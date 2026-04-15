@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed": "tsx ./src/seed.ts",
+    "import-products": "tsx ./src/import-products.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
@@ -14,6 +15,8 @@
     "tsx": "catalog:"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3"
+    "@workspace/db": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "xlsx": "^0.18.5"
   }
 }
