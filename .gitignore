@@ -2,6 +2,10 @@
 
 # compiled output
 dist
+# Allow committed prosan frontend build (needed for production cold starts)
+!artifacts/prosan/dist/
+!artifacts/prosan/dist/public/
+!artifacts/prosan/dist/public/**
 tmp
 out-tsc
 *.tsbuildinfo
