@@ -1,0 +1,222 @@
+PROSAN ENDÜSTRİ için web tabanlı, sade, hızlı ve veri odaklı bir stok, barkod ve satış yönetim sistemi oluştur.
+
+Genel yapı:
+- Mobil app değil, web tabanlı olsun.
+- Basit, hızlı, kolay yönetilen bir sistem olsun.
+- Çok süslü tasarım istemiyorum.
+- Dashboard güçlü ve veri odaklı olsun.
+- Aynı anda en fazla 4-5 kullanıcı kullanacak.
+- Yaklaşık 1000 adet stoklu ürün yönetilecek.
+- Masaüstünde rahat kullanılmalı, telefonda da açılmalı.
+
+Marka adı:
+PROSAN ENDÜSTRİ
+
+Ana ihtiyaçlar:
+1. Ürün listesini çok kolay yönetebileyim.
+2. Her ürün için barkod oluşturabileyim.
+3. Barkodları ben sisteme basit bir alandan manuel ekleyebileyim.
+4. İstersem sistem otomatik barkod da üretebilsin.
+5. Telefon kamerası ile barkod okutulabilsin.
+6. Barkod okutulduğunda şu bilgiler gelsin:
+   - Ürün adı
+   - Marka
+   - Stok sayısı
+   - Geliş fiyatı
+   - Satış fiyatı
+   - Karlılık yüzdesi
+7. Barkod dışında manuel ürün arama da olsun.
+8. Okutulan veya bulunan ürün ekranından stok, fiyat, satış fiyatı gibi veriler hızlıca güncellenebilsin.
+9. Kullanıcı bazlı rol ve yetkilendirme olsun.
+10. Sistemde IBAN bilgisi hem yazılı olarak görünsün hem de QR kod olarak üretilebilsin.
+
+Kullanıcı rolleri:
+- Admin:
+  - tüm ürünleri ekler, düzenler, siler
+  - kullanıcı açar
+  - rol ve yetki verir
+  - dashboard ve raporların tamamını görür
+  - IBAN bilgilerini yönetir
+- Personel:
+  - ürün arar
+  - barkod okutur
+  - satış yapar
+  - yetkisi varsa bazı alanları günceller
+- Opsiyonel:
+  - sadece görüntüleme yetkisi olan kullanıcı
+
+Ürün alanları:
+Her üründe şu alanlar olsun:
+- ürün kodu
+- barkod numarası
+- ürün adı
+- marka
+- kategori
+- açıklama
+- stok adedi
+- minimum kritik stok
+- geliş fiyatı
+- satış fiyatı
+- karlılık yüzdesi
+- son 30 gün görüntülenme sayısı
+- son 30 gün satış adedi
+- son güncelleme tarihi
+
+Barkod mantığı:
+- Barkod alanı basit bir input ile manuel girilebilsin.
+- Barkod numarası tekil olsun.
+- İstenirse sistem yeni barkod oluşturabilsin.
+- Barkod çıktısı alınabilecek şekilde gösterilebilsin.
+- Telefon kamerası ile barkod okutma özelliği web üzerinden çalışsın.
+- Barkod okutulunca ilgili ürünün hızlı işlem ekranı açılsın.
+- Ürün bulunamazsa “yeni ürün ekle” önerisi çıksın.
+
+IBAN / ödeme alanı:
+- Uygulamada bir ödeme bilgileri bölümü olsun.
+- Burada firma IBAN bilgisi yazılı şekilde gösterilsin.
+- Aynı IBAN bilgisi için QR kod üretilebilsin.
+- Bu alan admin tarafından düzenlenebilir olsun.
+- İstenirse satış ekranında veya ödeme ekranında gösterilebilsin.
+
+Fiyat ve karlılık mantığı:
+- Geliş fiyatı ve satış fiyatı girildiğinde karlılık yüzdesi otomatik hesaplanmalı.
+- Karlılık yüzdesi girildiğinde satış fiyatı otomatik hesaplanmalı.
+- Çift yönlü çalışmalı:
+  - geliş fiyatı + satış fiyatı => karlılık %
+  - geliş fiyatı + karlılık % => satış fiyatı
+- Kullanıcı ister direkt satış fiyatı girsin, ister yüzde girsin.
+- Formüller net ve doğru çalışmalı.
+
+Satış sistemi:
+- Ürün barkodla veya manuel aramayla bulunup satış yapılabilsin.
+- Satış yapıldığında stok otomatik düşsün.
+- O gün satılan ürünler ayrı listede görünsün.
+- Günlük satış hareketleri kayıt altına alınsın.
+- Satış geçmişi tutulmalı.
+- Son 30 gün satış adedi ürün bazında hesaplanmalı ve gösterilmeli.
+
+Görüntülenme sistemi:
+- Her ürün açıldığında veya görüntülendiğinde görüntülenme sayısı artsın.
+- Ancak her detaylı değişiklik loglanmasın.
+- Amaç ayrıntılı audit log değil.
+- Sadece ürün bazlı son 30 gün görüntülenme ve son 30 gün satış verisini görmek istiyorum.
+- Bu alan ürün detayında net görünsün.
+- Dashboard’da da istenirse en çok görüntülenen ürünler gösterilebilsin.
+
+Dashboard özellikleri:
+Dashboard sade ama güçlü olsun. Şunları göstersin:
+1. Toplam ürün sayısı
+2. Stok durumu:
+   - 0 stok kalan ürünler
+   - 1 stok kalan ürünler
+   - 2 stok kalan ürünler
+   - 3 stok kalan ürünler
+3. O gün satılan ürünler
+4. Günlük satış adedi
+5. Brüt ciro
+6. Net ciro (geliş fiyatı toplamına göre)
+7. Toplam karlılık
+8. Karlılık yüzdesi
+9. En çok satılan ürünler
+10. Son 30 günde en çok görüntülenen ürünler
+11. Kritik stok uyarıları
+
+Ürün listesi özellikleri:
+- Tablo halinde ürün listeleme
+- Arama
+- Filtreleme
+- Sıralama
+- Barkoda göre arama
+- Ürün adına göre arama
+- Markaya göre arama
+- Kritik stok filtresi
+
+Raporlama:
+- Günlük satış raporu
+- Tarih aralığına göre satış raporu
+- Ürün bazlı karlılık raporu
+- Stok raporu
+- Kritik stok raporu
+- Son 30 gün en çok görüntülenen ürünler
+- Son 30 gün en çok satılan ürünler
+- CSV / Excel dışa aktarma opsiyonel olabilir
+
+Arayüz beklentisi:
+- Gösterişli tasarım istemiyorum
+- Veri odaklı olsun
+- Okunabilir tablolar olsun
+- Dashboard kartları sade olsun
+- Hızlı kullanım öncelikli olsun
+- Responsive olsun ama masaüstü kullanım öncelikli
+
+Teknik beklenti:
+- Web tabanlı full-stack proje oluştur
+- Replit üzerinde kolay çalışsın
+- Kod modüler olsun
+- Veritabanı ile çalışsın
+- Yaklaşık 1000 ürün rahat yönetilebilsin
+- Temel yapı sağlam olsun
+
+Teknoloji tercihi:
+- Frontend: React
+- Backend: Node.js + Express
+- Database: SQLite veya PostgreSQL
+- Barkod okuma: telefon kamerası ile çalışan web barcode scanning çözümü
+- QR kod üretimi: IBAN için QR generator
+- Authentication: kullanıcı giriş sistemi
+- Authorization: rol bazlı yetki kontrolü
+
+Sayfalar:
+1. Giriş ekranı
+2. Dashboard
+3. Ürün listesi
+4. Ürün detay / düzenleme
+5. Yeni ürün ekleme
+6. Barkod oluşturma / tanımlama alanı
+7. Barkod okutma ekranı
+8. Satış ekranı
+9. Satış geçmişi
+10. Kullanıcı ve rol yönetimi
+11. IBAN / ödeme bilgileri ekranı
+12. Raporlar
+
+Veritabanı beklentisi:
+Ayrı tablolar olacak şekilde yapı kur:
+- users
+- roles
+- products
+- sales
+- product_views
+- payment_settings veya company_settings
+
+Notlar:
+- Her güncelleme için ayrıntılı audit log tutma
+- Ama son 30 gün görüntülenme ve satış istatistikleri hesaplanabilsin
+- Barkod alanı kolay yönetilsin
+- Barkod numarası unique olsun
+- Stok düşme güvenli olsun
+- Formlarda validasyon olsun
+- Hata mesajları anlaşılır olsun
+- Seed data eklensin
+- Kurulum adımları açıkça yazılsın
+
+Önemli:
+Bu projeyi önce MVP olarak çıkar:
+1. login
+2. ürün ekleme / düzenleme / silme
+3. barkod alanı ekleme
+4. manuel barkod oluşturma
+5. barkod okutma
+6. manuel arama
+7. satış yapma
+8. stok düşürme
+9. dashboard metrikleri
+10. kullanıcı rol sistemi
+11. IBAN yazılı ve QR gösterimi
+12. ürün bazlı son 30 gün görüntülenme ve satış bilgisi
+
+Önce çalışan çekirdek sistemi kur.
+Sonra raporlama ve ek geliştirmeleri ekle.
+
+Lütfen bu sistemi çalışır halde proje yapısı, backend, frontend, veritabanı modeli ve temel ekranlarıyla birlikte üret.
+Önce mimariyi kur, sonra temel CRUD, barkod, satış, görüntülenme istatistikleri, IBAN/QR ve dashboard özelliklerini tamamla.

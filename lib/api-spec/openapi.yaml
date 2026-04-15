@@ -3,20 +3,36 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: PROSAN ENDÜSTRİ - Stok, Barkod ve Satış Yönetim Sistemi API
+
 servers:
   - url: /api
     description: Base API path
+
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: products
+    description: Product management
+  - name: sales
+    description: Sales management
+  - name: dashboard
+    description: Dashboard statistics
+  - name: reports
+    description: Reports
+  - name: settings
+    description: Company settings
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +40,553 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserBody"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get a user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    put:
+      operationId: updateUser
+      tags: [users]
+      summary: Update a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List products
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: brand
+          in: query
+          schema:
+            type: string
+        - name: lowStock
+          in: query
+          schema:
+            type: boolean
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponse"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a new product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductBody"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /products/barcode/{barcode}:
+    get:
+      operationId: getProductByBarcode
+      tags: [products]
+      summary: Get a product by barcode
+      parameters:
+        - name: barcode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Product found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /products/generate-barcode:
+    post:
+      operationId: generateBarcode
+      tags: [products]
+      summary: Generate a unique barcode
+      responses:
+        "200":
+          description: Generated barcode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BarcodeResponse"
+
+  /products/categories:
+    get:
+      operationId: listCategories
+      tags: [products]
+      summary: List all product categories
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /products/brands:
+    get:
+      operationId: listBrands
+      tags: [products]
+      summary: List all product brands
+      responses:
+        "200":
+          description: List of brands
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get a product by ID (also records a view)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductBody"
+      responses:
+        "200":
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /products/{id}/quick-update:
+    patch:
+      operationId: quickUpdateProduct
+      tags: [products]
+      summary: Quick update product stock, price fields
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuickUpdateProductBody"
+      responses:
+        "200":
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /sales:
+    get:
+      operationId: listSales
+      tags: [sales]
+      summary: List sales
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: productId
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of sales
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaleListResponse"
+    post:
+      operationId: createSale
+      tags: [sales]
+      summary: Create a sale (reduces stock)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSaleBody"
+      responses:
+        "201":
+          description: Sale created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
+
+  /sales/today:
+    get:
+      operationId: getTodaySales
+      tags: [sales]
+      summary: Get today's sales summary
+      responses:
+        "200":
+          description: Today's sales
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodaySalesSummary"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/top-products:
+    get:
+      operationId: getTopProducts
+      tags: [dashboard]
+      summary: Get top selling and most viewed products (last 30 days)
+      responses:
+        "200":
+          description: Top products
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopProductsResponse"
+
+  /dashboard/critical-stock:
+    get:
+      operationId: getCriticalStock
+      tags: [dashboard]
+      summary: Get products with critical/low stock
+      responses:
+        "200":
+          description: Critical stock products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /reports/sales:
+    get:
+      operationId: getSalesReport
+      tags: [reports]
+      summary: Get sales report by date range
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Sales report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesReport"
+
+  /reports/stock:
+    get:
+      operationId: getStockReport
+      tags: [reports]
+      summary: Get stock report
+      responses:
+        "200":
+          description: Stock report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockReport"
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get company settings (IBAN etc)
+      responses:
+        "200":
+          description: Company settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanySettings"
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update company settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsBody"
+      responses:
+        "200":
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanySettings"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +594,519 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required: [error]
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    LoginBody:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required: [username, password]
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        message:
+          type: string
+      required: [user, message]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, staff, viewer]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, username, fullName, role, isActive]
+
+    CreateUserBody:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, staff, viewer]
+      required: [username, password, fullName, role]
+
+    UpdateUserBody:
+      type: object
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, staff, viewer]
+        isActive:
+          type: boolean
+        password:
+          type: string
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        productCode:
+          type: string
+        barcode:
+          type: string
+          nullable: true
+        name:
+          type: string
+        brand:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        stock:
+          type: integer
+        minStock:
+          type: integer
+        purchasePrice:
+          type: number
+          format: float
+        salePrice:
+          type: number
+          format: float
+        profitPercent:
+          type: number
+          format: float
+        views30Days:
+          type: integer
+        sales30Days:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, productCode, name, stock, minStock, purchasePrice, salePrice, profitPercent, views30Days, sales30Days]
+
+    ProductListResponse:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+      required: [products, total, page, limit, totalPages]
+
+    CreateProductBody:
+      type: object
+      properties:
+        productCode:
+          type: string
+        barcode:
+          type: string
+        name:
+          type: string
+        brand:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        stock:
+          type: integer
+        minStock:
+          type: integer
+        purchasePrice:
+          type: number
+          format: float
+        salePrice:
+          type: number
+          format: float
+        profitPercent:
+          type: number
+          format: float
+      required: [productCode, name, stock, minStock, purchasePrice, salePrice]
+
+    UpdateProductBody:
+      type: object
+      properties:
+        productCode:
+          type: string
+        barcode:
+          type: string
+        name:
+          type: string
+        brand:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        stock:
+          type: integer
+        minStock:
+          type: integer
+        purchasePrice:
+          type: number
+          format: float
+        salePrice:
+          type: number
+          format: float
+        profitPercent:
+          type: number
+          format: float
+
+    QuickUpdateProductBody:
+      type: object
+      properties:
+        stock:
+          type: integer
+        purchasePrice:
+          type: number
+          format: float
+        salePrice:
+          type: number
+          format: float
+        profitPercent:
+          type: number
+          format: float
+
+    BarcodeResponse:
+      type: object
+      properties:
+        barcode:
+          type: string
+      required: [barcode]
+
+    Sale:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        productCode:
+          type: string
+        barcode:
+          type: string
+          nullable: true
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+          format: float
+        totalPrice:
+          type: number
+          format: float
+        purchasePrice:
+          type: number
+          format: float
+        profit:
+          type: number
+          format: float
+        soldBy:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, productId, productName, productCode, quantity, unitPrice, totalPrice, purchasePrice, profit, createdAt]
+
+    SaleListResponse:
+      type: object
+      properties:
+        sales:
+          type: array
+          items:
+            $ref: "#/components/schemas/Sale"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+      required: [sales, total, page, limit, totalPages]
+
+    CreateSaleBody:
+      type: object
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+          format: float
+      required: [productId, quantity, unitPrice]
+
+    TodaySalesSummary:
+      type: object
+      properties:
+        totalSales:
+          type: integer
+        totalQuantity:
+          type: integer
+        grossRevenue:
+          type: number
+          format: float
+        netRevenue:
+          type: number
+          format: float
+        totalProfit:
+          type: number
+          format: float
+        profitPercent:
+          type: number
+          format: float
+        sales:
+          type: array
+          items:
+            $ref: "#/components/schemas/Sale"
+      required: [totalSales, totalQuantity, grossRevenue, netRevenue, totalProfit, profitPercent, sales]
+
+    DashboardStats:
+      type: object
+      properties:
+        totalProducts:
+          type: integer
+        outOfStock:
+          type: integer
+        stock1:
+          type: integer
+        stock2:
+          type: integer
+        stock3:
+          type: integer
+        todaySalesCount:
+          type: integer
+        todayGrossRevenue:
+          type: number
+          format: float
+        todayNetRevenue:
+          type: number
+          format: float
+        todayProfit:
+          type: number
+          format: float
+        todayProfitPercent:
+          type: number
+          format: float
+        criticalStockCount:
+          type: integer
+      required: [totalProducts, outOfStock, stock1, stock2, stock3, todaySalesCount, todayGrossRevenue, todayNetRevenue, todayProfit, todayProfitPercent, criticalStockCount]
+
+    TopProductsResponse:
+      type: object
+      properties:
+        topSelling:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        topViewed:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+      required: [topSelling, topViewed]
+
+    SalesReport:
+      type: object
+      properties:
+        startDate:
+          type: string
+        endDate:
+          type: string
+        totalSales:
+          type: integer
+        totalQuantity:
+          type: integer
+        grossRevenue:
+          type: number
+          format: float
+        netRevenue:
+          type: number
+          format: float
+        totalProfit:
+          type: number
+          format: float
+        profitPercent:
+          type: number
+          format: float
+        dailyBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailySales"
+        productBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductSalesBreakdown"
+      required: [startDate, endDate, totalSales, totalQuantity, grossRevenue, netRevenue, totalProfit, profitPercent, dailyBreakdown, productBreakdown]
+
+    DailySales:
+      type: object
+      properties:
+        date:
+          type: string
+        count:
+          type: integer
+        revenue:
+          type: number
+          format: float
+        profit:
+          type: number
+          format: float
+      required: [date, count, revenue, profit]
+
+    ProductSalesBreakdown:
+      type: object
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        productCode:
+          type: string
+        quantity:
+          type: integer
+        revenue:
+          type: number
+          format: float
+        profit:
+          type: number
+          format: float
+      required: [productId, productName, productCode, quantity, revenue, profit]
+
+    StockReport:
+      type: object
+      properties:
+        totalProducts:
+          type: integer
+        totalStockValue:
+          type: number
+          format: float
+        outOfStock:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        criticalStock:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        stockByCategory:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryStock"
+      required: [totalProducts, totalStockValue, outOfStock, criticalStock, stockByCategory]
+
+    CategoryStock:
+      type: object
+      properties:
+        category:
+          type: string
+        productCount:
+          type: integer
+        totalStock:
+          type: integer
+        stockValue:
+          type: number
+          format: float
+      required: [category, productCount, totalStock, stockValue]
+
+    CompanySettings:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyName:
+          type: string
+        iban:
+          type: string
+          nullable: true
+        bankName:
+          type: string
+          nullable: true
+        accountHolder:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, companyName]
+
+    UpdateSettingsBody:
+      type: object
+      properties:
+        companyName:
+          type: string
+        iban:
+          type: string
+        bankName:
+          type: string
+        accountHolder:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
