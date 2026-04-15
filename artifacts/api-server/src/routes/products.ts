@@ -121,10 +121,14 @@ router.post("/generate-barcode", requireAuth, async (req: Request, res: Response
 router.get("/barcode/:barcode", requireAuth, async (req: Request, res: Response) => {
   try {
     const { barcode } = req.params;
+    // Search by barcode field first, then by productCode as fallback
     const [product] = await db
       .select()
       .from(productsTable)
-      .where(eq(productsTable.barcode, barcode!));
+      .where(or(
+        eq(productsTable.barcode, barcode!),
+        eq(productsTable.productCode, barcode!)
+      ));
     if (!product) {
       res.status(404).json({ error: "Not Found", message: "Ürün bulunamadı" });
       return;

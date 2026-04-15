@@ -1,14 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useGetProduct, useQuickUpdateProduct, getGetProductQueryKey } from "@workspace/api-client-react";
-import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Edit, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Edit, Save, Loader2, Printer } from "lucide-react";
 import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import JsBarcode from "jsbarcode";
 
 export default function ProductDetail({ id }: { id: string }) {
   const productId = parseInt(id, 10);
@@ -16,6 +16,7 @@ export default function ProductDetail({ id }: { id: string }) {
   const quickUpdate = useQuickUpdateProduct();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const barcodeSvgRef = useRef<SVGSVGElement>(null);
 
   const [editMode, setEditMode] = useState(false);
   const [quickData, setQuickData] = useState({
@@ -35,6 +36,53 @@ export default function ProductDetail({ id }: { id: string }) {
       });
     }
   }, [product]);
+
+  const barcodeValue = product?.barcode || product?.productCode || "";
+
+  useEffect(() => {
+    if (barcodeSvgRef.current && barcodeValue) {
+      try {
+        JsBarcode(barcodeSvgRef.current, barcodeValue, {
+          format: barcodeValue.length === 13 ? "EAN13" : barcodeValue.length === 12 ? "EAN13" : "CODE128",
+          width: 2,
+          height: 60,
+          displayValue: true,
+          fontSize: 13,
+          margin: 8,
+          background: "#ffffff",
+          lineColor: "#000000",
+        });
+      } catch {
+        try {
+          JsBarcode(barcodeSvgRef.current, barcodeValue, {
+            format: "CODE128",
+            width: 2,
+            height: 60,
+            displayValue: true,
+            fontSize: 13,
+            margin: 8,
+          });
+        } catch { /* barcode not renderable */ }
+      }
+    }
+  }, [barcodeValue]);
+
+  const handlePrintBarcode = () => {
+    if (!barcodeSvgRef.current || !barcodeValue) return;
+    const svgData = barcodeSvgRef.current.outerHTML;
+    const win = window.open("", "_blank", "width=400,height=300");
+    if (!win) return;
+    win.document.write(`
+      <html><head><title>Barkod - ${product?.name}</title>
+      <style>body{margin:20px;font-family:sans-serif;text-align:center} h3{font-size:12px;margin-bottom:8px}</style>
+      </head><body>
+      <h3>${product?.name}</h3>
+      ${svgData}
+      <script>window.onload=()=>{window.print();window.close();}<\/script>
+      </body></html>
+    `);
+    win.document.close();
+  };
 
   const handleQuickChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -114,7 +162,22 @@ export default function ProductDetail({ id }: { id: string }) {
                 <p className="whitespace-pre-wrap">{product.description || "-"}</p>
               </div>
             </div>
-            
+
+            {barcodeValue && (
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium text-muted-foreground">Barkod Etiketi</p>
+                  <Button variant="outline" size="sm" onClick={handlePrintBarcode}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Yazdır
+                  </Button>
+                </div>
+                <div className="flex justify-center bg-white rounded-md border p-3">
+                  <svg ref={barcodeSvgRef} />
+                </div>
+              </div>
+            )}
+
             <div className="border-t pt-4 grid grid-cols-2 gap-4 mt-4">
                <div>
                 <p className="text-sm font-medium text-muted-foreground">Oluşturulma</p>
