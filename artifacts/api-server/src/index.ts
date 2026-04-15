@@ -1,8 +1,25 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, productsTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import seedProductsRaw from "./seed-products.json";
+
+interface SeedProduct {
+  productCode: string | null;
+  barcode: string | null;
+  name: string;
+  brand: string | null;
+  category: string | null;
+  description: string | null;
+  stock: number;
+  minStock: number;
+  purchasePrice: number;
+  salePrice: number;
+  profitPercent: number;
+}
+
+const seedProducts = seedProductsRaw as SeedProduct[];
 
 const rawPort = process.env["PORT"];
 
@@ -19,54 +36,96 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 async function seedDefaultUsers() {
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(usersTable);
+
+  if (count > 0) {
+    logger.info({ count }, "Users already exist, skipping user seed");
+    return;
+  }
+
+  logger.info("No users found, seeding default accounts...");
+
+  const defaultUsers = [
+    { username: "admin",     password: "admin123",  fullName: "Yönetici",       role: "admin"  as const },
+    { username: "talha",     password: "talha123",  fullName: "Talha",          role: "admin"  as const },
+    { username: "nihat",     password: "nihat123",  fullName: "Nihat",          role: "admin"  as const },
+    { username: "cenan",     password: "cenan123",  fullName: "Cenan",          role: "admin"  as const },
+    { username: "personel",  password: "staff123",  fullName: "Personel",       role: "staff"  as const },
+    { username: "goruntule", password: "staff123",  fullName: "Görüntüleyici",  role: "viewer" as const },
+  ];
+
+  for (const u of defaultUsers) {
+    const passwordHash = await bcrypt.hash(u.password, 10);
+    await db.insert(usersTable).values({
+      username: u.username,
+      passwordHash,
+      fullName: u.fullName,
+      role: u.role,
+    });
+    logger.info({ username: u.username, role: u.role }, "User seeded");
+  }
+
+  logger.info("Default users seeded successfully");
+}
+
+async function seedDefaultProducts() {
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(productsTable);
+
+  if (count > 0) {
+    logger.info({ count }, "Products already exist, skipping product seed");
+    return;
+  }
+
+  logger.info(`No products found, seeding ${seedProducts.length} products...`);
+
+  const CHUNK = 50;
+  for (let i = 0; i < seedProducts.length; i += CHUNK) {
+    const batch = seedProducts.slice(i, i + CHUNK);
+    await db.insert(productsTable).values(
+      batch.map((p) => ({
+        productCode:   p.productCode   ?? undefined,
+        barcode:       p.barcode       ?? undefined,
+        name:          p.name,
+        brand:         p.brand         ?? undefined,
+        category:      p.category      ?? undefined,
+        description:   p.description   ?? undefined,
+        stock:         p.stock,
+        minStock:      p.minStock,
+        purchasePrice: p.purchasePrice,
+        salePrice:     p.salePrice,
+        profitPercent: p.profitPercent,
+      }))
+    );
+    logger.info(`Inserted products ${i + 1}–${Math.min(i + CHUNK, seedProducts.length)}`);
+  }
+
+  logger.info("Products seeded successfully");
+}
+
+async function runSeeds() {
   try {
-    const [{ count }] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(usersTable);
-
-    if (count > 0) {
-      logger.info({ count }, "Users already exist, skipping seed");
-      return;
-    }
-
-    logger.info("No users found, seeding default accounts...");
-
-    const defaultUsers = [
-      { username: "admin",    password: "admin123",  fullName: "Yönetici",        role: "admin"  as const },
-      { username: "talha",    password: "talha123",  fullName: "Talha",           role: "admin"  as const },
-      { username: "nihat",    password: "nihat123",  fullName: "Nihat",           role: "admin"  as const },
-      { username: "cenan",    password: "cenan123",  fullName: "Cenan",           role: "admin"  as const },
-      { username: "personel", password: "staff123",  fullName: "Personel",        role: "staff"  as const },
-      { username: "goruntule",password: "staff123",  fullName: "Görüntüleyici",   role: "viewer" as const },
-    ];
-
-    for (const u of defaultUsers) {
-      const passwordHash = await bcrypt.hash(u.password, 10);
-      await db.insert(usersTable).values({
-        username: u.username,
-        passwordHash,
-        fullName: u.fullName,
-        role: u.role,
-      });
-      logger.info({ username: u.username, role: u.role }, "User seeded");
-    }
-
-    logger.info("Default users seeded successfully");
+    await seedDefaultUsers();
   } catch (err) {
-    logger.error({ err }, "Failed to seed default users");
+    logger.error({ err }, "Failed to seed users");
+  }
+
+  try {
+    await seedDefaultProducts();
+  } catch (err) {
+    logger.error({ err }, "Failed to seed products");
   }
 }
 
-async function start() {
-  await seedDefaultUsers();
-
-  app.listen(port, (err?: Error) => {
-    if (err) {
-      logger.error({ err }, "Error listening on port");
-      process.exit(1);
-    }
-    logger.info({ port }, "Server listening");
-  });
-}
-
-start();
+app.listen(port, (err?: Error) => {
+  if (err) {
+    logger.error({ err }, "Error listening on port");
+    process.exit(1);
+  }
+  logger.info({ port }, "Server listening");
+  // Run seeds after server is up so health check passes immediately
+  runSeeds().catch((err) => logger.error({ err }, "Seed error"));
+});
