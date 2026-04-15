@@ -1,20 +1,26 @@
-import { useState, useEffect } from "react";
-import { useCreateProduct, useGenerateBarcode } from "@workspace/api-client-react";
+import { useState } from "react";
+import { useCreateProduct, useGenerateBarcode, useListBrands, useListCategories } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { AutocompleteInput } from "@/components/autocomplete-input";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2, Save, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 
+const NUM_FIELDS = ["stock", "minStock", "purchasePrice", "salePrice", "profitPercent"] as const;
+
 export default function ProductNew() {
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createProduct = useCreateProduct();
   const generateBarcode = useGenerateBarcode();
+
+  const { data: brands } = useListBrands();
+  const { data: categories } = useListCategories();
 
   const [formData, setFormData] = useState({
     productCode: "",
@@ -32,31 +38,25 @@ export default function ProductNew() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
     setFormData(prev => {
       const newData = { ...prev, [name]: value };
 
-      // Handle numbers
-      if (['stock', 'minStock', 'purchasePrice', 'salePrice', 'profitPercent'].includes(name)) {
-        newData[name as keyof typeof newData] = value === '' ? 0 : Number(value);
+      if (NUM_FIELDS.includes(name as any)) {
+        (newData as any)[name] = value === "" ? 0 : Number(value);
       }
 
-      // Bidirectional profit calc
-      if (name === 'purchasePrice') {
+      if (name === "purchasePrice") {
         const pp = Number(value);
-        if (pp > 0 && prev.profitPercent > 0) {
+        if (pp > 0 && prev.profitPercent > 0)
           newData.salePrice = Number((pp * (1 + prev.profitPercent / 100)).toFixed(2));
-        }
-      } else if (name === 'salePrice') {
+      } else if (name === "salePrice") {
         const sp = Number(value);
-        if (prev.purchasePrice > 0) {
+        if (prev.purchasePrice > 0)
           newData.profitPercent = Number((((sp - prev.purchasePrice) / prev.purchasePrice) * 100).toFixed(2));
-        }
-      } else if (name === 'profitPercent') {
+      } else if (name === "profitPercent") {
         const pct = Number(value);
-        if (prev.purchasePrice > 0) {
+        if (prev.purchasePrice > 0)
           newData.salePrice = Number((prev.purchasePrice * (1 + pct / 100)).toFixed(2));
-        }
       }
 
       return newData as typeof prev;
@@ -68,7 +68,7 @@ export default function ProductNew() {
       const res = await generateBarcode.mutateAsync();
       setFormData(prev => ({ ...prev, barcode: res.barcode }));
       toast({ title: "Başarılı", description: "Barkod üretildi." });
-    } catch (error) {
+    } catch {
       toast({ title: "Hata", description: "Barkod üretilemedi.", variant: "destructive" });
     }
   };
@@ -80,13 +80,15 @@ export default function ProductNew() {
       toast({ title: "Başarılı", description: "Ürün eklendi." });
       setLocation(`/products/${newProd.id}`);
     } catch (error: any) {
-      toast({ 
-        title: "Hata", 
-        description: error?.response?.data?.message || "Ürün eklenirken bir hata oluştu.", 
-        variant: "destructive" 
+      toast({
+        title: "Hata",
+        description: error?.response?.data?.message || "Ürün eklenirken bir hata oluştu.",
+        variant: "destructive",
       });
     }
   };
+
+  const numFocus = (e: React.FocusEvent<HTMLInputElement>) => e.target.select();
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -128,11 +130,25 @@ export default function ProductNew() {
 
               <div className="space-y-2">
                 <Label htmlFor="brand">Marka</Label>
-                <Input id="brand" name="brand" value={formData.brand} onChange={handleChange} />
+                <AutocompleteInput
+                  id="brand"
+                  name="brand"
+                  value={formData.brand}
+                  onChange={(v) => setFormData(prev => ({ ...prev, brand: v }))}
+                  suggestions={(brands as string[] | undefined) ?? []}
+                  placeholder="Marka seçin veya yazın..."
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category">Kategori</Label>
-                <Input id="category" name="category" value={formData.category} onChange={handleChange} />
+                <AutocompleteInput
+                  id="category"
+                  name="category"
+                  value={formData.category}
+                  onChange={(v) => setFormData(prev => ({ ...prev, category: v }))}
+                  suggestions={(categories as string[] | undefined) ?? []}
+                  placeholder="Kategori seçin veya yazın..."
+                />
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -142,25 +158,44 @@ export default function ProductNew() {
 
               <div className="space-y-2">
                 <Label htmlFor="stock">Stok Miktarı *</Label>
-                <Input id="stock" name="stock" type="number" min="0" step="1" value={formData.stock} onChange={handleChange} required />
+                <Input
+                  id="stock" name="stock" type="number" min="0" step="1"
+                  value={formData.stock} onChange={handleChange} onFocus={numFocus}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="minStock">Min. Stok (Uyarı Seviyesi) *</Label>
-                <Input id="minStock" name="minStock" type="number" min="0" step="1" value={formData.minStock} onChange={handleChange} required />
+                <Input
+                  id="minStock" name="minStock" type="number" min="0" step="1"
+                  value={formData.minStock} onChange={handleChange} onFocus={numFocus}
+                  required
+                />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="purchasePrice">Alış Fiyatı (TL) *</Label>
-                <Input id="purchasePrice" name="purchasePrice" type="number" min="0" step="0.01" value={formData.purchasePrice} onChange={handleChange} required />
+                <Input
+                  id="purchasePrice" name="purchasePrice" type="number" min="0" step="0.01"
+                  value={formData.purchasePrice} onChange={handleChange} onFocus={numFocus}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="profitPercent">Kâr Marjı (%)</Label>
-                <Input id="profitPercent" name="profitPercent" type="number" min="0" step="0.1" value={formData.profitPercent} onChange={handleChange} />
+                <Input
+                  id="profitPercent" name="profitPercent" type="number" min="0" step="0.1"
+                  value={formData.profitPercent} onChange={handleChange} onFocus={numFocus}
+                />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="salePrice">Satış Fiyatı (TL) *</Label>
-                <Input id="salePrice" name="salePrice" type="number" min="0" step="0.01" value={formData.salePrice} onChange={handleChange} required className="font-bold text-primary border-primary/50" />
+                <Input
+                  id="salePrice" name="salePrice" type="number" min="0" step="0.01"
+                  value={formData.salePrice} onChange={handleChange} onFocus={numFocus}
+                  required className="font-bold text-primary border-primary/50"
+                />
               </div>
             </div>
 
