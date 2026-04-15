@@ -19,7 +19,7 @@ export default function Dashboard() {
   }
 
   const formatCurrency = (value: number | undefined) => {
-    return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(value || 0);
+    return (value || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " TL";
   };
 
   return (

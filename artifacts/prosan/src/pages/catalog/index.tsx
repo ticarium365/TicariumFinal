@@ -81,7 +81,7 @@ function ProductCard({ product }: { product: CatalogProduct }) {
       <div className="mt-auto pt-2 border-t border-slate-100 flex items-center justify-between">
         <span className="text-xs text-slate-400">Satış Fiyatı</span>
         <span className="text-lg font-bold text-orange-600">
-          ₺{Number(product.salePrice).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {Number(product.salePrice).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL
         </span>
       </div>
     </div>

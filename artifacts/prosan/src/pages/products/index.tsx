@@ -311,9 +311,9 @@ export default function ProductsList() {
                 <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground text-xs uppercase tracking-wider hidden lg:table-cell">Kategori</th>
                 <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground text-xs uppercase tracking-wider w-[80px]">Stok</th>
                 {isAdmin && (
-                  <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground text-xs uppercase tracking-wider hidden md:table-cell w-[100px]">Alış ₺</th>
+                  <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground text-xs uppercase tracking-wider hidden md:table-cell w-[100px]">Alış (TL)</th>
                 )}
-                <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground text-xs uppercase tracking-wider w-[100px]">Satış ₺</th>
+                <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground text-xs uppercase tracking-wider w-[100px]">Satış (TL)</th>
                 {isAdmin && (
                   <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground text-xs uppercase tracking-wider hidden lg:table-cell w-[80px]">Kâr %</th>
                 )}

@@ -15,7 +15,7 @@ export default function Reports() {
   const { data: salesData, isLoading: salesLoading } = useGetSalesReport({ query: { enabled: !!startDate && !!endDate }}, { startDate, endDate });
   const { data: stockData, isLoading: stockLoading } = useGetStockReport();
 
-  const formatCurrency = (val: number | undefined) => (val || 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
+  const formatCurrency = (val: number | undefined) => (val || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " TL";
 
   return (
     <div className="space-y-8">
