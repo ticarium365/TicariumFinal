@@ -1,8 +1,10 @@
 import { useGetDashboardStats, useGetTodaySales, useGetTopProducts, useGetCriticalStock } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, AlertTriangle, TrendingUp, DollarSign, Activity, ShoppingCart } from "lucide-react";
+import { Package, AlertTriangle, TrendingUp, DollarSign, Activity, ShoppingCart, ScanBarcode } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
@@ -25,6 +27,22 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Ana Panel</h1>
       </div>
+
+      {/* Hızlı Satış Butonu */}
+      <Link href="/sales">
+        <div className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 active:from-orange-700 active:to-orange-800 transition-all shadow-lg cursor-pointer">
+          <div className="flex items-center justify-between px-6 py-5">
+            <div>
+              <p className="text-white/80 text-sm font-medium uppercase tracking-wider">Hızlı İşlem</p>
+              <p className="text-white text-2xl font-bold mt-0.5">Barkod ile Satış Yap</p>
+              <p className="text-white/70 text-sm mt-1">Kamera ile barkod oku, sepete ekle, satışı tamamla</p>
+            </div>
+            <div className="bg-white/20 rounded-full p-4 shrink-0">
+              <ScanBarcode className="h-9 w-9 text-white" />
+            </div>
+          </div>
+        </div>
+      </Link>
 
       {/* Stats Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
