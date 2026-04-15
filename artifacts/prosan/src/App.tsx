@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 
 // Pages
 import Login from "@/pages/login";
+import Catalog from "@/pages/catalog/index";
 import Dashboard from "@/pages/dashboard";
 import ProductsList from "@/pages/products/index";
 import ProductNew from "@/pages/products/new";
@@ -56,64 +57,66 @@ function ProtectedRoute({
   );
 }
 
-function Router() {
+function AuthenticatedRouter() {
   return (
-    <Switch>
-      <Route path="/login" component={Login} />
-      
-      <Route path="/">
-        {() => {
-          window.location.href = "/dashboard";
-          return null;
-        }}
-      </Route>
-      
-      <Route path="/dashboard">
-        {() => <ProtectedRoute component={Dashboard} />}
-      </Route>
+    <AuthProvider>
+      <Switch>
+        <Route path="/login" component={Login} />
 
-      <Route path="/products">
-        {() => <ProtectedRoute component={ProductsList} />}
-      </Route>
+        <Route path="/">
+          {() => {
+            window.location.href = "/dashboard";
+            return null;
+          }}
+        </Route>
 
-      <Route path="/products/new">
-        {() => <ProtectedRoute component={ProductNew} roles={["admin", "staff"]} />}
-      </Route>
+        <Route path="/dashboard">
+          {() => <ProtectedRoute component={Dashboard} />}
+        </Route>
 
-      <Route path="/products/:id/edit">
-        {(params) => <ProtectedRoute component={() => <ProductEdit id={params.id} />} roles={["admin", "staff"]} />}
-      </Route>
+        <Route path="/products">
+          {() => <ProtectedRoute component={ProductsList} />}
+        </Route>
 
-      <Route path="/products/:id">
-        {(params) => <ProtectedRoute component={() => <ProductDetail id={params.id} />} />}
-      </Route>
+        <Route path="/products/new">
+          {() => <ProtectedRoute component={ProductNew} roles={["admin", "staff"]} />}
+        </Route>
 
-      <Route path="/barcode">
-        {() => <ProtectedRoute component={BarcodeScanner} roles={["admin", "staff"]} />}
-      </Route>
+        <Route path="/products/:id/edit">
+          {(params) => <ProtectedRoute component={() => <ProductEdit id={params.id} />} roles={["admin", "staff"]} />}
+        </Route>
 
-      <Route path="/sales">
-        {() => <ProtectedRoute component={SalesScreen} roles={["admin", "staff"]} />}
-      </Route>
+        <Route path="/products/:id">
+          {(params) => <ProtectedRoute component={() => <ProductDetail id={params.id} />} />}
+        </Route>
 
-      <Route path="/sales/history">
-        {() => <ProtectedRoute component={SalesHistory} />}
-      </Route>
+        <Route path="/barcode">
+          {() => <ProtectedRoute component={BarcodeScanner} roles={["admin", "staff"]} />}
+        </Route>
 
-      <Route path="/reports">
-        {() => <ProtectedRoute component={Reports} roles={["admin", "viewer"]} />}
-      </Route>
+        <Route path="/sales">
+          {() => <ProtectedRoute component={SalesScreen} roles={["admin", "staff"]} />}
+        </Route>
 
-      <Route path="/users">
-        {() => <ProtectedRoute component={UsersList} roles={["admin"]} />}
-      </Route>
+        <Route path="/sales/history">
+          {() => <ProtectedRoute component={SalesHistory} />}
+        </Route>
 
-      <Route path="/settings">
-        {() => <ProtectedRoute component={Settings} roles={["admin"]} />}
-      </Route>
+        <Route path="/reports">
+          {() => <ProtectedRoute component={Reports} roles={["admin", "viewer"]} />}
+        </Route>
 
-      <Route component={NotFound} />
-    </Switch>
+        <Route path="/users">
+          {() => <ProtectedRoute component={UsersList} roles={["admin"]} />}
+        </Route>
+
+        <Route path="/settings">
+          {() => <ProtectedRoute component={Settings} roles={["admin"]} />}
+        </Route>
+
+        <Route component={NotFound} />
+      </Switch>
+    </AuthProvider>
   );
 }
 
@@ -122,9 +125,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <AuthProvider>
-            <Router />
-          </AuthProvider>
+          <Switch>
+            <Route path="/catalog" component={Catalog} />
+            <Route>
+              {() => <AuthenticatedRouter />}
+            </Route>
+          </Switch>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>
