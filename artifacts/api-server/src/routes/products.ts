@@ -140,6 +140,53 @@ router.get("/barcode/:barcode", requireAuth, async (req: Request, res: Response)
   }
 });
 
+router.get("/export", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { search, category, brand, lowStock, sortBy = "name", sortOrder = "asc" } = req.query;
+
+    const conditions = [];
+
+    if (search) {
+      const searchStr = `%${search}%`;
+      conditions.push(
+        or(
+          ilike(productsTable.name, searchStr),
+          ilike(productsTable.productCode, searchStr),
+          ilike(productsTable.barcode, searchStr),
+          ilike(productsTable.brand, searchStr),
+          ilike(productsTable.category, searchStr)
+        )
+      );
+    }
+    if (category) conditions.push(eq(productsTable.category, String(category)));
+    if (brand) conditions.push(eq(productsTable.brand, String(brand)));
+    if (lowStock === "true") conditions.push(lte(productsTable.stock, productsTable.minStock));
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const orderColumn = {
+      name: productsTable.name,
+      productCode: productsTable.productCode,
+      stock: productsTable.stock,
+      salePrice: productsTable.salePrice,
+      purchasePrice: productsTable.purchasePrice,
+    }[String(sortBy)] ?? productsTable.name;
+
+    const orderFn = sortOrder === "desc" ? desc : asc;
+
+    const products = await db
+      .select()
+      .from(productsTable)
+      .where(whereClause)
+      .orderBy(orderFn(orderColumn));
+
+    res.json({ products, total: products.length });
+  } catch (err) {
+    req.log?.error({ err }, "Export products error");
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 router.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
     const {

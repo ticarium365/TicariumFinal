@@ -220,13 +220,13 @@ export default function ProductsList() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const params = new URLSearchParams({ limit: "9999", sortBy: "name", sortOrder: "asc" });
+      const params = new URLSearchParams({ sortBy: "name", sortOrder: "asc" });
       if (debouncedSearch) params.set("search", debouncedSearch);
       if (category !== "__all__") params.set("category", category);
       if (brand !== "__all__") params.set("brand", brand);
       if (lowStock) params.set("lowStock", "true");
 
-      const res = await fetch(`/api/products?${params.toString()}`, { credentials: "include" });
+      const res = await fetch(`/api/products/export?${params.toString()}`, { credentials: "include" });
       if (!res.ok) throw new Error("API hatası");
       const json = await res.json() as { products: any[] };
 
