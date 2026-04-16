@@ -262,6 +262,85 @@ id, key, value (jsonb), updated_at
 
 ---
 
+## İş Kuralları
+
+### Stok Yönetimi
+- **Stok negatife düşemez**: Satış sırasında `product.stock < quantity` kontrolü yapılır → `400 INSUFFICIENT_STOCK`. DB seviyesinde `CHECK (stock >= 0)` constraint ikinci güvencedir.
+- **İade stoku geri yükler**: `POST /api/sales/:id/return` çağrıldığında `product.stock += sale.quantity` otomatik uygulanır ve `stock_movements` tablosuna `type="return"` kaydı düşer.
+- **Aynı satış iki kez iade edilemez**: `sale.returned === true` ise `400 ALREADY_RETURNED` döner.
+
+### Ürün Tekliği
+- **Barkod** şirket bazlı benzersizdir: `(barcode, company_id)` unique index. Aynı barkod farklı şirketlerde olabilir, aynı şirkette olamaz. `NULL` barkod bu kuraldan muaftır.
+- **Ürün kodu** şirket bazlı benzersizdir: `(product_code, company_id)` unique index.
+- Çakışma durumunda `409 DUPLICATE_BARCODE` veya `409 DUPLICATE_PRODUCT_CODE` döner.
+
+### Kullanıcı Tekliği
+- `(username, company_id)` composite unique: aynı kullanıcı adı farklı şirketlerde var olabilir.
+
+### Ürün Pasifleştirme
+- `isActive: false` yapılan ürün API listelerinden çıkar (`WHERE is_active = true`).
+- Pasif ürünün geçmiş satış kayıtları korunur; satış geçmişinde görünmeye devam eder.
+- Pasif ürüne yeni satış yapılamaz (ürün bulunamaz → `404`).
+
+### Satış Kuralları
+- `viewer` rolü satış yapamaz; yalnızca `admin` ve `staff` satış oluşturabilir.
+- Satış silinmez; iade mekanizması kullanılır.
+- İade edilmiş satış stok hareketleri geçmişinde görünür.
+
+### Ödeme / Abonelik
+- `pending → confirmed` veya `pending → rejected`: tek yönlü geçiş. Onaylanmış veya reddedilmiş ödeme tekrar işleme alınamaz (`409 PAYMENT_ALREADY_PROCESSED`).
+- `confirmed` işlem sonrası şirketin `plan_type = "active"`, `trial_ends_at = now + N ay` olarak güncellenir.
+- `suspended` firmada tüm API istekleri (muaf yollar hariç) `402` döner.
+
+### API Hata Formatı (Standart)
+
+Tüm hata yanıtları şu formattadır:
+```json
+{
+  "error": {
+    "code": "HATA_KODU",
+    "message": "Kullanıcıya gösterilecek mesaj",
+    "details": null
+  }
+}
+```
+
+| HTTP | Kod | Durum |
+|---|---|---|
+| 400 | `BAD_REQUEST` | Eksik veya geçersiz alan |
+| 400 | `INSUFFICIENT_STOCK` | Yetersiz stok; `details.available` mevcut stok |
+| 400 | `ALREADY_RETURNED` | Satış zaten iade edilmiş |
+| 401 | `UNAUTHORIZED` | Giriş yapılmamış veya şifre hatalı |
+| 402 | `PAYMENT_REQUIRED` | Trial süresi dolmuş veya hesap askıda |
+| 403 | `FORBIDDEN` | Rol yetersiz |
+| 404 | `NOT_FOUND` | Kayıt bulunamadı |
+| 409 | `DUPLICATE_BARCODE` | Aynı barkod şirkette var |
+| 409 | `DUPLICATE_PRODUCT_CODE` | Aynı ürün kodu şirkette var |
+| 409 | `PAYMENT_ALREADY_PROCESSED` | Ödeme zaten işlenmiş |
+| 429 | `TOO_MANY_REQUESTS` | Rate limit aşıldı |
+| 500 | `INTERNAL_ERROR` | Sunucu hatası |
+
+### Audit Log
+
+`audit_logs` tablosuna şu işlemlerde kayıt düşer:
+
+| Eylem | Ne zaman |
+|---|---|
+| `LOGIN` | Başarılı giriş |
+| `LOGIN_FAILED` | Başarısız giriş denemesi |
+| `LOGOUT` | Çıkış |
+| `SALE_CREATE` | Yeni satış |
+| `SALE_RETURN` | Satış iadesi |
+| `PAYMENT_SUBMIT` | Havale bildirimi gönderildi |
+| `PAYMENT_CONFIRM` | Havale onaylandı |
+| `PAYMENT_REJECT` | Havale reddedildi |
+| `COMPANY_PLAN_CHANGE` | Şirket planı değişti |
+| `PLATFORM_SETTINGS_UPDATE` | Platform ayarları güncellendi |
+
+Her kayıtta: `company_id, user_id, username, action, entity, entity_id, details (JSON), ip_address, created_at`
+
+---
+
 ## Güvenlik
 
 ### Oturum (Cookie)

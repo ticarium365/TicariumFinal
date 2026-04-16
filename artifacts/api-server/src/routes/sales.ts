@@ -2,6 +2,8 @@ import { Router, Request, Response } from "express";
 import { db, salesTable, productsTable, stockMovementsTable } from "@workspace/db";
 import { eq, and, gte, lte, desc, count, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { Errors } from "../lib/errors.js";
+import { audit } from "../lib/audit.js";
 
 const router = Router();
 
@@ -134,7 +136,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
 
     const qty = parseInt(quantity);
     if (product.stock < qty) {
-      res.status(400).json({ error: "Bad Request", message: `Yetersiz stok. Mevcut stok: ${product.stock}` });
+      res.status(400).json(Errors.insufficientStock(product.stock));
       return;
     }
 
@@ -160,10 +162,18 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       .set({ stock: product.stock - qty, updatedAt: new Date() })
       .where(eq(productsTable.id, product.id));
 
+    await audit({
+      req,
+      action: "SALE_CREATE",
+      entity: "sale",
+      entityId: sale!.id,
+      details: { productId: product.id, productName: product.name, quantity: qty, unitPrice, totalPrice },
+    });
+
     res.status(201).json(sale);
   } catch (err) {
     req.log?.error({ err }, "Create sale error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -181,7 +191,7 @@ router.post("/:id/return", requireAuth, requireRole(["admin", "staff"]), async (
       return;
     }
     if (sale.returned) {
-      res.status(400).json({ error: "Bad Request", message: "Bu satış zaten iade edildi" });
+      res.status(400).json(Errors.alreadyReturned());
       return;
     }
 
@@ -212,10 +222,18 @@ router.post("/:id/return", requireAuth, requireRole(["admin", "staff"]), async (
       });
     }
 
+    await audit({
+      req,
+      action: "SALE_RETURN",
+      entity: "sale",
+      entityId: saleId,
+      details: { productId: sale.productId, quantity: sale.quantity, note },
+    });
+
     res.json({ message: "İade başarıyla kaydedildi", saleId });
   } catch (err) {
     req.log?.error({ err }, "Return sale error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 

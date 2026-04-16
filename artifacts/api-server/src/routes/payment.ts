@@ -1,7 +1,9 @@
 import { Router, Request, Response } from "express";
 import { db, companiesTable, bankPaymentsTable, platformSettingsTable } from "@workspace/db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { requireAuth, requireSuperAdmin } from "../middlewares/auth.js";
+import { Errors } from "../lib/errors.js";
+import { audit } from "../lib/audit.js";
 
 const router = Router();
 
@@ -39,7 +41,7 @@ router.get("/status", async (req: Request, res: Response) => {
       ibanInfo,
     });
   } catch (err) {
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -49,7 +51,7 @@ router.post("/bank-transfer", requireAuth, async (req: Request, res: Response) =
     const { amount, senderName, referenceNote } = req.body;
 
     if (!amount || !senderName) {
-      res.status(400).json({ error: "Bad Request", message: "amount ve senderName zorunlu" });
+      res.status(400).json(Errors.badRequest("amount ve senderName zorunlu"));
       return;
     }
 
@@ -61,10 +63,18 @@ router.post("/bank-transfer", requireAuth, async (req: Request, res: Response) =
       status: "pending",
     }).returning();
 
+    await audit({
+      req,
+      action: "PAYMENT_SUBMIT",
+      entity: "payment",
+      entityId: payment!.id,
+      details: { amount, senderName },
+    });
+
     res.status(201).json(payment);
   } catch (err) {
     req.log?.error({ err }, "Bank transfer submission error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -78,7 +88,7 @@ router.get("/my-payments", requireAuth, async (req: Request, res: Response) => {
       .orderBy(desc(bankPaymentsTable.createdAt));
     res.json(payments);
   } catch (err) {
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -105,7 +115,7 @@ router.get("/admin/transfers", requireAuth, requireSuperAdmin, async (req: Reque
       .orderBy(desc(bankPaymentsTable.createdAt));
     res.json(payments);
   } catch (err) {
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -116,7 +126,7 @@ router.patch("/admin/transfers/:id", requireAuth, requireSuperAdmin, async (req:
     const { action, adminNote, activateMonths } = req.body;
 
     if (!["confirm", "reject"].includes(action)) {
-      res.status(400).json({ error: "Bad Request", message: "action: confirm veya reject olmalı" });
+      res.status(400).json(Errors.badRequest("action: 'confirm' veya 'reject' olmalı"));
       return;
     }
 
@@ -126,28 +136,24 @@ router.patch("/admin/transfers/:id", requireAuth, requireSuperAdmin, async (req:
       .where(eq(bankPaymentsTable.id, id));
 
     if (!payment) {
-      res.status(404).json({ error: "Not Found", message: "Ödeme bulunamadı" });
+      res.status(404).json(Errors.notFound("Ödeme"));
       return;
     }
 
     // Idempotency: zaten işlenmiş ödeme tekrar onaylanamaz / reddedilemez
     if (payment.status !== "pending") {
-      res.status(409).json({
-        error: "Conflict",
-        message: `Bu ödeme zaten '${payment.status}' durumunda. Tekrar işlem yapılamaz.`,
-        currentStatus: payment.status,
-      });
+      res.status(409).json(Errors.paymentAlreadyProcessed(payment.status));
       return;
     }
 
-    const status = action === "confirm" ? "confirmed" : "rejected";
+    const newStatus = action === "confirm" ? "confirmed" : "rejected";
     const [updated] = await db
       .update(bankPaymentsTable)
       .set({
-        status,
+        status: newStatus,
         adminNote: adminNote || null,
         confirmedAt: action === "confirm" ? new Date() : null,
-        confirmedById: req.session?.userId as number | undefined,
+        confirmedById: req.session?.user?.id,
       })
       .where(eq(bankPaymentsTable.id, id))
       .returning();
@@ -163,12 +169,28 @@ router.patch("/admin/transfers/:id", requireAuth, requireSuperAdmin, async (req:
         trialEndsAt: newExpiry,
         updatedAt: new Date(),
       }).where(eq(companiesTable.id, payment.companyId));
+
+      await audit({
+        req,
+        action: "COMPANY_PLAN_CHANGE",
+        entity: "company",
+        entityId: payment.companyId,
+        details: { planType: "active", activatedMonths: months, expiresAt: newExpiry },
+      });
     }
+
+    await audit({
+      req,
+      action: action === "confirm" ? "PAYMENT_CONFIRM" : "PAYMENT_REJECT",
+      entity: "payment",
+      entityId: id,
+      details: { previousStatus: "pending", newStatus, adminNote, amount: payment.amount },
+    });
 
     res.json(updated);
   } catch (err) {
     req.log?.error({ err }, "Transfer action error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -180,7 +202,7 @@ router.get("/admin/platform-settings", requireAuth, requireSuperAdmin, async (re
     for (const row of rows) settings[row.key] = row.value;
     res.json(settings);
   } catch (err) {
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -198,10 +220,17 @@ router.put("/admin/platform-settings", requireAuth, requireSuperAdmin, async (re
         set: { value: ibanInfo, updatedAt: new Date() },
       });
 
+    await audit({
+      req,
+      action: "PLATFORM_SETTINGS_UPDATE",
+      entity: "platform_settings",
+      details: { key: "iban_info", updatedFields: Object.keys(req.body) },
+    });
+
     res.json({ success: true });
   } catch (err) {
     req.log?.error({ err }, "Platform settings update error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 

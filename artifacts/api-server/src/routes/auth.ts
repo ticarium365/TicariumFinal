@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
+import { Errors } from "../lib/errors.js";
+import { audit } from "../lib/audit.js";
 
 const router = Router();
 
@@ -10,39 +12,46 @@ router.post("/login", async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) {
-      res.status(400).json({ error: "Bad Request", message: "Kullanıcı adı ve şifre gerekli" });
+      res.status(400).json(Errors.badRequest("Kullanıcı adı ve şifre gerekli"));
       return;
     }
 
     const companyId = req.companyId;
 
-    // Super admin: company_id olmadan giriş yapabilir
     const [user] = await db
       .select()
       .from(usersTable)
-      .where(
-        eq(usersTable.username, username)
-      );
-
-    if (!user) {
-      res.status(401).json({ error: "Unauthorized", message: "Kullanıcı adı veya şifre hatalı" });
-      return;
-    }
+      .where(eq(usersTable.username, username));
 
     // Super admin her şirketten giriş yapabilir; diğerleri kendi şirketinden
-    if (user.role !== "super_admin" && user.companyId !== companyId) {
-      res.status(401).json({ error: "Unauthorized", message: "Kullanıcı adı veya şifre hatalı" });
+    if (!user || (user.role !== "super_admin" && user.companyId !== companyId)) {
+      await audit({
+        req,
+        action: "LOGIN_FAILED",
+        details: { username, reason: "user_not_found_or_wrong_company" },
+      });
+      res.status(401).json(Errors.unauthorized("Kullanıcı adı veya şifre hatalı"));
       return;
     }
 
     if (!user.isActive) {
-      res.status(401).json({ error: "Unauthorized", message: "Hesabınız devre dışı bırakılmış" });
+      await audit({
+        req,
+        action: "LOGIN_FAILED",
+        details: { username, reason: "account_disabled" },
+      });
+      res.status(401).json(Errors.unauthorized("Hesabınız devre dışı bırakılmış"));
       return;
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      res.status(401).json({ error: "Unauthorized", message: "Kullanıcı adı veya şifre hatalı" });
+      await audit({
+        req,
+        action: "LOGIN_FAILED",
+        details: { username, reason: "wrong_password" },
+      });
+      res.status(401).json(Errors.unauthorized("Kullanıcı adı veya şifre hatalı"));
       return;
     }
 
@@ -55,6 +64,14 @@ router.post("/login", async (req: Request, res: Response) => {
       isActive: user.isActive,
       companyId: user.role === "super_admin" ? (user.companyId ?? companyId) : companyId,
     };
+
+    await audit({
+      req,
+      action: "LOGIN",
+      entity: "user",
+      entityId: user.id,
+      details: { role: user.role },
+    });
 
     res.json({
       user: {
@@ -71,11 +88,15 @@ router.post("/login", async (req: Request, res: Response) => {
     });
   } catch (err) {
     req.log?.error({ err }, "Login error");
-    res.status(500).json({ error: "Internal Server Error", message: "Sunucu hatası" });
+    res.status(500).json(Errors.internal());
   }
 });
 
-router.post("/logout", (req: Request, res: Response) => {
+router.post("/logout", async (req: Request, res: Response) => {
+  const user = req.session.user;
+  if (user) {
+    await audit({ req, action: "LOGOUT", entity: "user", entityId: user.id });
+  }
   req.session.destroy(() => {
     res.json({ message: "Çıkış yapıldı" });
   });

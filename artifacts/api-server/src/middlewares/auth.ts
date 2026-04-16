@@ -16,9 +16,14 @@ declare module "express-session" {
   }
 }
 
+function err(status: number, code: string, message: string) {
+  return { status, body: { error: { code, message, details: null } } };
+}
+
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session?.user) {
-    res.status(401).json({ error: "Unauthorized", message: "Giriş yapmanız gerekiyor" });
+    const e = err(401, "UNAUTHORIZED", "Giriş yapmanız gerekiyor");
+    res.status(e.status).json(e.body);
     return;
   }
   next();
@@ -26,11 +31,13 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.session?.user) {
-    res.status(401).json({ error: "Unauthorized", message: "Giriş yapmanız gerekiyor" });
+    const e = err(401, "UNAUTHORIZED", "Giriş yapmanız gerekiyor");
+    res.status(e.status).json(e.body);
     return;
   }
   if (req.session.user.role !== "admin" && req.session.user.role !== "super_admin") {
-    res.status(403).json({ error: "Forbidden", message: "Bu işlem için admin yetkisi gerekiyor" });
+    const e = err(403, "FORBIDDEN", "Bu işlem için admin yetkisi gerekiyor");
+    res.status(e.status).json(e.body);
     return;
   }
   next();
@@ -39,11 +46,13 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
 export function requireRole(roles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.session?.user) {
-      res.status(401).json({ error: "Unauthorized", message: "Giriş yapmanız gerekiyor" });
+      const e = err(401, "UNAUTHORIZED", "Giriş yapmanız gerekiyor");
+      res.status(e.status).json(e.body);
       return;
     }
     if (!roles.includes(req.session.user.role)) {
-      res.status(403).json({ error: "Forbidden", message: "Bu işlem için yetkiniz yok" });
+      const e = err(403, "FORBIDDEN", "Bu işlem için yetkiniz yok");
+      res.status(e.status).json(e.body);
       return;
     }
     next();
@@ -52,11 +61,13 @@ export function requireRole(roles: string[]) {
 
 export function requireSuperAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.session?.user) {
-    res.status(401).json({ error: "Unauthorized", message: "Giriş yapmanız gerekiyor" });
+    const e = err(401, "UNAUTHORIZED", "Giriş yapmanız gerekiyor");
+    res.status(e.status).json(e.body);
     return;
   }
   if (req.session.user.role !== "super_admin") {
-    res.status(403).json({ error: "Forbidden", message: "Bu işlem için süper admin yetkisi gerekiyor" });
+    const e = err(403, "FORBIDDEN", "Bu işlem için süper admin yetkisi gerekiyor");
+    res.status(e.status).json(e.body);
     return;
   }
   next();

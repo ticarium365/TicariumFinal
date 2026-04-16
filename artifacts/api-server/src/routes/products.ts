@@ -268,12 +268,19 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       : calcProfitPercent(parseFloat(purchasePrice), parseFloat(salePrice));
 
     if (barcode) {
-      const [existing] = await db.select({ id: productsTable.id }).from(productsTable)
+      const [existingBarcode] = await db.select({ id: productsTable.id }).from(productsTable)
         .where(and(eq(productsTable.companyId, cid), eq(productsTable.barcode, barcode)));
-      if (existing) {
-        res.status(409).json({ error: "Conflict", message: "Bu barkod bu şirkette zaten kullanılıyor" });
+      if (existingBarcode) {
+        res.status(409).json({ error: { code: "DUPLICATE_BARCODE", message: "Bu barkod bu şirkette zaten kullanılıyor", details: null } });
         return;
       }
+    }
+
+    const [existingCode] = await db.select({ id: productsTable.id }).from(productsTable)
+      .where(and(eq(productsTable.companyId, cid), eq(productsTable.productCode, productCode)));
+    if (existingCode) {
+      res.status(409).json({ error: { code: "DUPLICATE_PRODUCT_CODE", message: "Bu ürün kodu bu şirkette zaten kullanılıyor", details: null } });
+      return;
     }
 
     const [product] = await db.insert(productsTable).values({
@@ -289,17 +296,17 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       purchasePrice: parseFloat(purchasePrice),
       salePrice: parseFloat(salePrice),
       profitPercent: parseFloat(String(finalProfitPercent)),
-      discountSalePct: discountSalePct !== undefined && discountSalePct !== "" ? parseFloat(discountSalePct) : null,
+      discountSalePct: discountSalePct !== undefined && discountSalePct !== "" ? parseFloat(discountSalePct) : 0,
     }).returning();
 
     res.status(201).json(await formatProduct(product!));
   } catch (err: any) {
     if (err?.code === "23505") {
-      res.status(409).json({ error: "Conflict", message: "Ürün kodu veya barkod zaten kullanılıyor" });
+      res.status(409).json({ error: { code: "DUPLICATE_BARCODE_OR_CODE", message: "Ürün kodu veya barkod bu şirkette zaten kullanılıyor", details: null } });
       return;
     }
     req.log?.error({ err }, "Create product error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Sunucu hatası oluştu", details: null } });
   }
 });
 
@@ -348,7 +355,7 @@ router.put("/:id", requireAuth, async (req: Request, res: Response) => {
       updateData.profitPercent = calcProfitPercent(parseFloat(purchasePrice), parseFloat(salePrice));
     }
     if (discountSalePct !== undefined) {
-      updateData.discountSalePct = discountSalePct !== "" ? parseFloat(String(discountSalePct)) : null;
+      updateData.discountSalePct = discountSalePct !== "" ? parseFloat(String(discountSalePct)) : 0;
     }
 
     const [product] = await db.update(productsTable).set(updateData)
