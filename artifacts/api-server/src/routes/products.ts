@@ -37,7 +37,7 @@ router.get("/categories", requireAuth, async (req: Request, res: Response) => {
     const results = await db
       .selectDistinct({ category: productsTable.category })
       .from(productsTable)
-      .where(and(eq(productsTable.companyId, cid), sql`${productsTable.category} IS NOT NULL`))
+      .where(and(eq(productsTable.companyId, cid), eq(productsTable.isActive, true), sql`${productsTable.category} IS NOT NULL`))
       .orderBy(productsTable.category);
     res.json(results.map((r) => r.category).filter(Boolean));
   } catch (err) {
@@ -53,7 +53,7 @@ router.get("/brands", requireAuth, async (req: Request, res: Response) => {
     const results = await db
       .selectDistinct({ brand: productsTable.brand })
       .from(productsTable)
-      .where(and(eq(productsTable.companyId, cid), sql`${productsTable.brand} IS NOT NULL`))
+      .where(and(eq(productsTable.companyId, cid), eq(productsTable.isActive, true), sql`${productsTable.brand} IS NOT NULL`))
       .orderBy(productsTable.brand);
     res.json(results.map((r) => r.brand).filter(Boolean));
   } catch (err) {
@@ -110,6 +110,7 @@ router.get("/barcode/:barcode", requireAuth, async (req: Request, res: Response)
       .from(productsTable)
       .where(and(
         eq(productsTable.companyId, cid),
+        eq(productsTable.isActive, true),
         or(
           eq(productsTable.barcode, barcode!),
           eq(productsTable.productCode, barcode!)
@@ -132,7 +133,7 @@ router.get("/export", requireAuth, async (req: Request, res: Response) => {
     const cid = req.companyId;
     const { search, category, brand, lowStock, sortBy = "name", sortOrder = "asc" } = req.query;
 
-    const conditions: any[] = [eq(productsTable.companyId, cid)];
+    const conditions: any[] = [eq(productsTable.companyId, cid), eq(productsTable.isActive, true)];
 
     if (search) {
       const searchStr = `%${search}%`;
@@ -170,13 +171,17 @@ router.get("/export", requireAuth, async (req: Request, res: Response) => {
 router.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const { search, category, brand, lowStock, sortBy = "name", sortOrder = "asc", page = 1, limit = 50 } = req.query;
+    const { search, category, brand, lowStock, sortBy = "name", sortOrder = "asc", page = 1, limit = 50, showInactive } = req.query;
 
     const pageNum = parseInt(String(page));
     const limitNum = Math.min(parseInt(String(limit)), 200);
     const offset = (pageNum - 1) * limitNum;
 
+    // showInactive=true yalnızca admin/super_admin için geçerlidir
+    const role = req.session?.user?.role;
+    const canSeeInactive = showInactive === "true" && (role === "admin" || role === "super_admin");
     const conditions: any[] = [eq(productsTable.companyId, cid)];
+    if (!canSeeInactive) conditions.push(eq(productsTable.isActive, true));
 
     if (search) {
       const searchStr = `%${search}%`;
@@ -376,22 +381,48 @@ router.put("/:id", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /api/products/:id
+// DELETE /api/products/:id  — soft delete (isActive=false)
 router.delete("/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
     const id = parseInt(req.params.id!);
-    const [deleted] = await db.delete(productsTable)
-      .where(and(eq(productsTable.id, id), eq(productsTable.companyId, cid)))
+    const [deactivated] = await db.update(productsTable)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(and(eq(productsTable.id, id), eq(productsTable.companyId, cid), eq(productsTable.isActive, true)))
       .returning({ id: productsTable.id });
-    if (!deleted) {
-      res.status(404).json({ error: "Not Found", message: "Ürün bulunamadı" });
+    if (!deactivated) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Ürün bulunamadı veya zaten silinmiş", details: null } });
       return;
     }
     res.json({ message: "Ürün silindi" });
   } catch (err) {
     req.log?.error({ err }, "Delete product error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Sunucu hatası oluştu", details: null } });
+  }
+});
+
+// PATCH /api/products/:id/restore  — soft-deleted ürünü geri yükle (admin+)
+router.patch("/:id/restore", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const role = req.session?.user?.role;
+    if (role !== "admin" && role !== "super_admin") {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "Bu işlem için yetkiniz yok", details: null } });
+      return;
+    }
+    const cid = req.companyId;
+    const id = parseInt(req.params.id!);
+    const [restored] = await db.update(productsTable)
+      .set({ isActive: true, updatedAt: new Date() })
+      .where(and(eq(productsTable.id, id), eq(productsTable.companyId, cid), eq(productsTable.isActive, false)))
+      .returning({ id: productsTable.id });
+    if (!restored) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Silinmiş ürün bulunamadı", details: null } });
+      return;
+    }
+    res.json({ message: "Ürün geri yüklendi" });
+  } catch (err) {
+    req.log?.error({ err }, "Restore product error");
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Sunucu hatası oluştu", details: null } });
   }
 });
 

@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, real, boolean, timestamp, uniqueIndex, check } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, boolean, timestamp, uniqueIndex, index, check } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { sql } from "drizzle-orm";
@@ -28,6 +28,11 @@ export const productsTable = pgTable("products", {
   barcodeCompanyIdx: uniqueIndex("products_barcode_company_idx").on(table.barcode, table.companyId),
   // İş kuralı: stok negatife düşemez
   stockNonNegative: check("products_stock_non_negative", sql`${table.stock} >= 0`),
+  // Performans indexleri — aktif ürün listesi ve filtreler
+  companyActiveIdx: index("products_company_active_idx").on(table.companyId, table.isActive),
+  companyCategoryIdx: index("products_company_category_idx").on(table.companyId, table.category),
+  companyBrandIdx: index("products_company_brand_idx").on(table.companyId, table.brand),
+  companyNameIdx: index("products_company_name_idx").on(table.companyId, table.name),
 }));
 
 export const insertProductSchema = createInsertSchema(productsTable).omit({
