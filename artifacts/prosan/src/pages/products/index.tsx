@@ -433,7 +433,7 @@ export default function ProductsList() {
 
                     {/* İşlemler */}
                     <td className="px-2 py-2.5">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-1">
                         <Link href={`/products/${p.id}/edit`}>
                           <Button variant="ghost" size="icon" className="h-7 w-7" title="Düzenle">
                             <Pencil className="h-3.5 w-3.5" />
