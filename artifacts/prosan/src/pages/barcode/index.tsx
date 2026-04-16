@@ -1,62 +1,60 @@
 import { useState, useEffect, useRef } from "react";
-import { BrowserMultiFormatReader, NotFoundException } from "@zxing/library"; // Fallback to zxing/library if browser isn't fully working, though user specified @zxing/browser, @zxing/library is often more reliable in react. We'll use BrowserMultiFormatReader from @zxing/browser.
 import { BrowserMultiFormatReader as ZXingBrowserReader } from "@zxing/browser";
 import { useGetProductByBarcode } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { ScanLine, Loader2, Search, ArrowRight, Package } from "lucide-react";
+import { ScanLine, Loader2, Search, ArrowRight, SwitchCamera } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export default function BarcodeScanner() {
   const [scannedCode, setScannedCode] = useState<string>("");
   const [manualCode, setManualCode] = useState<string>("");
   const [isScanning, setIsScanning] = useState(true);
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const videoRef = useRef<HTMLVideoElement>(null);
-  const readerRef = useRef<ZXingBrowserReader | null>(null);
+  const controlsRef = useRef<any>(null);
 
-  const { data: product, isLoading, isError, error } = useGetProductByBarcode(
-    scannedCode, 
+  const { data: product, isLoading, isError } = useGetProductByBarcode(
+    scannedCode,
     { query: { enabled: !!scannedCode, retry: false } }
   );
 
   useEffect(() => {
-    let controls: any;
+    if (!isScanning) return;
 
     const startScanner = async () => {
       if (!videoRef.current) return;
-      readerRef.current = new ZXingBrowserReader();
+      if (controlsRef.current) {
+        controlsRef.current.stop();
+        controlsRef.current = null;
+      }
+      const reader = new ZXingBrowserReader();
       try {
-        const videoInputDevices = await ZXingBrowserReader.listVideoInputDevices();
-        if (videoInputDevices.length > 0) {
-          const selectedDeviceId = videoInputDevices[0].deviceId;
-          controls = await readerRef.current.decodeFromVideoDevice(
-            selectedDeviceId,
-            videoRef.current,
-            (result, err) => {
-              if (result) {
-                setScannedCode(result.getText());
-                setIsScanning(false);
-                // controls.stop();
-              }
+        controlsRef.current = await reader.decodeFromConstraints(
+          { video: { facingMode } },
+          videoRef.current,
+          (result) => {
+            if (result) {
+              setScannedCode(result.getText());
+              setIsScanning(false);
             }
-          );
-        }
+          }
+        );
       } catch (err) {
         console.error("Camera access error:", err);
       }
     };
 
-    if (isScanning) {
-      startScanner();
-    }
-
+    const t = setTimeout(startScanner, 100);
     return () => {
-      if (controls) {
-        controls.stop();
+      clearTimeout(t);
+      if (controlsRef.current) {
+        controlsRef.current.stop();
+        controlsRef.current = null;
       }
     };
-  }, [isScanning]);
+  }, [isScanning, facingMode]);
 
   const handleManualSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,6 +70,10 @@ export default function BarcodeScanner() {
     setIsScanning(true);
   };
 
+  const flipCamera = () => {
+    setFacingMode(m => m === "environment" ? "user" : "environment");
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -81,18 +83,37 @@ export default function BarcodeScanner() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="overflow-hidden bg-zinc-950 text-zinc-50 border-zinc-800">
           <CardHeader className="bg-zinc-900 border-b border-zinc-800 pb-4">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <ScanLine className="h-5 w-5 text-primary" />
-              Kamera
+            <CardTitle className="text-lg flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <ScanLine className="h-5 w-5 text-primary" />
+                Kamera
+              </span>
+              {isScanning && (
+                <button
+                  className="bg-zinc-800 hover:bg-zinc-700 text-white rounded-full p-1.5 transition-colors"
+                  onClick={flipCamera}
+                  title={facingMode === "environment" ? "Ön kameraya geç" : "Arka kameraya geç"}
+                >
+                  <SwitchCamera className="h-4 w-4" />
+                </button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0 relative aspect-square md:aspect-auto md:h-[400px] flex flex-col">
             {isScanning ? (
               <div className="relative flex-1 bg-black">
-                <video ref={videoRef} className="w-full h-full object-cover" />
+                <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
                 <div className="absolute inset-0 border-[4px] border-primary/50 m-12 rounded-lg z-10 pointer-events-none">
                   <div className="absolute top-1/2 left-0 w-full h-0.5 bg-primary/80 animate-pulse shadow-[0_0_8px_2px_rgba(234,88,12,0.6)]"></div>
                 </div>
+                {/* Kamera çevir butonu (video üzerinde) */}
+                <button
+                  className="absolute bottom-3 right-3 bg-zinc-900/80 hover:bg-zinc-700/90 text-white rounded-full p-2 z-20 transition-colors"
+                  onClick={flipCamera}
+                  title={facingMode === "environment" ? "Ön kameraya geç" : "Arka kameraya geç"}
+                >
+                  <SwitchCamera className="h-5 w-5" />
+                </button>
               </div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-6 bg-zinc-900">
@@ -120,9 +141,9 @@ export default function BarcodeScanner() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleManualSearch} className="flex gap-2">
-                <Input 
-                  placeholder="Barkod veya ürün kodu" 
-                  value={manualCode} 
+                <Input
+                  placeholder="Barkod veya ürün kodu"
+                  value={manualCode}
                   onChange={e => setManualCode(e.target.value)}
                 />
                 <Button type="submit">
@@ -159,7 +180,7 @@ export default function BarcodeScanner() {
                       <h3 className="font-bold text-xl">{product.name}</h3>
                       <p className="text-sm text-muted-foreground">{product.productCode} • {product.category || 'Kategorisiz'}</p>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-2 bg-muted/50 p-3 rounded-md">
                       <div>
                         <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Stok</p>

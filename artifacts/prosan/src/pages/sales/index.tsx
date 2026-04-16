@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Package, ScanBarcode, X, Loader2, Camera, CameraOff } from "lucide-react";
+import { Search, ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Package, ScanBarcode, X, Loader2, Camera, CameraOff, SwitchCamera } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -33,6 +33,7 @@ export default function SalesScreen() {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [scannedCode, setScannedCode] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<any>(null);
   const scanLockRef = useRef(false);
@@ -56,15 +57,8 @@ export default function SalesScreen() {
     scanLockRef.current = false;
     try {
       const reader = new ZXingBrowserReader();
-      const devices = await ZXingBrowserReader.listVideoInputDevices();
-      if (devices.length === 0) {
-        setCameraError("Kamera bulunamadı");
-        return;
-      }
-      // Arka kamerayı tercih et (mobil için)
-      const backCamera = devices.find(d => d.label.toLowerCase().includes("back") || d.label.toLowerCase().includes("arka")) ?? devices[devices.length - 1];
-      controlsRef.current = await reader.decodeFromVideoDevice(
-        backCamera!.deviceId,
+      controlsRef.current = await reader.decodeFromConstraints(
+        { video: { facingMode } },
         videoRef.current,
         (result, err) => {
           if (result && !scanLockRef.current) {
@@ -76,7 +70,7 @@ export default function SalesScreen() {
     } catch (err: any) {
       setCameraError("Kamera erişim hatası. İzin verdiğinizden emin olun.");
     }
-  }, []);
+  }, [facingMode]);
 
   // Kamerayı durdur
   const stopCamera = useCallback(() => {
@@ -89,14 +83,14 @@ export default function SalesScreen() {
 
   useEffect(() => {
     if (cameraOpen) {
-      // video element render olduktan sonra başlat
+      stopCamera();
       const t = setTimeout(() => startCamera(), 100);
       return () => clearTimeout(t);
     } else {
       stopCamera();
       setScannedCode(null);
     }
-  }, [cameraOpen, startCamera, stopCamera]);
+  }, [cameraOpen, facingMode, startCamera, stopCamera]);
 
   // Tekrar tara: okunan kodu sıfırla ve kilidi aç
   const rescan = () => {
@@ -221,6 +215,14 @@ export default function SalesScreen() {
                     </div>
                   </div>
                 )}
+                {/* Kamera çevir butonu */}
+                <button
+                  className="absolute bottom-2 right-2 bg-zinc-900/80 hover:bg-zinc-700/90 text-white rounded-full p-2 z-20 transition-colors"
+                  onClick={() => setFacingMode(m => m === "environment" ? "user" : "environment")}
+                  title={facingMode === "environment" ? "Ön kameraya geç" : "Arka kameraya geç"}
+                >
+                  <SwitchCamera className="h-5 w-5" />
+                </button>
                 {cameraError && (
                   <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/90">
                     <p className="text-sm text-destructive text-center px-4">{cameraError}</p>
