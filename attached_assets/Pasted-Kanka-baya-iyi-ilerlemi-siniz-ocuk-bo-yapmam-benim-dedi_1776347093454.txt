@@ -1,0 +1,128 @@
+Kanka baya iyi ilerlemişsiniz. Çocuk boş yapmamış, benim dediğim kritik 4 açığı kapatmış resmen. En önemlisi de şu: tenant güvenliği + ödeme idempotency çözülmüşse proje artık “demo oyuncak” havasından çıkıp ciddi SaaS omurgasına yaklaşmış demektir.
+
+Şimdi bence topu güvenlikten biraz ürün sertleştirme + operasyon tarafına çevirmek lazım. Yani şu aşamada “ne yapalım?” sorusunun cevabı: yeni feature abanmak değil, sistemi taş gibi yapmak.
+
+Ben olsam sırayı şöyle kurarım:
+
+1) Business rule dokümanı çıkar
+
+Kodda bazı şeyler var ama yazılı kurallar ayrı dursun. En çok değer vereceğim şey bu olur. Şunları net yazın:
+
+stok eksiye düşemez
+bir satış ikinci kez iade edilemez
+iade olunca stok geri eklenir mi
+ürün pasife alınırsa satışta görünsün mü
+barkod ve product_code unique mi, company bazlı mı
+viewer / staff / admin tam olarak hangi işlemleri yapar
+suspended firmada hangi sayfalar açık kalır
+
+Bu doküman yoksa 2 hafta sonra herkes farklı yorum yapar.
+
+2) Audit log ekleyin
+
+Özellikle şu işlemlere:
+
+login / logout
+kullanıcı oluşturma, rol değiştirme
+ürün silme / düzenleme
+stok düzeltme
+satış iade
+ödeme onayı / reddi
+şirket plan değişimi
+
+Yarın bir müşteri “kim bunu değiştirdi?” dedi mi audit log hayat kurtarır. SaaS’ta bu altın.
+
+3) Hata standardı oturtun
+
+Backend her yerde aynı formatta hata dönsün:
+
+{
+  "error": {
+    "code": "PAYMENT_ALREADY_PROCESSED",
+    "message": "Bu ödeme zaten işlenmiş",
+    "details": null
+  }
+}
+
+Özellikle:
+
+400
+401
+403
+404
+409
+422
+429
+500
+
+Frontend tarafı aşırı rahat eder. Replit’te hızlı geliştirme için de nimet.
+
+4) DB constraint tarafını güçlendirin
+
+Kod kontrolü iyi ama DB tarafı da kilit olsun. Mesela:
+
+company_id + username unique
+company_id + barcode unique gerekiyorsa constraint
+company_id + product_code unique gerekiyorsa constraint
+plan_type / role / payment status enum check
+negatif stock_quantity’ye DB check constraint düşünün
+payment tekrar işlenmemesi için status transition mantığını DB veya service seviyesinde net kapatın
+
+Kod unutulur, DB daha az unutur.
+
+5) Testleri yazın
+
+Şu an elle test edilmiş gibi duruyor, güzel ama yetmez. Ben olsam ilk otomatik testleri şu 8 konuya yazarım:
+
+tenant resolution
+prod’da X-Tenant kapalı mı
+login rate limit
+cookie flags
+negatif stok engeli
+çift iade engeli
+payment double confirm 409
+company isolation (firma A, firma B verisini göremiyor mu)
+
+Bunlar varsa sistem korkmadan büyür.
+
+6) Operasyon dosyası hazırlayın
+
+Bu da çok lazım:
+
+env örneği
+prod deploy adımları
+migration nasıl geçilecek
+seed sadece dev’de mi
+backup nasıl alınacak
+loglar nerede
+healthcheck nasıl çalışıyor
+subdomain routing nasıl ayarlanacak
+
+Bu kısım yatırımcıdan çok size lazım. Sonradan yangın söndürmeyi azaltır.
+
+7) Sonra feature
+
+Bunlar oturduktan sonra para getiren şeylere geçin:
+
+düşük stok uyarısı
+WhatsApp / e-posta bildirim
+gelişmiş rapor
+cari / tedarikçi modülü
+e-fatura entegrasyonu
+ödeme kanıtı dosya yükleme
+abonelikte online ödeme
+
+Yani özet:
+şu an yeni sayfa ekleme zamanı değil, sistem sertleştirme zamanı.
+
+Benim sana net önerim:
+bir sonraki sprintte 4 iş açın:
+
+audit log
+error response standard
+business rules doc
+kritik integration testler
+
+Bunları yaparsanız proje “çalışıyor” seviyesinden “satılabilir / müşteri alınabilir” seviyesine gelir.
+
+İstersen ben sana şimdi direkt Replit’e atılacak görev listesi yazayım; kısa kısa, kopyala-yapıştır yapılacak şekilde.
