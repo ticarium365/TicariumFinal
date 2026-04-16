@@ -55,7 +55,8 @@ export default function ProductDetail({ id }: { id: string }) {
     stock: 0,
     purchasePrice: 0,
     salePrice: 0,
-    profitPercent: 0
+    profitPercent: 0,
+    discountSalePct: 0
   });
 
   useEffect(() => {
@@ -64,7 +65,8 @@ export default function ProductDetail({ id }: { id: string }) {
         stock: product.stock,
         purchasePrice: product.purchasePrice,
         salePrice: product.salePrice,
-        profitPercent: product.profitPercent
+        profitPercent: product.profitPercent,
+        discountSalePct: product.discountSalePct ?? 0
       });
     }
   }, [product]);
@@ -132,6 +134,10 @@ export default function ProductDetail({ id }: { id: string }) {
       return newData;
     });
   };
+
+  const discountedPrice = (quickData.purchasePrice > 0 && quickData.discountSalePct > 0)
+    ? quickData.purchasePrice * (1 + quickData.discountSalePct / 100)
+    : null;
 
   const handleQuickSave = async () => {
     try {
@@ -257,6 +263,15 @@ export default function ProductDetail({ id }: { id: string }) {
                   <Label>Satış Fiyatı (TL)</Label>
                   <Input name="salePrice" type="number" step="0.01" value={quickData.salePrice} onChange={handleQuickChange} className="border-primary" />
                 </div>
+                <div className="space-y-2">
+                  <Label>İskontolu Satış Marjı (%)</Label>
+                  <Input name="discountSalePct" type="number" step="0.1" min="0" value={quickData.discountSalePct} onChange={handleQuickChange} />
+                  {discountedPrice !== null && (
+                    <p className="text-xs text-muted-foreground">
+                      Hesaplanan: <span className="font-semibold text-amber-600">{discountedPrice.toFixed(2)} TL</span>
+                    </p>
+                  )}
+                </div>
                 <Button className="w-full" onClick={handleQuickSave} disabled={quickUpdate.isPending}>
                   {quickUpdate.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                   Kaydet
@@ -280,10 +295,21 @@ export default function ProductDetail({ id }: { id: string }) {
                   <span className="text-muted-foreground">Kâr Marjı</span>
                   <span>%{product.profitPercent.toFixed(1)}</span>
                 </div>
-                <div className="flex justify-between items-center py-2">
+                <div className="flex justify-between items-center py-2 border-b">
                   <span className="text-muted-foreground font-medium">Satış</span>
                   <span className="font-bold text-2xl text-primary">{product.salePrice.toFixed(2)} TL</span>
                 </div>
+                {(product.discountSalePct ?? 0) > 0 && (
+                  <div className="flex justify-between items-center py-2 bg-amber-50 dark:bg-amber-950/20 -mx-4 px-4 rounded-b-md">
+                    <div>
+                      <span className="text-amber-700 dark:text-amber-400 font-medium text-sm">İskontolu Satış</span>
+                      <span className="text-xs text-muted-foreground ml-1">(%{(product.discountSalePct ?? 0).toFixed(1)} marj)</span>
+                    </div>
+                    <span className="font-bold text-xl text-amber-600 dark:text-amber-400">
+                      {(product.purchasePrice * (1 + (product.discountSalePct ?? 0) / 100)).toFixed(2)} TL
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

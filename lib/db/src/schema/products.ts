@@ -15,6 +15,7 @@ export const productsTable = pgTable("products", {
   purchasePrice: real("purchase_price").notNull().default(0),
   salePrice: real("sale_price").notNull().default(0),
   profitPercent: real("profit_percent").notNull().default(0),
+  discountSalePct: real("discount_sale_pct").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

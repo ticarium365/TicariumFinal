@@ -181,14 +181,31 @@ export default function BarcodeScanner() {
                       <p className="text-sm text-muted-foreground">{product.productCode} • {product.category || 'Kategorisiz'}</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 bg-muted/50 p-3 rounded-md">
-                      <div>
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Stok</p>
-                        <p className="text-lg font-mono font-bold">{product.stock}</p>
+                    <div className="bg-muted/50 p-3 rounded-md space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Stok</p>
+                          <p className="text-lg font-mono font-bold">{product.stock}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Alış</p>
+                          <p className="text-base font-semibold">{product.purchasePrice.toFixed(2)} TL</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Fiyat</p>
-                        <p className="text-lg font-bold text-primary">{product.salePrice.toFixed(2)} TL</p>
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/50">
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Satış Fiyatı</p>
+                          <p className="text-lg font-bold text-primary">{product.salePrice.toFixed(2)} TL</p>
+                        </div>
+                        {(product.discountSalePct ?? 0) > 0 && (
+                          <div>
+                            <p className="text-xs text-amber-600 uppercase tracking-wider font-semibold">İskontolu Fiyat</p>
+                            <p className="text-lg font-bold text-amber-600">
+                              {(product.purchasePrice * (1 + (product.discountSalePct ?? 0) / 100)).toFixed(2)} TL
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">%{(product.discountSalePct ?? 0).toFixed(1)} marj</p>
+                          </div>
+                        )}
                       </div>
                     </div>
 

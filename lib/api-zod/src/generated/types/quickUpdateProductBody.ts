@@ -11,4 +11,5 @@ export interface QuickUpdateProductBody {
   purchasePrice?: number;
   salePrice?: number;
   profitPercent?: number;
+  discountSalePct?: number;
 }

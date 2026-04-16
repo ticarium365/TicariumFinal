@@ -93,6 +93,7 @@ export interface Product {
   purchasePrice: number;
   salePrice: number;
   profitPercent: number;
+  discountSalePct: number;
   views30Days: number;
   sales30Days: number;
   updatedAt?: string;
@@ -140,6 +141,7 @@ export interface QuickUpdateProductBody {
   purchasePrice?: number;
   salePrice?: number;
   profitPercent?: number;
+  discountSalePct?: number;
 }
 
 export interface BarcodeResponse {

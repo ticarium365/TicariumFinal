@@ -430,12 +430,13 @@ router.delete("/:id", requireAuth, async (req: Request, res: Response) => {
 router.patch("/:id/quick-update", requireAuth, async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id!);
-    const { stock, purchasePrice, salePrice, profitPercent } = req.body;
+    const { stock, purchasePrice, salePrice, profitPercent, discountSalePct } = req.body;
 
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (stock !== undefined) updateData.stock = parseInt(stock);
     if (purchasePrice !== undefined) updateData.purchasePrice = parseFloat(purchasePrice);
     if (salePrice !== undefined) updateData.salePrice = parseFloat(salePrice);
+    if (discountSalePct !== undefined) updateData.discountSalePct = parseFloat(discountSalePct);
     if (profitPercent !== undefined) {
       updateData.profitPercent = parseFloat(profitPercent);
     } else if (purchasePrice !== undefined && salePrice !== undefined) {

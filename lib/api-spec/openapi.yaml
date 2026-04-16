@@ -716,6 +716,9 @@ components:
         profitPercent:
           type: number
           format: float
+        discountSalePct:
+          type: number
+          format: float
         views30Days:
           type: integer
         sales30Days:
@@ -726,7 +729,7 @@ components:
         createdAt:
           type: string
           format: date-time
-      required: [id, productCode, name, stock, minStock, purchasePrice, salePrice, profitPercent, views30Days, sales30Days]
+      required: [id, productCode, name, stock, minStock, purchasePrice, salePrice, profitPercent, discountSalePct, views30Days, sales30Days]
 
     ProductListResponse:
       type: object
@@ -816,6 +819,9 @@ components:
           type: number
           format: float
         profitPercent:
+          type: number
+          format: float
+        discountSalePct:
           type: number
           format: float
 
