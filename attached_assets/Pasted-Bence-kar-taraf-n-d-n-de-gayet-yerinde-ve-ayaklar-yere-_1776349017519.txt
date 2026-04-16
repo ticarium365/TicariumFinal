@@ -1,0 +1,35 @@
+Bence karşı tarafın dönüşü de gayet yerinde ve ayakları yere basıyor kanka. Boş gaz vermemiş; neyin acil, neyin sonraki sprint işi olduğunu düzgün ayırmış. Özellikle şu tespitler sağlam:
+
+Integration test şart demesi doğru. Manuel curl’le gidilir ama bir yerde sessiz kırılır, kimse fark etmez.
+Excel içe aktarma en büyük satış kaldırıcı iş demesi de tam isabet. İlk müşteri onboarding’inde can kurtarır. “300 ürünü elle gir” dersen adam kaçar.
+Arama indexleri ve büyük veri tarafındaki acıyı önden görmüş olması da iyi. 316 ürün başka, 10.000 başka dünya.
+Sonra da lafı bırakmayıp soft delete + restore + isActive filtreleri + arama indexleri uygulamış olması daha da iyi. Bu baya elle tutulur ilerleme. DELETE’in fiziksel silme yerine is_active=false yapması, satış geçmişi gibi veri bütünlüğü konularında doğru yaklaşım.
+
+Benim net yorumum şu:
+siz artık “mimari doğru mu” aşamasını geçmişsiniz.
+Şu anki mesele:
+ürünü müşteriye girişte sürtünmesiz kullandırmak ve bozulmamasını garantiye almak.
+
+O yüzden bu noktada benim öncelik sıram şöyle olur:
+
+1. Integration test
+Bir sonraki net iş bu olmalı. Çünkü şu ana kadar koyduğunuz bütün korumalar değerli ama test yoksa yarın bir refactor’da biri kırar. Karşı tarafın da dediği gibi kritik senaryolar belli zaten.
+
+2. Excel/CSV import
+Bu da testten hemen sonra. Teknik olarak en seksi iş değil ama satış kapatan iş bu. İlk müşteriyi almak için “ürünleri sisteme hızlı taşıma” en büyük kozlardan biri. Bu konuda karşı tarafın önceliklendirmesi bence çok doğru.
+
+3. Düşük stok alarmı
+Retention tarafında değerli. Müşteri sisteme her gün bakmasa bile sistem onun adına kritik şeyi söylerse bağlanır.
+
+Yani benim cevabım:
+Adam doğru düşünüyor.
+Hatta güzel tarafı şu: sadece yorum yapmamış, seçtiği yolu uygulayıp sonucu da getirmiş. Soft delete ve index işi bu aşamada mantıklı seçim olmuş.
+
+Şimdi ben olsam ona şunu derdim:
+
+Güzel gidiyoruz. Şimdi teknik borcu kilitlemek için integration test sprintine geçelim. Ardından direkt müşteri onboarding’i için Excel/CSV import yapalım. Çünkü ilk müşteri satışını hızlandıracak en kritik iş o.
+
+Yani tek cümlelik karar:
+Sıradaki hamle integration test, hemen arkası Excel import.
+
+İstersen sana şimdi bunu karşı tarafa atmalık, kısa ve net bir mesaj halinde yazayım.
