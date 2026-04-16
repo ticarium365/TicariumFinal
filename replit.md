@@ -11,7 +11,7 @@ Platform markası **SMSYSTEMS**; kiracı markası dinamik olarak API'dan çekili
 ## Test Komutu
 
 ```bash
-# API integration testleri (24 test, 6 suite) — server çalışırken çalıştırın
+# API integration testleri (28 test, 7 suite) — server çalışırken çalıştırın
 pnpm --filter @workspace/api-server run test
 ```
 

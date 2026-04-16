@@ -21,6 +21,7 @@ import {
   Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LowStockBell } from "./low-stock-bell";
 import {
   Sheet,
   SheetContent,
@@ -145,6 +146,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
+
             <SheetContent side="left" className="w-64 p-0" style={{ background: "hsl(222 47% 15%)" }}>
               <SheetHeader className="p-4 border-b text-left" style={{ borderColor: "hsl(222 40% 22%)" }}>
                 <SheetTitle className="text-xl font-bold tracking-tight text-white">{companyName}</SheetTitle>
@@ -173,6 +175,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Sheet>
           <span className="font-bold text-lg tracking-tight text-white">{companyName}</span>
         </div>
+        {/* Mobile sağ — zil */}
+        {user.role !== "super_admin" && <LowStockBell />}
       </header>
 
       {/* Desktop Sidebar */}
@@ -196,6 +200,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <p className="text-sm font-semibold text-white truncate">{user.fullName}</p>
               <p className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(215 25% 55%)" }}>{user.role}</p>
             </div>
+            {user.role !== "super_admin" && <LowStockBell />}
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Çıkış Yap" className="h-8 w-8 shrink-0 text-slate-400 hover:text-white hover:bg-white/10">
               <LogOut className="h-4 w-4" />
             </Button>

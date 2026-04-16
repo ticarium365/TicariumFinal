@@ -392,9 +392,50 @@ describe("5. Tenant İzolasyonu", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 6. SUPER ADMIN
+// 6. DÜŞÜK STOK ALARMLARI
 // ---------------------------------------------------------------------------
-describe("6. Super Admin", () => {
+describe("6. Düşük Stok Alarmları", () => {
+  test("Düşük stok endpoint'i çalışıyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/alerts/low-stock", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(typeof json.count === "number", "count sayısal olmalı");
+    assert.ok(typeof json.critical === "number", "critical sayısal olmalı");
+    assert.ok(typeof json.low === "number", "low sayısal olmalı");
+    assert.ok(Array.isArray(json.products), "products dizi olmalı");
+  });
+
+  test("Düşük stok auth gerektiriyor", async () => {
+    const jar = new CookieJar();
+    const { status } = await api("GET", "/alerts/low-stock", { jar });
+    assert.equal(status, 401, "Oturumsuz erişim reddedilmeli");
+  });
+
+  test("Düşük stok ürünlerin stoku minStock'a eşit veya küçük", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { json } = await api("GET", "/alerts/low-stock", { jar });
+    for (const p of json.products) {
+      assert.ok(p.stock <= p.minStock, `${p.productCode} stok (${p.stock}) > minStock (${p.minStock})`);
+    }
+  });
+
+  test("Tenant izolasyonu: farklı şirketler farklı alarm görir", async () => {
+    const { jar: jarA } = await login("cenan", "cenan123");
+    const { jar: jarB } = await login("nihat_admin", "nihat123", "nihatturizm");
+    const { json: alertA } = await api("GET", "/alerts/low-stock", { jar: jarA });
+    const { json: alertB } = await api("GET", "/alerts/low-stock", { jar: jarB });
+    // Her tenant kendi ürünlerini görüyor — product id listesi farklı olmalı
+    const idsA = new Set(alertA.products.map((p) => p.id));
+    const idsB = new Set(alertB.products.map((p) => p.id));
+    const overlap = [...idsA].filter((id) => idsB.has(id));
+    assert.equal(overlap.length, 0, "Farklı tenant'ların alarm ürünleri çakışmamalı");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 7. SUPER ADMIN
+// ---------------------------------------------------------------------------
+describe("7. Super Admin", () => {
   test("Super admin giriş yapabilir", async () => {
     const { status, json } = await login("superadmin", "superadmin123");
     assert.equal(status, 200, JSON.stringify(json));

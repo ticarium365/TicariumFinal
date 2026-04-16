@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useSearch } from "wouter";
 import * as XLSX from "xlsx";
 import {
   useListProducts,
@@ -137,11 +138,22 @@ export default function ProductsList() {
   const queryClient = useQueryClient();
   const isAdmin = user?.role === "admin";
 
+  const searchStr = useSearch();
+
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("__all__");
   const [brand, setBrand] = useState("__all__");
-  const [lowStock, setLowStock] = useState(false);
+  const [lowStock, setLowStock] = useState(() => {
+    const params = new URLSearchParams(searchStr);
+    return params.get("lowStock") === "true";
+  });
   const [page, setPage] = useState(1);
+
+  // URL parametresi değiştiğinde lowStock filtresi güncelle
+  useEffect(() => {
+    const params = new URLSearchParams(searchStr);
+    setLowStock(params.get("lowStock") === "true");
+  }, [searchStr]);
   const [showFilters, setShowFilters] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);

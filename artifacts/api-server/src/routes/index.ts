@@ -11,6 +11,7 @@ import catalogRouter from "./catalog.js";
 import stockRouter from "./stock.js";
 import companiesRouter from "./companies.js";
 import paymentRouter from "./payment.js";
+import alertsRouter from "./alerts.js";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use("/settings", settingsRouter);
 router.use("/catalog", catalogRouter);
 router.use("/companies", companiesRouter);
 router.use("/payment", paymentRouter);
+router.use("/alerts", alertsRouter);
 
 export default router;
