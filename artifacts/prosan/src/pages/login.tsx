@@ -14,7 +14,7 @@ export default function Login() {
   const { toast } = useToast();
   const { company } = useCompany();
 
-  const companyName = company?.name ?? "SMS";
+  const companyName = "SMSYSTEMS";
   const companySubtitle = "Stok Yönetim Sistemi";
 
   const handleSubmit = async (e: React.FormEvent) => {

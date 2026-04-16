@@ -8,6 +8,14 @@ export interface CompanyInfo {
   logoUrl: string | null;
 }
 
+const PLATFORM: CompanyInfo = {
+  id: 0,
+  name: "SMSYSTEMS",
+  subdomain: "admin",
+  primaryColor: "#2563eb",
+  logoUrl: null,
+};
+
 interface CompanyContextType {
   company: CompanyInfo | null;
   isLoading: boolean;
@@ -24,17 +32,29 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    fetch("/api/auth/tenant", { credentials: "include" })
-      .then((res) => res.ok ? res.json() : Promise.reject(res))
-      .then((data: CompanyInfo) => {
-        if (mounted) setCompany(data);
-      })
-      .catch(() => {
-        // Sessizce devam et
-      })
-      .finally(() => {
-        if (mounted) setIsLoading(false);
-      });
+
+    async function resolve() {
+      // Önce oturum kontrolü — super_admin ise platform markası göster
+      const meRes = await fetch("/api/auth/me", { credentials: "include" }).catch(() => null);
+      if (meRes?.ok) {
+        const me = await meRes.json().catch(() => null);
+        if (me?.role === "super_admin") {
+          if (mounted) { setCompany(PLATFORM); setIsLoading(false); }
+          return;
+        }
+      }
+
+      // Normal kullanıcı: tenant'a ait şirket bilgisini al
+      const tenantRes = await fetch("/api/auth/tenant", { credentials: "include" }).catch(() => null);
+      if (tenantRes?.ok) {
+        const data = await tenantRes.json().catch(() => null);
+        if (mounted && data) setCompany(data);
+      }
+
+      if (mounted) setIsLoading(false);
+    }
+
+    resolve();
     return () => { mounted = false; };
   }, []);
 
