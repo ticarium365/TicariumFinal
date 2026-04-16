@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
-import { db, salesTable, productsTable } from "@workspace/db";
+import { db, salesTable, productsTable, stockMovementsTable } from "@workspace/db";
 import { eq, and, gte, lte, desc, count, sql } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
 
@@ -169,6 +169,54 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
     res.status(201).json(sale);
   } catch (err) {
     req.log?.error({ err }, "Create sale error");
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// POST /api/sales/:id/return — Satış iadesi
+router.post("/:id/return", requireAuth, requireRole(["admin", "staff"]), async (req: Request, res: Response) => {
+  try {
+    const saleId = parseInt(req.params.id);
+    const { note } = req.body;
+
+    const [sale] = await db.select().from(salesTable).where(eq(salesTable.id, saleId));
+    if (!sale) {
+      res.status(404).json({ error: "Not Found", message: "Satış kaydı bulunamadı" });
+      return;
+    }
+    if (sale.returned) {
+      res.status(400).json({ error: "Bad Request", message: "Bu satış zaten iade edildi" });
+      return;
+    }
+
+    await db.update(salesTable).set({
+      returned: true,
+      returnedAt: new Date(),
+      returnNote: note || null,
+    }).where(eq(salesTable.id, saleId));
+
+    // Stoğu geri yükle
+    const [product] = await db.select().from(productsTable).where(eq(productsTable.id, sale.productId));
+    if (product) {
+      await db.update(productsTable)
+        .set({ stock: product.stock + sale.quantity, updatedAt: new Date() })
+        .where(eq(productsTable.id, product.id));
+
+      await db.insert(stockMovementsTable).values({
+        productId: product.id,
+        productName: product.name,
+        productCode: product.productCode,
+        type: "return",
+        quantity: sale.quantity,
+        note: note || `Satış #${saleId} iadesi`,
+        refId: saleId,
+        createdBy: req.session.user?.fullName || req.session.user?.username,
+      });
+    }
+
+    res.json({ message: "İade başarıyla kaydedildi", saleId });
+  } catch (err) {
+    req.log?.error({ err }, "Return sale error");
     res.status(500).json({ error: "Internal Server Error" });
   }
 });

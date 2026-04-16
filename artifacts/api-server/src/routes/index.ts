@@ -8,6 +8,7 @@ import dashboardRouter from "./dashboard.js";
 import reportsRouter from "./reports.js";
 import settingsRouter from "./settings.js";
 import catalogRouter from "./catalog.js";
+import stockRouter from "./stock.js";
 
 const router: IRouter = Router();
 
@@ -16,6 +17,7 @@ router.use("/auth", authRouter);
 router.use("/users", usersRouter);
 router.use("/products", productsRouter);
 router.use("/sales", salesRouter);
+router.use("/stock", stockRouter);
 router.use("/dashboard", dashboardRouter);
 router.use("/reports", reportsRouter);
 router.use("/settings", settingsRouter);

@@ -63,7 +63,8 @@ scripts/
 
 - `users` - Kullanıcılar ve roller
 - `products` - Ürünler (kod, barkod, stok, fiyat, kar vb.)
-- `sales` - Satış kayıtları
+- `sales` - Satış kayıtları (returned, returnedAt, returnNote alanları dahil)
+- `stock_movements` - Stok hareketi geçmişi (satış/giriş/iade/düzeltme)
 - `product_views` - Son 30 gün görüntülenme istatistikleri
 - `company_settings` - Firma ayarları ve IBAN bilgisi
 
@@ -71,11 +72,14 @@ scripts/
 
 1. **Ürün Yönetimi**: CRUD, barkod (manuel/otomatik), kategori/marka filtreleme
 2. **Barkod Sistemi**: Kamera ile tarama (@zxing/browser), manuel giriş, otomatik üretim
-3. **Satış Sistemi**: Barkod/arama ile ürün bulma, stok otomatik düşme
-4. **Dashboard**: Ciro, kar, kritik stok, günlük satış özeti
-5. **Raporlar**: Satış raporu (tarih aralığı), stok raporu
-6. **IBAN/QR**: Yazılı IBAN + QR kod (qrcode.react)
-7. **Kullanıcı Yönetimi**: Admin paneli, rol atama
+3. **Satış Sistemi**: Çoklu ürün sepeti, barkod/arama ile ürün bulma, stok otomatik düşme
+4. **Stok Girişi** (`/stock`): Depoya gelen ürünleri kaydet (arama/barkod, miktar, alış fiyatı, not)
+5. **Stok Hareketi Geçmişi**: Ürün detay sayfasında satış/giriş/iade/düzeltme timeline'ı
+6. **Satış İadesi**: Satış geçmişinde "İade Et" butonu, stok otomatik geri yüklenir
+7. **Dashboard**: 30 günlük ciro/kar grafik, çok satanlar, kritik stok, trend kartları
+8. **Raporlar**: Satış raporu (tarih aralığı), stok raporu
+9. **IBAN/QR**: Yazılı IBAN + QR kod (qrcode.react)
+10. **Kullanıcı Yönetimi**: Admin paneli, rol atama
 
 ## Key Commands
 

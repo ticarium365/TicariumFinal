@@ -11,7 +11,8 @@ import {
   Users, 
   Settings, 
   LogOut, 
-  Menu
+  Menu,
+  PackagePlus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,6 +51,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/barcode", label: "Barkod Tarama", icon: ScanBarcode, roles: ["admin", "staff"] },
     { href: "/sales", label: "Satış Ekranı", icon: ShoppingCart, roles: ["admin", "staff"] },
     { href: "/sales/history", label: "Satış Geçmişi", icon: History, roles: ["admin", "staff", "viewer"] },
+    { href: "/stock", label: "Stok Girişi", icon: PackagePlus, roles: ["admin", "staff"] },
     { href: "/reports", label: "Raporlar", icon: BarChart3, roles: ["admin", "viewer"] },
     { href: "/users", label: "Kullanıcılar", icon: Users, roles: ["admin"] },
     { href: "/settings", label: "Ayarlar", icon: Settings, roles: ["admin"] },

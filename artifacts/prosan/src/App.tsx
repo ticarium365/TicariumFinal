@@ -17,6 +17,7 @@ import ProductEdit from "@/pages/products/edit";
 import BarcodeScanner from "@/pages/barcode/index";
 import SalesScreen from "@/pages/sales/index";
 import SalesHistory from "@/pages/sales/history";
+import StockEntry from "@/pages/stock/index";
 import Reports from "@/pages/reports/index";
 import UsersList from "@/pages/users/index";
 import Settings from "@/pages/settings/index";
@@ -100,6 +101,10 @@ function AuthenticatedRouter() {
 
         <Route path="/sales/history">
           {() => <ProtectedRoute component={SalesHistory} />}
+        </Route>
+
+        <Route path="/stock">
+          {() => <ProtectedRoute component={StockEntry} roles={["admin", "staff"]} />}
         </Route>
 
         <Route path="/reports">

@@ -22,14 +22,6 @@ export default function ProductNew() {
   const { data: brands } = useListBrands();
   const { data: categories } = useListCategories();
 
-  // Sayfa açıldığında otomatik barkod üret
-  useEffect(() => {
-    generateBarcode.mutateAsync().then(res => {
-      setFormData(prev => ({ ...prev, barcode: res.barcode }));
-    }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const [formData, setFormData] = useState({
     productCode: "",
     barcode: "",
@@ -43,6 +35,14 @@ export default function ProductNew() {
     salePrice: 0,
     profitPercent: 0,
   });
+
+  // Sayfa açıldığında otomatik barkod üret
+  useEffect(() => {
+    generateBarcode.mutateAsync().then(res => {
+      setFormData(prev => ({ ...prev, barcode: res.barcode }));
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

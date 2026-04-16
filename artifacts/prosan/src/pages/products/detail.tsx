@@ -1,14 +1,45 @@
 import { useState, useEffect, useRef } from "react";
 import { useGetProduct, useQuickUpdateProduct, getGetProductQueryKey } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Edit, Save, Loader2, Printer } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Edit, Save, Loader2, Printer, PackagePlus, TrendingDown, RotateCcw, Wrench, Activity } from "lucide-react";
 import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import JsBarcode from "jsbarcode";
+
+interface StockMovement {
+  id: number;
+  type: string;
+  quantity: number;
+  note: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+function useProductMovements(productId: number) {
+  return useQuery<{ movements: StockMovement[]; total: number }>({
+    queryKey: ["stock-movements", productId],
+    queryFn: async () => {
+      const res = await fetch(`/api/stock/movements?productId=${productId}&limit=20`, { credentials: "include" });
+      if (!res.ok) throw new Error("fetch error");
+      return res.json();
+    },
+    enabled: !!productId,
+    staleTime: 30_000,
+  });
+}
+
+const movementMeta: Record<string, { label: string; icon: React.ElementType; color: string; sign: string }> = {
+  sale:       { label: "Satış",        icon: TrendingDown,  color: "text-rose-600",    sign: "-" },
+  purchase:   { label: "Stok Girişi",  icon: PackagePlus,   color: "text-emerald-600", sign: "+" },
+  return:     { label: "İade",         icon: RotateCcw,     color: "text-blue-600",    sign: "+" },
+  correction: { label: "Düzeltme",     icon: Wrench,        color: "text-amber-600",   sign: "" },
+};
 
 export default function ProductDetail({ id }: { id: string }) {
   const productId = parseInt(id, 10);
@@ -17,6 +48,7 @@ export default function ProductDetail({ id }: { id: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const barcodeSvgRef = useRef<SVGSVGElement>(null);
+  const { data: movementsData } = useProductMovements(productId);
 
   const [editMode, setEditMode] = useState(false);
   const [quickData, setQuickData] = useState({
@@ -257,6 +289,52 @@ export default function ProductDetail({ id }: { id: string }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Stok Hareketi Geçmişi */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" />
+            Stok Hareketi Geçmişi
+            {movementsData?.total != null && movementsData.total > 0 && (
+              <Badge variant="secondary" className="ml-1">{movementsData.total}</Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0 pb-2">
+          {!movementsData?.movements?.length ? (
+            <p className="text-sm text-muted-foreground text-center py-6">Henüz stok hareketi bulunmuyor.</p>
+          ) : (
+            <div className="divide-y">
+              {movementsData.movements.map(m => {
+                const meta = movementMeta[m.type] ?? { label: m.type, icon: Activity, color: "text-muted-foreground", sign: "" };
+                const Icon = meta.icon;
+                const sign = m.type === "correction" ? (m.quantity >= 0 ? "+" : "") : meta.sign;
+                return (
+                  <div key={m.id} className="flex items-center gap-3 py-2.5">
+                    <div className={`rounded-full p-1.5 bg-muted/60 shrink-0 ${meta.color}`}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{meta.label}</span>
+                        {m.note && <span className="text-xs text-muted-foreground truncate">· {m.note}</span>}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                        <span>{new Date(m.createdAt).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" })}</span>
+                        {m.createdBy && <span>· {m.createdBy}</span>}
+                      </div>
+                    </div>
+                    <span className={`font-mono font-bold text-sm shrink-0 ${meta.color}`}>
+                      {sign}{Math.abs(m.quantity)} adet
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
