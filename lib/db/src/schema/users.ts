@@ -1,12 +1,13 @@
-import { pgTable, serial, text, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, integer, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const userRoleEnum = pgEnum("user_role", ["admin", "staff", "viewer"]);
+export const userRoleEnum = pgEnum("user_role", ["admin", "staff", "viewer", "super_admin"]);
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
+  companyId: integer("company_id"),
+  username: text("username").notNull(),
   passwordHash: text("password_hash").notNull(),
   fullName: text("full_name").notNull(),
   email: text("email"),
@@ -14,7 +15,9 @@ export const usersTable = pgTable("users", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => ({
+  usernameCompanyIdx: uniqueIndex("users_username_company_idx").on(table.username, table.companyId),
+}));
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({
   id: true,

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/components/auth-context";
+import { CompanyProvider } from "@/components/company-context";
 import { Layout } from "@/components/layout";
 import NotFound from "@/pages/not-found";
 
@@ -21,6 +22,7 @@ import StockEntry from "@/pages/stock/index";
 import Reports from "@/pages/reports/index";
 import UsersList from "@/pages/users/index";
 import Settings from "@/pages/settings/index";
+import CompaniesAdmin from "@/pages/admin/companies";
 
 const queryClient = new QueryClient();
 
@@ -119,6 +121,10 @@ function AuthenticatedRouter() {
           {() => <ProtectedRoute component={Settings} roles={["admin"]} />}
         </Route>
 
+        <Route path="/admin/companies">
+          {() => <ProtectedRoute component={CompaniesAdmin} roles={["super_admin"]} />}
+        </Route>
+
         <Route component={NotFound} />
       </Switch>
     </AuthProvider>
@@ -129,15 +135,17 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Switch>
-            <Route path="/catalog" component={Catalog} />
-            <Route>
-              {() => <AuthenticatedRouter />}
-            </Route>
-          </Switch>
-        </WouterRouter>
-        <Toaster />
+        <CompanyProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Switch>
+              <Route path="/catalog" component={Catalog} />
+              <Route>
+                {() => <AuthenticatedRouter />}
+              </Route>
+            </Switch>
+          </WouterRouter>
+          <Toaster />
+        </CompanyProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

@@ -6,21 +6,14 @@ const router = Router();
 
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const {
-      search,
-      category,
-      brand,
-      sortBy = "name",
-      sortOrder = "asc",
-      page = 1,
-      limit = 50,
-    } = req.query;
+    const cid = req.companyId;
+    const { search, category, brand, sortBy = "name", sortOrder = "asc", page = 1, limit = 50 } = req.query;
 
     const pageNum = parseInt(String(page));
     const limitNum = Math.min(parseInt(String(limit)), 200);
     const offset = (pageNum - 1) * limitNum;
 
-    const conditions = [];
+    const conditions: any[] = [eq(productsTable.companyId, cid)];
 
     if (search) {
       const searchStr = `%${search}%`;
@@ -33,16 +26,10 @@ router.get("/", async (req: Request, res: Response) => {
         )
       );
     }
+    if (category) conditions.push(eq(productsTable.category, String(category)));
+    if (brand) conditions.push(eq(productsTable.brand, String(brand)));
 
-    if (category) {
-      conditions.push(eq(productsTable.category, String(category)));
-    }
-
-    if (brand) {
-      conditions.push(eq(productsTable.brand, String(brand)));
-    }
-
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = and(...conditions);
 
     const orderColumn = {
       name: productsTable.name,
@@ -53,35 +40,27 @@ router.get("/", async (req: Request, res: Response) => {
 
     const orderFn = sortOrder === "desc" ? desc : asc;
 
+    const selectFields = {
+      id: productsTable.id,
+      productCode: productsTable.productCode,
+      name: productsTable.name,
+      brand: productsTable.brand,
+      category: productsTable.category,
+      description: productsTable.description,
+      stock: productsTable.stock,
+      minStock: productsTable.minStock,
+      salePrice: productsTable.salePrice,
+      barcode: productsTable.barcode,
+    };
+
     const [products, totalResult, categories, brands] = await Promise.all([
-      db
-        .select({
-          id: productsTable.id,
-          productCode: productsTable.productCode,
-          name: productsTable.name,
-          brand: productsTable.brand,
-          category: productsTable.category,
-          description: productsTable.description,
-          stock: productsTable.stock,
-          minStock: productsTable.minStock,
-          salePrice: productsTable.salePrice,
-          barcode: productsTable.barcode,
-        })
-        .from(productsTable)
-        .where(whereClause)
-        .orderBy(orderFn(orderColumn))
-        .limit(limitNum)
-        .offset(offset),
+      db.select(selectFields).from(productsTable).where(whereClause).orderBy(orderFn(orderColumn)).limit(limitNum).offset(offset),
       db.select({ count: count() }).from(productsTable).where(whereClause),
-      db
-        .selectDistinct({ category: productsTable.category })
-        .from(productsTable)
-        .where(sql`${productsTable.category} IS NOT NULL`)
+      db.selectDistinct({ category: productsTable.category }).from(productsTable)
+        .where(and(eq(productsTable.companyId, cid), sql`${productsTable.category} IS NOT NULL`))
         .orderBy(productsTable.category),
-      db
-        .selectDistinct({ brand: productsTable.brand })
-        .from(productsTable)
-        .where(sql`${productsTable.brand} IS NOT NULL`)
+      db.selectDistinct({ brand: productsTable.brand }).from(productsTable)
+        .where(and(eq(productsTable.companyId, cid), sql`${productsTable.brand} IS NOT NULL`))
         .orderBy(productsTable.brand),
     ]);
 
@@ -104,6 +83,7 @@ router.get("/", async (req: Request, res: Response) => {
 
 router.get("/:id", async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const id = parseInt(req.params.id!);
     const [product] = await db
       .select({
@@ -119,7 +99,7 @@ router.get("/:id", async (req: Request, res: Response) => {
         barcode: productsTable.barcode,
       })
       .from(productsTable)
-      .where(eq(productsTable.id, id));
+      .where(and(eq(productsTable.id, id), eq(productsTable.companyId, cid)));
 
     if (!product) {
       res.status(404).json({ error: "Not Found", message: "Ürün bulunamadı" });

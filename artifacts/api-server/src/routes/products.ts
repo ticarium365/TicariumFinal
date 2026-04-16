@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { db, productsTable, productViewsTable, salesTable } from "@workspace/db";
-import { eq, like, ilike, and, lte, or, desc, asc, count, gte, sql } from "drizzle-orm";
+import { eq, ilike, and, lte, or, desc, asc, count, gte, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
@@ -10,54 +10,34 @@ function calcProfitPercent(purchasePrice: number, salePrice: number): number {
   return ((salePrice - purchasePrice) / purchasePrice) * 100;
 }
 
-async function getViews30Days(productId: number): Promise<number> {
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const [result] = await db
-    .select({ count: count() })
-    .from(productViewsTable)
-    .where(
-      and(
-        eq(productViewsTable.productId, productId),
-        gte(productViewsTable.viewedAt, thirtyDaysAgo)
-      )
-    );
-  return result?.count ?? 0;
-}
-
-async function getSales30Days(productId: number): Promise<number> {
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const [result] = await db
-    .select({ total: sql<number>`COALESCE(SUM(${salesTable.quantity}), 0)` })
-    .from(salesTable)
-    .where(
-      and(
-        eq(salesTable.productId, productId),
-        gte(salesTable.createdAt, thirtyDaysAgo)
-      )
-    );
-  return Number(result?.total ?? 0);
-}
-
 async function formatProduct(p: typeof productsTable.$inferSelect) {
-  const [views, sales] = await Promise.all([
-    getViews30Days(p.id),
-    getSales30Days(p.id),
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const [viewResult, saleResult] = await Promise.all([
+    db.select({ count: count() }).from(productViewsTable).where(
+      and(eq(productViewsTable.productId, p.id), gte(productViewsTable.viewedAt, thirtyDaysAgo))
+    ),
+    db.select({ total: sql<number>`COALESCE(SUM(${salesTable.quantity}), 0)` }).from(salesTable).where(
+      and(eq(salesTable.productId, p.id), gte(salesTable.createdAt, thirtyDaysAgo))
+    ),
   ]);
+
   return {
     ...p,
-    views30Days: views,
-    sales30Days: sales,
+    views30Days: viewResult[0]?.count ?? 0,
+    sales30Days: Number(saleResult[0]?.total ?? 0),
   };
 }
 
+// GET /api/products/categories
 router.get("/categories", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const results = await db
       .selectDistinct({ category: productsTable.category })
       .from(productsTable)
-      .where(sql`${productsTable.category} IS NOT NULL`)
+      .where(and(eq(productsTable.companyId, cid), sql`${productsTable.category} IS NOT NULL`))
       .orderBy(productsTable.category);
     res.json(results.map((r) => r.category).filter(Boolean));
   } catch (err) {
@@ -66,12 +46,14 @@ router.get("/categories", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/products/brands
 router.get("/brands", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const results = await db
       .selectDistinct({ brand: productsTable.brand })
       .from(productsTable)
-      .where(sql`${productsTable.brand} IS NOT NULL`)
+      .where(and(eq(productsTable.companyId, cid), sql`${productsTable.brand} IS NOT NULL`))
       .orderBy(productsTable.brand);
     res.json(results.map((r) => r.brand).filter(Boolean));
   } catch (err) {
@@ -80,16 +62,16 @@ router.get("/brands", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/products/generate-barcode
 router.get("/generate-barcode", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     let barcode: string;
     let isUnique = false;
     do {
       barcode = String(Math.floor(100000000000 + Math.random() * 900000000000));
-      const [existing] = await db
-        .select({ id: productsTable.id })
-        .from(productsTable)
-        .where(eq(productsTable.barcode, barcode));
+      const [existing] = await db.select({ id: productsTable.id }).from(productsTable)
+        .where(and(eq(productsTable.companyId, cid), eq(productsTable.barcode, barcode)));
       isUnique = !existing;
     } while (!isUnique);
     res.json({ barcode });
@@ -99,16 +81,16 @@ router.get("/generate-barcode", requireAuth, async (req: Request, res: Response)
   }
 });
 
+// POST /api/products/generate-barcode
 router.post("/generate-barcode", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     let barcode: string;
     let isUnique = false;
     do {
       barcode = String(Math.floor(100000000000 + Math.random() * 900000000000));
-      const [existing] = await db
-        .select({ id: productsTable.id })
-        .from(productsTable)
-        .where(eq(productsTable.barcode, barcode));
+      const [existing] = await db.select({ id: productsTable.id }).from(productsTable)
+        .where(and(eq(productsTable.companyId, cid), eq(productsTable.barcode, barcode)));
       isUnique = !existing;
     } while (!isUnique);
     res.json({ barcode });
@@ -118,16 +100,20 @@ router.post("/generate-barcode", requireAuth, async (req: Request, res: Response
   }
 });
 
+// GET /api/products/barcode/:barcode
 router.get("/barcode/:barcode", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const { barcode } = req.params;
-    // Search by barcode field first, then by productCode as fallback
     const [product] = await db
       .select()
       .from(productsTable)
-      .where(or(
-        eq(productsTable.barcode, barcode!),
-        eq(productsTable.productCode, barcode!)
+      .where(and(
+        eq(productsTable.companyId, cid),
+        or(
+          eq(productsTable.barcode, barcode!),
+          eq(productsTable.productCode, barcode!)
+        )
       ));
     if (!product) {
       res.status(404).json({ error: "Not Found", message: "Ürün bulunamadı" });
@@ -140,30 +126,29 @@ router.get("/barcode/:barcode", requireAuth, async (req: Request, res: Response)
   }
 });
 
+// GET /api/products/export
 router.get("/export", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const { search, category, brand, lowStock, sortBy = "name", sortOrder = "asc" } = req.query;
 
-    const conditions = [];
+    const conditions: any[] = [eq(productsTable.companyId, cid)];
 
     if (search) {
       const searchStr = `%${search}%`;
-      conditions.push(
-        or(
-          ilike(productsTable.name, searchStr),
-          ilike(productsTable.productCode, searchStr),
-          ilike(productsTable.barcode, searchStr),
-          ilike(productsTable.brand, searchStr),
-          ilike(productsTable.category, searchStr)
-        )
-      );
+      conditions.push(or(
+        ilike(productsTable.name, searchStr),
+        ilike(productsTable.productCode, searchStr),
+        ilike(productsTable.barcode, searchStr),
+        ilike(productsTable.brand, searchStr),
+        ilike(productsTable.category, searchStr)
+      ));
     }
     if (category) conditions.push(eq(productsTable.category, String(category)));
     if (brand) conditions.push(eq(productsTable.brand, String(brand)));
     if (lowStock === "true") conditions.push(lte(productsTable.stock, productsTable.minStock));
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
+    const whereClause = and(...conditions);
     const orderColumn = {
       name: productsTable.name,
       productCode: productsTable.productCode,
@@ -171,15 +156,9 @@ router.get("/export", requireAuth, async (req: Request, res: Response) => {
       salePrice: productsTable.salePrice,
       purchasePrice: productsTable.purchasePrice,
     }[String(sortBy)] ?? productsTable.name;
-
     const orderFn = sortOrder === "desc" ? desc : asc;
 
-    const products = await db
-      .select()
-      .from(productsTable)
-      .where(whereClause)
-      .orderBy(orderFn(orderColumn));
-
+    const products = await db.select().from(productsTable).where(whereClause).orderBy(orderFn(orderColumn));
     res.json({ products, total: products.length });
   } catch (err) {
     req.log?.error({ err }, "Export products error");
@@ -187,51 +166,33 @@ router.get("/export", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/products
 router.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
-    const {
-      search,
-      category,
-      brand,
-      lowStock,
-      sortBy = "name",
-      sortOrder = "asc",
-      page = 1,
-      limit = 50,
-    } = req.query;
+    const cid = req.companyId;
+    const { search, category, brand, lowStock, sortBy = "name", sortOrder = "asc", page = 1, limit = 50 } = req.query;
 
     const pageNum = parseInt(String(page));
     const limitNum = Math.min(parseInt(String(limit)), 200);
     const offset = (pageNum - 1) * limitNum;
 
-    const conditions = [];
+    const conditions: any[] = [eq(productsTable.companyId, cid)];
 
     if (search) {
       const searchStr = `%${search}%`;
-      conditions.push(
-        or(
-          ilike(productsTable.name, searchStr),
-          ilike(productsTable.productCode, searchStr),
-          ilike(productsTable.barcode, searchStr),
-          ilike(productsTable.brand, searchStr),
-          ilike(productsTable.category, searchStr)
-        )
-      );
+      conditions.push(or(
+        ilike(productsTable.name, searchStr),
+        ilike(productsTable.productCode, searchStr),
+        ilike(productsTable.barcode, searchStr),
+        ilike(productsTable.brand, searchStr),
+        ilike(productsTable.category, searchStr)
+      ));
     }
+    if (category) conditions.push(eq(productsTable.category, String(category)));
+    if (brand) conditions.push(eq(productsTable.brand, String(brand)));
+    if (lowStock === "true") conditions.push(lte(productsTable.stock, productsTable.minStock));
 
-    if (category) {
-      conditions.push(eq(productsTable.category, String(category)));
-    }
-
-    if (brand) {
-      conditions.push(eq(productsTable.brand, String(brand)));
-    }
-
-    if (lowStock === "true") {
-      conditions.push(lte(productsTable.stock, productsTable.minStock));
-    }
-
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = and(...conditions);
 
     const orderColumn = {
       name: productsTable.name,
@@ -242,53 +203,37 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
       profitPercent: productsTable.profitPercent,
       updatedAt: productsTable.updatedAt,
     }[String(sortBy)] ?? productsTable.name;
-
     const orderFn = sortOrder === "desc" ? desc : asc;
-
-    const [products, totalResult] = await Promise.all([
-      db.select().from(productsTable)
-        .where(whereClause)
-        .orderBy(orderFn(orderColumn))
-        .limit(limitNum)
-        .offset(offset),
-      db.select({ count: count() }).from(productsTable).where(whereClause),
-    ]);
-
-    const total = totalResult[0]?.count ?? 0;
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+    const [products, totalResult] = await Promise.all([
+      db.select().from(productsTable).where(whereClause).orderBy(orderFn(orderColumn)).limit(limitNum).offset(offset),
+      db.select({ count: count() }).from(productsTable).where(whereClause),
+    ]);
+
+    const total = totalResult[0]?.count ?? 0;
     const productIds = products.map((p) => p.id);
 
     const [viewCounts, saleCounts] = await Promise.all([
       productIds.length > 0
-        ? db.select({
-            productId: productViewsTable.productId,
-            cnt: count(),
-          })
-          .from(productViewsTable)
-          .where(
-            and(
+        ? db.select({ productId: productViewsTable.productId, cnt: count() })
+            .from(productViewsTable)
+            .where(and(
               sql`${productViewsTable.productId} = ANY(${sql.raw(`ARRAY[${productIds.join(",")}]`)})`,
               gte(productViewsTable.viewedAt, thirtyDaysAgo)
-            )
-          )
-          .groupBy(productViewsTable.productId)
+            ))
+            .groupBy(productViewsTable.productId)
         : Promise.resolve([]),
       productIds.length > 0
-        ? db.select({
-            productId: salesTable.productId,
-            total: sql<number>`COALESCE(SUM(${salesTable.quantity}), 0)`,
-          })
-          .from(salesTable)
-          .where(
-            and(
+        ? db.select({ productId: salesTable.productId, total: sql<number>`COALESCE(SUM(${salesTable.quantity}), 0)` })
+            .from(salesTable)
+            .where(and(
               sql`${salesTable.productId} = ANY(${sql.raw(`ARRAY[${productIds.join(",")}]`)})`,
               gte(salesTable.createdAt, thirtyDaysAgo)
-            )
-          )
-          .groupBy(salesTable.productId)
+            ))
+            .groupBy(salesTable.productId)
         : Promise.resolve([]),
     ]);
 
@@ -301,22 +246,18 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
       sales30Days: saleMap.get(p.id) ?? 0,
     }));
 
-    res.json({
-      products: formatted,
-      total,
-      page: pageNum,
-      limit: limitNum,
-      totalPages: Math.ceil(total / limitNum),
-    });
+    res.json({ products: formatted, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
   } catch (err) {
     req.log?.error({ err }, "List products error");
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
+// POST /api/products
 router.post("/", requireAuth, async (req: Request, res: Response) => {
   try {
-    const { productCode, barcode, name, brand, category, description, stock, minStock, purchasePrice, salePrice, profitPercent } = req.body;
+    const cid = req.companyId;
+    const { productCode, barcode, name, brand, category, description, stock, minStock, purchasePrice, salePrice, profitPercent, discountSalePct } = req.body;
     if (!productCode || !name || stock === undefined || minStock === undefined || purchasePrice === undefined || salePrice === undefined) {
       res.status(400).json({ error: "Bad Request", message: "Zorunlu alanlar eksik" });
       return;
@@ -327,14 +268,16 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       : calcProfitPercent(parseFloat(purchasePrice), parseFloat(salePrice));
 
     if (barcode) {
-      const [existing] = await db.select({ id: productsTable.id }).from(productsTable).where(eq(productsTable.barcode, barcode));
+      const [existing] = await db.select({ id: productsTable.id }).from(productsTable)
+        .where(and(eq(productsTable.companyId, cid), eq(productsTable.barcode, barcode)));
       if (existing) {
-        res.status(409).json({ error: "Conflict", message: "Bu barkod zaten kullanılıyor" });
+        res.status(409).json({ error: "Conflict", message: "Bu barkod bu şirkette zaten kullanılıyor" });
         return;
       }
     }
 
     const [product] = await db.insert(productsTable).values({
+      companyId: cid,
       productCode,
       barcode: barcode || null,
       name,
@@ -346,6 +289,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       purchasePrice: parseFloat(purchasePrice),
       salePrice: parseFloat(salePrice),
       profitPercent: parseFloat(String(finalProfitPercent)),
+      discountSalePct: discountSalePct !== undefined && discountSalePct !== "" ? parseFloat(discountSalePct) : null,
     }).returning();
 
     res.status(201).json(await formatProduct(product!));
@@ -359,16 +303,19 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/products/:id
 router.get("/:id", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const id = parseInt(req.params.id!);
-    const [product] = await db.select().from(productsTable).where(eq(productsTable.id, id));
+    const [product] = await db.select().from(productsTable)
+      .where(and(eq(productsTable.id, id), eq(productsTable.companyId, cid)));
     if (!product) {
       res.status(404).json({ error: "Not Found", message: "Ürün bulunamadı" });
       return;
     }
 
-    await db.insert(productViewsTable).values({ productId: id });
+    await db.insert(productViewsTable).values({ companyId: cid, productId: id });
 
     res.json(await formatProduct(product));
   } catch (err) {
@@ -377,10 +324,12 @@ router.get("/:id", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// PUT /api/products/:id
 router.put("/:id", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const id = parseInt(req.params.id!);
-    const { productCode, barcode, name, brand, category, description, stock, minStock, purchasePrice, salePrice, profitPercent } = req.body;
+    const { productCode, barcode, name, brand, category, description, stock, minStock, purchasePrice, salePrice, profitPercent, discountSalePct } = req.body;
 
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (productCode !== undefined) updateData.productCode = productCode;
@@ -391,7 +340,6 @@ router.put("/:id", requireAuth, async (req: Request, res: Response) => {
     if (stock !== undefined) updateData.stock = parseInt(stock);
     if (minStock !== undefined) updateData.minStock = parseInt(minStock);
     if (barcode !== undefined) updateData.barcode = barcode || null;
-
     if (purchasePrice !== undefined) updateData.purchasePrice = parseFloat(purchasePrice);
     if (salePrice !== undefined) updateData.salePrice = parseFloat(salePrice);
     if (profitPercent !== undefined) {
@@ -399,8 +347,13 @@ router.put("/:id", requireAuth, async (req: Request, res: Response) => {
     } else if (purchasePrice !== undefined && salePrice !== undefined) {
       updateData.profitPercent = calcProfitPercent(parseFloat(purchasePrice), parseFloat(salePrice));
     }
+    if (discountSalePct !== undefined) {
+      updateData.discountSalePct = discountSalePct !== "" ? parseFloat(String(discountSalePct)) : null;
+    }
 
-    const [product] = await db.update(productsTable).set(updateData).where(eq(productsTable.id, id)).returning();
+    const [product] = await db.update(productsTable).set(updateData)
+      .where(and(eq(productsTable.id, id), eq(productsTable.companyId, cid)))
+      .returning();
     if (!product) {
       res.status(404).json({ error: "Not Found", message: "Ürün bulunamadı" });
       return;
@@ -416,41 +369,21 @@ router.put("/:id", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// DELETE /api/products/:id
 router.delete("/:id", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const id = parseInt(req.params.id!);
-    await db.delete(productsTable).where(eq(productsTable.id, id));
-    res.json({ message: "Ürün silindi" });
-  } catch (err) {
-    req.log?.error({ err }, "Delete product error");
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-router.patch("/:id/quick-update", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const id = parseInt(req.params.id!);
-    const { stock, purchasePrice, salePrice, profitPercent, discountSalePct } = req.body;
-
-    const updateData: Record<string, unknown> = { updatedAt: new Date() };
-    if (stock !== undefined) updateData.stock = parseInt(stock);
-    if (purchasePrice !== undefined) updateData.purchasePrice = parseFloat(purchasePrice);
-    if (salePrice !== undefined) updateData.salePrice = parseFloat(salePrice);
-    if (discountSalePct !== undefined) updateData.discountSalePct = parseFloat(discountSalePct);
-    if (profitPercent !== undefined) {
-      updateData.profitPercent = parseFloat(profitPercent);
-    } else if (purchasePrice !== undefined && salePrice !== undefined) {
-      updateData.profitPercent = calcProfitPercent(parseFloat(purchasePrice), parseFloat(salePrice));
-    }
-
-    const [product] = await db.update(productsTable).set(updateData).where(eq(productsTable.id, id)).returning();
-    if (!product) {
+    const [deleted] = await db.delete(productsTable)
+      .where(and(eq(productsTable.id, id), eq(productsTable.companyId, cid)))
+      .returning({ id: productsTable.id });
+    if (!deleted) {
       res.status(404).json({ error: "Not Found", message: "Ürün bulunamadı" });
       return;
     }
-    res.json(await formatProduct(product));
+    res.json({ message: "Ürün silindi" });
   } catch (err) {
-    req.log?.error({ err }, "Quick update product error");
+    req.log?.error({ err }, "Delete product error");
     res.status(500).json({ error: "Internal Server Error" });
   }
 });

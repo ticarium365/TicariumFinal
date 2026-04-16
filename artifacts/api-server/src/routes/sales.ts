@@ -7,6 +7,7 @@ const router = Router();
 
 router.get("/daily-stats", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const days = Math.min(parseInt(String(req.query.days || "30")), 90);
     const since = new Date();
     since.setDate(since.getDate() - days + 1);
@@ -20,11 +21,10 @@ router.get("/daily-stats", requireAuth, async (req: Request, res: Response) => {
         count: sql<number>`COUNT(*)::int`,
       })
       .from(salesTable)
-      .where(gte(salesTable.createdAt, since))
+      .where(and(eq(salesTable.companyId, cid), gte(salesTable.createdAt, since)))
       .groupBy(sql`DATE(${salesTable.createdAt} AT TIME ZONE 'Europe/Istanbul')`)
       .orderBy(sql`DATE(${salesTable.createdAt} AT TIME ZONE 'Europe/Istanbul')`);
 
-    // Fill in missing days with 0
     const result: { date: string; revenue: number; profit: number; count: number }[] = [];
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date();
@@ -48,6 +48,7 @@ router.get("/daily-stats", requireAuth, async (req: Request, res: Response) => {
 
 router.get("/today", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -56,7 +57,11 @@ router.get("/today", requireAuth, async (req: Request, res: Response) => {
     const sales = await db
       .select()
       .from(salesTable)
-      .where(and(gte(salesTable.createdAt, today), lte(salesTable.createdAt, tomorrow)))
+      .where(and(
+        eq(salesTable.companyId, cid),
+        gte(salesTable.createdAt, today),
+        lte(salesTable.createdAt, tomorrow)
+      ))
       .orderBy(desc(salesTable.createdAt));
 
     const totalQuantity = sales.reduce((s, item) => s + item.quantity, 0);
@@ -65,15 +70,7 @@ router.get("/today", requireAuth, async (req: Request, res: Response) => {
     const totalProfit = grossRevenue - netRevenue;
     const profitPercent = netRevenue > 0 ? (totalProfit / netRevenue) * 100 : 0;
 
-    res.json({
-      totalSales: sales.length,
-      totalQuantity,
-      grossRevenue,
-      netRevenue,
-      totalProfit,
-      profitPercent,
-      sales,
-    });
+    res.json({ totalSales: sales.length, totalQuantity, grossRevenue, netRevenue, totalProfit, profitPercent, sales });
   } catch (err) {
     req.log?.error({ err }, "Get today sales error");
     res.status(500).json({ error: "Internal Server Error" });
@@ -82,33 +79,26 @@ router.get("/today", requireAuth, async (req: Request, res: Response) => {
 
 router.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const { startDate, endDate, productId, page = 1, limit = 50 } = req.query;
     const pageNum = parseInt(String(page));
     const limitNum = Math.min(parseInt(String(limit)), 200);
     const offset = (pageNum - 1) * limitNum;
 
-    const conditions = [];
+    const conditions = [eq(salesTable.companyId, cid)];
 
-    if (startDate) {
-      conditions.push(gte(salesTable.createdAt, new Date(String(startDate))));
-    }
+    if (startDate) conditions.push(gte(salesTable.createdAt, new Date(String(startDate))));
     if (endDate) {
       const end = new Date(String(endDate));
       end.setHours(23, 59, 59, 999);
       conditions.push(lte(salesTable.createdAt, end));
     }
-    if (productId) {
-      conditions.push(eq(salesTable.productId, parseInt(String(productId))));
-    }
+    if (productId) conditions.push(eq(salesTable.productId, parseInt(String(productId))));
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = and(...conditions);
 
     const [sales, totalResult] = await Promise.all([
-      db.select().from(salesTable)
-        .where(whereClause)
-        .orderBy(desc(salesTable.createdAt))
-        .limit(limitNum)
-        .offset(offset),
+      db.select().from(salesTable).where(whereClause).orderBy(desc(salesTable.createdAt)).limit(limitNum).offset(offset),
       db.select({ count: count() }).from(salesTable).where(whereClause),
     ]);
 
@@ -127,13 +117,16 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 
 router.post("/", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const { productId, quantity, unitPrice } = req.body;
     if (!productId || !quantity || !unitPrice) {
       res.status(400).json({ error: "Bad Request", message: "Zorunlu alanlar eksik" });
       return;
     }
 
-    const [product] = await db.select().from(productsTable).where(eq(productsTable.id, parseInt(productId)));
+    const [product] = await db.select().from(productsTable).where(
+      and(eq(productsTable.id, parseInt(productId)), eq(productsTable.companyId, cid))
+    );
     if (!product) {
       res.status(404).json({ error: "Not Found", message: "Ürün bulunamadı" });
       return;
@@ -149,6 +142,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
     const profit = (parseFloat(unitPrice) - product.purchasePrice) * qty;
 
     const [sale] = await db.insert(salesTable).values({
+      companyId: cid,
       productId: product.id,
       productName: product.name,
       productCode: product.productCode,
@@ -173,13 +167,15 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/sales/:id/return — Satış iadesi
 router.post("/:id/return", requireAuth, requireRole(["admin", "staff"]), async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const saleId = parseInt(req.params.id);
     const { note } = req.body;
 
-    const [sale] = await db.select().from(salesTable).where(eq(salesTable.id, saleId));
+    const [sale] = await db.select().from(salesTable).where(
+      and(eq(salesTable.id, saleId), eq(salesTable.companyId, cid))
+    );
     if (!sale) {
       res.status(404).json({ error: "Not Found", message: "Satış kaydı bulunamadı" });
       return;
@@ -195,14 +191,16 @@ router.post("/:id/return", requireAuth, requireRole(["admin", "staff"]), async (
       returnNote: note || null,
     }).where(eq(salesTable.id, saleId));
 
-    // Stoğu geri yükle
-    const [product] = await db.select().from(productsTable).where(eq(productsTable.id, sale.productId));
+    const [product] = await db.select().from(productsTable).where(
+      and(eq(productsTable.id, sale.productId), eq(productsTable.companyId, cid))
+    );
     if (product) {
       await db.update(productsTable)
         .set({ stock: product.stock + sale.quantity, updatedAt: new Date() })
         .where(eq(productsTable.id, product.id));
 
       await db.insert(stockMovementsTable).values({
+        companyId: cid,
         productId: product.id,
         productName: product.name,
         productCode: product.productCode,

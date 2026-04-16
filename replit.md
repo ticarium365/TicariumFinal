@@ -1,8 +1,10 @@
-# PROSAN ENDÜSTRİ - Stok, Barkod ve Satış Yönetim Sistemi
+# SMS — Stok Yönetim Sistemi (Multi-Tenant SaaS)
 
 ## Proje Genel Bakış
 
-PROSAN ENDÜSTRİ için web tabanlı, tam özellikli endüstriyel stok ve satış yönetim sistemi.
+Subdomain-tabanlı çok kiracılı (multi-tenant) SaaS stok ve satış yönetim sistemi.
+Her şirket kendi subdomain'i üzerinden sisteme erişir (ör. `prosan.smsystem.com`).
+PROSAN ENDÜSTRİ ilk kiracı olarak seeded edilmiştir.
 
 ## Stack
 
@@ -15,7 +17,7 @@ PROSAN ENDÜSTRİ için web tabanlı, tam özellikli endüstriyel stok ve satı�
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
-- **Auth**: express-session + bcryptjs (session-based)
+- **Auth**: express-session + bcryptjs (session-based, company-scoped)
 - **Barcode scanning**: @zxing/browser (kamera ile)
 - **QR code**: qrcode.react (IBAN için)
 - **Build**: esbuild (CJS bundle)
@@ -26,17 +28,17 @@ PROSAN ENDÜSTRİ için web tabanlı, tam özellikli endüstriyel stok ve satı�
 artifacts/
   prosan/              # Frontend React uygulaması
     src/
-      pages/           # Sayfa bileşenleri (dashboard, products, sales, barcode, reports, settings, users)
-      components/      # Paylaşılan bileşenler (layout, auth-context, ui/*)
+      pages/           # dashboard, products, sales, barcode, reports, settings, users, admin/companies
+      components/      # layout, auth-context, company-context, ui/*
       hooks/           # Custom React hooks
   api-server/          # Express.js backend
     src/
-      routes/          # API route'ları (auth, users, products, sales, dashboard, reports, settings)
-      middlewares/     # Auth middleware (requireAuth, requireAdmin)
+      routes/          # auth, users, products, sales, dashboard, reports, settings, catalog, stock, companies
+      middlewares/     # tenant.ts (subdomain→company), auth.ts (requireAuth, requireAdmin, requireSuperAdmin)
 
 lib/
   db/                  # Drizzle ORM schema ve bağlantı
-    src/schema/        # users, products, sales, product_views, company_settings tabloları
+    src/schema/        # companies, users, products, sales, stock_movements, product_views, company_settings
   api-spec/            # OpenAPI spec (openapi.yaml)
   api-client-react/    # Orval tarafından üretilen React Query hooks
   api-zod/             # Orval tarafından üretilen Zod schemas
@@ -45,60 +47,67 @@ scripts/
   src/seed.ts          # Örnek veri seed scripti
 ```
 
+## Multi-Tenant Mimarisi
+
+### Tenant Resolution
+`tenant.ts` middleware her `/api` isteğinden önce çalışır:
+1. `Host` header'ından subdomain çıkarır → `companies` tablosunda arar
+2. Dev ortamı: `X-Tenant` header veya ilk aktif şirket (fallback)
+3. `req.companyId` ve `req.company` set eder
+
+### Şirket İzolasyonu
+Tüm tablolarda `company_id` sütunu; tüm route'lar `eq(table.companyId, req.companyId)` filtresi uygular:
+- products, sales, stock_movements, product_views, users, company_settings
+
+### Auth
+- Login: kullanıcı adı + şifre + company scope (farklı şirketler aynı kullanıcı adı kullanabilir)
+- Session'a `companyId` eklenir
+- `super_admin` rolü tüm şirketlere erişebilir
+
 ## Kullanıcı Rolleri
 
-- **admin**: Tam erişim (ürün CRUD, kullanıcı yönetimi, raporlar, IBAN)
-- **staff**: Ürün görüntüleme/hızlı güncelleme, barkod okuma, satış
+- **super_admin**: Tüm şirketlere erişim, firma yönetimi (`/admin/companies`)
+- **admin**: Tam erişim kendi şirketinde (ürün CRUD, kullanıcı yönetimi, raporlar)
+- **staff**: Ürün görüntüleme/güncelleme, barkod, satış, stok girişi
 - **viewer**: Sadece görüntüleme
 
-## Demo Kullanıcılar
+## Demo Kullanıcılar (company_id=1, subdomain=prosan)
 
 | Kullanıcı | Şifre | Rol |
 |-----------|-------|-----|
-| admin | admin123 | Admin |
-| personel | staff123 | Staff |
+| cenan | cenan123 | Admin |
+| talha | talha123 | Staff |
+| nihat | nihat123 | Staff |
 | goruntule | staff123 | Viewer |
 
 ## Veritabanı Tabloları
 
-- `users` - Kullanıcılar ve roller
-- `products` - Ürünler (kod, barkod, stok, fiyat, kar vb.)
-- `sales` - Satış kayıtları (returned, returnedAt, returnNote alanları dahil)
-- `stock_movements` - Stok hareketi geçmişi (satış/giriş/iade/düzeltme)
+- `companies` - Kiracı şirketler (name, subdomain, primaryColor, logoUrl, isActive)
+- `users` - Kullanıcılar ve roller (company_id ile izole)
+- `products` - Ürünler (kod, barkod, stok, fiyat, kar, discountSalePct)
+- `sales` - Satış kayıtları (returned, returnedAt, returnNote dahil)
+- `stock_movements` - Stok hareketi geçmişi
 - `product_views` - Son 30 gün görüntülenme istatistikleri
 - `company_settings` - Firma ayarları ve IBAN bilgisi
 
 ## Ana Özellikler
 
-1. **Ürün Yönetimi**: CRUD, barkod (manuel/otomatik), kategori/marka filtreleme
-2. **Barkod Sistemi**: Kamera ile tarama (@zxing/browser), manuel giriş, otomatik üretim
-3. **Satış Sistemi**: Çoklu ürün sepeti, barkod/arama ile ürün bulma, stok otomatik düşme
-4. **Stok Girişi** (`/stock`): Depoya gelen ürünleri kaydet (arama/barkod, miktar, alış fiyatı, not)
-5. **Stok Hareketi Geçmişi**: Ürün detay sayfasında satış/giriş/iade/düzeltme timeline'ı
-6. **Satış İadesi**: Satış geçmişinde "İade Et" butonu, stok otomatik geri yüklenir
-7. **Dashboard**: 30 günlük ciro/kar grafik, çok satanlar, kritik stok, trend kartları
-8. **Raporlar**: Satış raporu (tarih aralığı), stok raporu
-9. **IBAN/QR**: Yazılı IBAN + QR kod (qrcode.react)
-10. **Kullanıcı Yönetimi**: Admin paneli, rol atama
+1. **Multi-Tenant**: Subdomain-tabanlı izolasyon, her şirket kendi verisini görür
+2. **Dinamik Marka**: Login sayfası ve sidebar şirket adını API'dan alır (`/api/auth/tenant`)
+3. **Ürün Yönetimi**: CRUD, barkod, kategori/marka filtreleme, iskontolu fiyat
+4. **Barkod Sistemi**: Kamera ile tarama, manuel giriş, otomatik üretim
+5. **Satış Sistemi**: Çoklu ürün sepeti, barkod/arama ile ürün bulma
+6. **Stok Girişi** (`/stock`): Depoya gelen ürünleri kaydet
+7. **Stok Hareketi Geçmişi**: Satış/giriş/iade/düzeltme timeline'ı
+8. **Satış İadesi**: Stok otomatik geri yüklenir
+9. **Dashboard**: 30 günlük ciro/kar grafik, çok satanlar, kritik stok
+10. **Raporlar**: Satış raporu (tarih aralığı), stok raporu
+11. **Super Admin Paneli**: `/admin/companies` — firma ekleme, aktif/pasif etme
 
-## Key Commands
+## Önemli Notlar
 
-- `pnpm run typecheck` — tam typecheck
-- `pnpm run build` — typecheck + build
-- `pnpm --filter @workspace/api-spec run codegen` — API hook'larını yenile
-- `pnpm --filter @workspace/db run push` — DB schema değişikliklerini uygula
-- `pnpm --filter @workspace/api-server run dev` — API server başlat
-
-## Fiyat ve Kar Hesaplama
-
-Çift yönlü çalışır:
-- Geliş fiyatı + Satış fiyatı → Kar %
-- Geliş fiyatı + Kar % → Satış fiyatı
-
-## Notlar
-
-- Session-based auth (express-session)
-- credentials: include ile cookie gönderilir
-- API base path: /api
-- Frontend port: 19971 (PORT env var)
-- API server port: 8080
+- `discountSalePct` → iskontolu satış fiyatı = `purchasePrice * (1 + discountSalePct/100)`
+- Barkod lookup: önce `barcode` sonra `productCode` alanı aranır
+- `sale.returned` TypeScript client'ta `(sale as any).returned` cast'i gerekebilir
+- Dev ortamında tenant header olmadan ilk aktif şirket kullanılır (prosan)
+- X-Tenant header ile farklı tenant test edilebilir: `-H "X-Tenant: prosan"`

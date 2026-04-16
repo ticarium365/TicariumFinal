@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 import session from "express-session";
 import router from "./routes/index.js";
 import { logger } from "./lib/logger.js";
+import { tenantMiddleware } from "./middlewares/tenant.js";
 
 const app: Express = express();
 
@@ -52,6 +53,8 @@ app.use(session({
   },
 }));
 
+// Tenant middleware — tüm /api route'larından önce çalışır
+app.use("/api", tenantMiddleware);
 app.use("/api", router);
 
 export default app;

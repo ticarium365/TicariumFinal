@@ -7,6 +7,7 @@ const router = Router();
 
 router.get("/stats", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -18,16 +19,20 @@ router.get("/stats", requireAuth, async (req: Request, res: Response) => {
       todaySalesResult,
       criticalCountResult,
     ] = await Promise.all([
-      db.select({ count: count() }).from(productsTable),
+      db.select({ count: count() }).from(productsTable).where(eq(productsTable.companyId, cid)),
       db.select({ stock: productsTable.stock, count: count() })
         .from(productsTable)
-        .where(sql`${productsTable.stock} <= 3`)
+        .where(and(eq(productsTable.companyId, cid), sql`${productsTable.stock} <= 3`))
         .groupBy(productsTable.stock),
       db.select().from(salesTable).where(
-        and(gte(salesTable.createdAt, today), lte(salesTable.createdAt, tomorrow))
+        and(
+          eq(salesTable.companyId, cid),
+          gte(salesTable.createdAt, today),
+          lte(salesTable.createdAt, tomorrow)
+        )
       ),
       db.select({ count: count() }).from(productsTable)
-        .where(sql`${productsTable.stock} <= ${productsTable.minStock}`),
+        .where(and(eq(productsTable.companyId, cid), sql`${productsTable.stock} <= ${productsTable.minStock}`)),
     ]);
 
     const stockMap: Record<number, number> = {};
@@ -61,6 +66,7 @@ router.get("/stats", requireAuth, async (req: Request, res: Response) => {
 
 router.get("/top-products", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -70,7 +76,7 @@ router.get("/top-products", requireAuth, async (req: Request, res: Response) => 
         total: sql<number>`COALESCE(SUM(${salesTable.quantity}), 0)`,
       })
       .from(salesTable)
-      .where(gte(salesTable.createdAt, thirtyDaysAgo))
+      .where(and(eq(salesTable.companyId, cid), gte(salesTable.createdAt, thirtyDaysAgo)))
       .groupBy(salesTable.productId)
       .orderBy(desc(sql`SUM(${salesTable.quantity})`))
       .limit(10);
@@ -81,7 +87,7 @@ router.get("/top-products", requireAuth, async (req: Request, res: Response) => 
         cnt: count(),
       })
       .from(productViewsTable)
-      .where(gte(productViewsTable.viewedAt, thirtyDaysAgo))
+      .where(and(eq(productViewsTable.companyId, cid), gte(productViewsTable.viewedAt, thirtyDaysAgo)))
       .groupBy(productViewsTable.productId)
       .orderBy(desc(count()))
       .limit(10);
@@ -129,10 +135,14 @@ router.get("/top-products", requireAuth, async (req: Request, res: Response) => 
 
 router.get("/critical-stock", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const products = await db
       .select()
       .from(productsTable)
-      .where(sql`${productsTable.stock} <= ${productsTable.minStock}`)
+      .where(and(
+        eq(productsTable.companyId, cid),
+        sql`${productsTable.stock} <= ${productsTable.minStock}`
+      ))
       .orderBy(productsTable.stock)
       .limit(50);
 

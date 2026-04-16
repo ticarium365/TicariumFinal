@@ -7,10 +7,12 @@ const router = Router();
 
 router.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
-    let [settings] = await db.select().from(companySettingsTable);
+    const cid = req.companyId;
+    let [settings] = await db.select().from(companySettingsTable).where(eq(companySettingsTable.companyId, cid));
     if (!settings) {
       [settings] = await db.insert(companySettingsTable).values({
-        companyName: "PROSAN ENDÜSTRİ",
+        companyId: cid,
+        companyName: req.company.name,
       }).returning();
     }
     res.json(settings);
@@ -22,6 +24,7 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 
 router.put("/", requireAuth, requireAdmin, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const { companyName, iban, bankName, accountHolder, phone, email, address } = req.body;
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (companyName !== undefined) updateData.companyName = companyName;
@@ -32,10 +35,11 @@ router.put("/", requireAuth, requireAdmin, async (req: Request, res: Response) =
     if (email !== undefined) updateData.email = email;
     if (address !== undefined) updateData.address = address;
 
-    let [settings] = await db.select().from(companySettingsTable);
+    let [settings] = await db.select().from(companySettingsTable).where(eq(companySettingsTable.companyId, cid));
     if (!settings) {
       [settings] = await db.insert(companySettingsTable).values({
-        companyName: companyName ?? "PROSAN ENDÜSTRİ",
+        companyId: cid,
+        companyName: companyName ?? req.company.name,
         ...updateData,
       }).returning();
     } else {

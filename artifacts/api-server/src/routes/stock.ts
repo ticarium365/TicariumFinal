@@ -1,13 +1,13 @@
 import { Router, Request, Response } from "express";
 import { db, productsTable, stockMovementsTable } from "@workspace/db";
-import { eq, desc, and, gte, lte, count } from "drizzle-orm";
+import { eq, desc, and, count } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
 
-// POST /api/stock/entry — Stok girişi
 router.post("/entry", requireAuth, requireRole(["admin", "staff"]), async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const { productId, quantity, purchasePrice, note } = req.body;
     if (!productId || !quantity) {
       res.status(400).json({ error: "Bad Request", message: "Ürün ve miktar zorunlu" });
@@ -19,7 +19,9 @@ router.post("/entry", requireAuth, requireRole(["admin", "staff"]), async (req: 
       return;
     }
 
-    const [product] = await db.select().from(productsTable).where(eq(productsTable.id, parseInt(productId)));
+    const [product] = await db.select().from(productsTable).where(
+      and(eq(productsTable.id, parseInt(productId)), eq(productsTable.companyId, cid))
+    );
     if (!product) {
       res.status(404).json({ error: "Not Found", message: "Ürün bulunamadı" });
       return;
@@ -34,6 +36,7 @@ router.post("/entry", requireAuth, requireRole(["admin", "staff"]), async (req: 
     await db.update(productsTable).set(updateData).where(eq(productsTable.id, product.id));
 
     const [movement] = await db.insert(stockMovementsTable).values({
+      companyId: cid,
       productId: product.id,
       productName: product.name,
       productCode: product.productCode,
@@ -43,27 +46,25 @@ router.post("/entry", requireAuth, requireRole(["admin", "staff"]), async (req: 
       createdBy: req.session.user?.fullName || req.session.user?.username,
     }).returning();
 
-    res.status(201).json({
-      message: "Stok girişi kaydedildi",
-      movement,
-      newStock,
-    });
+    res.status(201).json({ message: "Stok girişi kaydedildi", movement, newStock });
   } catch (err) {
     req.log?.error({ err }, "Stock entry error");
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-// POST /api/stock/correction — Stok düzeltme (admin only)
 router.post("/correction", requireAuth, requireRole(["admin"]), async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const { productId, newStock, note } = req.body;
     if (!productId || newStock === undefined) {
       res.status(400).json({ error: "Bad Request", message: "Ürün ve yeni stok zorunlu" });
       return;
     }
 
-    const [product] = await db.select().from(productsTable).where(eq(productsTable.id, parseInt(productId)));
+    const [product] = await db.select().from(productsTable).where(
+      and(eq(productsTable.id, parseInt(productId)), eq(productsTable.companyId, cid))
+    );
     if (!product) {
       res.status(404).json({ error: "Not Found", message: "Ürün bulunamadı" });
       return;
@@ -77,6 +78,7 @@ router.post("/correction", requireAuth, requireRole(["admin"]), async (req: Requ
       .where(eq(productsTable.id, product.id));
 
     const [movement] = await db.insert(stockMovementsTable).values({
+      companyId: cid,
       productId: product.id,
       productName: product.name,
       productCode: product.productCode,
@@ -93,19 +95,19 @@ router.post("/correction", requireAuth, requireRole(["admin"]), async (req: Requ
   }
 });
 
-// GET /api/stock/movements — Tüm stok hareketleri
 router.get("/movements", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const { productId, type, page = 1, limit = 50 } = req.query;
     const pageNum = parseInt(String(page));
     const limitNum = Math.min(parseInt(String(limit)), 200);
     const offset = (pageNum - 1) * limitNum;
 
-    const conditions: any[] = [];
+    const conditions: any[] = [eq(stockMovementsTable.companyId, cid)];
     if (productId) conditions.push(eq(stockMovementsTable.productId, parseInt(String(productId))));
     if (type) conditions.push(eq(stockMovementsTable.type, String(type)));
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = and(...conditions);
 
     const [movements, totalResult] = await Promise.all([
       db.select().from(stockMovementsTable)

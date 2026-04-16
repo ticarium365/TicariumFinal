@@ -9,6 +9,7 @@ import reportsRouter from "./reports.js";
 import settingsRouter from "./settings.js";
 import catalogRouter from "./catalog.js";
 import stockRouter from "./stock.js";
+import companiesRouter from "./companies.js";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use("/dashboard", dashboardRouter);
 router.use("/reports", reportsRouter);
 router.use("/settings", settingsRouter);
 router.use("/catalog", catalogRouter);
+router.use("/companies", companiesRouter);
 
 export default router;

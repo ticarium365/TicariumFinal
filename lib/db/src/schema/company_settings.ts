@@ -1,10 +1,11 @@
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const companySettingsTable = pgTable("company_settings", {
   id: serial("id").primaryKey(),
-  companyName: text("company_name").notNull().default("PROSAN ENDÜSTRİ"),
+  companyId: integer("company_id"),
+  companyName: text("company_name").notNull().default(""),
   iban: text("iban"),
   bankName: text("bank_name"),
   accountHolder: text("account_holder"),

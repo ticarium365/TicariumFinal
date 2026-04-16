@@ -1,0 +1,134 @@
+import { Router, Request, Response } from "express";
+import bcrypt from "bcryptjs";
+import { db, companiesTable, usersTable, productsTable, salesTable } from "@workspace/db";
+import { eq, count, sql } from "drizzle-orm";
+import { requireAuth, requireSuperAdmin } from "../middlewares/auth.js";
+
+const router = Router();
+
+// GET /api/companies — Tüm şirketleri listele (super admin)
+router.get("/", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const companies = await db.select().from(companiesTable).orderBy(companiesTable.createdAt);
+
+    const enriched = await Promise.all(companies.map(async (c) => {
+      const [pCount, uCount, sCount] = await Promise.all([
+        db.select({ count: count() }).from(productsTable).where(eq(productsTable.companyId, c.id)),
+        db.select({ count: count() }).from(usersTable).where(eq(usersTable.companyId, c.id)),
+        db.select({ count: count() }).from(salesTable).where(eq(salesTable.companyId, c.id)),
+      ]);
+      return {
+        ...c,
+        productCount: pCount[0]?.count ?? 0,
+        userCount: uCount[0]?.count ?? 0,
+        saleCount: sCount[0]?.count ?? 0,
+      };
+    }));
+
+    res.json(enriched);
+  } catch (err) {
+    req.log?.error({ err }, "List companies error");
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// POST /api/companies — Yeni şirket oluştur (super admin)
+router.post("/", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const { name, subdomain, primaryColor, logoUrl, adminUsername, adminPassword, adminFullName } = req.body;
+
+    if (!name || !subdomain || !adminUsername || !adminPassword || !adminFullName) {
+      res.status(400).json({ error: "Bad Request", message: "name, subdomain, adminUsername, adminPassword ve adminFullName zorunlu" });
+      return;
+    }
+
+    if (!/^[a-z0-9-]+$/.test(subdomain)) {
+      res.status(400).json({ error: "Bad Request", message: "Subdomain yalnızca küçük harf, rakam ve tire içerebilir" });
+      return;
+    }
+
+    // Şirket oluştur
+    const [company] = await db.insert(companiesTable).values({
+      name,
+      subdomain,
+      primaryColor: primaryColor || "#2563eb",
+      logoUrl: logoUrl || null,
+      isActive: true,
+    }).returning();
+
+    // Admin kullanıcı oluştur
+    const passwordHash = await bcrypt.hash(adminPassword, 10);
+    const [adminUser] = await db.insert(usersTable).values({
+      companyId: company!.id,
+      username: adminUsername,
+      passwordHash,
+      fullName: adminFullName,
+      role: "admin",
+      isActive: true,
+    }).returning({
+      id: usersTable.id,
+      username: usersTable.username,
+      fullName: usersTable.fullName,
+      role: usersTable.role,
+    });
+
+    res.status(201).json({ company, adminUser });
+  } catch (err: any) {
+    if (err?.code === "23505") {
+      res.status(409).json({ error: "Conflict", message: "Bu subdomain zaten kullanılıyor" });
+      return;
+    }
+    req.log?.error({ err }, "Create company error");
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// GET /api/companies/:id — Şirket detayı (super admin)
+router.get("/:id", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id!);
+    const [company] = await db.select().from(companiesTable).where(eq(companiesTable.id, id));
+    if (!company) {
+      res.status(404).json({ error: "Not Found", message: "Şirket bulunamadı" });
+      return;
+    }
+
+    const users = await db.select({
+      id: usersTable.id,
+      username: usersTable.username,
+      fullName: usersTable.fullName,
+      role: usersTable.role,
+      isActive: usersTable.isActive,
+    }).from(usersTable).where(eq(usersTable.companyId, id));
+
+    res.json({ ...company, users });
+  } catch (err) {
+    req.log?.error({ err }, "Get company error");
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// PATCH /api/companies/:id — Şirket güncelle (super admin)
+router.patch("/:id", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id!);
+    const { name, primaryColor, logoUrl, isActive } = req.body;
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    if (name !== undefined) updateData.name = name;
+    if (primaryColor !== undefined) updateData.primaryColor = primaryColor;
+    if (logoUrl !== undefined) updateData.logoUrl = logoUrl;
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    const [company] = await db.update(companiesTable).set(updateData).where(eq(companiesTable.id, id)).returning();
+    if (!company) {
+      res.status(404).json({ error: "Not Found", message: "Şirket bulunamadı" });
+      return;
+    }
+    res.json(company);
+  } catch (err) {
+    req.log?.error({ err }, "Update company error");
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+export default router;

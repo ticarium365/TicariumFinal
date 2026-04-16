@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation } from "wouter";
 import { useAuth } from "./auth-context";
+import { useCompany } from "./company-context";
 import { useLogout } from "@workspace/api-client-react";
 import { 
   LayoutDashboard, 
@@ -12,7 +13,8 @@ import {
   Settings, 
   LogOut, 
   Menu,
-  PackagePlus
+  PackagePlus,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,10 +29,13 @@ import { useState } from "react";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { company } = useCompany();
   const [location] = useLocation();
   const logout = useLogout();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+
+  const companyName = company?.name ?? "SMS";
 
   const handleLogout = async () => {
     try {
@@ -46,7 +51,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
 
   const navItems = [
-    { href: "/dashboard", label: "Ana Panel", icon: LayoutDashboard, roles: ["admin", "staff", "viewer"] },
+    { href: "/dashboard", label: "Ana Panel", icon: LayoutDashboard, roles: ["admin", "staff", "viewer", "super_admin"] },
     { href: "/products", label: "Ürünler", icon: Package, roles: ["admin", "staff", "viewer"] },
     { href: "/barcode", label: "Barkod Tarama", icon: ScanBarcode, roles: ["admin", "staff"] },
     { href: "/sales", label: "Satış Ekranı", icon: ShoppingCart, roles: ["admin", "staff"] },
@@ -55,6 +60,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/reports", label: "Raporlar", icon: BarChart3, roles: ["admin", "viewer"] },
     { href: "/users", label: "Kullanıcılar", icon: Users, roles: ["admin"] },
     { href: "/settings", label: "Ayarlar", icon: Settings, roles: ["admin"] },
+    { href: "/admin/companies", label: "Firma Yönetimi", icon: Building2, roles: ["super_admin"] },
   ];
 
   const filteredNav = navItems.filter(item => user && item.roles.includes(user.role));
@@ -115,8 +121,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0" style={{ background: "hsl(222 47% 15%)" }}>
               <SheetHeader className="p-4 border-b text-left" style={{ borderColor: "hsl(222 40% 22%)" }}>
-                <SheetTitle className="text-xl font-bold tracking-tight text-white">PROSAN</SheetTitle>
-                <p className="text-xs" style={{ color: "hsl(215 25% 55%)" }}>Endüstriyel Yönetim</p>
+                <SheetTitle className="text-xl font-bold tracking-tight text-white">{companyName}</SheetTitle>
+                <p className="text-xs" style={{ color: "hsl(215 25% 55%)" }}>Stok Yönetim Sistemi</p>
               </SheetHeader>
               <div className="p-3 flex-1 overflow-y-auto">
                 <NavLinks dark />
@@ -138,15 +144,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
             </SheetContent>
           </Sheet>
-          <span className="font-bold text-lg tracking-tight text-white">PROSAN</span>
+          <span className="font-bold text-lg tracking-tight text-white">{companyName}</span>
         </div>
       </header>
 
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-60 flex-col h-screen sticky top-0" style={{ background: "hsl(222 47% 15%)" }}>
         <div className="px-5 py-5 border-b" style={{ borderColor: "hsl(222 40% 22%)" }}>
-          <h1 className="text-xl font-bold tracking-tight text-white">PROSAN</h1>
-          <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest" style={{ color: "hsl(215 25% 60%)" }}>Endüstriyel Yönetim</p>
+          <h1 className="text-xl font-bold tracking-tight text-white">{companyName}</h1>
+          <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest" style={{ color: "hsl(215 25% 60%)" }}>Stok Yönetim Sistemi</p>
         </div>
         
         <div className="flex-1 overflow-y-auto p-3">

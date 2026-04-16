@@ -5,6 +5,7 @@ import { productsTable } from "./products";
 
 export const productViewsTable = pgTable("product_views", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id"),
   productId: integer("product_id").notNull().references(() => productsTable.id, { onDelete: "cascade" }),
   viewedAt: timestamp("viewed_at", { withTimezone: true }).defaultNow().notNull(),
 });

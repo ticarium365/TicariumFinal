@@ -5,12 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Lock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useCompany } from "@/components/company-context";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const login = useLogin();
   const { toast } = useToast();
+  const { company } = useCompany();
+
+  const companyName = company?.name ?? "SMS";
+  const companySubtitle = "Stok Yönetim Sistemi";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +26,7 @@ export default function Login() {
     } catch (error: any) {
       toast({
         title: "Giriş Başarısız",
-        description: error?.response?.data?.message || "Kullanıcı adı veya şifre hatalı.",
+        description: error?.response?.data?.message || error?.data?.message || "Kullanıcı adı veya şifre hatalı.",
         variant: "destructive",
       });
     }
@@ -35,14 +40,14 @@ export default function Login() {
         style={{ background: "hsl(222 47% 15%)" }}
       >
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">PROSAN</h1>
+          <h1 className="text-3xl font-bold text-white tracking-tight">{companyName}</h1>
           <p className="text-sm font-medium mt-1 uppercase tracking-widest" style={{ color: "hsl(215 25% 55%)" }}>
-            Endüstriyel Yönetim
+            {companySubtitle}
           </p>
         </div>
         <div className="space-y-4">
           {[
-            { title: "Stok Yönetimi", desc: "316+ ürün, barkod desteği" },
+            { title: "Stok Yönetimi", desc: "Barkod destekli ürün takibi" },
             { title: "Satış Ekranı", desc: "Kamera ile hızlı satış" },
             { title: "Canlı Dashboard", desc: "Ciro, kâr ve trend grafikleri" },
           ].map(item => (
@@ -55,7 +60,7 @@ export default function Login() {
             </div>
           ))}
         </div>
-        <p className="text-xs" style={{ color: "hsl(215 25% 40%)" }}>© 2025 Prosan Endüstri</p>
+        <p className="text-xs" style={{ color: "hsl(215 25% 40%)" }}>© {new Date().getFullYear()} {companyName}</p>
       </div>
 
       {/* Sağ panel — giriş formu */}
@@ -63,8 +68,8 @@ export default function Login() {
         <div className="w-full max-w-sm">
           {/* Mobil logo */}
           <div className="lg:hidden text-center mb-8">
-            <h1 className="text-3xl font-bold text-primary tracking-tight">PROSAN</h1>
-            <p className="text-sm text-muted-foreground mt-1">Endüstriyel Yönetim Sistemi</p>
+            <h1 className="text-3xl font-bold text-primary tracking-tight">{companyName}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{companySubtitle}</p>
           </div>
 
           <div className="bg-white rounded-2xl border border-border shadow-sm p-8">

@@ -1,12 +1,13 @@
 import { Router, Request, Response } from "express";
 import { db, salesTable, productsTable } from "@workspace/db";
-import { and, gte, lte, desc, sql, count } from "drizzle-orm";
+import { and, gte, lte, desc, eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
 
 router.get("/sales", requireAuth, async (req: Request, res: Response) => {
   try {
+    const cid = req.companyId;
     const { startDate, endDate } = req.query;
     if (!startDate || !endDate) {
       res.status(400).json({ error: "Bad Request", message: "Başlangıç ve bitiş tarihi gerekli" });
@@ -20,7 +21,7 @@ router.get("/sales", requireAuth, async (req: Request, res: Response) => {
     const sales = await db
       .select()
       .from(salesTable)
-      .where(and(gte(salesTable.createdAt, start), lte(salesTable.createdAt, end)))
+      .where(and(eq(salesTable.companyId, cid), gte(salesTable.createdAt, start), lte(salesTable.createdAt, end)))
       .orderBy(desc(salesTable.createdAt));
 
     const totalQuantity = sales.reduce((s, item) => s + item.quantity, 0);
@@ -39,12 +40,9 @@ router.get("/sales", requireAuth, async (req: Request, res: Response) => {
       dailyMap.set(dateKey, existing);
     }
 
-    const dailyBreakdown = Array.from(dailyMap.entries()).map(([date, data]) => ({
-      date,
-      count: data.count,
-      revenue: data.revenue,
-      profit: data.profit,
-    })).sort((a, b) => a.date.localeCompare(b.date));
+    const dailyBreakdown = Array.from(dailyMap.entries())
+      .map(([date, data]) => ({ date, count: data.count, revenue: data.revenue, profit: data.profit }))
+      .sort((a, b) => a.date.localeCompare(b.date));
 
     const productMap = new Map<number, { productName: string; productCode: string; quantity: number; revenue: number; profit: number }>();
     for (const sale of sales) {
@@ -85,7 +83,8 @@ router.get("/sales", requireAuth, async (req: Request, res: Response) => {
 
 router.get("/stock", requireAuth, async (req: Request, res: Response) => {
   try {
-    const products = await db.select().from(productsTable);
+    const cid = req.companyId;
+    const products = await db.select().from(productsTable).where(eq(productsTable.companyId, cid));
     const totalStockValue = products.reduce((s, p) => s + p.stock * p.purchasePrice, 0);
 
     const outOfStock = products.filter((p) => p.stock === 0);
@@ -101,10 +100,7 @@ router.get("/stock", requireAuth, async (req: Request, res: Response) => {
       categoryMap.set(cat, existing);
     }
 
-    const stockByCategory = Array.from(categoryMap.entries()).map(([category, data]) => ({
-      category,
-      ...data,
-    }));
+    const stockByCategory = Array.from(categoryMap.entries()).map(([category, data]) => ({ category, ...data }));
 
     res.json({
       totalProducts: products.length,
