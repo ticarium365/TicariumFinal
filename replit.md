@@ -8,6 +8,17 @@ Platform markası **SMSYSTEMS**; kiracı markası dinamik olarak API'dan çekili
 
 ---
 
+## Test Komutu
+
+```bash
+# API integration testleri (24 test, 6 suite) — server çalışırken çalıştırın
+pnpm --filter @workspace/api-server run test
+```
+
+Testler `artifacts/api-server/tests/integration.test.mjs` dosyasındadır. Node.js `node:test` + native `fetch` kullanır, ek bağımlılık gerekmez. Çalışan sunucuya (port 8080) gerçek HTTP istekleri atar.
+
+---
+
 ## Teknoloji Stack
 
 | Katman | Teknoloji |
