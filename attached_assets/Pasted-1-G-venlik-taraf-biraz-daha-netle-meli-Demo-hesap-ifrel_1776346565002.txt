@@ -1,0 +1,70 @@
+1) Güvenlik tarafı biraz daha netleşmeli
+Demo hesap şifrelerinin dokümana açık yazılması geliştirmede pratik ama gerçek repo/dökümanda riskli. Session auth var demişsin ama şu başlıklar ayrıca yazılsa iyi olur:
+
+cookie ayarları: httpOnly, secure, sameSite
+rate limit var mı
+brute force/login denemesi koruması
+audit log tutuluyor mu
+tenant spoofing’e karşı X-Tenant sadece dev’de mi açık
+Bunlar net değil. Multi-tenant işte en ufak açık can sıkar.
+
+2) Yetki matrisi daha detaylı olmalı
+Roller var ama “viewer neyi sadece görür, staff hangi endpoint’te update yapar, satış iade kim yapar” gibi net tablo olsa cuk oturur. Şu an genel hat iyi ama backend izinleri endpoint bazında ayrı tablo olsa ekipte kimse yanlış anlamaz.
+
+3) Satış ve stok tarafında iş kuralları daha açık yazılmalı
+Mesela:
+
+stok negatife düşebilir mi
+iade olunca stok otomatik geri ekleniyor mu
+aynı barkod iki üründe olabilir mi
+ürün silinince satış geçmişi ne oluyor
+purchase_price değişince eski raporlar etkileniyor mu
+Bu tarz kurallar dokümanda yoksa kod yazarken herkes kafasına göre takılır.
+
+4) API sözleşmesi iyi ama hata senaryoları da yazılmalı
+402 var demişsin, güzel. Ama bir de standart hata formatı yazılsa iyi:
+
+401
+403
+404
+409
+422
+500
+Frontend yazan adam için baya rahatlık sağlar. “error.code / message / details” standardı gibi.
+
+5) Multi-tenant fallback kısmı dev için güzel ama prod’da tehlikeli
+“Hiçbiri yoksa en düşük id’li aktif şirketi döndürür” kısmı dev’de rahatlık, ama prod’a yanlışlıkla sızarsa bela olur. Buna dokümanda kalın kalın “yalnızca development” notu koymak lazım. Hatta env ile kapatılmalı. Bu en kritik noktalardan biri bence.
+
+6) Finans tarafı için veri izi lazım
+Banka transferi onayı var, güzel. Ama şunlar da belirtilirse taş gibi olur:
+
+kim onayladı
+önceki durum neydi
+manuel müdahale logu var mı
+aynı ödeme iki kez onaylanmasın diye koruma var mı
+Ödeme işinde log ve idempotency candır.
+
+7) Dokümanın eksik kalan “işletme” kısmı var
+Şunlar da eklenirse yatırımcıya/ekibe gösterilecek seviyeye çıkar:
+
+deployment mimarisi
+environment değişkenleri
+backup/restore stratejisi
+migration akışı
+monitoring/logging
+test stratejisi
+Şu an daha çok ürün + kod organizasyonu anlatıyor, operasyon kısmı eksik.
+
+Genel puan verecek olsam:
+8/10
+Çünkü temel yapı sağlam, okunuyor, neyin nerede olduğu belli. Ama production-grade hissi için güvenlik, hata standartları, iş kuralları ve operasyon kısmı biraz daha sertleştirilmeli.
+
+Ben olsam bu dokümanı 3 parçaya bölerdim:
+
+Product Overview
+Technical Architecture
+Business Rules & Security
+
+Böyle olunca Replit’te çalışan ekip de rahat eder, sonradan gelen adam da 10 dakikada çözer.
+
+İstersen bunu sana bir sonraki mesajda “daha profesyonel, yatırımcıya/ekibe gösterilecek formatta yeniden yazayım”.
