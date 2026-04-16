@@ -59,106 +59,106 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* LIGHT MODE - Industrial Cockpit (High Contrast, Dense) */
+/* LIGHT MODE — Clean Blue & White */
 :root {
-  --background: 0 0% 96%; /* Zinc 100 */
-  --foreground: 240 10% 10%; /* Zinc 950 */
-  
-  --border: 240 5.9% 85%; /* Zinc 200 */
-  --input: 240 5.9% 85%;
-  --ring: 24 98% 50%; /* Safety Orange */
+  --background: 216 33% 97%;       /* Çok açık mavi-beyaz */
+  --foreground: 222 47% 11%;       /* Koyu lacivert */
 
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 10%;
-  --card-border: 240 5.9% 90%;
+  --border: 215 25% 88%;
+  --input: 215 25% 88%;
+  --ring: 221 83% 53%;             /* Blue-600 */
+
+  --card: 0 0% 100%;               /* Saf beyaz kart */
+  --card-foreground: 222 47% 11%;
+  --card-border: 215 25% 91%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 10%;
-  --popover-border: 240 5.9% 90%;
+  --popover-foreground: 222 47% 11%;
+  --popover-border: 215 25% 91%;
 
-  --primary: 24 98% 50%; /* Safety Orange */
+  --primary: 221 83% 53%;          /* Blue-600 — #2563EB */
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 240 5% 26%; /* Zinc 700 */
-  --secondary-foreground: 0 0% 100%;
+  --secondary: 215 25% 92%;
+  --secondary-foreground: 222 47% 20%;
 
-  --muted: 240 4.8% 92%; /* Zinc 100 */
-  --muted-foreground: 240 3.8% 46%; /* Zinc 500 */
+  --muted: 215 25% 93%;
+  --muted-foreground: 215 16% 47%;
 
-  --accent: 240 4.8% 92%; /* Zinc 100 */
-  --accent-foreground: 240 5.9% 10%;
+  --accent: 214 95% 93%;           /* Blue-50 vurgu */
+  --accent-foreground: 221 83% 40%;
 
-  --destructive: 0 84.2% 60.2%; /* Red 500 */
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --warning: 45 93% 47%; /* Amber 500 */
-  --warning-foreground: 240 10% 10%;
+  --warning: 45 93% 47%;
+  --warning-foreground: 222 47% 11%;
 
-  --success: 142 71% 45%; /* Green 500 */
+  --success: 142 71% 45%;
   --success-foreground: 0 0% 100%;
 
-  /* Dark Sidebar */
-  --sidebar: 240 10% 10%; /* Zinc 950 */
-  --sidebar-foreground: 240 5% 85%; /* Zinc 300 */
-  --sidebar-border: 240 10% 15%;
-  --sidebar-primary: 24 98% 50%;
+  /* Sidebar — lacivert */
+  --sidebar: 222 47% 15%;
+  --sidebar-foreground: 215 25% 85%;
+  --sidebar-border: 222 40% 20%;
+  --sidebar-primary: 221 83% 65%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 10% 15%;
+  --sidebar-accent: 222 40% 22%;
   --sidebar-accent-foreground: 0 0% 100%;
-  --sidebar-ring: 24 98% 50%;
+  --sidebar-ring: 221 83% 65%;
 
   --app-font-sans: 'Inter', system-ui, sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: 'Space Mono', ui-monospace, monospace;
-  
-  --radius: 0.25rem; /* 4px - sharper edges for industrial feel */
+
+  --radius: 0.5rem;                /* Daha yuvarlak köşeler */
 }
 
 .dark {
-  --background: 240 10% 8%; /* Zinc 950 */
-  --foreground: 0 0% 98%; /* Zinc 50 */
-  
-  --border: 240 5% 15%; /* Zinc 800 */
-  --input: 240 5% 15%;
-  --ring: 24 98% 50%; /* Safety Orange */
+  --background: 222 47% 8%;
+  --foreground: 0 0% 98%;
 
-  --card: 240 10% 12%; /* Zinc 900 */
+  --border: 222 30% 18%;
+  --input: 222 30% 18%;
+  --ring: 221 83% 60%;
+
+  --card: 222 40% 12%;
   --card-foreground: 0 0% 98%;
-  --card-border: 240 5% 18%;
+  --card-border: 222 30% 20%;
 
-  --popover: 240 10% 12%;
+  --popover: 222 40% 12%;
   --popover-foreground: 0 0% 98%;
-  --popover-border: 240 5% 18%;
+  --popover-border: 222 30% 20%;
 
-  --primary: 24 98% 50%; /* Safety Orange */
+  --primary: 221 83% 60%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 240 5% 26%; /* Zinc 700 */
+  --secondary: 222 30% 22%;
   --secondary-foreground: 0 0% 100%;
 
-  --muted: 240 5% 15%; /* Zinc 800 */
-  --muted-foreground: 240 5% 65%; /* Zinc 400 */
+  --muted: 222 30% 18%;
+  --muted-foreground: 215 20% 60%;
 
-  --accent: 240 5% 15%; /* Zinc 800 */
+  --accent: 222 30% 20%;
   --accent-foreground: 0 0% 98%;
 
-  --destructive: 0 62.8% 50.6%; /* Red 600 */
+  --destructive: 0 63% 50%;
   --destructive-foreground: 0 0% 100%;
 
-  --warning: 45 93% 47%; /* Amber 500 */
-  --warning-foreground: 240 10% 10%;
+  --warning: 45 93% 47%;
+  --warning-foreground: 222 47% 11%;
 
-  --success: 142 71% 45%; /* Green 500 */
+  --success: 142 71% 45%;
   --success-foreground: 0 0% 100%;
 
-  --sidebar: 240 10% 8%; /* Zinc 950 */
-  --sidebar-foreground: 240 5% 85%; /* Zinc 300 */
-  --sidebar-border: 240 5% 15%;
-  --sidebar-primary: 24 98% 50%;
+  --sidebar: 222 47% 8%;
+  --sidebar-foreground: 215 25% 80%;
+  --sidebar-border: 222 30% 16%;
+  --sidebar-primary: 221 83% 65%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 5% 15%;
+  --sidebar-accent: 222 30% 16%;
   --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-ring: 24 98% 50%;
+  --sidebar-ring: 221 83% 65%;
 }
 
 @layer base {

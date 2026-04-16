@@ -3,8 +3,7 @@ import { useLogin } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
@@ -16,7 +15,6 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !password) return;
-
     try {
       await login.mutateAsync({ data: { username, password } });
       window.location.replace("/dashboard");
@@ -30,55 +28,101 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-3xl font-bold tracking-tight text-primary">PROSAN</CardTitle>
-          <CardDescription>Endüstriyel Yönetim Sistemine Giriş</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Kullanıcı Adı</Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="Kullanıcı adınızı girin"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                disabled={login.isPending}
-                required
-              />
+    <div className="min-h-screen w-full flex" style={{ background: "hsl(216 33% 97%)" }}>
+      {/* Sol panel — lacivert */}
+      <div
+        className="hidden lg:flex flex-col justify-between w-96 shrink-0 p-10"
+        style={{ background: "hsl(222 47% 15%)" }}
+      >
+        <div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">PROSAN</h1>
+          <p className="text-sm font-medium mt-1 uppercase tracking-widest" style={{ color: "hsl(215 25% 55%)" }}>
+            Endüstriyel Yönetim
+          </p>
+        </div>
+        <div className="space-y-4">
+          {[
+            { title: "Stok Yönetimi", desc: "316+ ürün, barkod desteği" },
+            { title: "Satış Ekranı", desc: "Kamera ile hızlı satış" },
+            { title: "Canlı Dashboard", desc: "Ciro, kâr ve trend grafikleri" },
+          ].map(item => (
+            <div key={item.title} className="flex items-start gap-3">
+              <div className="h-2 w-2 rounded-full mt-2 shrink-0" style={{ background: "hsl(221 83% 60%)" }} />
+              <div>
+                <p className="text-sm font-semibold text-white">{item.title}</p>
+                <p className="text-xs" style={{ color: "hsl(215 25% 55%)" }}>{item.desc}</p>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Şifre</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Şifrenizi girin"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={login.isPending}
-                required
-              />
+          ))}
+        </div>
+        <p className="text-xs" style={{ color: "hsl(215 25% 40%)" }}>© 2025 Prosan Endüstri</p>
+      </div>
+
+      {/* Sağ panel — giriş formu */}
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          {/* Mobil logo */}
+          <div className="lg:hidden text-center mb-8">
+            <h1 className="text-3xl font-bold text-primary tracking-tight">PROSAN</h1>
+            <p className="text-sm text-muted-foreground mt-1">Endüstriyel Yönetim Sistemi</p>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-border shadow-sm p-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold tracking-tight">Giriş Yap</h2>
+              <p className="text-sm text-muted-foreground mt-1">Hesabınıza erişmek için bilgilerinizi girin</p>
             </div>
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={login.isPending || !username || !password}
-            >
-              {login.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Giriş Yapılıyor...
-                </>
-              ) : (
-                "Giriş Yap"
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="username">Kullanıcı Adı</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="Kullanıcı adı"
+                    className="pl-9 h-11"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    disabled={login.isPending}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Şifre</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    className="pl-9 h-11"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={login.isPending}
+                    required
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full h-11 mt-2 text-base font-semibold"
+                disabled={login.isPending || !username || !password}
+              >
+                {login.isPending ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Giriş Yapılıyor...</>
+                ) : (
+                  "Giriş Yap"
+                )}
+              </Button>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

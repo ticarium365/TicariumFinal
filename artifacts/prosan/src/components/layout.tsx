@@ -59,16 +59,34 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const filteredNav = navItems.filter(item => user && item.roles.includes(user.role));
 
-  const NavLinks = () => (
-    <div className="flex flex-col gap-1">
+  const NavLinks = ({ dark = false }: { dark?: boolean }) => (
+    <div className="flex flex-col gap-0.5">
       {filteredNav.map((item) => {
         const isActive = location === item.href || location.startsWith(item.href + "/");
+        if (dark) {
+          return (
+            <Link key={item.href} href={item.href}>
+              <div
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer text-sm ${
+                  isActive
+                    ? "bg-white/10 text-white font-semibold"
+                    : "font-medium hover:bg-white/8 hover:text-white"
+                }`}
+                style={{ color: isActive ? "white" : "hsl(215 25% 65%)" }}
+                onClick={() => setIsOpen(false)}
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                <span>{item.label}</span>
+              </div>
+            </Link>
+          );
+        }
         return (
           <Link key={item.href} href={item.href}>
             <div
               className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer ${
-                isActive 
-                  ? "bg-primary/10 text-primary font-medium" 
+                isActive
+                  ? "bg-primary/10 text-primary font-medium"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
               onClick={() => setIsOpen(false)}
@@ -87,59 +105,64 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
       {/* Mobile Header */}
-      <header className="md:hidden border-b bg-card px-4 py-3 flex items-center justify-between sticky top-0 z-30">
+      <header className="md:hidden px-4 py-3 flex items-center justify-between sticky top-0 z-30 border-b" style={{ background: "hsl(222 47% 15%)" }}>
         <div className="flex items-center gap-2">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="-ml-2">
+              <Button variant="ghost" size="icon" className="-ml-2 text-white hover:bg-white/10">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0">
-              <SheetHeader className="p-4 border-b text-left">
-                <SheetTitle className="text-xl font-bold tracking-tight">PROSAN</SheetTitle>
-                <p className="text-xs text-muted-foreground">Endüstriyel Yönetim</p>
+            <SheetContent side="left" className="w-64 p-0" style={{ background: "hsl(222 47% 15%)" }}>
+              <SheetHeader className="p-4 border-b text-left" style={{ borderColor: "hsl(222 40% 22%)" }}>
+                <SheetTitle className="text-xl font-bold tracking-tight text-white">PROSAN</SheetTitle>
+                <p className="text-xs" style={{ color: "hsl(215 25% 55%)" }}>Endüstriyel Yönetim</p>
               </SheetHeader>
-              <div className="p-4 flex-1 overflow-y-auto">
-                <NavLinks />
+              <div className="p-3 flex-1 overflow-y-auto">
+                <NavLinks dark />
               </div>
-              <div className="p-4 border-t mt-auto">
-                <div className="mb-4">
-                  <p className="text-sm font-medium">{user.fullName}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
+              <div className="p-4 mt-auto" style={{ borderTop: "1px solid hsl(222 40% 22%)" }}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: "hsl(221 83% 53%)" }}>
+                    {user.fullName.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">{user.fullName}</p>
+                    <p className="text-xs capitalize" style={{ color: "hsl(215 25% 55%)" }}>{user.role}</p>
+                  </div>
                 </div>
-                <Button variant="outline" className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
+                <Button variant="outline" className="w-full justify-start border-white/10 text-slate-300 hover:text-white hover:bg-white/10 bg-transparent" onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Çıkış Yap
                 </Button>
               </div>
             </SheetContent>
           </Sheet>
-          <span className="font-bold text-lg tracking-tight">PROSAN</span>
+          <span className="font-bold text-lg tracking-tight text-white">PROSAN</span>
         </div>
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 flex-col border-r bg-card h-screen sticky top-0">
-        <div className="p-6 border-b">
-          <h1 className="text-2xl font-bold tracking-tight text-primary">PROSAN</h1>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">Endüstriyel Yönetim</p>
+      <aside className="hidden md:flex w-60 flex-col h-screen sticky top-0" style={{ background: "hsl(222 47% 15%)" }}>
+        <div className="px-5 py-5 border-b" style={{ borderColor: "hsl(222 40% 22%)" }}>
+          <h1 className="text-xl font-bold tracking-tight text-white">PROSAN</h1>
+          <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest" style={{ color: "hsl(215 25% 60%)" }}>Endüstriyel Yönetim</p>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-4">
-          <NavLinks />
+        <div className="flex-1 overflow-y-auto p-3">
+          <NavLinks dark />
         </div>
 
-        <div className="p-4 border-t bg-muted/30">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-sm font-bold truncate max-w-[140px]">{user.fullName}</p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="flex h-2 w-2 rounded-full bg-green-500"></span>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{user.role}</p>
-              </div>
+        <div className="p-3 mt-auto" style={{ borderTop: "1px solid hsl(222 40% 22%)" }}>
+          <div className="flex items-center gap-3 px-2 py-2">
+            <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: "hsl(221 83% 53%)" }}>
+              {user.fullName.charAt(0).toUpperCase()}
             </div>
-            <Button variant="ghost" size="icon" onClick={handleLogout} title="Çıkış Yap" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white truncate">{user.fullName}</p>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(215 25% 55%)" }}>{user.role}</p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={handleLogout} title="Çıkış Yap" className="h-8 w-8 shrink-0 text-slate-400 hover:text-white hover:bg-white/10">
               <LogOut className="h-4 w-4" />
             </Button>
           </div>

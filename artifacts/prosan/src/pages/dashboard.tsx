@@ -152,7 +152,7 @@ export default function Dashboard() {
 
       {/* Hızlı Satış Butonu */}
       <Link href="/sales">
-        <div className="rounded-xl bg-gradient-to-r from-orange-500 via-orange-500 to-orange-600 hover:brightness-105 active:brightness-95 transition-all shadow-lg shadow-orange-500/20 cursor-pointer">
+        <div className="rounded-xl bg-gradient-to-r from-blue-600 via-blue-600 to-blue-700 hover:brightness-105 active:brightness-95 transition-all shadow-lg shadow-blue-600/20 cursor-pointer">
           <div className="flex items-center justify-between px-6 py-4">
             <div>
               <p className="text-white/80 text-xs font-medium uppercase tracking-widest">Hızlı İşlem</p>
@@ -212,8 +212,8 @@ export default function Dashboard() {
             <AreaChart data={chartData30} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.22} />
+                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
@@ -240,7 +240,7 @@ export default function Dashboard() {
                 wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
                 formatter={(v) => v === "revenue" ? "Ciro" : "Kâr"}
               />
-              <Area type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={2} fill="url(#colorRevenue)" dot={false} />
+              <Area type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} fill="url(#colorRevenue)" dot={false} />
               <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} fill="url(#colorProfit)" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
@@ -277,7 +277,7 @@ export default function Dashboard() {
                     width={110}
                   />
                   <Tooltip content={<BarTooltip />} />
-                  <Bar dataKey="satış" fill="#f97316" radius={[0, 4, 4, 0]} maxBarSize={18} />
+                  <Bar dataKey="satış" fill="#2563eb" radius={[0, 4, 4, 0]} maxBarSize={18} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -356,7 +356,7 @@ export default function Dashboard() {
                 width={42}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="revenue" name="Ciro" fill="#f97316" radius={[4, 4, 0, 0]} maxBarSize={48} />
+              <Bar dataKey="revenue" name="Ciro" fill="#2563eb" radius={[4, 4, 0, 0]} maxBarSize={48} />
               <Bar dataKey="profit" name="Kâr" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={48} />
             </BarChart>
           </ResponsiveContainer>
