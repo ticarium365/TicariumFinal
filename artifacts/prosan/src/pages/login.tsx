@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useLogin } from "@workspace/api-client-react";
-import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +11,6 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const login = useLogin();
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,7 +19,7 @@ export default function Login() {
 
     try {
       await login.mutateAsync({ data: { username, password } });
-      setLocation("/dashboard");
+      window.location.replace("/dashboard");
     } catch (error: any) {
       toast({
         title: "Giriş Başarısız",
