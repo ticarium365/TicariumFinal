@@ -42,8 +42,10 @@ import {
   X,
   Package,
   FileDown,
+  FileUp,
   Loader2,
 } from "lucide-react";
+import { ImportProductsModal } from "@/components/import-products-modal";
 import { Link } from "wouter";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useToast } from "@/hooks/use-toast";
@@ -142,6 +144,7 @@ export default function ProductsList() {
   const [page, setPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -294,6 +297,17 @@ export default function ProductsList() {
             )}
             <span className="hidden sm:inline">Excel'e Aktar</span>
           </Button>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setShowImportModal(true)}
+              title="Excel veya CSV dosyasından ürün içe aktar"
+            >
+              <FileUp className="h-4 w-4" />
+              <span className="hidden sm:inline">İçe Aktar</span>
+            </Button>
+          )}
           {(isAdmin || user?.role === "staff") && (
             <Link href="/products/new">
               <Button className="gap-2 shadow">
@@ -581,6 +595,11 @@ export default function ProductsList() {
           </div>
         </div>
       )}
+      <ImportProductsModal
+        open={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={invalidate}
+      />
     </div>
   );
 }

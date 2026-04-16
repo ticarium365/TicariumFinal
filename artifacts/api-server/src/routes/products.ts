@@ -2,8 +2,20 @@ import { Router, Request, Response } from "express";
 import { db, productsTable, productViewsTable, salesTable } from "@workspace/db";
 import { eq, ilike, and, lte, or, desc, asc, count, gte, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
+import multer from "multer";
+import * as XLSX from "xlsx";
 
 const router = Router();
+
+// Multer: bellekte tut, diske yazma (max 5MB)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ok = /\.(xlsx|xls|csv)$/i.test(file.originalname);
+    cb(ok ? null : new Error("Yalnızca .xlsx, .xls veya .csv dosyaları kabul edilir") as any, ok);
+  },
+});
 
 function calcProfitPercent(purchasePrice: number, salePrice: number): number {
   if (purchasePrice === 0) return 0;
@@ -166,6 +178,161 @@ router.get("/export", requireAuth, async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+// GET /api/products/import-template — indirilebilir boş Excel şablonu
+router.get("/import-template", requireAuth, async (_req: Request, res: Response) => {
+  const headers = [
+    "Ürün Kodu", "Barkod", "Ürün Adı", "Marka", "Kategori",
+    "Açıklama", "Stok", "Min. Stok", "Alış Fiyatı (TL)", "Satış Fiyatı (TL)", "İndirim (%)",
+  ];
+  const example = [
+    "URUN-001", "1234567890123", "Örnek Ürün", "Marka A", "Kategori B",
+    "Ürün açıklaması", 10, 2, 50.00, 100.00, 0,
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+  ws["!cols"] = [
+    { wch: 14 }, { wch: 16 }, { wch: 36 }, { wch: 18 }, { wch: 18 },
+    { wch: 30 }, { wch: 8 }, { wch: 10 }, { wch: 18 }, { wch: 18 }, { wch: 10 },
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Ürünler");
+
+  const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  res.setHeader("Content-Disposition", 'attachment; filename="urun-import-sablonu.xlsx"');
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.send(buf);
+});
+
+// POST /api/products/import — Excel/CSV içe aktar
+router.post(
+  "/import",
+  requireAuth,
+  upload.single("file"),
+  async (req: Request, res: Response) => {
+    try {
+      const cid = req.companyId;
+      const mode = (req.body.mode as string) ?? "skip"; // "skip" | "update"
+
+      if (!req.file) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: "Dosya yüklenmedi", details: null } });
+        return;
+      }
+
+      // Excel / CSV parse
+      const wb = XLSX.read(req.file.buffer, { type: "buffer" });
+      const ws = wb.Sheets[wb.SheetNames[0]!]!;
+      const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+      if (rows.length === 0) {
+        res.status(400).json({ error: { code: "BAD_REQUEST", message: "Dosya boş ya da geçersiz format", details: null } });
+        return;
+      }
+
+      // Sütun eşleme (hem Türkçe hem İngilizce sütun adlarını kabul et)
+      function col(row: Record<string, unknown>, ...keys: string[]): string {
+        for (const k of keys) {
+          const v = row[k];
+          if (v !== undefined && v !== "") return String(v).trim();
+        }
+        return "";
+      }
+
+      let imported = 0;
+      let updated = 0;
+      let skipped = 0;
+      const errors: { row: number; message: string }[] = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i]!;
+        const rowNum = i + 2; // Excel satır numarası (1-indexed header + 1)
+
+        const productCode = col(row, "Ürün Kodu", "productCode", "urun_kodu", "Product Code");
+        const name = col(row, "Ürün Adı", "name", "urun_adi", "Product Name");
+        const barcode = col(row, "Barkod", "barcode") || null;
+        const brand = col(row, "Marka", "brand") || null;
+        const category = col(row, "Kategori", "category") || null;
+        const description = col(row, "Açıklama", "description") || null;
+        const stockRaw = col(row, "Stok", "stock");
+        const minStockRaw = col(row, "Min. Stok", "minStock", "min_stock");
+        const purchasePriceRaw = col(row, "Alış Fiyatı (TL)", "purchasePrice", "alis_fiyati");
+        const salePriceRaw = col(row, "Satış Fiyatı (TL)", "salePrice", "satis_fiyati");
+        const discountRaw = col(row, "İndirim (%)", "discountSalePct", "indirim");
+
+        // Zorunlu alan kontrolü
+        if (!productCode) { errors.push({ row: rowNum, message: "Ürün Kodu boş" }); skipped++; continue; }
+        if (!name) { errors.push({ row: rowNum, message: `'${productCode}': Ürün Adı boş` }); skipped++; continue; }
+
+        const stock = parseInt(stockRaw) || 0;
+        const minStock = parseInt(minStockRaw) || 0;
+        const purchasePrice = parseFloat(purchasePriceRaw.replace(",", ".")) || 0;
+        const salePrice = parseFloat(salePriceRaw.replace(",", ".")) || 0;
+        const discountSalePct = parseFloat(discountRaw.replace(",", ".")) || 0;
+
+        if (salePrice <= 0) { errors.push({ row: rowNum, message: `'${productCode}': Satış Fiyatı geçersiz` }); skipped++; continue; }
+
+        const profitPercent = calcProfitPercent(purchasePrice, salePrice);
+
+        try {
+          // Mevcut ürünü kontrol et (bu şirkette aynı ürün kodu)
+          const [existing] = await db.select({ id: productsTable.id, isActive: productsTable.isActive })
+            .from(productsTable)
+            .where(and(eq(productsTable.companyId, cid), eq(productsTable.productCode, productCode)));
+
+          if (existing) {
+            if (mode === "update") {
+              // Barkod çakışma kontrolü (başka ürüne ait barkod mu?)
+              if (barcode) {
+                const [barcodeConflict] = await db.select({ id: productsTable.id })
+                  .from(productsTable)
+                  .where(and(eq(productsTable.companyId, cid), eq(productsTable.barcode, barcode)));
+                if (barcodeConflict && barcodeConflict.id !== existing.id) {
+                  errors.push({ row: rowNum, message: `'${productCode}': Barkod başka ürüne ait` });
+                  skipped++;
+                  continue;
+                }
+              }
+              await db.update(productsTable)
+                .set({ name, barcode, brand, category, description, stock, minStock, purchasePrice, salePrice, profitPercent, discountSalePct, isActive: true, updatedAt: new Date() })
+                .where(eq(productsTable.id, existing.id));
+              updated++;
+            } else {
+              // mode=skip
+              errors.push({ row: rowNum, message: `'${productCode}': Zaten mevcut, atlandı` });
+              skipped++;
+            }
+          } else {
+            // Barkod çakışma kontrolü
+            if (barcode) {
+              const [barcodeConflict] = await db.select({ id: productsTable.id })
+                .from(productsTable)
+                .where(and(eq(productsTable.companyId, cid), eq(productsTable.barcode, barcode)));
+              if (barcodeConflict) {
+                errors.push({ row: rowNum, message: `'${productCode}': Barkod başka ürüne ait` });
+                skipped++;
+                continue;
+              }
+            }
+            await db.insert(productsTable).values({
+              companyId: cid, productCode, name, barcode, brand, category, description,
+              stock, minStock, purchasePrice, salePrice, profitPercent, discountSalePct,
+            });
+            imported++;
+          }
+        } catch (rowErr: any) {
+          req.log?.error({ rowErr, rowNum }, "Import row error");
+          errors.push({ row: rowNum, message: `'${productCode}': Beklenmeyen hata` });
+          skipped++;
+        }
+      }
+
+      res.json({ imported, updated, skipped, total: rows.length, errors });
+    } catch (err) {
+      req.log?.error({ err }, "Import products error");
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Sunucu hatası oluştu", details: null } });
+    }
+  }
+);
 
 // GET /api/products
 router.get("/", requireAuth, async (req: Request, res: Response) => {
