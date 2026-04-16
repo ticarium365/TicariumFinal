@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import * as XLSX from "xlsx";
 import {
   useListProducts,
   useUpdateProduct,
@@ -40,6 +41,8 @@ import {
   Check,
   X,
   Package,
+  FileDown,
+  Loader2,
 } from "lucide-react";
 import { Link } from "wouter";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -138,6 +141,7 @@ export default function ProductsList() {
   const [lowStock, setLowStock] = useState(false);
   const [page, setPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -213,6 +217,54 @@ export default function ProductsList() {
     }
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams({ limit: "9999", sortBy: "name", sortOrder: "asc" });
+      if (debouncedSearch) params.set("search", debouncedSearch);
+      if (category !== "__all__") params.set("category", category);
+      if (brand !== "__all__") params.set("brand", brand);
+      if (lowStock) params.set("lowStock", "true");
+
+      const res = await fetch(`/api/products?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("API hatası");
+      const json = await res.json() as { products: any[] };
+
+      const rows = json.products.map((p: any) => ({
+        "Ürün Kodu": p.productCode ?? "",
+        "Barkod": p.barcode ?? "",
+        "Ürün Adı": p.name,
+        "Marka": p.brand ?? "",
+        "Kategori": p.category ?? "",
+        "Stok": p.stock,
+        "Min. Stok": p.minStock,
+        "Alış Fiyatı (TL)": Number(p.purchasePrice).toFixed(2),
+        "Satış Fiyatı (TL)": Number(p.salePrice).toFixed(2),
+        "Kâr (%)": Number(p.profitPercent).toFixed(2),
+        "Açıklama": p.description ?? "",
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const colWidths = [
+        { wch: 14 }, { wch: 16 }, { wch: 36 }, { wch: 18 }, { wch: 18 },
+        { wch: 8 }, { wch: 10 }, { wch: 18 }, { wch: 18 }, { wch: 10 }, { wch: 30 },
+      ];
+      ws["!cols"] = colWidths;
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Ürünler");
+
+      const date = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `prosan-urunler-${date}.xlsx`);
+
+      toast({ title: "Excel indirildi", description: `${rows.length} ürün dışa aktarıldı.` });
+    } catch {
+      toast({ title: "Hata", description: "Excel oluşturulamadı.", variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const products = data?.products ?? [];
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
@@ -227,12 +279,30 @@ export default function ProductsList() {
           <h1 className="text-2xl font-bold tracking-tight">Ürün Yönetimi</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{total} ürün kayıtlı</p>
         </div>
-        <Link href="/products/new">
-          <Button className="gap-2 shadow">
-            <Plus className="h-4 w-4" />
-            Yeni Ürün
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={handleExport}
+            disabled={exporting}
+            title="Tüm ürünleri Excel olarak indir"
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileDown className="h-4 w-4" />
+            )}
+            <span className="hidden sm:inline">Excel'e Aktar</span>
           </Button>
-        </Link>
+          {(isAdmin || user?.role === "staff") && (
+            <Link href="/products/new">
+              <Button className="gap-2 shadow">
+                <Plus className="h-4 w-4" />
+                Yeni Ürün
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Arama + Filtreler */}
