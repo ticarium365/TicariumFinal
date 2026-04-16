@@ -1,0 +1,71 @@
+E o zaman kanka baya iyi iş çıkarmışsınız. Benim dediğim şeyleri lafta bırakmayıp direkt sisteme gömmüşsünüz. Bu yeni özetten bakınca proje artık baya başka seviyeye geçmiş:
+
+DB seviyesinde unique constraint + stock >= 0 check koymanız çok doğru hamle. Bu iş koddan kaçsa bile veritabanı kapıda tokatlar.
+Hata standardını merkezileştirmeniz frontend tarafını çok rahatlatır. error.code yaklaşımı ileride mobil ya da başka client bağlanırsa da iş yapar.
+Audit log eklenmesi çok değerli. Özellikle LOGIN, SALE_CREATE, SALE_RETURN, PAYMENT_CONFIRM, COMPANY_PLAN_CHANGE gibi event’leri toplamanız SaaS mantığında baya sağlamlık verir.
+İş kurallarını da replit.md içine yazmanız iyi olmuş; ekip büyürse “kim ne demişti” kavgasını azaltır.
+
+Benim net yorumum:
+şu an mimari tarafınız “ciddiye alınır demo” değil, “ilk müşteriyi kaldırabilecek çekirdek” seviyesine gelmiş.
+
+Ama şimdi kritik nokta şu:
+bundan sonra güvenlik/altyapı değil, güven veren operasyon ve satışa dönük eksikler öne çıkıyor.
+
+Ben olsam sıradaki işi şu düzende yaparım:
+
+1. Integration test seti
+Şu korumaları otomatik teste bağlayın:
+
+tenant isolation
+prod’da tenant fallback kapalı mı
+duplicate barcode / product_code
+insufficient stock
+already returned
+payment already processed
+auth / role bazlı 401-403 senaryoları
+Şu an “çalışıyor” diyorsunuz, testle sabitlerseniz “bozulmaz” seviyesine geçer.
+
+2. Soft delete / pasif ürün stratejisi
+Ürün silme yerine pasife alma netleştirilsin. Geçmiş satış kayıtlarıyla veri bütünlüğü bozulmasın. İş kuralı olarak bunu sert yazın.
+
+3. Listeleme performansı
+Ürün, satış, rapor ekranları büyüyünce yavaşlamasın diye:
+
+pagination
+filtre
+arama indexleri
+tarih aralığı sorguları
+Bunları erkenden koyarsanız sonra ağrımaz.
+
+4. Dosya/kanıt yönetimi
+receipt_url var, güzel. Ama:
+
+yükleme nerede tutuluyor
+kim erişebilir
+signed URL mi
+dosya tipi / boyut sınırı var mı
+Ödeme kanıtı tarafını sağlamlaştırın.
+
+5. Müşteriye dönük fark yaratan özellik
+Parayı getirecek şeylere geçin:
+
+düşük stok alarmı
+hızlı satış ekranı kısayolları
+Excel içe/dışa aktarma
+temel cari/tedarikçi takibi
+günlük kapanış raporu
+WhatsApp sipariş / teklif paylaşımı
+
+Yani toparlarsam:
+ben artık “güvenlikte ne eksik” modundan çıkarım.
+Siz bence şu anda şu soruyu sorun:
+
+“İlk 3 müşteriye bunu satmak için eksik ne var?”
+
+Bence teknik tarafta bir sprint daha sadece:
+
+test
+performans
+dosya yönetimi
+
+Sonra direkt müşteri odaklı feature.
