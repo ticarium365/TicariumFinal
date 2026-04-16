@@ -112,12 +112,23 @@ router.get("/:id", requireAuth, requireSuperAdmin, async (req: Request, res: Res
 router.patch("/:id", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id!);
-    const { name, primaryColor, logoUrl, isActive } = req.body;
+    const { name, primaryColor, logoUrl, isActive, planType, trialEndsAt, trialDays } = req.body;
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (name !== undefined) updateData.name = name;
     if (primaryColor !== undefined) updateData.primaryColor = primaryColor;
     if (logoUrl !== undefined) updateData.logoUrl = logoUrl;
     if (isActive !== undefined) updateData.isActive = isActive;
+    if (planType !== undefined) updateData.planType = planType;
+
+    // Trial bitiş tarihini doğrudan tarihe göre veya gün sayısına göre ayarla
+    if (trialEndsAt !== undefined) {
+      updateData.trialEndsAt = trialEndsAt ? new Date(trialEndsAt) : null;
+    } else if (trialDays !== undefined && trialDays > 0) {
+      const d = new Date();
+      d.setDate(d.getDate() + Number(trialDays));
+      updateData.trialEndsAt = d;
+      updateData.planType = "trial";
+    }
 
     const [company] = await db.update(companiesTable).set(updateData).where(eq(companiesTable.id, id)).returning();
     if (!company) {

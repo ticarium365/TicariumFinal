@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/components/auth-context";
 import { CompanyProvider } from "@/components/company-context";
 import { Layout } from "@/components/layout";
+import { TrialGateway } from "@/components/trial-gateway";
 import NotFound from "@/pages/not-found";
 
 // Pages
@@ -23,14 +24,16 @@ import Reports from "@/pages/reports/index";
 import UsersList from "@/pages/users/index";
 import Settings from "@/pages/settings/index";
 import CompaniesAdmin from "@/pages/admin/companies";
+import AdminPayments from "@/pages/admin/payments";
+import PlatformSettings from "@/pages/admin/platform-settings";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ 
-  component: Component, 
-  roles 
-}: { 
-  component: React.ComponentType; 
+function ProtectedRoute({
+  component: Component,
+  roles,
+}: {
+  component: React.ComponentType;
   roles?: string[];
 }) {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -55,7 +58,9 @@ function ProtectedRoute({
 
   return (
     <Layout>
-      <Component />
+      <TrialGateway>
+        <Component />
+      </TrialGateway>
     </Layout>
   );
 }
@@ -123,6 +128,14 @@ function AuthenticatedRouter() {
 
         <Route path="/admin/companies">
           {() => <ProtectedRoute component={CompaniesAdmin} roles={["super_admin"]} />}
+        </Route>
+
+        <Route path="/admin/payments">
+          {() => <ProtectedRoute component={AdminPayments} roles={["super_admin"]} />}
+        </Route>
+
+        <Route path="/admin/platform-settings">
+          {() => <ProtectedRoute component={PlatformSettings} roles={["super_admin"]} />}
         </Route>
 
         <Route component={NotFound} />

@@ -5,3 +5,5 @@ export * from "./sales";
 export * from "./stock_movements";
 export * from "./product_views";
 export * from "./company_settings";
+export * from "./bank_payments";
+export * from "./platform_settings";

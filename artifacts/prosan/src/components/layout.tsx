@@ -1,20 +1,24 @@
 import { Outlet, Link, useLocation } from "wouter";
 import { useAuth } from "./auth-context";
 import { useCompany } from "./company-context";
+import { usePaymentStatus } from "@/hooks/use-payment-status";
 import { useLogout } from "@workspace/api-client-react";
-import { 
-  LayoutDashboard, 
-  Package, 
-  ScanBarcode, 
-  ShoppingCart, 
-  History, 
-  BarChart3, 
-  Users, 
-  Settings, 
-  LogOut, 
+import {
+  LayoutDashboard,
+  Package,
+  ScanBarcode,
+  ShoppingCart,
+  History,
+  BarChart3,
+  Users,
+  Settings,
+  LogOut,
   Menu,
   PackagePlus,
   Building2,
+  CreditCard,
+  Wrench,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +30,30 @@ import {
 } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+
+function TrialBanner() {
+  const { user } = useAuth();
+  const { data: status } = usePaymentStatus();
+
+  if (!user || user.role === "super_admin") return null;
+  if (!status || status.planType !== "trial" || status.trialDaysLeft === null) return null;
+  if (status.isTrialExpired) return null;
+
+  const days = status.trialDaysLeft;
+  const color = days <= 3 ? "bg-red-600" : days <= 7 ? "bg-orange-500" : "bg-blue-600/80";
+
+  return (
+    <div className={`mx-3 mb-2 rounded-lg px-3 py-2 text-white text-xs ${color}`}>
+      <div className="flex items-center gap-1.5 font-semibold">
+        <Clock className="h-3 w-3 shrink-0" />
+        Trial: {days} gün kaldı
+      </div>
+      {days <= 7 && (
+        <p className="mt-0.5 opacity-80">Süre dolmadan ödeme yapın.</p>
+      )}
+    </div>
+  );
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -41,12 +69,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     try {
       await logout.mutateAsync();
       window.location.href = "/login";
-    } catch (error) {
-      toast({
-        title: "Hata",
-        description: "Çıkış yapılamadı.",
-        variant: "destructive"
-      });
+    } catch {
+      toast({ title: "Hata", description: "Çıkış yapılamadı.", variant: "destructive" });
     }
   };
 
@@ -61,6 +85,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/users", label: "Kullanıcılar", icon: Users, roles: ["admin"] },
     { href: "/settings", label: "Ayarlar", icon: Settings, roles: ["admin"] },
     { href: "/admin/companies", label: "Firma Yönetimi", icon: Building2, roles: ["super_admin"] },
+    { href: "/admin/payments", label: "Ödeme Bildirimleri", icon: CreditCard, roles: ["super_admin"] },
+    { href: "/admin/platform-settings", label: "Platform Ayarları", icon: Wrench, roles: ["super_admin"] },
   ];
 
   const filteredNav = navItems.filter(item => user && item.roles.includes(user.role));
@@ -125,6 +151,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <p className="text-xs" style={{ color: "hsl(215 25% 55%)" }}>Stok Yönetim Sistemi</p>
               </SheetHeader>
               <div className="p-3 flex-1 overflow-y-auto">
+                <TrialBanner />
                 <NavLinks dark />
               </div>
               <div className="p-4 mt-auto" style={{ borderTop: "1px solid hsl(222 40% 22%)" }}>
@@ -154,8 +181,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <h1 className="text-xl font-bold tracking-tight text-white">{companyName}</h1>
           <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest" style={{ color: "hsl(215 25% 60%)" }}>Stok Yönetim Sistemi</p>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto p-3">
+          <TrialBanner />
           <NavLinks dark />
         </div>
 

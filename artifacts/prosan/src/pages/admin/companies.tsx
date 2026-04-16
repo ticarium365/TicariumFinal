@@ -11,7 +11,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Building2, CheckCircle, XCircle, Package, Users, ShoppingCart } from "lucide-react";
+import { Loader2, Plus, Building2, CheckCircle, XCircle, Package, Users, ShoppingCart, Calendar, Settings } from "lucide-react";
 
 interface Company {
   id: number;
@@ -20,6 +20,8 @@ interface Company {
   primaryColor: string | null;
   logoUrl: string | null;
   isActive: boolean;
+  planType: "trial" | "active" | "suspended";
+  trialEndsAt: string | null;
   createdAt: string;
   productCount: number;
   userCount: number;
@@ -33,6 +35,7 @@ interface NewCompanyForm {
   adminPassword: string;
   adminFullName: string;
   primaryColor: string;
+  trialDays: string;
 }
 
 const emptyForm: NewCompanyForm = {
@@ -42,12 +45,38 @@ const emptyForm: NewCompanyForm = {
   adminPassword: "",
   adminFullName: "",
   primaryColor: "#2563eb",
+  trialDays: "14",
 };
+
+function PlanBadge({ company }: { company: Company }) {
+  const now = new Date();
+  const expired = company.trialEndsAt && new Date(company.trialEndsAt) < now;
+  const daysLeft = company.trialEndsAt
+    ? Math.ceil((new Date(company.trialEndsAt).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  if (company.planType === "active") {
+    return <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">Aktif Abonelik</Badge>;
+  }
+  if (company.planType === "suspended") {
+    return <Badge className="bg-red-100 text-red-700 border-red-200 text-xs">Askıya Alınmış</Badge>;
+  }
+  if (expired) {
+    return <Badge className="bg-red-100 text-red-700 border-red-200 text-xs">Trial Doldu</Badge>;
+  }
+  if (daysLeft !== null && daysLeft >= 0) {
+    return <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-xs">Trial • {daysLeft} gün</Badge>;
+  }
+  return <Badge className="bg-slate-100 text-slate-600 text-xs">Trial</Badge>;
+}
 
 export default function CompaniesAdmin() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [trialDialog, setTrialDialog] = useState<Company | null>(null);
+  const [trialDays, setTrialDays] = useState("14");
+  const [planType, setPlanType] = useState<string>("trial");
   const [form, setForm] = useState<NewCompanyForm>(emptyForm);
   const [creating, setCreating] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
@@ -59,16 +88,14 @@ export default function CompaniesAdmin() {
       if (!res.ok) throw new Error("Yüklenemedi");
       const data = await res.json();
       setCompanies(data);
-    } catch (err) {
+    } catch {
       toast({ title: "Hata", description: "Firmalar yüklenemedi.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadCompanies();
-  }, []);
+  useEffect(() => { loadCompanies(); }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +109,16 @@ export default function CompaniesAdmin() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Oluşturulamadı");
+
+      // Trial günü ayarla
+      if (form.trialDays && parseInt(form.trialDays) > 0) {
+        await fetch(`/api/companies/${data.company.id}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ trialDays: parseInt(form.trialDays) }),
+        });
+      }
 
       toast({ title: "Başarılı", description: `${form.name} firması oluşturuldu.` });
       setDialogOpen(false);
@@ -104,16 +141,41 @@ export default function CompaniesAdmin() {
         body: JSON.stringify({ isActive: !company.isActive }),
       });
       if (!res.ok) throw new Error("Güncelleme başarısız");
-      toast({
-        title: "Güncellendi",
-        description: `${company.name} ${!company.isActive ? "aktif edildi" : "devre dışı bırakıldı"}.`,
-      });
+      toast({ title: "Güncellendi", description: `${company.name} ${!company.isActive ? "aktif edildi" : "devre dışı bırakıldı"}.` });
       await loadCompanies();
     } catch (err: any) {
       toast({ title: "Hata", description: err.message, variant: "destructive" });
     } finally {
       setTogglingId(null);
     }
+  };
+
+  const handleUpdateTrial = async () => {
+    if (!trialDialog) return;
+    try {
+      const body: Record<string, unknown> = { planType, updatedAt: new Date() };
+      if (planType === "trial" && trialDays) {
+        body.trialDays = parseInt(trialDays);
+      }
+      const res = await fetch(`/api/companies/${trialDialog.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("Güncelleme başarısız");
+      toast({ title: "Güncellendi" });
+      setTrialDialog(null);
+      await loadCompanies();
+    } catch (err: any) {
+      toast({ title: "Hata", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const openTrialDialog = (company: Company) => {
+    setTrialDialog(company);
+    setPlanType(company.planType);
+    setTrialDays("14");
   };
 
   const f = (key: keyof NewCompanyForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -143,23 +205,17 @@ export default function CompaniesAdmin() {
                 <Label htmlFor="name">Firma Adı *</Label>
                 <Input id="name" value={form.name} onChange={f("name")} placeholder="ÖRNEK ENDÜSTRİ" required />
               </div>
-
               <div className="space-y-1.5">
                 <Label htmlFor="subdomain">Subdomain *</Label>
                 <div className="flex items-center gap-2">
-                  <Input
-                    id="subdomain"
-                    value={form.subdomain}
-                    onChange={f("subdomain")}
-                    placeholder="ornek"
-                    pattern="[a-z0-9\-]+"
-                    title="Yalnızca küçük harf, rakam ve tire"
-                    required
-                  />
+                  <Input id="subdomain" value={form.subdomain} onChange={f("subdomain")} placeholder="ornek" pattern="[a-z0-9\-]+" required />
                   <span className="text-sm text-muted-foreground shrink-0">.smsystem.com</span>
                 </div>
               </div>
-
+              <div className="space-y-1.5">
+                <Label htmlFor="trialDays">Trial Süresi (gün)</Label>
+                <Input id="trialDays" type="number" min="1" max="365" value={form.trialDays} onChange={f("trialDays")} placeholder="14" />
+              </div>
               <div className="border-t pt-4">
                 <p className="text-sm font-medium mb-3">Admin Kullanıcı</p>
                 <div className="space-y-3">
@@ -177,21 +233,13 @@ export default function CompaniesAdmin() {
                   </div>
                 </div>
               </div>
-
               <div className="space-y-1.5">
                 <Label htmlFor="primaryColor">Ana Renk</Label>
                 <div className="flex items-center gap-3">
-                  <input
-                    id="primaryColor"
-                    type="color"
-                    value={form.primaryColor}
-                    onChange={f("primaryColor")}
-                    className="w-10 h-10 rounded cursor-pointer border border-border"
-                  />
+                  <input id="primaryColor" type="color" value={form.primaryColor} onChange={f("primaryColor")} className="w-10 h-10 rounded cursor-pointer border border-border" />
                   <Input value={form.primaryColor} onChange={f("primaryColor")} className="flex-1" placeholder="#2563eb" />
                 </div>
               </div>
-
               <div className="flex justify-end gap-3 pt-2">
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>İptal</Button>
                 <Button type="submit" disabled={creating}>
@@ -204,9 +252,7 @@ export default function CompaniesAdmin() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+        <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
       ) : companies.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
@@ -216,47 +262,87 @@ export default function CompaniesAdmin() {
         <div className="grid gap-4">
           {companies.map((company) => (
             <div key={company.id} className="bg-card border rounded-xl p-5 flex items-center gap-4">
-              <div
-                className="h-12 w-12 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0"
-                style={{ background: company.primaryColor ?? "#2563eb" }}
-              >
+              <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0" style={{ background: company.primaryColor ?? "#2563eb" }}>
                 {company.name.charAt(0).toUpperCase()}
               </div>
-
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-semibold text-sm">{company.name}</span>
                   <Badge variant={company.isActive ? "default" : "secondary"} className="text-xs">
-                    {company.isActive ? (
-                      <><CheckCircle className="h-3 w-3 mr-1" />Aktif</>
-                    ) : (
-                      <><XCircle className="h-3 w-3 mr-1" />Pasif</>
-                    )}
+                    {company.isActive ? <><CheckCircle className="h-3 w-3 mr-1" />Aktif</> : <><XCircle className="h-3 w-3 mr-1" />Pasif</>}
                   </Badge>
+                  <PlanBadge company={company} />
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">{company.subdomain}.smsystem.com</p>
+                {company.trialEndsAt && (
+                  <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {company.planType === "active" ? "Abonelik bitiş:" : "Trial bitiş:"} {new Date(company.trialEndsAt).toLocaleDateString("tr-TR")}
+                  </p>
+                )}
                 <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1"><Package className="h-3 w-3" />{company.productCount} ürün</span>
                   <span className="flex items-center gap-1"><Users className="h-3 w-3" />{company.userCount} kullanıcı</span>
                   <span className="flex items-center gap-1"><ShoppingCart className="h-3 w-3" />{company.saleCount} satış</span>
                 </div>
               </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleToggleActive(company)}
-                disabled={togglingId === company.id}
-                className="shrink-0"
-              >
-                {togglingId === company.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : company.isActive ? "Devre Dışı Bırak" : "Aktif Et"}
-              </Button>
+              <div className="flex gap-2 ml-3 shrink-0">
+                <Button variant="outline" size="sm" onClick={() => openTrialDialog(company)}>
+                  <Settings className="h-3.5 w-3.5 mr-1" /> Plan
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleToggleActive(company)} disabled={togglingId === company.id}>
+                  {togglingId === company.id ? <Loader2 className="h-4 w-4 animate-spin" /> : company.isActive ? "Devre Dışı" : "Aktif Et"}
+                </Button>
+              </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Trial / Plan Yönetimi Dialog */}
+      <Dialog open={!!trialDialog} onOpenChange={() => setTrialDialog(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Plan Ayarla — {trialDialog?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-2">
+              <Label>Plan Tipi</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {(["trial", "active", "suspended"] as const).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPlanType(p)}
+                    className={`py-2 px-3 rounded-lg border text-xs font-medium transition-all ${planType === p ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+                  >
+                    {p === "trial" ? "Trial" : p === "active" ? "Aktif" : "Askıya Al"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {planType === "trial" && (
+              <div className="space-y-1.5">
+                <Label>Bugünden itibaren kaç gün trial?</Label>
+                <Input type="number" min="1" max="365" value={trialDays} onChange={(e) => setTrialDays(e.target.value)} />
+              </div>
+            )}
+            {planType === "active" && (
+              <p className="text-sm text-muted-foreground">
+                Firma tamamen aktif edilecek. Havale onaylandıktan sonra da bu işlem otomatik yapılır.
+              </p>
+            )}
+            {planType === "suspended" && (
+              <p className="text-sm text-orange-600 bg-orange-50 rounded p-2 text-xs">
+                Firma sisteme erişemeyecek ve ödeme sayfasına yönlendirilecek.
+              </p>
+            )}
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => setTrialDialog(null)}>İptal</Button>
+              <Button onClick={handleUpdateTrial}>Kaydet</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

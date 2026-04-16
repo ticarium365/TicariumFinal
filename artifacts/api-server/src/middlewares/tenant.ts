@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { db, companiesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import type { Company } from "@workspace/db";
 
 declare global {
@@ -16,32 +16,33 @@ function extractSubdomain(host: string): string | null {
   const hostWithoutPort = host.split(":")[0]!;
   const parts = hostWithoutPort.split(".");
 
-  // localhost, 127.0.0.1, *.replit.dev gibi geliştirme ortamları
   if (parts.length < 2) return null;
   if (hostWithoutPort === "localhost") return null;
   if (hostWithoutPort.endsWith(".replit.dev")) return null;
   if (hostWithoutPort.endsWith(".replit.app")) {
-    // deployed.replit.app → no subdomain, or prosan.something.replit.app
     if (parts.length >= 3) return parts[0]!;
     return null;
   }
 
-  // Gerçek production: prosan.smsystem.com → ["prosan", "smsystem", "com"]
   if (parts.length >= 3) return parts[0]!;
   return null;
 }
 
-let _defaultCompany: Company | null = null;
-
 async function getDefaultCompany(): Promise<Company | null> {
-  if (_defaultCompany) return _defaultCompany;
   const [company] = await db
     .select()
     .from(companiesTable)
     .where(eq(companiesTable.isActive, true))
+    .orderBy(asc(companiesTable.id))
     .limit(1);
-  if (company) _defaultCompany = company;
   return company ?? null;
+}
+
+// Yollar trial/plan kontrolünden muaf (app.use("/api") altında, /api prefix yok)
+const EXEMPT_PATHS = ["/auth/", "/payment/", "/catalog", "/health"];
+
+function isExempt(path: string): boolean {
+  return EXEMPT_PATHS.some((p) => path.startsWith(p));
 }
 
 export async function tenantMiddleware(req: Request, res: Response, next: NextFunction) {
@@ -51,7 +52,6 @@ export async function tenantMiddleware(req: Request, res: Response, next: NextFu
 
     let company: Company | null = null;
 
-    // 1. Önce X-Tenant header'ına bak (geliştirme ortamı)
     if (tenantHeader) {
       const [found] = await db
         .select()
@@ -60,7 +60,6 @@ export async function tenantMiddleware(req: Request, res: Response, next: NextFu
       if (found) company = found;
     }
 
-    // 2. Subdomain'den resolve et
     if (!company) {
       const subdomain = extractSubdomain(host);
       if (subdomain) {
@@ -72,7 +71,6 @@ export async function tenantMiddleware(req: Request, res: Response, next: NextFu
       }
     }
 
-    // 3. Fallback: ilk aktif şirket (dev ortamı)
     if (!company) {
       company = await getDefaultCompany();
     }
@@ -89,6 +87,29 @@ export async function tenantMiddleware(req: Request, res: Response, next: NextFu
 
     req.companyId = company.id;
     req.company = company;
+
+    // Trial / plan kontrolü — muaf yollar hariç
+    if (!isExempt(req.path)) {
+      const now = new Date();
+      const trialExpired =
+        company.planType === "trial" &&
+        company.trialEndsAt !== null &&
+        company.trialEndsAt !== undefined &&
+        company.trialEndsAt < now;
+
+      const isSuspended = company.planType === "suspended";
+
+      if (trialExpired || isSuspended) {
+        res.status(402).json({
+          error: "Payment Required",
+          message: trialExpired ? "Trial süreniz doldu" : "Hesabınız askıya alındı",
+          planType: company.planType,
+          trialEndsAt: company.trialEndsAt,
+        });
+        return;
+      }
+    }
+
     next();
   } catch (err) {
     console.error("Tenant middleware error:", err);

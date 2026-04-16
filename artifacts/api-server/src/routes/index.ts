@@ -10,6 +10,7 @@ import settingsRouter from "./settings.js";
 import catalogRouter from "./catalog.js";
 import stockRouter from "./stock.js";
 import companiesRouter from "./companies.js";
+import paymentRouter from "./payment.js";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use("/reports", reportsRouter);
 router.use("/settings", settingsRouter);
 router.use("/catalog", catalogRouter);
 router.use("/companies", companiesRouter);
+router.use("/payment", paymentRouter);
 
 export default router;
