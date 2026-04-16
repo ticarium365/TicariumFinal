@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCreateProduct, useGenerateBarcode, useListBrands, useListCategories } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,14 @@ export default function ProductNew() {
 
   const { data: brands } = useListBrands();
   const { data: categories } = useListCategories();
+
+  // Sayfa açıldığında otomatik barkod üret
+  useEffect(() => {
+    generateBarcode.mutateAsync().then(res => {
+      setFormData(prev => ({ ...prev, barcode: res.barcode }));
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [formData, setFormData] = useState({
     productCode: "",

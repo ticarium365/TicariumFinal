@@ -5,6 +5,47 @@ import { requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
 
+router.get("/daily-stats", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const days = Math.min(parseInt(String(req.query.days || "30")), 90);
+    const since = new Date();
+    since.setDate(since.getDate() - days + 1);
+    since.setHours(0, 0, 0, 0);
+
+    const rows = await db
+      .select({
+        date: sql<string>`DATE(${salesTable.createdAt} AT TIME ZONE 'Europe/Istanbul')`,
+        revenue: sql<number>`COALESCE(SUM(${salesTable.totalPrice}), 0)`,
+        profit: sql<number>`COALESCE(SUM(${salesTable.profit}), 0)`,
+        count: sql<number>`COUNT(*)::int`,
+      })
+      .from(salesTable)
+      .where(gte(salesTable.createdAt, since))
+      .groupBy(sql`DATE(${salesTable.createdAt} AT TIME ZONE 'Europe/Istanbul')`)
+      .orderBy(sql`DATE(${salesTable.createdAt} AT TIME ZONE 'Europe/Istanbul')`);
+
+    // Fill in missing days with 0
+    const result: { date: string; revenue: number; profit: number; count: number }[] = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().slice(0, 10);
+      const found = rows.find(r => r.date === dateStr);
+      result.push({
+        date: dateStr,
+        revenue: found ? Number(found.revenue) : 0,
+        profit: found ? Number(found.profit) : 0,
+        count: found ? found.count : 0,
+      });
+    }
+
+    res.json(result);
+  } catch (err) {
+    req.log?.error({ err }, "Get daily stats error");
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 router.get("/today", requireAuth, async (req: Request, res: Response) => {
   try {
     const today = new Date();
