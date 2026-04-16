@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "kaw-H31_kpT9xvNF9w4Hi"
+uri = "file://replit.md"
+type = "text"
+title = "SMS — Proje Dokümantasyonu"
