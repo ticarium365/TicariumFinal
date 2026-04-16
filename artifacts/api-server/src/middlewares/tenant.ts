@@ -12,6 +12,8 @@ declare global {
   }
 }
 
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
 function extractSubdomain(host: string): string | null {
   const hostWithoutPort = host.split(":")[0]!;
   const parts = hostWithoutPort.split(".");
@@ -28,6 +30,7 @@ function extractSubdomain(host: string): string | null {
   return null;
 }
 
+// Yalnızca geliştirme ortamında kullanılır — production'da devre dışı
 async function getDefaultCompany(): Promise<Company | null> {
   const [company] = await db
     .select()
@@ -48,18 +51,22 @@ function isExempt(path: string): boolean {
 export async function tenantMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
     const host = req.headers.host ?? "";
-    const tenantHeader = req.headers["x-tenant"] as string | undefined;
 
     let company: Company | null = null;
 
-    if (tenantHeader) {
-      const [found] = await db
-        .select()
-        .from(companiesTable)
-        .where(eq(companiesTable.subdomain, tenantHeader));
-      if (found) company = found;
+    // X-Tenant header — YALNIZCA geliştirme ortamında kabul edilir
+    if (!IS_PRODUCTION) {
+      const tenantHeader = req.headers["x-tenant"] as string | undefined;
+      if (tenantHeader) {
+        const [found] = await db
+          .select()
+          .from(companiesTable)
+          .where(eq(companiesTable.subdomain, tenantHeader));
+        if (found) company = found;
+      }
     }
 
+    // Subdomain çözümü (hem dev hem prod)
     if (!company) {
       const subdomain = extractSubdomain(host);
       if (subdomain) {
@@ -71,7 +78,15 @@ export async function tenantMiddleware(req: Request, res: Response, next: NextFu
       }
     }
 
+    // Dev fallback: subdomain yoksa ilk aktif şirketi döndür — ASLA production'da kullanılmaz
     if (!company) {
+      if (IS_PRODUCTION) {
+        res.status(400).json({
+          error: "Bad Request",
+          message: "Tenant belirlenemedi. Geçerli bir subdomain ile erişin.",
+        });
+        return;
+      }
       company = await getDefaultCompany();
     }
 

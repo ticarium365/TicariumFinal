@@ -130,6 +130,16 @@ router.patch("/admin/transfers/:id", requireAuth, requireSuperAdmin, async (req:
       return;
     }
 
+    // Idempotency: zaten işlenmiş ödeme tekrar onaylanamaz / reddedilemez
+    if (payment.status !== "pending") {
+      res.status(409).json({
+        error: "Conflict",
+        message: `Bu ödeme zaten '${payment.status}' durumunda. Tekrar işlem yapılamaz.`,
+        currentStatus: payment.status,
+      });
+      return;
+    }
+
     const status = action === "confirm" ? "confirmed" : "rejected";
     const [updated] = await db
       .update(bankPaymentsTable)

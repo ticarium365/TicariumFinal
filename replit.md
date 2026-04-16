@@ -262,6 +262,35 @@ id, key, value (jsonb), updated_at
 
 ---
 
+## Güvenlik
+
+### Oturum (Cookie)
+- `httpOnly: true` — JavaScript ile erişilemez
+- `secure: true` — yalnızca production'da, HTTPS üzerinden
+- `sameSite: "strict"` — production'da; geliştirmede `"lax"`
+
+### Rate Limiting
+- Login endpoint (`POST /api/auth/login`): 15 dakikada maksimum 20 başarısız deneme
+- Aşılırsa `429 Too Many Requests` döner
+- Başarılı girişler sayaca dahil edilmez (`skipSuccessfulRequests: true`)
+
+### Tenant Güvenliği
+- `X-Tenant` header yalnızca `NODE_ENV !== "production"` ortamında kabul edilir
+- Subdomain çözümlenemezse production'da `400 Bad Request` döner; geliştirmede ilk aktif şirkete fallback yapılır
+- **ÖNEMLİ**: "En düşük id'li firma" fallback'i yalnızca geliştirme için tasarlanmıştır. Production deployment'ta subdomain daima çözülmeli; fallback asla çalışmamalıdır.
+
+### Ödeme Idempotency
+- Onaylanmış veya reddedilmiş ödemeler tekrar işleme alınamaz
+- İkinci işlem denemesi `409 Conflict` döner
+- `bank_payments.status` → `pending` → `confirmed | rejected` tek yönlü geçiş
+
+### İş Kuralı Güvenceleri
+- Stok negatife düşemez: satış sırasında `product.stock < quantity` kontrolü yapılır, `400` döner
+- İade ikinci kez yapılamaz: `sale.returned === true` ise `400` döner
+- Kullanıcılar yalnızca kendi şirket kapsamındaki verilere erişebilir
+
+---
+
 ## Önemli Uygulama Notları
 
 - `discountSalePct` → iskontolu fiyat = `purchasePrice × (1 + discountSalePct / 100)`
