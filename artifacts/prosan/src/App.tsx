@@ -53,6 +53,7 @@ import QuoteNewPage from "@/pages/b2b/quote-new";
 import QuoteDetailPage from "@/pages/b2b/quote-detail";
 import OrdersListPage from "@/pages/b2b/orders-list";
 import OrderDetailPage from "@/pages/b2b/order-detail";
+import CatalogManagePage from "@/pages/b2b/catalog-manage";
 
 const queryClient = new QueryClient();
 
@@ -261,6 +262,10 @@ function AuthenticatedRouter() {
 
         <Route path="/b2b/orders/:id">
           {() => <ProtectedRoute component={OrderDetailPage} roles={["admin", "staff"]} />}
+        </Route>
+
+        <Route path="/b2b/catalog">
+          {() => <ProtectedRoute component={CatalogManagePage} roles={["admin", "staff"]} />}
         </Route>
 
         <Route path="/users">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, Star, MapPin, Phone, Globe, Tag, MessageSquare, Package, CheckCircle2, Building2 } from "lucide-react";
+import { ArrowLeft, Star, MapPin, Phone, Globe, Tag, MessageSquare, Package, CheckCircle2, Building2, PackageOpen, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -90,6 +90,30 @@ export default function CompanyProfilePage({ subdomain }: Props) {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [catalog, setCatalog] = useState<any[]>([]);
+  const [catalogQty, setCatalogQty] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    fetch(`${apiBase}/b2b/catalog/by-subdomain/${subdomain}`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((d) => setCatalog(Array.isArray(d.items) ? d.items : []))
+      .catch(() => setCatalog([]));
+  }, [subdomain]);
+
+  function requestQuoteFromCatalog(selectedItems: any[]) {
+    const items = selectedItems.map((it) => ({
+      productName: it.name,
+      productCode: it.code ?? "",
+      description: it.description ?? "",
+      quantity: catalogQty[it.id] ?? it.minOrderQty ?? 1,
+      unit: it.unit ?? "adet",
+    }));
+    sessionStorage.setItem(
+      "b2b:quote-prefill",
+      JSON.stringify({ subdomain, items, subject: `${profileData?.profile.companyName ?? ""} kataloğundan teklif` })
+    );
+    navigate(`/b2b/quotes/new?company=${subdomain}`);
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -249,6 +273,63 @@ export default function CompanyProfilePage({ subdomain }: Props) {
           )}
         </CardContent>
       </Card>
+
+      {catalog.length > 0 && (
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <PackageOpen className="h-4 w-4" />
+              Katalog ({catalog.length})
+            </CardTitle>
+            {profile.acceptOffers && user && (
+              <Button size="sm" variant="outline" onClick={() => requestQuoteFromCatalog(catalog)}>
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Tüm kalemler için teklif iste
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {catalog.map((it) => (
+              <div key={it.id} className="border rounded-lg p-3 space-y-2 bg-card">
+                <div className="space-y-0.5">
+                  <h3 className="font-semibold text-sm leading-tight">{it.name}</h3>
+                  {it.code && <code className="text-[10px] text-muted-foreground font-mono">{it.code}</code>}
+                </div>
+                {it.category && (
+                  <Badge variant="secondary" className="text-[10px]">
+                    {it.category}
+                  </Badge>
+                )}
+                {it.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2">{it.description}</p>
+                )}
+                <div className="flex items-center justify-between text-xs pt-1 border-t">
+                  <span className="text-muted-foreground">Min: {it.minOrderQty} {it.unit}</span>
+                  <span className="font-bold text-sm">
+                    {it.listPrice != null
+                      ? `${it.listPrice.toLocaleString("tr-TR")} ${it.currency}`
+                      : "Fiyat sorunuz"}
+                  </span>
+                </div>
+                {profile.acceptOffers && user && (
+                  <div className="flex gap-1.5 pt-1">
+                    <input
+                      type="number"
+                      min={it.minOrderQty}
+                      defaultValue={it.minOrderQty}
+                      onChange={(e) => setCatalogQty({ ...catalogQty, [it.id]: Number(e.target.value) || it.minOrderQty })}
+                      className="w-16 h-8 text-xs px-2 border rounded"
+                    />
+                    <Button size="sm" className="flex-1 h-8 text-xs" onClick={() => requestQuoteFromCatalog([it])}>
+                      Teklif İste
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>

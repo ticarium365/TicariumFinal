@@ -138,7 +138,7 @@ export default function OrdersListPage() {
         fetch(url, { credentials: "include" }).then((r) => r.json()),
         fetch(`${apiBase}/b2b/orders/stats`, { credentials: "include" }).then((r) => r.json()),
       ]);
-      setData(list);
+      setData(Array.isArray(list) ? list : []);
       setStats(s);
     } catch {
       toast({ title: "Hata", description: "Siparişler yüklenemedi", variant: "destructive" });

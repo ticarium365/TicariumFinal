@@ -48,6 +48,30 @@ export default function QuoteNewPage() {
   const [items, setItems] = useState<Item[]>([{ ...EMPTY_ITEM }]);
 
   useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("b2b:quote-prefill");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.subdomain && parsed.subdomain === subdomain) {
+          if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+            setItems(
+              parsed.items.map((it: any) => ({
+                productName: String(it.productName ?? it.name ?? ""),
+                productCode: String(it.productCode ?? it.code ?? ""),
+                description: String(it.description ?? ""),
+                quantity: String(it.quantity ?? it.minOrderQty ?? 1),
+                unit: String(it.unit ?? "adet"),
+              }))
+            );
+          }
+          if (parsed.subject) setSubject(String(parsed.subject));
+        }
+        sessionStorage.removeItem("b2b:quote-prefill");
+      }
+    } catch {}
+  }, [subdomain]);
+
+  useEffect(() => {
     if (!subdomain) { navigate("/network"); return; }
     fetch(`${apiBase}/network/companies/${subdomain}`, { credentials: "include" })
       .then(async (r) => {

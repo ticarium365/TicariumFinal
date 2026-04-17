@@ -7,6 +7,7 @@ import { useLogout } from "@workspace/api-client-react";
 import {
   LayoutDashboard,
   Package,
+  PackageOpen,
   ScanBarcode,
   Barcode,
   ShoppingCart,
@@ -109,6 +110,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/network", label: "B2B Ağı", icon: Network, roles: ["admin", "staff", "viewer"] },
     { href: "/b2b/quotes", label: "Teklifler", icon: FileText, roles: ["admin", "staff"] },
     { href: "/b2b/orders", label: "Siparişler", icon: Package, roles: ["admin", "staff"] },
+    { href: "/b2b/catalog", label: "B2B Katalog", icon: PackageOpen, roles: ["admin", "staff"] },
     { href: "/reports", label: "Raporlar", icon: BarChart3, roles: ["admin", "viewer"] },
     { href: "/reports/daily-summary", label: "Günlük Kapanış", icon: CalendarCheck, roles: ["admin", "viewer"] },
     { href: "/users", label: "Kullanıcılar", icon: Users, roles: ["admin"] },

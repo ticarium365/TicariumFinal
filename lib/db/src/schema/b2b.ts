@@ -130,6 +130,37 @@ export const b2bOrdersTable = pgTable(
 
 export type B2bOrder = typeof b2bOrdersTable.$inferSelect;
 
+export const b2bCatalogItemsTable = pgTable(
+  "b2b_catalog_items",
+  {
+    id: serial("id").primaryKey(),
+    companyId: integer("company_id")
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: "cascade" }),
+    sourceProductId: integer("source_product_id"),
+    name: text("name").notNull(),
+    code: text("code"),
+    description: text("description"),
+    category: text("category"),
+    unit: text("unit").notNull().default("adet"),
+    listPrice: real("list_price"),
+    currency: text("currency").notNull().default("TRY"),
+    minOrderQty: real("min_order_qty").notNull().default(1),
+    leadDays: integer("lead_days"),
+    imageUrl: text("image_url"),
+    isPublished: boolean("is_published").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("b2b_cat_company_idx").on(t.companyId, t.isPublished),
+    index("b2b_cat_category_idx").on(t.category),
+  ]
+);
+
+export type B2bCatalogItem = typeof b2bCatalogItemsTable.$inferSelect;
+
 export const insertB2bQuoteRequestSchema = createInsertSchema(b2bQuoteRequestsTable).omit({
   id: true,
   fromCompanyId: true,

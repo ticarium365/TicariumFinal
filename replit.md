@@ -142,6 +142,15 @@ The project utilizes a monorepo structure managed by `pnpm workspaces`.
 - `cash_registers` — Kasa tanımları (companyId, name, openingBalance, currentBalance, isDefault)
 - `cash_movements` — Kasa hareketleri (registerId, type, direction, amount, balanceBefore, balanceAfter)
 
+## Sprint 33 — B2B Katalog (TAMAMLANDI)
+
+- Yeni tablo: `b2b_catalog_items` (companyId, sourceProductId, name/code/category, listPrice nullable, minOrderQty, leadDays, isPublished, sortOrder).
+- API: `/api/b2b/catalog` altında `GET /mine`, `GET /by-subdomain/:sub` (yalnız `isPublished=true`), `POST /`, `POST /import-from-products` (max 200, kiracıya ait ürünleri `inArray` ile çeker), `PATCH /:id`, `POST /:id/toggle`, `DELETE /:id` — hepsi `companyId` ile sıkı izole.
+- Frontend: `/b2b/catalog` (kart ızgarası, ekle/düzenle dialog'u, "Stoktan Aktar" çoklu seçim dialog'u, yayınla/gizle, sil), sidebar bağlantısı (`PackageOpen`).
+- Network firma profilinde "Katalog" bölümü (firma katalog yayınlamışsa görünür) — alıcı kalem başına miktar girip "Teklif İste" butonuyla `sessionStorage["b2b:quote-prefill"]` üzerinden `/b2b/quotes/new` sayfasını ön-doldurur (subdomain doğrulanır, okunduktan sonra silinir).
+- E2E doğrulandı: NİHAT katalog kalemi yayınladı → PROSAN profilden gördü → prefill ile teklif oluşturma akışı hazır. Tenant izolasyonu: PROSAN, NİHAT'ın kalemini PATCH/DELETE edemiyor (404).
+- Ek küçük fix: `orders-list.tsx` API non-array dönerse `filtered.map` patlıyordu, `Array.isArray` ile sertleştirildi.
+
 ## Sprint 32 — B2B Sipariş Yönetimi (TAMAMLANDI)
 
 - Yeni tablo: `b2b_orders` (kod, durum, toplam, sevkiyat adresi, kargo bilgisi, durum zaman damgaları).
