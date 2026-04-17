@@ -142,6 +142,16 @@ The project utilizes a monorepo structure managed by `pnpm workspaces`.
 - `cash_registers` — Kasa tanımları (companyId, name, openingBalance, currentBalance, isDefault)
 - `cash_movements` — Kasa hareketleri (registerId, type, direction, amount, balanceBefore, balanceAfter)
 
+## Sprint 46-49 — Omnichannel Satış Kanalları (TAMAMLANDI)
+
+- Yeni tablo: `product_channel_listings` — kiracı başına ürün × kanal eşlemesi (companyId+productId+channelKey unique). 8 kanal sabit (`CHANNEL_KEYS`): trendyol, hepsiburada, n11, amazon_tr (marketplace) · shopify, own_site (ecommerce) · supplier_network, public_catalog (b2b).
+- Fiyat motoru (`computeEffectivePrice`): 4 mod — `fixed`, `markup_pct`, `markup_amount`, `base` — opsiyonel `minPrice` tabanı + zaman pencereli `campaignPrice`/`campaignStartsAt`/`campaignEndsAt` desteği.
+- Stok motoru (`computeEffectiveStock`): 4 mod — `full`, `buffer` (stok−tampon), `fixed`, `percent` — `minStockShow`/`maxStockShow` ile kelepçe + `stopBelowCritical` kritik altında otomatik gizleme.
+- API: `/api/channels` altında `GET /` (kanal tanımları), `GET /stats` (kanal başına toplam/aktif), `GET /:channelKey/listings` (matris satırları), `GET /products/:productId/all` (8 kanalın hepsi), `PUT /products/:productId/:channelKey` (upsert), `POST /bulk` (filtre→kanallar→aksiyon sihirbazı). Bulk handler `onConflictDoUpdate` ile atomik (race-condition güvenli).
+- Frontend: `/channels` (kanal kartları + istatistikler), `/channels/:channelKey` (matris + inline aktif toggle + ürün başına ayar dialog'u), `/channels/bulk` (3 adımlı sihirbaz: filtre → kanal seçimi → aksiyon). Sidebar'a "Satış Kanalları" (Radio ikonu) eklendi.
+- E2E doğrulandı: PROSAN PAMUKKALE markası tek komutla 2 kanalda yayına alındı (9 ürün × 2 kanal = 18 affected, idempotent ikinci çalıştırma da çalışıyor). NİHAT, PROSAN'ın ürünlerine müdahale edemiyor (404).
+- Not: Marketplace gerçek API entegrasyonları (Trendyol/Hepsiburada/N11/Amazon SP-API) ayrı sprint — gerçek kimlik bilgileri gerektiriyor; iskelet hazır, sync job'u eklendiğinde her kanalın kendi adapter'ı `effectivePrice/effectiveStock` çıktılarını kullanacak.
+
 ## Sprint 33 — B2B Katalog (TAMAMLANDI)
 
 - Yeni tablo: `b2b_catalog_items` (companyId, sourceProductId, name/code/category, listPrice nullable, minOrderQty, leadDays, isPublished, sortOrder).

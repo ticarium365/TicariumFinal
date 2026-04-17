@@ -35,6 +35,7 @@ import networkRouter from "./network.js";
 import b2bRouter from "./b2b.js";
 import b2bOrdersRouter from "./b2b-orders.js";
 import b2bCatalogRouter from "./b2b-catalog.js";
+import channelsRouter from "./channels.js";
 
 const router: IRouter = Router();
 
@@ -74,5 +75,6 @@ router.use("/network", networkRouter);
 router.use("/b2b", b2bRouter);
 router.use("/b2b/orders", b2bOrdersRouter);
 router.use("/b2b/catalog", b2bCatalogRouter);
+router.use("/channels", channelsRouter);
 
 export default router;

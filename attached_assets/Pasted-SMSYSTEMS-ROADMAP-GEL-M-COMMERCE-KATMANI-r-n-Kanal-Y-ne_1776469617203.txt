@@ -1,0 +1,330 @@
+SMSYSTEMS ROADMAP — GELİŞMİŞ COMMERCE KATMANI
+(Ürün Kanal Yönetimi + Fiyat Motoru + Rekabet Analizi)
+
+NOT:
+Bu faz, mevcut sprintlerin üstüne eklenir.
+Amaç: İçerideki ERP verisini akıllı şekilde dış satış kanallarına yönetmek.
+
+==================================================
+FAZ F — OMNICHANNEL PRODUCT CONTROL
+===================================
+
+SPRINT 46 — Kanal Bazlı Ürün Yayınlama Merkezi
+
+AMAÇ:
+Her ürün her yere çıkmasın.
+Kullanıcı hangi ürünü hangi kanala göndereceğini seçsin.
+
+Özellikler:
+
+Her ürün için kanal bazlı kontrol:
+
+[ ] Trendyol’a gönder
+[ ] Hepsiburada’ya gönder
+[ ] N11’e gönder
+[ ] Shopify mağazasına gönder
+[ ] Kendi sitesine gönder
+[ ] Supplier networkte göster
+[ ] Public katalogda göster
+
+Ürün Bazlı Ayarlar:
+
+* ayrı başlık
+* ayrı açıklama
+* ayrı kategori eşleme
+* ayrı görsel seçimi
+* ayrı SKU
+* aktif/pasif
+
+Toplu İşlem:
+
+* seçili ürünleri Trendyol’a aç
+* seçili ürünleri kapat
+* kategori bazlı yayınla
+* marka bazlı yayınla
+
+DEFINITION OF DONE:
+Kullanıcı hangi ürünün hangi kanalda olacağını tam kontrol ediyor.
+
+==================================================
+
+SPRINT 47 — Kanal Bazlı Fiyat Motoru
+
+AMAÇ:
+Her kanalda ayrı fiyat.
+
+Özellikler:
+
+Ürün için:
+
+Ana fiyat = 100 TL
+
+Kanal fiyatları:
+
+* Trendyol = 109 TL
+* Hepsiburada = 112 TL
+* N11 = 107 TL
+* Site = 99 TL
+* Supplier network = teklif al
+
+Kurallar:
+
+* sabit fiyat
+* yüzde ekle (%10)
+* sabit ekle (+15 TL)
+* min fiyat altına düşme
+* kampanya fiyatı
+* tarihli fiyat
+
+Toplu Güncelleme:
+
+* tüm Trendyol fiyatlarına +%7
+* X marka ürünlerde -10 TL
+* kategori bazlı zam
+
+DEFINITION OF DONE:
+Kanal bazlı fiyatlama profesyonel seviyede hazır.
+
+==================================================
+
+SPRINT 48 — Kanal Bazlı Stok Motoru
+
+AMAÇ:
+Gerçek stok ayrı, yayınlanan stok ayrı.
+
+Örnek:
+
+Sistemde stok = 12
+
+Kurallar:
+
+* Trendyol = stok -2
+* Hepsiburada = stok -4
+* N11 = sabit 3 göster
+* Site = tamamını göster
+* Supplier network = sadece 5 göster
+
+Kurallar:
+
+* yüzde stok göster (%50)
+* min/max stok limiti
+* sıfırsa kapat
+* kritik stokta yayını durdur
+* güvenlik tampon stoku
+
+Toplu İşlem:
+
+* tüm pazar yerlerinde -3 tampon uygula
+* X kategori max 10 stok göster
+
+DEFINITION OF DONE:
+Overselling riski düşer, kanal stoğu kontrol edilir.
+
+==================================================
+
+SPRINT 49 — Toplu Kanal Operasyon Merkezi
+
+AMAÇ:
+1000 ürünü tek tek uğraşmadan yönetmek.
+
+Özellikler:
+
+Toplu işlemler:
+
+* fiyat artır/azalt
+* stok tamponu değiştir
+* yayına al / kapat
+* kategori değiştir
+* kampanya ata
+* açıklama değiştir
+* etiket ekle
+* kanal değiştir
+
+Filtreler:
+
+* satış yok 30 gün
+* stok fazla
+* marj düşük
+* marka bazlı
+* kategori bazlı
+
+DEFINITION OF DONE:
+Büyük kataloglar hızlı yönetiliyor.
+
+==================================================
+FAZ G — AKILLI REKABET MOTORU
+=============================
+
+SPRINT 50 — Rakip Fiyat Takibi
+
+AMAÇ:
+Pazar yerlerinde fiyat körlüğünü bitirmek.
+
+Özellikler:
+
+Bildirim:
+
+* Sen Trendyol’da 100 TL’sin
+* En düşük rakip 90 TL
+* Ortalama fiyat 96 TL
+* Buybox kaybettin
+* İlk sayfa dışına düştün
+
+Kanallar:
+
+* Trendyol
+* Hepsiburada
+* N11
+* Amazon TR (sonra)
+
+DEFINITION OF DONE:
+Kullanıcı piyasayı görüyor.
+
+==================================================
+
+SPRINT 51 — Akıllı Fiyat Öneri Motoru
+
+AMAÇ:
+Fiyatı sistem önersin.
+
+Örnek öneriler:
+
+* 100 TL yerine 94,90 yap dönüşüm artabilir
+* 89 TL altına inme marj düşer
+* Rakibe göre +2 gün hızlı kargo avantajın var, fiyat koru
+* Son 7 günde satış yok, %8 kampanya önerilir
+
+DEFINITION OF DONE:
+Fiyat kararı veriye dayanıyor.
+
+==================================================
+
+SPRINT 52 — Kanal Karlılık Analizi
+
+AMAÇ:
+Satış var ama para var mı?
+
+Rapor:
+
+* Trendyol satış cirosu
+* komisyon kesintisi
+* reklam gideri
+* kargo gideri
+* iade oranı
+* net kar
+
+Kanal karşılaştırması:
+
+* Site en karlı
+* Trendyol hacim yüksek
+* HB düşük marj
+
+DEFINITION OF DONE:
+Hangi kanal para kazandırıyor net görülüyor.
+
+==================================================
+
+SPRINT 53 — Reklam + Kanal Performansı
+
+AMAÇ:
+Reklam nereye yarıyor?
+
+Özellikler:
+
+* 5000 TL Meta reklam → siteye 80 sipariş
+* Trendyol sponsorlu ürün → 22 satış
+* Google Shopping → ROAS 5.2
+
+Bildirim:
+
+* Reklam bütçesi boşa gidiyor
+* Bu ürün reklama uygun
+* Bu ürün organik satıyor reklam kes
+
+DEFINITION OF DONE:
+Bütçe verimli yönetiliyor.
+
+==================================================
+FAZ H — OTOMASYON
+=================
+
+SPRINT 54 — Otomatik Kural Motoru
+
+Örnek Kurallar:
+
+* Rakip benden %10 ucuzsa fiyatı 3 TL düşür
+* Stok 5 altına düşünce marketplace kapat
+* Marj %15 altına düşerse satış durdur
+* Son 14 gün satmayan ürünü kampanyaya al
+* Yeni ürünleri siteye otomatik aç
+
+DEFINITION OF DONE:
+Panel manuel iş yükü azaltır.
+
+==================================================
+
+SPRINT 55 — Bildirim Merkezi Pro
+
+Kanallar:
+
+* uygulama içi
+* email
+* whatsapp
+* telegram
+* webhook
+
+Bildirimler:
+
+* rakip fiyat düştü
+* stok bitecek
+* ürün trend oldu
+* buybox kaybı
+* yüksek iade başladı
+
+==================================================
+BÜYÜK RESİM
+===========
+
+Bugün:
+stok programı
+
+Sonra:
+çok kanallı satış merkezi
+
+Sonra:
+otomatik fiyat motoru
+
+Sonra:
+rakip analizi platformu
+
+Sonra:
+KOBİ’lerin dijital satış beyni
+
+==================================================
+EN KRİTİK PARA GETİREN SIRALAMA
+===============================
+
+46
+47
+48
+49
+50
+52
+53
+54
+
+==================================================
+GERÇEK DEĞER
+============
+
+Sen artık ERP yapmıyorsun.
+
+Sen;
+
+* stok yöneten
+* satış dağıtan
+* fiyat yöneten
+* rakibi izleyen
+* reklam optimize eden
+
+ticaret işletim sistemi kuruyorsun.

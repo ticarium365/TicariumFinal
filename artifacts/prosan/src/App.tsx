@@ -54,6 +54,9 @@ import QuoteDetailPage from "@/pages/b2b/quote-detail";
 import OrdersListPage from "@/pages/b2b/orders-list";
 import OrderDetailPage from "@/pages/b2b/order-detail";
 import CatalogManagePage from "@/pages/b2b/catalog-manage";
+import ChannelsListPage from "@/pages/channels/channels-list";
+import ChannelDetailPage from "@/pages/channels/channel-detail";
+import ChannelsBulkPage from "@/pages/channels/channels-bulk";
 
 const queryClient = new QueryClient();
 
@@ -266,6 +269,21 @@ function AuthenticatedRouter() {
 
         <Route path="/b2b/catalog">
           {() => <ProtectedRoute component={CatalogManagePage} roles={["admin", "staff"]} />}
+        </Route>
+
+        <Route path="/channels">
+          {() => <ProtectedRoute component={ChannelsListPage} roles={["admin", "staff"]} />}
+        </Route>
+        <Route path="/channels/bulk">
+          {() => <ProtectedRoute component={ChannelsBulkPage} roles={["admin"]} />}
+        </Route>
+        <Route path="/channels/:channelKey">
+          {(params) => (
+            <ProtectedRoute
+              component={() => <ChannelDetailPage channelKey={params.channelKey} />}
+              roles={["admin", "staff"]}
+            />
+          )}
         </Route>
 
         <Route path="/users">
