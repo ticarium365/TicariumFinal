@@ -8,3 +8,4 @@ export * from "./company_settings";
 export * from "./bank_payments";
 export * from "./platform_settings";
 export * from "./audit_logs";
+export * from "./notifications";

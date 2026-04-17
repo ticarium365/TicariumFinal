@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { db, productsTable, salesTable, productViewsTable } from "@workspace/db";
 import { and, gte, lte, count, desc, sql, eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
+import { requireAdmin } from "../middlewares/auth.js";
 
 const router = Router();
 
@@ -156,6 +157,112 @@ router.get("/critical-stock", requireAuth, async (req: Request, res: Response) =
   } catch (err) {
     req.log?.error({ err }, "Critical stock error");
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/dashboard/morning-brief
+// Dünkü özet + bugünün ilk saati + kritik stok + top ürünler + hava notları
+// ---------------------------------------------------------------------------
+router.get("/morning-brief", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const cid = req.companyId;
+
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    const yesterdayEnd = new Date(todayStart);
+
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - 7);
+
+    const [yesterdaySales, weekSales, criticalProducts] = await Promise.all([
+      db.select()
+        .from(salesTable)
+        .where(and(
+          eq(salesTable.companyId, cid),
+          gte(salesTable.createdAt, yesterdayStart),
+          lte(salesTable.createdAt, yesterdayEnd),
+        )),
+      db.select()
+        .from(salesTable)
+        .where(and(
+          eq(salesTable.companyId, cid),
+          gte(salesTable.createdAt, weekStart),
+        )),
+      db.select({
+        id: productsTable.id,
+        name: productsTable.name,
+        productCode: productsTable.productCode,
+        stock: productsTable.stock,
+        minStock: productsTable.minStock,
+      })
+        .from(productsTable)
+        .where(and(
+          eq(productsTable.companyId, cid),
+          eq(productsTable.isActive, true),
+          sql`${productsTable.stock} <= ${productsTable.minStock}`,
+        ))
+        .orderBy(productsTable.stock)
+        .limit(10),
+    ]);
+
+    const yesterdayRevenue = yesterdaySales.reduce((s, x) => s + x.totalPrice, 0);
+    const yesterdayProfit = yesterdaySales.reduce((s, x) => s + x.profit, 0);
+
+    const weekRevenue = weekSales.reduce((s, x) => s + x.totalPrice, 0);
+    const weekProfit = weekSales.reduce((s, x) => s + x.profit, 0);
+
+    // Dün ile bir önceki haftanın aynı günü kıyasla
+    const prevDayStart = new Date(yesterdayStart);
+    prevDayStart.setDate(prevDayStart.getDate() - 7);
+    const prevDayEnd = new Date(prevDayStart);
+    prevDayEnd.setDate(prevDayEnd.getDate() + 1);
+
+    const prevDaySales = await db.select()
+      .from(salesTable)
+      .where(and(
+        eq(salesTable.companyId, cid),
+        gte(salesTable.createdAt, prevDayStart),
+        lte(salesTable.createdAt, prevDayEnd),
+      ));
+
+    const prevDayRevenue = prevDaySales.reduce((s, x) => s + x.totalPrice, 0);
+    const revenueTrend = prevDayRevenue > 0
+      ? ((yesterdayRevenue - prevDayRevenue) / prevDayRevenue) * 100
+      : null;
+
+    const zeroStock = criticalProducts.filter((p) => p.stock === 0).length;
+    const lowStock = criticalProducts.filter((p) => p.stock > 0).length;
+
+    const hour = now.getHours();
+    const greeting = hour < 12 ? "Günaydın" : hour < 18 ? "İyi günler" : "İyi akşamlar";
+
+    res.json({
+      greeting,
+      date: now.toISOString().split("T")[0],
+      yesterday: {
+        salesCount: yesterdaySales.length,
+        revenue: yesterdayRevenue,
+        profit: yesterdayProfit,
+        revenueTrend,
+      },
+      week: {
+        salesCount: weekSales.length,
+        revenue: weekRevenue,
+        profit: weekProfit,
+      },
+      stock: {
+        zeroStock,
+        lowStock,
+        criticalProducts: criticalProducts.slice(0, 5),
+      },
+    });
+  } catch (err) {
+    req.log?.error({ err }, "Morning brief error");
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Sunucu hatası", details: null } });
   }
 });
 

@@ -1,0 +1,416 @@
+SPRINT 4 — Cari / Müşteri Takibi Modülü
+
+AMAÇ:
+SMSYSTEMS’i sadece stok programı olmaktan çıkarıp işletmenin günlük tahsilat, borç/alacak ve müşteri ilişkilerini yönettiği sisteme çevirmek.
+
+Bu sprint sonunda kullanıcı:
+
+* müşteri ekleyebilecek
+* müşteriye satış bağlayabilecek
+* müşterinin borcunu görebilecek
+* tahsilat alabilecek
+* cari hareketlerini inceleyebilecek
+* müşteri bazlı satış geçmişi görebilecek
+
+==================================================
+GENEL TESLİM KURALLARI
+======================
+
+* Multi-tenant izolasyonu zorunlu
+* company_id scope her sorguda uygulanacak
+* auth + role kontrolü olacak
+* standart error formatı kullanılacak
+* audit log kritik işlemlerde çalışacak
+* integration test yazılacak
+* responsive UI olacak
+* docs güncellenecek
+
+==================================================
+VERİTABANI ŞEMASI
+=================
+
+1. customers
+
+id
+company_id
+code                (müşteri kodu, unique company bazlı)
+type                (individual | company)
+name
+tax_office nullable
+tax_number nullable
+phone nullable
+email nullable
+city nullable
+district nullable
+address nullable
+contact_person nullable
+credit_limit numeric default 0
+opening_balance numeric default 0
+current_balance numeric default 0
+notes nullable
+is_active boolean default true
+created_at
+updated_at
+
+Index:
+(company_id, code) unique
+(company_id, name)
+(company_id, phone)
+
+---
+
+2. customer_transactions
+
+id
+company_id
+customer_id
+type
+(source: sale | payment | adjustment | refund)
+
+direction
+(debit | credit)
+
+amount
+reference_type nullable
+reference_id nullable
+description nullable
+created_by
+created_at
+
+Mantık:
+debit  = müşterinin borcu arttı
+credit = müşterinin borcu azaldı
+
+---
+
+3. sales tablosuna ek alan
+
+customer_id nullable
+
+Bir satış müşteriye bağlanabilir.
+
+==================================================
+BAKİYE HESAP MANTIĞI
+====================
+
+current_balance = toplam debit - toplam credit
+
+Örnek:
+10.000 satış = debit
+4.000 tahsilat = credit
+
+Bakiye = 6.000
+
+Not:
+İlk versiyonda customers.current_balance tutulabilir.
+Her işlem sonrası transaction ile güncellensin.
+
+==================================================
+BACKEND API
+===========
+
+1. Müşteri CRUD
+
+GET /api/customers
+
+* pagination
+* search
+* active filter
+
+GET /api/customers/:id
+
+POST /api/customers
+
+PUT /api/customers/:id
+
+DELETE /api/customers/:id
+(soft delete => is_active=false)
+
+PATCH /api/customers/:id/restore
+
+---
+
+2. Cari İşlemler
+
+GET /api/customers/:id/transactions
+
+POST /api/customers/:id/payment
+
+Body:
+{
+amount,
+paymentMethod,
+note
+}
+
+Bu işlem:
+
+* customer_transactions içine credit kayıt açar
+* bakiye düşer
+* audit log atar
+
+POST /api/customers/:id/adjustment
+
+Body:
+{
+amount,
+direction,
+note
+}
+
+Manuel bakiye düzeltme
+
+---
+
+3. Satış Bağlama
+
+POST /api/sales
+
+Mevcut satış endpoint’ine ekle:
+
+customerId optional
+
+Satış müşteriye bağlıysa:
+
+* sale oluşur
+* customer_transactions içine debit oluşur
+* bakiye artar
+
+---
+
+4. Rapor Endpointleri
+
+GET /api/customers/top-debtors
+GET /api/customers/:id/statement
+GET /api/customers/:id/sales
+
+==================================================
+BACKEND İŞ KURALLARI
+====================
+
+* viewer ödeme alamaz
+
+* staff satışa müşteri bağlayabilir (opsiyonel)
+
+* admin tam yetkili
+
+* super_admin tenant seçmeden veri görmez
+
+* Tahsilat amount > 0 olmalı
+
+* Silinmiş müşteriye işlem yapılamaz
+
+* credit_limit aşımı uyarı verebilir (bloklama opsiyonel)
+
+* Aynı transaction iki kez işlenmemeli
+
+==================================================
+AUDIT LOG OLAYLARI
+==================
+
+CUSTOMER_CREATE
+CUSTOMER_UPDATE
+CUSTOMER_DELETE
+CUSTOMER_RESTORE
+CUSTOMER_PAYMENT
+CUSTOMER_ADJUSTMENT
+SALE_LINKED_CUSTOMER
+
+==================================================
+FRONTEND EKRANLARI
+==================
+
+1. Müşteriler Sayfası
+
+Tablo kolonları:
+
+* Kod
+* Ad
+* Telefon
+* Şehir
+* Bakiye
+* Durum
+* İşlem
+
+Özellikler:
+
+* arama
+* filtre
+* aktif/pasif
+* pagination
+* yeni müşteri ekle
+
+---
+
+2. Müşteri Detay Sayfası
+
+Üst Kart:
+
+* müşteri adı
+* telefon
+* bakiye
+* limit
+* şehir
+* notlar
+
+Tablar:
+
+A) Hareketler
+
+* tarih
+* açıklama
+* debit
+* credit
+* bakiye sonrası
+
+B) Satışlar
+
+* tarih
+* tutar
+* ödeme tipi
+
+C) Bilgiler
+
+* iletişim bilgileri
+
+---
+
+3. Tahsilat Modalı
+
+Alanlar:
+
+* tutar
+* ödeme yöntemi
+* not
+
+Kaydet → bakiye güncellenir
+
+---
+
+4. Satış Ekranı Güncelleme
+
+Yeni satış ekranında:
+
+* müşteri seç dropdown
+* hızlı müşteri ekle
+* veresiye / müşteriye yaz seçeneği
+
+==================================================
+UI / UX DETAYLARI
+=================
+
+* Borçlu müşteri kırmızı badge
+* Alacaklı müşteri yeşil badge
+* 0 bakiye gri
+* hızlı tahsilat butonu
+* telefon numarasına tıklanabilir link
+* mobil uyumlu kart görünüm
+
+==================================================
+RAPORLAR
+========
+
+1. En Borçlu 10 Müşteri
+2. Bu Ay Tahsilatlar
+3. Müşteri Satış Hacmi
+4. Vadesi Yüksek Açık Bakiyeler
+5. Son Tahsilatlar
+
+==================================================
+IMPORT / EXPORT
+===============
+
+CSV / Excel müşteri içe aktarma
+
+Kolonlar:
+
+code
+name
+phone
+email
+city
+address
+opening_balance
+
+Müşteri dışa aktarma da olsun.
+
+==================================================
+INTEGRATION TESTLER
+===================
+
+1. müşteri oluşturma
+2. duplicate code engeli
+3. tenant isolation
+4. soft delete
+5. restore
+6. tahsilat işlemi
+7. bakiye doğru hesaplandı mı
+8. satış müşteriye bağlanınca debit oluştu mu
+9. statement endpoint doğru mu
+10. viewer tahsilat alamıyor mu
+11. auth koruması
+
+==================================================
+PERFORMANS
+==========
+
+Index ekle:
+
+customers:
+(company_id, name)
+(company_id, current_balance)
+
+customer_transactions:
+(company_id, customer_id, created_at)
+
+==================================================
+DOKÜMANTASYON
+=============
+
+replit.md içine ekle:
+
+* müşteri modülü
+* bakiye mantığı
+* tahsilat akışı
+* role permissions
+* endpoint listesi
+
+==================================================
+SPRINT UYGULAMA SIRASI
+======================
+
+1. DB schema
+2. customers routes
+3. payment routes
+4. sales customer linkage
+5. frontend customers page
+6. customer detail
+7. tahsilat modal
+8. reports
+9. import/export
+10. tests
+11. docs
+
+==================================================
+DEFINITION OF DONE
+==================
+
+* Müşteri oluşturulabiliyor
+* Satış müşteriye bağlanıyor
+* Borç otomatik oluşuyor
+* Tahsilat giriliyor
+* Bakiye doğru güncelleniyor
+* Hareket geçmişi izleniyor
+* Testler yeşil
+* UI responsive
+* Tenant güvenliği sağlam
+
+==================================================
+İŞ DEĞERİ
+=========
+
+Bu sprint sonunda ürün sadece stok yazılımı olmaz.
+Kullanıcı müşteri borçlarını takip ettiği için sistemden çıkamaz.
+
+Retention ciddi artar.
+Upsell potansiyeli doğar.

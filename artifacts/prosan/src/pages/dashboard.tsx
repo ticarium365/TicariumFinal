@@ -7,6 +7,7 @@ import {
   Package, AlertTriangle, TrendingUp, TrendingDown, ScanBarcode,
   ShoppingCart, BarChart2, CircleDollarSign,
 } from "lucide-react";
+import { MorningBrief } from "@/components/morning-brief";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
@@ -149,6 +150,9 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
+
+      {/* Günaydın Özet */}
+      <MorningBrief />
 
       {/* Hızlı Satış Butonu */}
       <Link href="/sales">

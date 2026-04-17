@@ -11,7 +11,7 @@ Platform markası **SMSYSTEMS**; kiracı markası dinamik olarak API'dan çekili
 ## Test Komutu
 
 ```bash
-# API integration testleri (56 test, 13 suite) — server çalışırken çalıştırın
+# API integration testleri (71 test, 15 suite) — server çalışırken çalıştırın
 pnpm --filter @workspace/api-server run test
 ```
 
@@ -19,9 +19,9 @@ Testler `artifacts/api-server/tests/integration.test.mjs` dosyasındadır. Node.
 
 **Not:** Rate limiter production dışında devre dışı (`skip: () => NODE_ENV !== "production"`). Test çalıştırmadan önce kullanıcıların `is_active=true` olduğundan emin olun.
 
-**Suite'ler (13):**
+**Suite'ler (15):**
 1. Auth · 2. Ürünler · 3. Satış ve Stok · 4. Soft Delete & Restore · 5. Tenant İzolasyonu · 6. Düşük Stok Alarmları · 7. Toplu Stok Güncellemesi · 8. Günlük Kapanış Özeti · 9. Super Admin
-10. Ayarlar · 11. Onboarding · 12. Logo Yükleme · 13. Demo Sıfırlama
+10. Ayarlar · 11. Onboarding · 12. Logo Yükleme · 13. Demo Sıfırlama · 14. Bildirimler · 15. Morning Brief ve Şablonlar
 
 ---
 
@@ -397,7 +397,14 @@ Her kayıtta: `company_id, user_id, username, action, entity, entity_id, details
 |--------|--------|-------|
 | Sprint 1 | Temel Altyapı (Bulk stok, Günlük kapanış, Ödeme yöntemi) | ✅ TAMAMLANDI |
 | Sprint 2 | Onboarding Paketi (Sihirbaz, Logo, Tema, Demo reset, WelcomeTour) | ✅ TAMAMLANDI |
-| Sprint 3–18 | Gelecek sprintler (AI stok tahmini → E-ticaret katalog) | ⏳ BEKLIYOR |
+| Sprint 3 | Kullanım Alışkanlığı Paketi (Morning Brief, Bildirimler, Şablonlar) | ✅ TAMAMLANDI |
+| Sprint 4–18 | Gelecek sprintler (Cari/Müşteri → E-ticaret katalog) | ⏳ BEKLIYOR |
+
+### Sprint 3 Özeti
+- **DB**: `notifications` tablosu eklendi (company_id, user_id, type, title, message, is_read, entity_type, entity_id)
+- **Backend**: `/api/notifications` (GET, count, read-all, /:id/read, generate, templates), `/api/dashboard/morning-brief`
+- **Frontend**: `NotificationCenter` bileşeni (LowStockBell'in yerini aldı, tam bildirim merkezi + unread badge), `MorningBrief` widget (Dashboard'da dünün özeti + 7 günlük + kritik stok), hooks (use-notifications.ts)
+- **Testler**: 71/71 geçiyor (15 suite: +2 yeni Sprint 3 suite'i)
 
 ### Sprint 2 Özeti
 - **DB**: `company_settings` genişletildi — `logo_url`, `primary_color`, `onboarding_completed`, `currency`, `tax_rate`, `website`, `tax_number`

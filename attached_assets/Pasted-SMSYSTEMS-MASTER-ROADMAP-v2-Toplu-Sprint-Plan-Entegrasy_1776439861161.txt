@@ -1,0 +1,551 @@
+SMSYSTEMS MASTER ROADMAP v2
+(Toplu Sprint Planı + Entegrasyon + Gelecek Pazaryeri Altyapısı)
+
+GENEL VİZYON
+Bu ürün yalnızca stok/satış programı olmayacak.
+
+3 ana hedef:
+
+1. İşletmeler için günlük kullanılan SaaS yönetim sistemi
+2. Dış servislerle entegre çalışan açık platform
+3. Müşteri onayıyla tedarikçi envanterlerini toplayıp canlı satış yapılabilen ticaret ağı
+
+Yani hedef:
+ERP + SaaS + Entegrasyon Merkezi + Tedarik Ağı
+
+==================================================
+GENEL KURALLAR (HER SPRINTTE ZORUNLU)
+=====================================
+
+* Multi-tenant veri izolasyonu korunacak
+* company_id scope zorunlu
+* Yetki sistemi net kalacak
+* Tüm endpoint’ler standart error formatı kullanacak
+* Audit log kritik aksiyonlarda çalışacak
+* Integration test yazılacak
+* Responsive UI zorunlu
+* Soft delete öncelikli yaklaşım
+* Dokümantasyon güncellenecek
+* Tüm yeni modüller gelecekte API-first düşünülerek yazılacak
+
+Standart hata formatı:
+{
+error: {
+code,
+message,
+details
+}
+}
+
+==================================================
+FAZ 1 — ÇEKİRDEK OPERASYON
+==========================
+
+SPRINT 1
+Toplu Stok Güncelleme + Günlük Kapanış
+
+* stock import (set/add/subtract)
+* dry run
+* stock movements
+* audit log
+* daily summary
+* payment breakdown
+* top products
+* print/pdf basic
+
+SPRINT 2
+Onboarding + Hızlı Kurulum
+
+* setup wizard
+* logo yükleme
+* renk seçimi
+* ilk admin kullanıcı
+* ilk ürün import
+* excel import v2
+* kategori/marka auto create
+* hoş geldin turu
+
+SPRINT 3
+Kullanım Alışkanlığı Paketi
+
+* morning brief dashboard
+* günlük PDF raporu
+* bildirim merkezi
+* kritik stok bildirimleri
+* unread notification system
+* whatsapp/email mesaj template
+
+==================================================
+FAZ 2 — İŞLETME YÖNETİMİ
+========================
+
+SPRINT 4
+Cari / Müşteri Takibi
+
+* müşteri kartları
+* borç/alacak
+* vadeli satış
+* tahsilat
+* cari ekstre
+* müşteri satış geçmişi
+
+SPRINT 5
+Tedarikçi / Alış Yönetimi
+
+* tedarikçi kartları
+* alış faturası
+* maliyet güncelleme
+* borç takibi
+* geçmiş alışlar
+* supplier reports
+
+SPRINT 6
+Gelişmiş Raporlama
+
+* satış trendi
+* kategori satış
+* marka satış
+* personel performansı
+* kar raporu
+* düşük kar marjı ürünler
+* iade oranları
+* export excel/pdf
+
+==================================================
+FAZ 3 — SAHA VE DEPO
+====================
+
+SPRINT 7
+Barkod / Etiket Merkezi
+
+* toplu barkod basımı
+* fiyat etiketi
+* raf etiketi
+* QR ürün etiketi
+* print templates
+
+SPRINT 8
+Sayım Merkezi
+
+* stok sayım oturumu
+* barkod ile sayım
+* excel ile sayım yükleme
+* fark raporu
+* toplu düzeltme
+* audit log
+
+SPRINT 9
+Çok Şubeli Yapı
+
+* branch management
+* branch stock
+* transfer
+* şube kullanıcıları
+* şube raporları
+
+==================================================
+FAZ 4 — FİNANS
+==============
+
+SPRINT 10
+Kasa / Gider / Finans
+
+* gider girişleri
+* kasa hareketleri
+* banka hesapları
+* günlük net kar
+* aylık finans özeti
+
+SPRINT 11
+Abonelik v2
+
+* kredi kartı ödeme
+* plan upgrade
+* otomatik yenileme
+* fatura geçmişi
+* kupon sistemi
+
+SPRINT 12
+Dosya / Evrak Yönetimi
+
+* ödeme dekont upload
+* pdf/png/jpg
+* signed url
+* müşteri evrakları
+* tedarikçi evrakları
+
+==================================================
+FAZ 5 — ENTEGRASYON PLATFORMU
+(BUNU ÖZELLİKLE İSTEDİN)
+========================
+
+AMAÇ:
+Yarın Paraşüt, Mikro, Logo, Nebim, Eta, Netsis vb sistemlerle bağlanabilmek.
+
+SPRINT 13
+Entegrasyon Çekirdeği
+
+Yeni Modül:
+integration_providers
+company_integrations
+sync_logs
+webhook_events
+
+Yapılacaklar:
+
+* Entegrasyon yönetim paneli
+* API key / OAuth saklama
+* bağlantı testi
+* aktif/pasif entegrasyon
+* son sync zamanı
+* hata logları
+
+Desteklenecek connector altyapısı:
+
+* Paraşüt
+* Mikro
+* Logo
+* Netsis
+* ETA
+* Shopify
+* WooCommerce
+* Trendyol
+* Hepsiburada
+* N11
+
+Mimari:
+
+/connectors/parasut
+/connectors/logo
+/connectors/mikro
+/connectors/shopify
+
+Her biri ortak interface kullanacak:
+
+connect()
+disconnect()
+syncProducts()
+syncStock()
+syncOrders()
+pushInvoice()
+healthCheck()
+
+SPRINT 14
+Muhasebe Entegrasyonları
+
+* Paraşüt connector
+* Mikro connector
+* Logo connector
+
+İlk sürüm sync:
+
+* ürün kartları
+* stoklar
+* satış faturası export
+* müşteri kartı export
+* cari hareket export
+
+SPRINT 15
+E-Ticaret Entegrasyonları
+
+* Shopify
+* WooCommerce
+* Trendyol
+* Hepsiburada
+
+İlk sürüm:
+
+* sipariş çekme
+* stok gönderme
+* ürün fiyat güncelleme
+* sipariş statü sync
+
+==================================================
+FAZ 6 — TEDARİK AĞI / CANLI ENVANTER PAZARYERİ
+(BUNU ÖZELLİKLE İSTEDİN)
+========================
+
+AMAÇ:
+Müşterilerin onayı ile stoklarını sisteme bağlayıp ortak ticaret ağı kurmak.
+
+ÖRNEK:
+10 nalbur sisteme bağlı.
+Hepsi izin verdi.
+Sen onların stoklarını tek havuzda görüp canlı satış yapabiliyorsun.
+
+Bu çok büyük fırsat.
+
+SPRINT 16
+Marketplace Core
+
+Yeni Tablolar:
+
+supplier_network_members
+supplier_permissions
+shared_products
+shared_stock_feeds
+partner_orders
+partner_order_items
+commission_rules
+
+İzin Yapısı:
+
+Her müşteri panelinden onay verir:
+
+[ ] ürünlerimi paylaş
+[ ] stok miktarımı paylaş
+[ ] fiyatımı paylaş
+[ ] sipariş gelsin
+[ ] anonim göster
+[ ] sadece belirli firmalara açık
+
+SPRINT 17
+Canlı Envanter Feed
+
+* API ile stok çekme
+* webhook ile stok güncelleme
+* cron ile sync
+* son güncelleme zamanı
+* offline supplier alarmı
+
+Frontend:
+
+“Tedarik Ağı” ekranı
+
+* ürün ara
+* hangi firmada var
+* kaç adet var
+* fiyatlar
+* mesafe/şehir
+* son güncelleme
+
+SPRINT 18
+Sipariş Dağıtım Sistemi
+
+Sen müşteri adına satış yaptın.
+
+Sistem:
+
+* uygun tedarikçiyi seçer
+* siparişi iletir
+* komisyon hesaplar
+* sevkiyat statüsü tutar
+* ödeme paylaşımı yapar
+
+Modeller:
+
+Manual Mode
+Auto Cheapest
+Nearest Supplier
+Priority Supplier
+
+SPRINT 19
+Komisyon / Gelir Modeli
+
+* işlem başı komisyon
+* aylık network üyeliği
+* premium supplier görünürlüğü
+* lead generation ücreti
+
+==================================================
+FAZ 7 — AÇIK API PLATFORMU
+==========================
+
+SPRINT 20
+
+Public API v1
+
+* API keys
+* tenant scoped tokens
+* rate limit
+* webhook subscriptions
+* docs portal
+* sdk starter kits
+
+Endpoint örnekleri:
+
+GET /public/products
+GET /public/stock
+POST /public/orders
+GET /public/customers
+
+Webhook:
+
+order.created
+stock.changed
+payment.received
+product.updated
+
+==================================================
+FAZ 8 — PREMIUM AKILLI SİSTEM
+=============================
+
+SPRINT 21
+
+Akıllı Bildirimler
+
+* ürün bitecek
+* satış düştü
+* müşteri kayboldu
+* fiyat yükselt
+* kar düştü
+
+SPRINT 22
+
+Personel Yönetimi
+
+* vardiya
+* hedef
+* prim
+* satış performansı
+
+SPRINT 23
+
+Kampanya Motoru
+
+* kategori indirimi
+* tarihli kampanya
+* müşteri bazlı fiyat
+* toplu fiyat listeleri
+
+==================================================
+FAZ 9 — TEKNİK KURUMSALLAŞMA
+============================
+
+SPRINT 24
+
+Test & QA
+
+* E2E
+* integration
+* load test
+* regression suite
+
+SPRINT 25
+
+Performance
+
+* redis cache
+* queue workers
+* async reports
+* db tuning
+
+SPRINT 26
+
+Security
+
+* 2FA
+* device sessions
+* suspicious login
+* IP logs
+* forced logout
+
+SPRINT 27
+
+DevOps
+
+* CI/CD
+* rollback
+* backups
+* uptime monitoring
+* staging/prod pipeline
+
+==================================================
+FAZ 10 — MOBİL
+==============
+
+SPRINT 28
+
+Mobil Hazırlık
+
+* mobile ux optimize
+* pwa mode
+* camera barcode flow
+
+SPRINT 29
+
+Native App (EN SON)
+
+* satış yap
+* stok bak
+* sipariş al
+* bildirim al
+
+==================================================
+VERİTABANI STRATEJİSİ
+=====================
+
+Şimdiden future-proof tasarla:
+
+customers
+suppliers
+branches
+notifications
+files
+integrations
+sync_logs
+shared_products
+partner_orders
+commissions
+api_keys
+devices
+
+==================================================
+ÖNCELİK SIRASI (PARA GETİREN)
+=============================
+
+1. Sprint 1
+2. Sprint 2
+3. Sprint 3
+4. Sprint 4
+5. Sprint 13
+6. Sprint 16
+7. Sprint 20
+
+==================================================
+ÇOK KRİTİK MİMARİ NOT
+=====================
+
+Bugünden itibaren tüm modülleri plugin-ready yaz.
+
+Örn:
+connector service
+notification service
+report service
+marketplace service
+
+Hardcoded yazma.
+
+==================================================
+BÜYÜK RESİM
+===========
+
+Bugün:
+stok programı
+
+6 ay sonra:
+işletme yönetim sistemi
+
+1 yıl sonra:
+tedarik ağı + entegrasyon platformu
+
+2 yıl sonra:
+B2B ticaret ağı
+
+==================================================
+ŞİMDİ YAPILACAK
+===============
+
+Roadmap’e sırayla başla.
+Her sprint sonunda:
+
+* çalışan feature
+* test yeşil
+* docs güncel
+* performans iyi
+* tenant güvenliği bozulmamış
+
+İlk iş şimdi:
+Sprint 3 tamamla.
+Sonra Sprint 4.
+Ardından Sprint 13’e hazırlık başlasın.

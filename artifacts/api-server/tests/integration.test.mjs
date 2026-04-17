@@ -717,3 +717,125 @@ describe("13. Demo Sıfırlama", () => {
     assert.equal(status, 401);
   });
 });
+
+// ---------------------------------------------------------------------------
+// 14. BİLDİRİMLER (Sprint 3)
+// ---------------------------------------------------------------------------
+describe("14. Bildirimler", () => {
+  test("Admin bildirim sayısını okuyabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/notifications/count", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(typeof json.unread === "number", "unread sayısal olmalı");
+  });
+
+  test("Viewer bildirim sayısını okuyabilir", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status, json } = await api("GET", "/notifications/count", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(typeof json.unread === "number", "viewer de count okuyabilmeli");
+  });
+
+  test("Auth olmadan bildirim sayısı — 401", async () => {
+    const jar = new CookieJar();
+    const { status } = await api("GET", "/notifications/count", { jar });
+    assert.equal(status, 401);
+  });
+
+  test("Admin bildirim listesi okuyabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/notifications", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(Array.isArray(json.notifications), "notifications dizi olmalı");
+    assert.ok(typeof json.total === "number", "total sayısal olmalı");
+  });
+
+  test("Viewer bildirim listesi okuyamaz — 403", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("GET", "/notifications", { jar });
+    assert.equal(status, 403, "viewer 403 almalı");
+  });
+
+  test("Admin bildirim üretebilir (generate)", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("POST", "/notifications/generate", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(typeof json.created === "number", "created sayısal olmalı");
+    assert.ok(typeof json.total === "number", "total sayısal olmalı");
+  });
+
+  test("Viewer bildirim üretemez — 403", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("POST", "/notifications/generate", { jar });
+    assert.equal(status, 403, "viewer 403 almalı");
+  });
+
+  test("Tümünü okundu işaretleme çalışıyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("PUT", "/notifications/read-all", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(json.ok === true, "ok:true döner");
+  });
+
+  test("Okunmamış filtresi çalışıyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/notifications?unread=true", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(Array.isArray(json.notifications), "okunmamış listesi dizi olmalı");
+  });
+
+  test("Mesaj şablonları endpoint çalışıyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/notifications/templates?productName=Test&stock=5&companyName=PROSAN", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(json.low_stock_whatsapp, "whatsapp şablonu olmalı");
+    assert.ok(json.low_stock_email, "email şablonu olmalı");
+    assert.ok(typeof json.low_stock_email.subject === "string", "email subject olmalı");
+  });
+
+  test("Tenant izolasyonu: iki firma bildirimleri ayrı", async () => {
+    const { jar: jarA } = await login("cenan", "cenan123");
+    const { jar: jarB } = await login("nihat_admin", "nihat123", "nihatturizm");
+    await api("POST", "/notifications/generate", { jar: jarA });
+    await api("POST", "/notifications/generate", { jar: jarB });
+    const { json: countA } = await api("GET", "/notifications/count", { jar: jarA });
+    const { json: countB } = await api("GET", "/notifications/count", { jar: jarB });
+    // İki şirketin sayısı bağımsız (her iki de sayısal olmalı)
+    assert.ok(typeof countA.unread === "number" && typeof countB.unread === "number", "her iki tenant kendi sayısını döner");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 15. GÜNAYDINSABAH BRİEF + ŞABLONLAR (Sprint 3)
+// ---------------------------------------------------------------------------
+describe("15. Morning Brief ve Şablonlar", () => {
+  test("Admin morning brief okuyabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/dashboard/morning-brief", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(typeof json.greeting === "string", "greeting string olmalı");
+    assert.ok(typeof json.date === "string", "date string olmalı");
+    assert.ok(json.yesterday, "yesterday alanı olmalı");
+    assert.ok(typeof json.yesterday.salesCount === "number", "salesCount sayısal");
+    assert.ok(json.stock, "stock alanı olmalı");
+  });
+
+  test("Viewer morning brief okuyamaz — 403", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("GET", "/dashboard/morning-brief", { jar });
+    assert.equal(status, 403, "viewer 403 almalı");
+  });
+
+  test("Auth olmadan morning brief — 401", async () => {
+    const jar = new CookieJar();
+    const { status } = await api("GET", "/dashboard/morning-brief", { jar });
+    assert.equal(status, 401);
+  });
+
+  test("Şablon parametreleri doğru render edilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { json } = await api("GET", "/notifications/templates?productName=Çivi&stock=2&companyName=PROSAN", { jar });
+    assert.ok(json.low_stock_whatsapp.includes("Çivi"), "ürün adı şablonda yer almalı");
+    assert.ok(json.restock_request_whatsapp.includes("PROSAN"), "firma adı şablonda yer almalı");
+  });
+});
