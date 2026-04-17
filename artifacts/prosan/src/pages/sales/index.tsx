@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Package, ScanBarcode, X, Loader2, Camera, CameraOff, SwitchCamera } from "lucide-react";
+import { Search, ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Package, ScanBarcode, X, Loader2, Camera, CameraOff, SwitchCamera, Banknote, CreditCard, ArrowLeftRight } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -28,6 +28,7 @@ export default function SalesScreen() {
   const createSale = useCreateSale();
 
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "transfer" | "other">("cash");
 
   // Barkod kamera state
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -154,7 +155,7 @@ export default function SalesScreen() {
     try {
       await Promise.all(cart.map(item =>
         createSale.mutateAsync({
-          data: { productId: item.productId, quantity: item.quantity, unitPrice: item.unitPrice }
+          data: { productId: item.productId, quantity: item.quantity, unitPrice: item.unitPrice, paymentMethod }
         })
       ));
       toast({ title: "Başarılı", description: "Satış tamamlandı." });
@@ -393,7 +394,29 @@ export default function SalesScreen() {
               <span className="text-xl ml-1 text-zinc-300">TL</span>
             </div>
 
-            <div className="mt-6 space-y-2">
+            {/* Ödeme Yöntemi */}
+            <div className="mt-4 grid grid-cols-3 gap-1.5">
+              {([
+                { value: "cash", label: "Nakit", Icon: Banknote },
+                { value: "card", label: "Kart", Icon: CreditCard },
+                { value: "transfer", label: "Havale", Icon: ArrowLeftRight },
+              ] as const).map(({ value, label, Icon }) => (
+                <button
+                  key={value}
+                  onClick={() => setPaymentMethod(value)}
+                  className={`flex flex-col items-center gap-1 rounded-lg border py-2 px-1 text-xs font-medium transition-colors ${
+                    paymentMethod === value
+                      ? "border-primary bg-primary text-white"
+                      : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-3 space-y-2">
               <Button
                 size="lg"
                 className="w-full h-14 text-base font-bold shadow-lg"

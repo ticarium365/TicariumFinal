@@ -8,11 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   PackagePlus, Search, Check, ScanBarcode, Camera, CameraOff,
-  SwitchCamera, Loader2, X, History
+  SwitchCamera, Loader2, X, History, FileSpreadsheet
 } from "lucide-react";
 import { BrowserMultiFormatReader as ZXingBrowserReader } from "@zxing/browser";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/auth-context";
+import { BulkStockModal } from "@/components/bulk-stock-modal";
 
 interface EntryRow {
   productId: number;
@@ -51,6 +53,9 @@ export default function StockEntryPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const stockEntry = useStockEntry();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const [showBulkModal, setShowBulkModal] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 300);
@@ -149,15 +154,25 @@ export default function StockEntryPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <PackagePlus className="h-7 w-7 text-primary" />
-          Stok Girişi
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Depoya gelen ürünleri kaydedin. Stok otomatik olarak güncellenir.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <PackagePlus className="h-7 w-7 text-primary" />
+            Stok Girişi
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Depoya gelen ürünleri kaydedin. Stok otomatik olarak güncellenir.
+          </p>
+        </div>
+        {isAdmin && (
+          <Button variant="outline" size="sm" onClick={() => setShowBulkModal(true)} className="shrink-0">
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Toplu Güncelle
+          </Button>
+        )}
       </div>
+
+      <BulkStockModal open={showBulkModal} onClose={() => setShowBulkModal(false)} />
 
       {/* Ürün Seçimi */}
       {!selectedProduct && (

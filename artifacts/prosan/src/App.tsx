@@ -21,6 +21,7 @@ import SalesScreen from "@/pages/sales/index";
 import SalesHistory from "@/pages/sales/history";
 import StockEntry from "@/pages/stock/index";
 import Reports from "@/pages/reports/index";
+import DailySummary from "@/pages/reports/daily-summary";
 import UsersList from "@/pages/users/index";
 import Settings from "@/pages/settings/index";
 import CompaniesAdmin from "@/pages/admin/companies";
@@ -116,6 +117,10 @@ function AuthenticatedRouter() {
 
         <Route path="/reports">
           {() => <ProtectedRoute component={Reports} roles={["admin", "viewer"]} />}
+        </Route>
+
+        <Route path="/reports/daily-summary">
+          {() => <ProtectedRoute component={DailySummary} roles={["admin", "viewer"]} />}
         </Route>
 
         <Route path="/users">

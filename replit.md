@@ -11,11 +11,13 @@ Platform markası **SMSYSTEMS**; kiracı markası dinamik olarak API'dan çekili
 ## Test Komutu
 
 ```bash
-# API integration testleri (28 test, 7 suite) — server çalışırken çalıştırın
+# API integration testleri (40 test, 9 suite) — server çalışırken çalıştırın
 pnpm --filter @workspace/api-server run test
 ```
 
 Testler `artifacts/api-server/tests/integration.test.mjs` dosyasındadır. Node.js `node:test` + native `fetch` kullanır, ek bağımlılık gerekmez. Çalışan sunucuya (port 8080) gerçek HTTP istekleri atar.
+
+**Suite'ler:** 1. Auth · 2. Ürünler · 3. Satış ve Stok · 4. Soft Delete & Restore · 5. Tenant İzolasyonu · 6. Düşük Stok Alarmları · 7. Toplu Stok Güncellemesi · 8. Günlük Kapanış Özeti · 9. Super Admin
 
 ---
 
@@ -53,6 +55,8 @@ artifacts/
         sales-history.tsx      # Satış geçmişi ve iadeler
         stock.tsx              # Stok girişi
         reports.tsx            # Satış ve stok raporları
+        reports/
+          daily-summary.tsx    # Günlük kapanış özeti (KPI + ödeme kırılımı + top 5 ürün)
         settings.tsx           # Şirket ve kullanıcı ayarları
         users.tsx              # Kullanıcı yönetimi
         payment.tsx            # Ödeme / abonelik sayfası (IBAN + havale formu)
@@ -66,6 +70,8 @@ artifacts/
         auth-context.tsx       # Oturum durumu (React Context)
         company-context.tsx    # Aktif şirket (React Context)
         trial-gateway.tsx      # Trial süresi dolmuşsa ödeme sayfasına yönlendir
+        low-stock-bell.tsx     # Düşük stok alarm zili (60s polling, sidebar + mobil)
+        bulk-stock-modal.tsx   # Toplu stok güncelleme (XLSX drag-drop + dry-run preview)
         ui/                    # shadcn bileşenleri
 
   api-server/                  # Express.js backend
@@ -244,7 +250,7 @@ min_stock_level, unit, description, is_active, created_at, updated_at
 ### sales
 
 ```
-id, company_id, user_id, total_amount, payment_method, note,
+id, company_id, user_id, total_amount, payment_method (cash|card|transfer|other), note,
 returned, returned_at, return_note, created_at
 + sale_items: sale_id, product_id, quantity, unit_price, total_price
 ```

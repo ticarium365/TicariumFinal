@@ -19,6 +19,7 @@ import {
   CreditCard,
   Wrench,
   Clock,
+  CalendarCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LowStockBell } from "./low-stock-bell";
@@ -83,6 +84,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/sales/history", label: "Satış Geçmişi", icon: History, roles: ["admin", "staff", "viewer"] },
     { href: "/stock", label: "Stok Girişi", icon: PackagePlus, roles: ["admin", "staff"] },
     { href: "/reports", label: "Raporlar", icon: BarChart3, roles: ["admin", "viewer"] },
+    { href: "/reports/daily-summary", label: "Günlük Kapanış", icon: CalendarCheck, roles: ["admin", "viewer"] },
     { href: "/users", label: "Kullanıcılar", icon: Users, roles: ["admin"] },
     { href: "/settings", label: "Ayarlar", icon: Settings, roles: ["admin"] },
     { href: "/admin/companies", label: "Firma Yönetimi", icon: Building2, roles: ["super_admin"] },

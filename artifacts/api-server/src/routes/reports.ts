@@ -1,16 +1,17 @@
 import { Router, Request, Response } from "express";
 import { db, salesTable, productsTable } from "@workspace/db";
-import { and, gte, lte, desc, eq } from "drizzle-orm";
+import { and, gte, lte, desc, eq, count as dbCount } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
 
+// GET /api/reports/sales
 router.get("/sales", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
     const { startDate, endDate } = req.query;
     if (!startDate || !endDate) {
-      res.status(400).json({ error: "Bad Request", message: "Başlangıç ve bitiş tarihi gerekli" });
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: "Başlangıç ve bitiş tarihi gerekli", details: null } });
       return;
     }
 
@@ -77,10 +78,11 @@ router.get("/sales", requireAuth, async (req: Request, res: Response) => {
     });
   } catch (err) {
     req.log?.error({ err }, "Sales report error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Sunucu hatası", details: null } });
   }
 });
 
+// GET /api/reports/stock
 router.get("/stock", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
@@ -111,7 +113,90 @@ router.get("/stock", requireAuth, async (req: Request, res: Response) => {
     });
   } catch (err) {
     req.log?.error({ err }, "Stock report error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Sunucu hatası", details: null } });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/reports/daily-summary?date=YYYY-MM-DD
+// ---------------------------------------------------------------------------
+router.get("/daily-summary", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const cid = req.companyId;
+    const { date } = req.query;
+
+    // Super admin bu endpoint'te tenant bazlı veri görmez
+    if (req.session.user?.role === "super_admin") {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "Super admin bu raporu göremez", details: null } });
+      return;
+    }
+
+    const targetDate = date ? String(date) : new Date().toISOString().split("T")[0];
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(targetDate!)) {
+      res.status(400).json({ error: { code: "BAD_REQUEST", message: "Geçersiz tarih formatı. YYYY-MM-DD kullanın.", details: null } });
+      return;
+    }
+
+    const start = new Date(`${targetDate}T00:00:00.000Z`);
+    const end = new Date(`${targetDate}T23:59:59.999Z`);
+
+    const sales = await db
+      .select()
+      .from(salesTable)
+      .where(and(eq(salesTable.companyId, cid), gte(salesTable.createdAt, start), lte(salesTable.createdAt, end)))
+      .orderBy(desc(salesTable.createdAt));
+
+    const activeSales = sales.filter((s) => !s.returned);
+    const returnedSales = sales.filter((s) => s.returned);
+
+    const totalRevenue = activeSales.reduce((s, x) => s + x.totalPrice, 0);
+    const totalProfit = activeSales.reduce((s, x) => s + x.profit, 0);
+    const totalReturnedAmount = returnedSales.reduce((s, x) => s + x.totalPrice, 0);
+    const netRevenue = totalRevenue - totalReturnedAmount;
+
+    // Ödeme yöntemi kırılımı
+    const paymentBreakdown = { cash: 0, card: 0, transfer: 0, other: 0 };
+    for (const s of activeSales) {
+      const m = (s.paymentMethod || "other") as keyof typeof paymentBreakdown;
+      if (m in paymentBreakdown) paymentBreakdown[m] += s.totalPrice;
+      else paymentBreakdown.other += s.totalPrice;
+    }
+
+    // En çok satan 5 ürün (adet)
+    const productMap = new Map<number, { productName: string; productCode: string; quantity: number; revenue: number }>();
+    for (const s of activeSales) {
+      const existing = productMap.get(s.productId) ?? { productName: s.productName, productCode: s.productCode, quantity: 0, revenue: 0 };
+      existing.quantity += s.quantity;
+      existing.revenue += s.totalPrice;
+      productMap.set(s.productId, existing);
+    }
+    const topProducts = Array.from(productMap.values())
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+
+    // Kritik stok sayısı
+    const [{ count: lowStockCount }] = await db
+      .select({ count: dbCount() })
+      .from(productsTable)
+      .where(and(eq(productsTable.companyId, cid), eq(productsTable.isActive, true), lte(productsTable.stock, productsTable.minStock)));
+
+    res.json({
+      date: targetDate,
+      createdAtRange: { start: start.toISOString(), end: end.toISOString() },
+      totalSalesCount: activeSales.length,
+      totalRevenue,
+      totalProfit,
+      netRevenue,
+      totalReturnedCount: returnedSales.length,
+      totalReturnedAmount,
+      paymentBreakdown,
+      topProducts,
+      lowStockCount,
+    });
+  } catch (err) {
+    req.log?.error({ err }, "Daily summary error");
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Sunucu hatası", details: null } });
   }
 });
 

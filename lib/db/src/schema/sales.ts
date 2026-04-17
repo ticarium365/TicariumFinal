@@ -18,6 +18,7 @@ export const salesTable = pgTable("sales", {
   profit: real("profit").notNull(),
   userId: integer("user_id").references(() => usersTable.id),
   soldBy: text("sold_by"),
+  paymentMethod: text("payment_method"), // 'cash' | 'card' | 'transfer' | 'other'
   returned: boolean("returned").default(false).notNull(),
   returnedAt: timestamp("returned_at", { withTimezone: true }),
   returnNote: text("return_note"),

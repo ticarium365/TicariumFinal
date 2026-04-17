@@ -1,0 +1,133 @@
+Bu sprintte 2 işi bitirelim: Toplu Stok Güncelleme + Günlük Kapanış Özeti.
+
+1. Toplu Stok Güncelleme — Kapsam
+   Amaç: Depo sayımı veya toplu düzeltmelerde ürünleri tek tek açmadan Excel/CSV ile stok güncellemek.
+
+Backend:
+
+* GET /api/stock/import-template
+
+  * Excel şablonu indirsin
+  * Kolonlar: product_code, barcode, quantity, mode, note
+  * mode değerleri: set, add, subtract
+* POST /api/stock/import
+
+  * .xlsx / .xls / .csv kabul etsin
+  * max 5 MB
+  * satır bazlı parse etsin
+  * product_code öncelikli eşleme, barcode fallback
+  * quantity sayı değilse hata
+  * subtract işleminde stok eksiye düşerse hata
+  * mode=set ise stok verilen değere çekilsin
+  * mode=add ise mevcut stoğa eklensin
+  * mode=subtract ise mevcut stoktan düşülsün
+  * her başarılı işlem stock_movements tablosuna kaydolmalı
+  * her toplu işlem için audit log oluşmalı
+  * response formatı:
+    { total, updated, skipped, errors: [{ row, code, message }] }
+
+İş kuralları:
+
+* yalnızca admin ve üstü kullanabilsin
+* inactive ürünler güncellenemesin
+* aynı dosyada aynı ürün birden fazla geçerse kabul edilsin ama sıra ile işlensin
+* quantity < 0 kabul edilmesin
+* set modunda sonuç stok 0 olabilir ama negatif olamaz
+
+Frontend:
+
+* Stok veya ürünler sayfasına “Toplu Stok Güncelle” butonu
+* Modal / drawer açılsın
+* Dosya yükleme alanı
+* Şablon indir butonu
+* Mode açıklamaları kısa kısa gösterilsin
+* Önce dry-run / önizleme çalışsın:
+
+  * kaç satır başarıyla işlenecek
+  * kaç hata var
+  * hangi ürün ne kadar değişecek
+* Kullanıcı onay verirse gerçek import çalışsın
+* Sonuç ekranı:
+
+  * güncellendi sayısı
+  * hata sayısı
+  * satır bazlı hata listesi
+* İşlem bitince ürün listesi / stok listesi refresh olsun
+
+Test:
+
+* set/add/subtract senaryoları
+* yetersiz stok hatası
+* inactive ürün hatası
+* bulunamayan ürün hatası
+* auth / role kontrolü
+* tenant isolation
+* audit log oluştu mu
+* stock_movements doğru kaydedildi mi
+
+2. Günlük Kapanış Özeti — Kapsam
+   Amaç: Kullanıcı gün sonunda satışın özetini tek ekranda görsün.
+
+Backend:
+
+* GET /api/reports/daily-summary?date=YYYY-MM-DD
+* response:
+
+  * totalSalesCount
+  * totalRevenue
+  * totalReturnedCount
+  * totalReturnedAmount
+  * paymentBreakdown: cash, card, transfer, other
+  * topProducts[]
+  * lowStockCount
+  * createdAtRange
+* tenant bazlı çalışmalı
+* yalnızca auth kullanıcılar erişebilsin
+* super_admin bu endpoint’te şirket seçmeden veri görmesin
+
+Frontend:
+
+* Dashboard veya reports altında “Günlük Kapanış” kartı / sayfası
+* tarih seçici
+* ana KPI kartları:
+
+  * satış adedi
+  * toplam ciro
+  * iade
+  * kritik stok
+* ödeme yöntemi kırılımı
+* en çok satan 5 ürün
+* yazdır / dışa aktar butonu (ilk versiyonda basit print yeter)
+
+İş kuralları:
+
+* iade edilen satışlar ayrı gösterilsin
+* net ciro gerekiyorsa ayrıca hesaplanıp gösterilsin
+* saat aralığı şirket local timezone’a göre hesaplanmalı
+
+Test:
+
+* boş gün senaryosu
+* satış var / iade var senaryosu
+* payment breakdown doğruluğu
+* top products doğruluğu
+* tenant isolation
+* auth koruması
+
+Teslim sırası:
+
+1. stock import backend
+2. stock import frontend + dry-run
+3. stock import testleri
+4. daily summary backend
+5. daily summary frontend
+6. daily summary testleri
+7. replit.md güncellemesi
+
+Definition of Done:
+
+* tüm yeni endpoint’ler standart error formatı kullanıyor
+* audit log bağlı
+* integration testler yeşil
+* UI’den uçtan uca çalışıyor
+* dokümantasyon güncel

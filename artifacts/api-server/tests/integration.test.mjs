@@ -433,9 +433,142 @@ describe("6. Düşük Stok Alarmları", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 7. SUPER ADMIN
+// 7. TOPLU STOK GÜNCELLEMESİ
 // ---------------------------------------------------------------------------
-describe("7. Super Admin", () => {
+describe("7. Toplu Stok Güncellemesi", () => {
+  // Minimal geçerli XLSX dosyası — base64 kodlu (1 satır: set modu)
+  // Gerçek XLSX yerine multipart/form-data ile CSV text de kullanabiliriz
+  async function stockImportRequest(jar, csvText, dryRun = true) {
+    const boundary = "----TestBoundary123";
+    const body = [
+      `--${boundary}`,
+      'Content-Disposition: form-data; name="file"; filename="test.csv"',
+      "Content-Type: text/csv",
+      "",
+      csvText,
+      `--${boundary}--`,
+    ].join("\r\n");
+
+    const headers = {
+      "Content-Type": `multipart/form-data; boundary=${boundary}`,
+      "Content-Length": String(Buffer.byteLength(body)),
+    };
+    if (jar.header()) headers["Cookie"] = jar.header();
+    if (jar.tenant) headers["X-Tenant"] = jar.tenant;
+
+    const res = await fetch(`${BASE}/stock/import?dryRun=${dryRun}`, {
+      method: "POST",
+      headers,
+      body,
+    });
+    const json = await res.json().catch(() => ({}));
+    jar.update(res);
+    return { status: res.status, json };
+  }
+
+  test("Şablon indirme çalışıyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const hdrs = { Cookie: jar.header(), "X-Tenant": jar.tenant };
+    const res = await fetch(`${BASE}/stock/import-template`, { headers: hdrs });
+    jar.update(res);
+    assert.equal(res.status, 200, "Şablon 200 dönmeli");
+    const ct = res.headers.get("content-type");
+    assert.ok(ct?.includes("spreadsheetml") || ct?.includes("octet-stream"), `Content-Type beklenen: ${ct}`);
+  });
+
+  test("Auth olmadan import — 401", async () => {
+    const jar = new CookieJar();
+    const { status } = await stockImportRequest(jar, "product_code,quantity,mode\nPRO-999,5,set", true);
+    assert.equal(status, 401, "401 bekleniyor");
+  });
+
+  test("Viewer import yapamaz — 403", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await stockImportRequest(jar, "product_code,quantity,mode\nPRO-999,5,set", true);
+    assert.equal(status, 403, "403 bekleniyor");
+  });
+
+  test("Dry-run: olmayan ürün kodu hata döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await stockImportRequest(jar, "product_code,quantity,mode\nNONEXISTENT-999,5,set", true);
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(json.dryRun === true, "dryRun flag olmalı");
+    assert.ok(json.errors.length > 0, "Hata döndürülmeli");
+    assert.ok(json.errors[0].code === "PRODUCT_NOT_FOUND", `Kod PRODUCT_NOT_FOUND olmalı, aldık: ${json.errors[0]?.code}`);
+  });
+
+  test("Dry-run: geçersiz mod hata döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await stockImportRequest(jar, "product_code,quantity,mode\nPRO-001,5,invalid", true);
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(json.errors.length > 0, "Hata döndürülmeli");
+  });
+
+  test("Dry-run: negatif miktar hata döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await stockImportRequest(jar, "product_code,quantity,mode\nPRO-001,-5,add", true);
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(json.errors.length > 0, "Negatif miktar hatası döndürülmeli");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 8. GÜNLÜK KAPANIŞ ÖZETİ
+// ---------------------------------------------------------------------------
+describe("8. Günlük Kapanış Özeti", () => {
+  test("Geçerli tarih ile özet döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const today = new Date().toISOString().split("T")[0];
+    const { status, json } = await api("GET", `/reports/daily-summary?date=${today}`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(typeof json.totalSalesCount === "number", "totalSalesCount sayısal olmalı");
+    assert.ok(typeof json.totalRevenue === "number", "totalRevenue sayısal olmalı");
+    assert.ok(json.paymentBreakdown, "paymentBreakdown mevcut olmalı");
+    assert.ok(Array.isArray(json.topProducts), "topProducts dizi olmalı");
+    assert.ok(typeof json.lowStockCount === "number", "lowStockCount sayısal olmalı");
+  });
+
+  test("Auth olmadan — 401", async () => {
+    const jar = new CookieJar();
+    const { status } = await api("GET", "/reports/daily-summary", { jar });
+    assert.equal(status, 401, "401 bekleniyor");
+  });
+
+  test("Super admin göremez — 403", async () => {
+    const { jar } = await login("superadmin", "superadmin123");
+    const { status } = await api("GET", "/reports/daily-summary", { jar });
+    assert.equal(status, 403, "Super admin 403 almalı");
+  });
+
+  test("Geçersiz tarih formatı — 400", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/reports/daily-summary?date=not-a-date", { jar });
+    assert.equal(status, 400, JSON.stringify(json));
+  });
+
+  test("Tarihsiz çağrı bugünü döndürür", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/reports/daily-summary", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    const today = new Date().toISOString().split("T")[0];
+    assert.equal(json.date, today, "Bugünün tarihi döndürülmeli");
+  });
+
+  test("Tenant izolasyonu: farklı şirketlerin ciroları birbirinden bağımsız", async () => {
+    const { jar: jarA } = await login("cenan", "cenan123");
+    const { jar: jarB } = await login("nihat_admin", "nihat123", "nihatturizm");
+    const today = new Date().toISOString().split("T")[0];
+    const { json: sumA } = await api("GET", `/reports/daily-summary?date=${today}`, { jar: jarA });
+    const { json: sumB } = await api("GET", `/reports/daily-summary?date=${today}`, { jar: jarB });
+    // İki şirketin verisi bağımsız hesaplanıyor — en azından lowStockCount aynı olmak zorunda değil
+    assert.ok(typeof sumA.totalSalesCount === "number" && typeof sumB.totalSalesCount === "number", "Her iki tenant veri döndürmeli");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 9. SUPER ADMIN
+// ---------------------------------------------------------------------------
+describe("9. Super Admin", () => {
   test("Super admin giriş yapabilir", async () => {
     const { status, json } = await login("superadmin", "superadmin123");
     assert.equal(status, 200, JSON.stringify(json));

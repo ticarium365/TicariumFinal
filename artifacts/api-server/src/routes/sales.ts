@@ -120,11 +120,13 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 router.post("/", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const { productId, quantity, unitPrice } = req.body;
+    const { productId, quantity, unitPrice, paymentMethod } = req.body;
     if (!productId || !quantity || !unitPrice) {
       res.status(400).json({ error: "Bad Request", message: "Zorunlu alanlar eksik" });
       return;
     }
+    const validPaymentMethods = ["cash", "card", "transfer", "other"];
+    const pm = validPaymentMethods.includes(paymentMethod) ? paymentMethod : null;
 
     const [product] = await db.select().from(productsTable).where(
       and(eq(productsTable.id, parseInt(productId)), eq(productsTable.companyId, cid))
@@ -156,6 +158,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       profit,
       userId: req.session.user?.id,
       soldBy: req.session.user?.fullName,
+      paymentMethod: pm,
     }).returning();
 
     await db.update(productsTable)
