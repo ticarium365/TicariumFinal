@@ -142,6 +142,17 @@ The project utilizes a monorepo structure managed by `pnpm workspaces`.
 - `cash_registers` — Kasa tanımları (companyId, name, openingBalance, currentBalance, isDefault)
 - `cash_movements` — Kasa hareketleri (registerId, type, direction, amount, balanceBefore, balanceAfter)
 
+## Sprint 32 — B2B Sipariş Yönetimi (TAMAMLANDI)
+
+- Yeni tablo: `b2b_orders` (kod, durum, toplam, sevkiyat adresi, kargo bilgisi, durum zaman damgaları).
+- Akış: Alıcı bir teklifi `accepted` yaptığında otomatik olarak `b2b_orders` kaydı oluşturulur (kod `ORD-YYMMDD-XXXX`).
+- Durum makinesi: `pending → confirmed → shipped → delivered → completed` ve `pending|confirmed → cancelled`.
+  - Satıcı: pending→confirmed, confirmed→shipped (kargo no/firma ekler), shipped→delivered, delivered→completed.
+  - Alıcı: shipped/delivered→completed; pending/confirmed iken iptal edebilir.
+- API: `/api/b2b/orders/{inbox|outbox|stats}`, `GET /:id`, `PATCH /:id/status`.
+- Frontend: `/b2b/orders` (sekmeli liste + istatistik chip'leri), `/b2b/orders/:id` (durum çizgisi, sevkiyat kartı, kargo dialog'u, iptal dialog'u). Sidebar'a "Siparişler" eklendi.
+- Bildirimler: her durum değişikliğinde karşı tarafa `b2b_order_status` notification düşülür; otomatik sipariş oluşturulurken `b2b_quote_decision` mesajına sipariş kodu eklenir.
+
 ## Sprint 31 — B2B RFQ / Teklif Sistemi (TAMAMLANDI)
 
 - Yeni tablolar: `b2b_quote_requests`, `b2b_quote_items`, `b2b_messages`.

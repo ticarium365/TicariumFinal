@@ -33,6 +33,7 @@ import customerGroupsRouter from "./customer-groups.js";
 import orderAnalyticsRouter from "./order-analytics.js";
 import networkRouter from "./network.js";
 import b2bRouter from "./b2b.js";
+import b2bOrdersRouter from "./b2b-orders.js";
 
 const router: IRouter = Router();
 
@@ -70,5 +71,6 @@ router.use(ordersManageRouter);
 router.use(customerGroupsRouter);
 router.use("/network", networkRouter);
 router.use("/b2b", b2bRouter);
+router.use("/b2b/orders", b2bOrdersRouter);
 
 export default router;

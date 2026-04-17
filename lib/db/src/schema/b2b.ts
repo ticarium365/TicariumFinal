@@ -87,6 +87,49 @@ export const b2bMessagesTable = pgTable(
   (t) => [index("b2b_msg_request_idx").on(t.requestId, t.createdAt)]
 );
 
+export const b2bOrdersTable = pgTable(
+  "b2b_orders",
+  {
+    id: serial("id").primaryKey(),
+    quoteId: integer("quote_id")
+      .notNull()
+      .references(() => b2bQuoteRequestsTable.id, { onDelete: "cascade" }),
+    buyerCompanyId: integer("buyer_company_id")
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: "cascade" }),
+    sellerCompanyId: integer("seller_company_id")
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: "cascade" }),
+    code: text("code").notNull(),
+    status: text("status").notNull().default("pending"),
+    totalAmount: real("total_amount").notNull(),
+    currency: text("currency").notNull().default("TRY"),
+    shippingCity: text("shipping_city"),
+    shippingAddress: text("shipping_address"),
+    contactPhone: text("contact_phone"),
+    trackingNo: text("tracking_no"),
+    carrier: text("carrier"),
+    sellerNote: text("seller_note"),
+    buyerNote: text("buyer_note"),
+    cancelReason: text("cancel_reason"),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    shippedAt: timestamp("shipped_at", { withTimezone: true }),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("b2b_ord_buyer_idx").on(t.buyerCompanyId, t.status),
+    index("b2b_ord_seller_idx").on(t.sellerCompanyId, t.status),
+    index("b2b_ord_code_idx").on(t.code),
+    index("b2b_ord_quote_idx").on(t.quoteId),
+  ]
+);
+
+export type B2bOrder = typeof b2bOrdersTable.$inferSelect;
+
 export const insertB2bQuoteRequestSchema = createInsertSchema(b2bQuoteRequestsTable).omit({
   id: true,
   fromCompanyId: true,

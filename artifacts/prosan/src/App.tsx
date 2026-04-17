@@ -51,6 +51,8 @@ import MyNetworkProfilePage from "@/pages/network/my-profile";
 import QuotesListPage from "@/pages/b2b/quotes-list";
 import QuoteNewPage from "@/pages/b2b/quote-new";
 import QuoteDetailPage from "@/pages/b2b/quote-detail";
+import OrdersListPage from "@/pages/b2b/orders-list";
+import OrderDetailPage from "@/pages/b2b/order-detail";
 
 const queryClient = new QueryClient();
 
@@ -251,6 +253,14 @@ function AuthenticatedRouter() {
 
         <Route path="/b2b/quotes/:id">
           {(params) => <ProtectedRoute component={() => <QuoteDetailPage id={params.id} />} roles={["admin", "staff"]} />}
+        </Route>
+
+        <Route path="/b2b/orders">
+          {() => <ProtectedRoute component={OrdersListPage} roles={["admin", "staff"]} />}
+        </Route>
+
+        <Route path="/b2b/orders/:id">
+          {() => <ProtectedRoute component={OrderDetailPage} roles={["admin", "staff"]} />}
         </Route>
 
         <Route path="/users">

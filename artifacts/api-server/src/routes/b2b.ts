@@ -6,6 +6,7 @@ import {
   b2bQuoteRequestsTable,
   b2bQuoteItemsTable,
   b2bMessagesTable,
+  b2bOrdersTable,
   notificationsTable,
 } from "@workspace/db";
 import { eq, and, desc, or, inArray, sql } from "drizzle-orm";
@@ -464,7 +465,7 @@ router.post("/quotes/:id/decision", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Geçersiz veri" });
     }
 
-    await db
+    const updated = await db
       .update(b2bQuoteRequestsTable)
       .set({
         status: parsed.data.decision,
@@ -472,7 +473,11 @@ router.post("/quotes/:id/decision", async (req: Request, res: Response) => {
         decidedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(b2bQuoteRequestsTable.id, quoteId));
+      .where(and(eq(b2bQuoteRequestsTable.id, quoteId), eq(b2bQuoteRequestsTable.status, "quoted")))
+      .returning({ id: b2bQuoteRequestsTable.id });
+    if (updated.length === 0) {
+      return res.status(409).json({ error: "Bu teklif zaten karara bağlanmış" });
+    }
 
     const [buyer] = await db
       .select({ name: companiesTable.name })
@@ -480,14 +485,45 @@ router.post("/quotes/:id/decision", async (req: Request, res: Response) => {
       .where(eq(companiesTable.id, companyId))
       .limit(1);
 
+    let orderId: number | null = null;
+    let orderCode: string | null = null;
+    if (parsed.data.decision === "accepted") {
+      const code = `ORD-${new Date()
+        .toISOString()
+        .slice(2, 10)
+        .replace(/-/g, "")}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      const [order] = await db
+        .insert(b2bOrdersTable)
+        .values({
+          quoteId,
+          buyerCompanyId: quote.fromCompanyId,
+          sellerCompanyId: quote.toCompanyId,
+          code,
+          status: "pending",
+          totalAmount: quote.quotedTotalAmount ?? 0,
+          currency: quote.quotedCurrency ?? "TRY",
+          shippingCity: quote.deliveryCity,
+          shippingAddress: quote.deliveryAddress,
+          contactPhone: quote.contactPhone,
+        })
+        .returning({ id: b2bOrdersTable.id, code: b2bOrdersTable.code });
+      orderId = order.id;
+      orderCode = order.code;
+    }
+
     await db.insert(notificationsTable).values({
       companyId: quote.toCompanyId,
       type: "b2b_quote_decision",
       title: `Teklif ${parsed.data.decision === "accepted" ? "Kabul Edildi" : "Reddedildi"}: ${quote.code}`,
-      message: `${buyer?.name ?? "Alıcı"} teklifinizi ${parsed.data.decision === "accepted" ? "kabul etti" : "reddetti"}`,
+      message:
+        parsed.data.decision === "accepted" && orderCode
+          ? `${buyer?.name ?? "Alıcı"} teklifinizi kabul etti. Sipariş oluşturuldu: ${orderCode}`
+          : `${buyer?.name ?? "Alıcı"} teklifinizi ${parsed.data.decision === "accepted" ? "kabul etti" : "reddetti"}`,
+      entityType: orderId ? "b2b_order" : "b2b_quote",
+      entityId: orderId ?? quoteId,
     });
 
-    res.json({ ok: true, status: parsed.data.decision });
+    res.json({ ok: true, status: parsed.data.decision, orderId, orderCode });
   } catch (err) {
     req.log.error({ err }, "b2b decision failed");
     res.status(500).json({ error: "Karar kaydedilemedi" });
