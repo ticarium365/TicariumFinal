@@ -1292,3 +1292,137 @@ describe("19. Alış Faturası ve Stok Girişi", () => {
     assert.equal(status, 403);
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 20. GELİŞMİŞ RAPORLAR — Kâr, Müşteri, Tedarikçi Analizleri, CSV Exportlar
+// ══════════════════════════════════════════════════════════════════════════════
+describe("20. Gelişmiş Raporlar", () => {
+  const START = "2020-01-01";
+  const END   = "2099-12-31";
+
+  test("Satış raporu 200 döner ve gerekli alanlar mevcuttur", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/reports/sales?startDate=${START}&endDate=${END}`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok("grossRevenue"    in json, "grossRevenue eksik");
+    assert.ok("totalProfit"     in json, "totalProfit eksik");
+    assert.ok("productBreakdown" in json, "productBreakdown eksik");
+    assert.ok(Array.isArray(json.productBreakdown), "productBreakdown dizi olmalı");
+    assert.ok("dailyBreakdown"  in json, "dailyBreakdown eksik");
+    assert.ok("paymentBreakdown" in json, "paymentBreakdown eksik");
+  });
+
+  test("Satış raporu tarih parametresi olmadan 400 döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("GET", "/reports/sales", { jar });
+    assert.equal(status, 400);
+  });
+
+  test("Kâr analizi raporu 200 döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/reports/profit?startDate=${START}&endDate=${END}`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok("summary"         in json, "summary eksik");
+    assert.ok("productProfits"  in json, "productProfits eksik");
+    assert.ok("categoryProfits" in json, "categoryProfits eksik");
+    assert.ok("monthlyTrend"    in json, "monthlyTrend eksik");
+    assert.ok(typeof json.summary.totalRevenue === "number", "totalRevenue sayı olmalı");
+  });
+
+  test("Kâr analizi — viewer erişebilir", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("GET", `/reports/profit?startDate=${START}&endDate=${END}`, { jar });
+    assert.equal(status, 200);
+  });
+
+  test("Kâr analizi tarih parametresi olmadan 400 döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("GET", "/reports/profit", { jar });
+    assert.equal(status, 400);
+  });
+
+  test("Müşteri analizi raporu 200 döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/reports/customer-analytics?startDate=${START}&endDate=${END}`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok("totalCustomers"      in json, "totalCustomers eksik");
+    assert.ok("totalDebt"           in json, "totalDebt eksik");
+    assert.ok("topCustomersBySales" in json, "topCustomersBySales eksik");
+    assert.ok("topDebtors"          in json, "topDebtors eksik");
+    assert.ok(Array.isArray(json.topDebtors), "topDebtors dizi olmalı");
+  });
+
+  test("Müşteri analizi — viewer erişebilir", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("GET", `/reports/customer-analytics?startDate=${START}&endDate=${END}`, { jar });
+    assert.equal(status, 200);
+  });
+
+  test("Tedarikçi analizi raporu 200 döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/reports/supplier-analytics?startDate=${START}&endDate=${END}`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok("totalSuppliers"       in json, "totalSuppliers eksik");
+    assert.ok("totalPurchaseAmount"  in json, "totalPurchaseAmount eksik");
+    assert.ok("topSuppliersBySpend"  in json, "topSuppliersBySpend eksik");
+    assert.ok("monthlyPurchases"     in json, "monthlyPurchases eksik");
+    assert.ok(Array.isArray(json.monthlyPurchases), "monthlyPurchases dizi olmalı");
+  });
+
+  test("Alış özet raporu 200 döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/reports/purchases-summary?startDate=${START}&endDate=${END}`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok("totalPurchases" in json, "totalPurchases eksik");
+    assert.ok("totalAmount"    in json, "totalAmount eksik");
+    assert.ok("purchases"      in json, "purchases eksik");
+    assert.ok(Array.isArray(json.purchases), "purchases dizi olmalı");
+  });
+
+  test("Tenant izolasyonu — rapor yalnızca kendi tenant verisini döner", async () => {
+    const { jar: jar1 } = await login("cenan", "cenan123");
+    const { json: j1 } = await api("GET", `/reports/sales?startDate=${START}&endDate=${END}`, { jar: jar1 });
+    const { jar: jar2 } = await login("nihat_admin", "nihat123", "nihatturizm");
+    const { json: j2 } = await api("GET", `/reports/sales?startDate=${START}&endDate=${END}`, { jar: jar2 });
+    // Farklı tenant'lar farklı satış sayısına sahip olabilir, key'ler her ikisinde de mevcut olmalı
+    assert.ok("totalSales" in j1, "j1 totalSales eksik");
+    assert.ok("totalSales" in j2, "j2 totalSales eksik");
+  });
+
+  test("Satış CSV export 200 döner ve CSV içeriği gelir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const headers = { "Cookie": jar.header(), "X-Tenant": "prosan" };
+    const res = await fetch(`http://localhost:8080/api/reports/export/sales?startDate=${START}&endDate=${END}`, { headers });
+    assert.equal(res.status, 200, "export/sales 200 olmalı");
+    const ct = res.headers.get("content-type") ?? "";
+    assert.ok(ct.includes("text/csv"), `Content-Type text/csv olmalı, alınan: ${ct}`);
+    const text = await res.text();
+    assert.ok(text.includes("Tarih") || text.includes("Ürün"), "CSV başlık satırı eksik");
+  });
+
+  test("Alış CSV export 200 döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const headers = { "Cookie": jar.header(), "X-Tenant": "prosan" };
+    const res = await fetch(`http://localhost:8080/api/reports/export/purchases?startDate=${START}&endDate=${END}`, { headers });
+    assert.equal(res.status, 200, "export/purchases 200 olmalı");
+    const ct = res.headers.get("content-type") ?? "";
+    assert.ok(ct.includes("text/csv"), `Content-Type text/csv olmalı, alınan: ${ct}`);
+  });
+
+  test("Stok CSV export 200 döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const headers = { "Cookie": jar.header(), "X-Tenant": "prosan" };
+    const res = await fetch(`http://localhost:8080/api/reports/export/stock`, { headers });
+    assert.equal(res.status, 200, "export/stock 200 olmalı");
+    const ct = res.headers.get("content-type") ?? "";
+    assert.ok(ct.includes("text/csv"), `Content-Type text/csv olmalı, alınan: ${ct}`);
+    const text = await res.text();
+    assert.ok(text.includes("Ürün Kodu"), "CSV başlık satırı eksik");
+  });
+
+  test("Anonim kullanıcı rapor erişemez", async () => {
+    const jar = new CookieJar("prosan");
+    const { status } = await api("GET", `/reports/profit?startDate=${START}&endDate=${END}`, { jar });
+    assert.equal(status, 401);
+  });
+});

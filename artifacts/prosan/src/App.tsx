@@ -34,6 +34,7 @@ import SuppliersList from "@/pages/suppliers/index";
 import SupplierDetail from "@/pages/suppliers/detail";
 import PurchasesList from "@/pages/purchases/index";
 import NewPurchase from "@/pages/purchases/new";
+import BarcodesPage from "@/pages/barcodes/index";
 
 const queryClient = new QueryClient();
 
@@ -166,6 +167,10 @@ function AuthenticatedRouter() {
 
         <Route path="/purchases/new">
           {() => <ProtectedRoute component={NewPurchase} roles={["admin", "staff"]} />}
+        </Route>
+
+        <Route path="/barcodes">
+          {() => <ProtectedRoute component={BarcodesPage} roles={["admin", "staff", "viewer"]} />}
         </Route>
 
         <Route path="/users">
