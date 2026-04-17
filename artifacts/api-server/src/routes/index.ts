@@ -25,6 +25,12 @@ import subscriptionsRouter from "./subscriptions.js";
 import storageRouter from "./storage.js";
 import documentsRouter from "./documents.js";
 import notificationRulesRouter from "./notification-rules.js";
+import personnelRouter from "./personnel.js";
+import campaignsRouter from "./campaigns.js";
+import catalogSettingsRouter from "./catalog-settings.js";
+import ordersManageRouter from "./orders-manage.js";
+import customerGroupsRouter from "./customer-groups.js";
+import orderAnalyticsRouter from "./order-analytics.js";
 
 const router: IRouter = Router();
 
@@ -54,5 +60,11 @@ router.use("/subscriptions", subscriptionsRouter);
 router.use(storageRouter);
 router.use(documentsRouter);
 router.use(notificationRulesRouter);
+router.use(personnelRouter);
+router.use(campaignsRouter);
+router.use(catalogSettingsRouter);
+router.use(orderAnalyticsRouter);
+router.use(ordersManageRouter);
+router.use(customerGroupsRouter);
 
 export default router;

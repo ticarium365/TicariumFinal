@@ -1,5 +1,10 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "SDV4uzui6w7ITlXhJ6bkc"
+uri = "file://artifacts/smsystems-mobile/assets/images/icon.png"
+type = "image"
+title = "smsystems mobile icon"
 
 [[outputs]]
 id = "kaw-H31_kpT9xvNF9w4Hi"

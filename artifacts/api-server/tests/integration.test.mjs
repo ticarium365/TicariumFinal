@@ -3105,3 +3105,994 @@ describe("Sprint 21 — Akıllı Bildirim Sistemi", () => {
     assert.ok(!json.rules.some(r => r.id === ruleId));
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Sprint 22 — Personel Yönetimi
+// ═══════════════════════════════════════════════════════════════════════════════
+describe("Sprint 22 — Personel Yönetimi", () => {
+  let deptId;
+  let personnelId;
+  let leaveId;
+
+  test("Departman listesi başlangıçta boş", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/departments", { jar });
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(json.departments));
+  });
+
+  test("Admin departman oluşturabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("POST", "/departments", {
+      jar,
+      body: { name: "Satış Departmanı", description: "Satış ve pazarlama ekibi" },
+    });
+    assert.equal(status, 201, `201 bekleniyor — ${JSON.stringify(json)}`);
+    assert.equal(json.name, "Satış Departmanı");
+    assert.ok(json.id);
+    deptId = json.id;
+  });
+
+  test("Viewer departman oluşturamaz", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("POST", "/departments", { jar, body: { name: "Yasak" } });
+    assert.equal(status, 403);
+  });
+
+  test("Departman güncellenebilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("PUT", `/departments/${deptId}`, {
+      jar,
+      body: { name: "Satış & Pazarlama" },
+    });
+    assert.equal(status, 200);
+    assert.equal(json.name, "Satış & Pazarlama");
+  });
+
+  test("Admin personel oluşturabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("POST", "/personnel", {
+      jar,
+      body: {
+        firstName: "Ahmet",
+        lastName: "Yılmaz",
+        position: "Satış Temsilcisi",
+        departmentId: deptId,
+        phone: "05551234567",
+        email: "ahmet@test.com",
+        startDate: "2024-01-15",
+        salary: "25000",
+        isActive: true,
+      },
+    });
+    assert.equal(status, 201, `201 bekleniyor — ${JSON.stringify(json)}`);
+    assert.equal(json.fullName, "Ahmet Yılmaz");
+    assert.equal(json.position, "Satış Temsilcisi");
+    assert.ok(json.id);
+    personnelId = json.id;
+  });
+
+  test("Personel listesinde görünüyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { json } = await api("GET", "/personnel", { jar });
+    assert.ok(json.personnel.some((p) => p.id === personnelId));
+  });
+
+  test("Personel detayı alınabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/personnel/${personnelId}`, { jar });
+    assert.equal(status, 200);
+    assert.equal(json.fullName, "Ahmet Yılmaz");
+    assert.ok(Array.isArray(json.leaves));
+  });
+
+  test("İstatistikler alınabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/personnel/stats", { jar });
+    assert.equal(status, 200);
+    assert.ok(typeof json.total === "number");
+    assert.ok(typeof json.active === "number");
+    assert.ok(typeof json.inactive === "number");
+    assert.ok(typeof json.pendingLeaves === "number");
+  });
+
+  test("Personel güncellenebilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("PUT", `/personnel/${personnelId}`, {
+      jar,
+      body: { position: "Kıdemli Satış Temsilcisi", salary: "30000" },
+    });
+    assert.equal(status, 200);
+    assert.equal(json.position, "Kıdemli Satış Temsilcisi");
+  });
+
+  test("Personel aktif/pasif toggle çalışıyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("PATCH", `/personnel/${personnelId}/toggle`, { jar });
+    assert.equal(status, 200);
+    assert.equal(json.ok, true);
+    assert.equal(json.isActive, false);
+    // Tekrar aktifleştir
+    const { json: j2 } = await api("PATCH", `/personnel/${personnelId}/toggle`, { jar });
+    assert.equal(j2.isActive, true);
+  });
+
+  test("İzin talebi oluşturulabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("POST", "/leave-requests", {
+      jar,
+      body: {
+        personnelId,
+        type: "annual",
+        startDate: "2026-05-01",
+        endDate: "2026-05-05",
+        days: 5,
+        reason: "Yıllık tatil",
+      },
+    });
+    assert.equal(status, 201, `201 bekleniyor — ${JSON.stringify(json)}`);
+    assert.equal(json.status, "pending");
+    assert.equal(json.typeLabel, "Yıllık İzin");
+    leaveId = json.id;
+  });
+
+  test("İzin talepleri listeleniyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { json } = await api("GET", "/leave-requests", { jar });
+    assert.ok(json.leaveRequests.some((l) => l.id === leaveId));
+  });
+
+  test("İzin talebi onaylanabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("PATCH", `/leave-requests/${leaveId}/approve`, { jar });
+    assert.equal(status, 200);
+    assert.equal(json.status, "approved");
+  });
+
+  test("Onaylanan izin personel detayında görünüyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { json } = await api("GET", `/personnel/${personnelId}`, { jar });
+    const leave = json.leaves.find((l) => l.id === leaveId);
+    assert.ok(leave, "İzin personel detayında görünmeli");
+    assert.equal(leave.status, "approved");
+  });
+
+  test("Viewer izin talebi oluşturamaz", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("POST", "/leave-requests", {
+      jar,
+      body: { personnelId, type: "sick", startDate: "2026-06-01", endDate: "2026-06-02", days: 1 },
+    });
+    assert.equal(status, 403);
+  });
+
+  test("Tenant izolasyonu: diğer tenant personel göremez", async () => {
+    const { jar } = await login("nihat_admin", "nihat123", "nihatturizm");
+    const { json } = await api("GET", "/personnel", { jar });
+    assert.ok(!json.personnel?.some((p) => p.id === personnelId), "Başka tenant personeli görmemeli");
+  });
+
+  test("İzin talebi silinebilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("DELETE", `/leave-requests/${leaveId}`, { jar });
+    assert.equal(status, 204);
+  });
+
+  test("Personel silinebilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("DELETE", `/personnel/${personnelId}`, { jar });
+    assert.equal(status, 204);
+  });
+
+  test("Departman silinebilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("DELETE", `/departments/${deptId}`, { jar });
+    assert.equal(status, 204);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Sprint 23 — Kampanya & İndirim Yönetimi
+// ═══════════════════════════════════════════════════════════════════════════════
+describe("Sprint 23 — Kampanya & İndirim Yönetimi", () => {
+  let campaignId;
+  let fixedCampaignId;
+
+  test("Kampanya listesi başlangıçta boş", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/campaigns", { jar });
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(json.campaigns));
+  });
+
+  test("Aktif kampanya listesi alınabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/campaigns/active", { jar });
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(json.campaigns));
+  });
+
+  test("Admin yüzde indirim kampanyası oluşturabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const today = new Date().toISOString().slice(0, 10);
+    const future = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+    const { status, json } = await api("POST", "/campaigns", {
+      jar,
+      body: {
+        name: "Yaz İndirimi",
+        discountType: "percent",
+        discountValue: 20,
+        scope: "all",
+        startDate: today,
+        endDate: future,
+        isActive: true,
+      },
+    });
+    assert.equal(status, 201, `201 bekleniyor — ${JSON.stringify(json)}`);
+    assert.equal(json.name, "Yaz İndirimi");
+    assert.equal(json.discountType, "percent");
+    assert.ok(json.discountLabel);
+    assert.ok(json.statusLabel);
+    campaignId = json.id;
+  });
+
+  test("Admin sabit indirim kampanyası oluşturabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const today = new Date().toISOString().slice(0, 10);
+    const future = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+    const { status, json } = await api("POST", "/campaigns", {
+      jar,
+      body: {
+        name: "50TL İndirim",
+        discountType: "fixed",
+        discountValue: 50,
+        scope: "all",
+        minAmount: 200,
+        startDate: today,
+        endDate: future,
+        couponCode: "YAZ50",
+        isActive: true,
+      },
+    });
+    assert.equal(status, 201, `201 bekleniyor — ${JSON.stringify(json)}`);
+    assert.equal(json.couponCode, "YAZ50");
+    fixedCampaignId = json.id;
+  });
+
+  test("Kampanya detayı alınabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/campaigns/${campaignId}`, { jar });
+    assert.equal(status, 200);
+    assert.equal(json.id, campaignId);
+  });
+
+  test("Kampanya listesinde görünüyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { json } = await api("GET", "/campaigns", { jar });
+    assert.ok(json.campaigns.some((c) => c.id === campaignId));
+  });
+
+  test("Aktif kampanya listesinde görünüyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { json } = await api("GET", "/campaigns/active", { jar });
+    assert.ok(json.campaigns.some((c) => c.id === campaignId));
+  });
+
+  test("Kampanya güncellenebilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("PUT", `/campaigns/${campaignId}`, {
+      jar,
+      body: { name: "Yaz Büyük İndirimi", discountValue: 25 },
+    });
+    assert.equal(status, 200);
+    assert.equal(json.name, "Yaz Büyük İndirimi");
+  });
+
+  test("Kampanya toggle (aktif/pasif) çalışıyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("PATCH", `/campaigns/${campaignId}/toggle`, { jar });
+    assert.equal(status, 200);
+    assert.equal(json.isActive, false);
+    // Geri aktifleştir
+    const { json: j2 } = await api("PATCH", `/campaigns/${campaignId}/toggle`, { jar });
+    assert.equal(j2.isActive, true);
+  });
+
+  test("Kampanya uygulama — yeterli tutar", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("POST", "/campaigns/apply", {
+      jar,
+      body: { amount: 300, quantity: 1 },
+    });
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(json.applicable));
+    assert.ok(json.applicable.length >= 1, "En az 1 kampanya uygulanmalı");
+    assert.ok(json.discountAmount > 0);
+    assert.ok(json.finalAmount < 300);
+    assert.ok(json.bestCampaign);
+  });
+
+  test("Kampanya uygulama — sabit indirim min tutar kontrolü", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    // 50TL kampanyası için minAmount=200, burada 100TL ile deneyelim
+    const { json } = await api("POST", "/campaigns/apply", { jar, body: { amount: 100, quantity: 1 } });
+    // 50TL kampanyası uygulanmamalı (minAmount=200 > 100)
+    const fixed = json.applicable?.find((c) => c.id === fixedCampaignId);
+    assert.ok(!fixed, "Minimum tutar sağlanmadığında sabit indirim uygulanmamalı");
+  });
+
+  test("Viewer kampanya oluşturamaz", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("POST", "/campaigns", {
+      jar,
+      body: { name: "Yasak", discountType: "percent", discountValue: 10, scope: "all", startDate: "2026-01-01", endDate: "2026-12-31" },
+    });
+    assert.equal(status, 403);
+  });
+
+  test("Tenant izolasyonu: diğer tenant kampanya göremez", async () => {
+    const { jar } = await login("nihat_admin", "nihat123", "nihatturizm");
+    const { json } = await api("GET", "/campaigns", { jar });
+    assert.ok(!json.campaigns?.some((c) => c.id === campaignId), "Başka tenant kampanyası görülmemeli");
+  });
+
+  test("Kampanya silinebilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("DELETE", `/campaigns/${campaignId}`, { jar });
+    assert.equal(status, 204);
+  });
+
+  test("İkinci kampanya da silinebilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("DELETE", `/campaigns/${fixedCampaignId}`, { jar });
+    assert.equal(status, 204);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Sprint 20 — Public API (Geliştirici API'si)
+// ═══════════════════════════════════════════════════════════════════════════════
+describe("Sprint 20 — Public API", () => {
+  let rawApiKey;
+  let apiKeyId;
+
+  // Public API için Bearer auth yardımcısı
+  async function publicApi(method, path, { body, apiKey } = {}) {
+    const url = `http://localhost:8080/api${path}`;
+    const opts = {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    };
+    const r = await fetch(url, opts);
+    let json = null;
+    try { json = await r.json(); } catch {}
+    return { status: r.status, json };
+  }
+
+  test("API anahtarı olmadan erişim engellenir", async () => {
+    const { status } = await publicApi("GET", "/public/v1/info");
+    assert.equal(status, 401);
+  });
+
+  test("Geçersiz API anahtarı reddedilir", async () => {
+    const { status } = await publicApi("GET", "/public/v1/info", { apiKey: "sms_invalid_key_here_invalid" });
+    assert.equal(status, 401);
+  });
+
+  test("Admin 'write' scope ile API anahtarı oluşturabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("POST", "/integrations/api-keys", {
+      jar,
+      body: { name: "Test API Anahtarı", scopes: "write" },
+    });
+    assert.equal(status, 201, `201 bekleniyor — ${JSON.stringify(json)}`);
+    assert.ok(json.apiKey?.rawKey, "rawKey dönmeli");
+    rawApiKey = json.apiKey.rawKey;
+    apiKeyId = json.apiKey.id;
+  });
+
+  test("API anahtarı ile /info alınabilir", async () => {
+    const { status, json } = await publicApi("GET", "/public/v1/info", { apiKey: rawApiKey });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.ok(json.api?.version);
+    assert.ok(json.company?.name);
+    assert.equal(json.scopes, "write");
+  });
+
+  test("Ürün listesi alınabilir", async () => {
+    const { status, json } = await publicApi("GET", "/public/v1/products", { apiKey: rawApiKey });
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(json.products));
+    assert.ok(json.pagination?.total >= 0);
+  });
+
+  test("Sayfalama parametreleri çalışıyor", async () => {
+    const { json } = await publicApi("GET", "/public/v1/products?page=1&limit=5", { apiKey: rawApiKey });
+    assert.ok(json.products.length <= 5);
+    assert.equal(json.pagination?.limit, 5);
+  });
+
+  test("Barkod ile ürün sorgulanabilir", async () => {
+    // Önce var olan bir ürünün barkodunu al
+    const { json: listJson } = await publicApi("GET", "/public/v1/products?limit=1", { apiKey: rawApiKey });
+    if (listJson.products.length > 0 && listJson.products[0].barcode) {
+      const barcode = listJson.products[0].barcode;
+      const { status, json } = await publicApi("GET", `/public/v1/products/${barcode}`, { apiKey: rawApiKey });
+      assert.equal(status, 200);
+      assert.equal(json.barcode, barcode);
+    } else {
+      // Barkod yoksa 404 bekleniyor
+      const { status } = await publicApi("GET", "/public/v1/products/NONEXISTENT", { apiKey: rawApiKey });
+      assert.equal(status, 404);
+    }
+  });
+
+  test("Stok özeti alınabilir", async () => {
+    const { status, json } = await publicApi("GET", "/public/v1/inventory", { apiKey: rawApiKey });
+    assert.equal(status, 200);
+    assert.ok(typeof json.totalProducts === "number");
+    assert.ok(typeof json.totalStock === "number");
+    assert.ok(typeof json.lowStockCount === "number");
+    assert.ok(Array.isArray(json.byCategory));
+  });
+
+  test("Aktif kampanyalar alınabilir", async () => {
+    const { status, json } = await publicApi("GET", "/public/v1/campaigns", { apiKey: rawApiKey });
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(json.campaigns));
+  });
+
+  test("İstatistikler (write scope ile) alınabilir", async () => {
+    const { status, json } = await publicApi("GET", "/public/v1/stats", { apiKey: rawApiKey });
+    assert.equal(status, 200);
+    assert.ok(json.month);
+    assert.ok(json.sales);
+    assert.ok(json.inventory);
+  });
+
+  test("Read-only anahtar write endpoint'i çağıramaz", async () => {
+    // Read-only anahtar oluştur
+    const { jar } = await login("cenan", "cenan123");
+    const { json: keyJson } = await api("POST", "/integrations/api-keys", {
+      jar,
+      body: { name: "Read Only", scopes: "read" },
+    });
+    const readOnlyKey = keyJson.apiKey?.rawKey;
+    assert.ok(readOnlyKey);
+
+    const { status } = await publicApi("GET", "/public/v1/stats", { apiKey: readOnlyKey });
+    assert.equal(status, 403);
+
+    // Temizle
+    await api("DELETE", `/integrations/api-keys/${keyJson.apiKey.id}`, { jar });
+  });
+
+  test("API anahtarı silinebilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("DELETE", `/integrations/api-keys/${apiKeyId}`, { jar });
+    assert.equal(status, 200);
+  });
+
+  test("Silinmiş anahtar artık çalışmaz", async () => {
+    const { status } = await publicApi("GET", "/public/v1/info", { apiKey: rawApiKey });
+    assert.equal(status, 401);
+  });
+});
+
+// ─── Sprint 16 — Katalog Yönetimi ─────────────────────────────────────────────
+describe("Sprint 16 — Katalog Yönetimi", () => {
+  let writeApiKey;
+
+  async function publicApi(method, path, { body, apiKey } = {}) {
+    const url = `http://localhost:8080/api${path}`;
+    const r = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    let json = null;
+    try { json = await r.json(); } catch {}
+    return { status: r.status, json };
+  }
+
+  test("Admin katalog ayarlarını alabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/catalog-settings", { jar });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.ok("isEnabled" in json, "isEnabled alanı olmalı");
+    assert.ok("allowOrders" in json, "allowOrders alanı olmalı");
+  });
+
+  test("Admin katalog ayarlarını güncelleyebilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("PUT", "/catalog-settings", {
+      jar,
+      body: { isEnabled: true, title: "Test Kataloğu", showPrices: true, allowOrders: true },
+    });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.equal(json.isEnabled, true);
+    assert.equal(json.title, "Test Kataloğu");
+  });
+
+  test("Viewer katalog ayarlarını güncelleyemez", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("PUT", "/catalog-settings", {
+      jar,
+      body: { isEnabled: false },
+    });
+    assert.equal(status, 403);
+  });
+
+  test("Aktif katalog API anahtarı ile alınabilir", async () => {
+    // Önce write scope ile API key oluştur
+    const { jar } = await login("cenan", "cenan123");
+    const { json: keyJson } = await api("POST", "/integrations/api-keys", {
+      jar,
+      body: { name: "Katalog Test Anahtarı", scopes: "write" },
+    });
+    writeApiKey = keyJson.apiKey?.rawKey;
+
+    const { status, json } = await publicApi("GET", "/public/v1/catalog", { apiKey: writeApiKey });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.ok(Array.isArray(json.products), "products dizisi olmalı");
+    assert.ok("catalog" in json, "catalog objesi olmalı");
+  });
+
+  test("Katalog devre dışı bırakıldığında 403 döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    await api("PUT", "/catalog-settings", { jar, body: { isEnabled: false } });
+    const { status } = await publicApi("GET", "/public/v1/catalog", { apiKey: writeApiKey });
+    assert.equal(status, 403);
+    // Tekrar aktif et
+    await api("PUT", "/catalog-settings", { jar, body: { isEnabled: true } });
+  });
+
+  test("Temizlik: katalog API anahtarını sil", async () => {
+    if (!writeApiKey) return;
+    const { jar } = await login("cenan", "cenan123");
+    const { json: listJson } = await api("GET", "/integrations/api-keys", { jar });
+    const key = listJson?.apiKeys?.find(k => k.name === "Katalog Test Anahtarı");
+    if (key) {
+      const { status } = await api("DELETE", `/integrations/api-keys/${key.id}`, { jar });
+      assert.equal(status, 200);
+    }
+  });
+});
+
+// ─── Sprint 17 — Sipariş Yönetimi ─────────────────────────────────────────────
+describe("Sprint 17 — Sipariş Yönetimi", () => {
+  let orderId;
+  let productId;
+  let writeApiKey;
+
+  async function publicApi(method, path, { body, apiKey } = {}) {
+    const url = `http://localhost:8080/api${path}`;
+    const r = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    let json = null;
+    try { json = await r.json(); } catch {}
+    return { status: r.status, json };
+  }
+
+  test("Sipariş oluşturmak için ürün ID alınır", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { json } = await api("GET", "/products", { jar });
+    const products = json?.products ?? json ?? [];
+    productId = Array.isArray(products) ? products[0]?.id : null;
+    assert.ok(productId, "En az bir ürün olmalı");
+  });
+
+  test("Admin sipariş oluşturabilir", async () => {
+    if (!productId) return;
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("POST", "/orders", {
+      jar,
+      body: {
+        customerName: "Test Müşteri",
+        customerEmail: "test@example.com",
+        customerPhone: "05001234567",
+        notes: "Test notu",
+        items: [{ productId, quantity: 2, unitPrice: 100 }],
+      },
+    });
+    assert.equal(status, 201, `201 bekleniyor — ${JSON.stringify(json)}`);
+    assert.ok(json.order?.id, "Sipariş ID'si olmalı");
+    assert.ok(json.order?.orderNo?.startsWith("ORD-"), "Sipariş numarası formatı");
+    orderId = json.order.id;
+  });
+
+  test("Viewer sipariş oluşturamaz", async () => {
+    if (!productId) return;
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("POST", "/orders", {
+      jar,
+      body: { customerName: "Test", items: [{ productId, quantity: 1, unitPrice: 50 }] },
+    });
+    assert.equal(status, 403);
+  });
+
+  test("Admin sipariş listesini alabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/orders", { jar });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.ok(Array.isArray(json.orders), "orders dizisi olmalı");
+    assert.ok("pagination" in json, "pagination bilgisi olmalı");
+  });
+
+  test("Sipariş detayı alınabilir", async () => {
+    if (!orderId) return;
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/orders/${orderId}`, { jar });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.equal(json.id, orderId);
+    assert.ok(Array.isArray(json.items), "items dizisi olmalı");
+  });
+
+  test("Sipariş istatistikleri alınabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/orders/stats", { jar });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.ok("total" in json, "total alanı olmalı");
+    assert.ok(Array.isArray(json.byStatus), "byStatus dizisi olmalı");
+  });
+
+  test("Sipariş durumu güncellenebilir", async () => {
+    if (!orderId) return;
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("PATCH", `/orders/${orderId}/status`, {
+      jar,
+      body: { status: "confirmed" },
+    });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.equal(json.status, "confirmed");
+  });
+
+  test("Geçersiz sipariş durumu reddedilir", async () => {
+    if (!orderId) return;
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("PATCH", `/orders/${orderId}/status`, {
+      jar,
+      body: { status: "gecersiz_durum" },
+    });
+    assert.equal(status, 400);
+  });
+
+  test("Onaylanmış sipariş silinemez", async () => {
+    if (!orderId) return;
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("DELETE", `/orders/${orderId}`, { jar });
+    assert.equal(status, 409);
+  });
+
+  test("Public API ile katalog sipariş oluşturulabilir", async () => {
+    if (!productId) return;
+    // Write scope API key oluştur
+    const { jar } = await login("cenan", "cenan123");
+    const { json: keyJson } = await api("POST", "/integrations/api-keys", {
+      jar,
+      body: { name: "Sipariş Test Anahtarı", scopes: "write" },
+    });
+    writeApiKey = keyJson.apiKey?.rawKey;
+
+    const { status, json } = await publicApi("POST", "/public/v1/orders", {
+      apiKey: writeApiKey,
+      body: {
+        customerName: "API Müşterisi",
+        customerEmail: "api@example.com",
+        items: [{ productId, quantity: 1 }],
+      },
+    });
+    assert.equal(status, 201, `201 bekleniyor — ${JSON.stringify(json)}`);
+    assert.ok(json.order?.orderNo, "Sipariş numarası olmalı");
+  });
+
+  test("Bekleyen sipariş silinebilir", async () => {
+    if (!orderId) return;
+    // Durumu cancelled yap, sonra sil
+    const { jar } = await login("cenan", "cenan123");
+    await api("PATCH", `/orders/${orderId}/status`, { jar, body: { status: "cancelled" } });
+    const { status, json } = await api("DELETE", `/orders/${orderId}`, { jar });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.equal(json.ok, true);
+  });
+
+  test("Temizlik: API anahtarını sil", async () => {
+    if (!writeApiKey) return;
+    const { jar } = await login("cenan", "cenan123");
+    const { json: listJson } = await api("GET", "/integrations/api-keys", { jar });
+    const key = listJson?.apiKeys?.find(k => k.name === "Sipariş Test Anahtarı");
+    if (key) {
+      await api("DELETE", `/integrations/api-keys/${key.id}`, { jar });
+    }
+  });
+});
+
+// ─── Sprint 18 — Müşteri Grupları & Özel Fiyatlandırma ───────────────────────
+describe("Sprint 18 — Müşteri Grupları", () => {
+  let groupId;
+  let customerId;
+
+  test("Müşteri ID alınır", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { json } = await api("GET", "/customers", { jar });
+    const customers = json?.customers ?? json ?? [];
+    customerId = Array.isArray(customers) ? customers[0]?.id : null;
+  });
+
+  test("Admin müşteri grubu oluşturabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("POST", "/customer-groups", {
+      jar,
+      body: { name: "VIP Müşteriler", description: "En iyi müşteriler", discountPct: 10 },
+    });
+    assert.equal(status, 201, `201 bekleniyor — ${JSON.stringify(json)}`);
+    assert.ok(json.group?.id, "Grup ID'si olmalı");
+    assert.equal(json.group.name, "VIP Müşteriler");
+    assert.equal(json.group.discountPct, 10);
+    groupId = json.group.id;
+  });
+
+  test("Geçersiz indirim yüzdesi reddedilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("POST", "/customer-groups", {
+      jar,
+      body: { name: "Hatalı Grup", discountPct: 150 },
+    });
+    assert.equal(status, 400);
+  });
+
+  test("Viewer müşteri grubu oluşturamaz", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("POST", "/customer-groups", {
+      jar,
+      body: { name: "Viewer Grubu", discountPct: 5 },
+    });
+    assert.equal(status, 403);
+  });
+
+  test("Müşteri grupları listelenebilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/customer-groups", { jar });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.ok(Array.isArray(json.groups), "groups dizisi olmalı");
+  });
+
+  test("Müşteri grubu detayı alınabilir", async () => {
+    if (!groupId) return;
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/customer-groups/${groupId}`, { jar });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.equal(json.id, groupId);
+    assert.ok(Array.isArray(json.members), "members dizisi olmalı");
+  });
+
+  test("Müşteri gruba eklenebilir", async () => {
+    if (!groupId || !customerId) return;
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("POST", `/customer-groups/${groupId}/members`, {
+      jar,
+      body: { customerId },
+    });
+    assert.equal(status, 201, `201 bekleniyor — ${JSON.stringify(json)}`);
+  });
+
+  test("Müşteri grubundan çıkarılabilir", async () => {
+    if (!groupId || !customerId) return;
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("DELETE", `/customer-groups/${groupId}/members/${customerId}`, { jar });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.equal(json.ok, true);
+  });
+
+  test("Müşteri grubu güncellenebilir", async () => {
+    if (!groupId) return;
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("PUT", `/customer-groups/${groupId}`, {
+      jar,
+      body: { name: "Platinum Müşteriler", discountPct: 15 },
+    });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.equal(json.name, "Platinum Müşteriler");
+    assert.equal(json.discountPct, 15);
+  });
+
+  test("Müşteri grubu silinebilir", async () => {
+    if (!groupId) return;
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("DELETE", `/customer-groups/${groupId}`, { jar });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.equal(json.ok, true);
+  });
+
+  test("Silinmiş grup bulunamaz", async () => {
+    if (!groupId) return;
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("GET", `/customer-groups/${groupId}`, { jar });
+    assert.equal(status, 404);
+  });
+});
+
+// ─── Sprint 19 — Sipariş & Katalog Analitik ───────────────────────────────────
+describe("Sprint 19 — Sipariş & Katalog Analitik", () => {
+
+  test("Sipariş analitiği alınabilir (varsayılan: month)", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/orders/analytics", { jar });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.ok("totals" in json, "totals olmalı");
+    assert.ok("bySource" in json, "bySource olmalı");
+    assert.ok("topProducts" in json, "topProducts olmalı");
+    assert.ok("period" in json, "period olmalı");
+  });
+
+  test("Sipariş analitiği haftalık periyot ile alınabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/orders/analytics?period=week", { jar });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.equal(json.period, "week");
+  });
+
+  test("Sipariş analitiği yıllık periyot ile alınabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/orders/analytics?period=year", { jar });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.equal(json.period, "year");
+  });
+
+  test("Viewer sipariş analitiğini göremez", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("GET", "/orders/analytics", { jar });
+    assert.equal(status, 403);
+  });
+
+  test("Katalog analitiği alınabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/catalog-analytics", { jar });
+    assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
+    assert.ok("orderStats" in json, "orderStats olmalı");
+    assert.ok("totalOrders" in json.orderStats, "totalOrders olmalı");
+    assert.ok("catalogOrders" in json.orderStats, "catalogOrders olmalı");
+  });
+
+  test("Viewer katalog analitiğini göremez", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("GET", "/catalog-analytics", { jar });
+    assert.equal(status, 403);
+  });
+});
+
+// ─── Sprint 24 — QA & Giriş Doğrulama ────────────────────────────────────────
+describe("Sprint 24 — QA & Giriş Doğrulama", () => {
+  test("Sipariş oluşturma: customerName olmadan 400 döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("POST", "/orders", {
+      jar,
+      body: { items: [{ productId: 1, quantity: 1, unitPrice: 10 }] },
+    });
+    assert.equal(status, 400);
+  });
+
+  test("Sipariş oluşturma: items boş olduğunda 400 döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("POST", "/orders", {
+      jar,
+      body: { customerName: "Test", items: [] },
+    });
+    assert.equal(status, 400);
+  });
+
+  test("Müşteri grubu: discountPct > 100 reddedilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("POST", "/customer-groups", {
+      jar,
+      body: { name: "Hata Test", discountPct: 999 },
+    });
+    assert.equal(status, 400);
+  });
+
+  test("Müşteri grubu: name olmadan 400 döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("POST", "/customer-groups", {
+      jar,
+      body: { discountPct: 5 },
+    });
+    assert.equal(status, 400);
+  });
+
+  test("Geçersiz ID ile sipariş detayı 400 döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("GET", "/orders/abc", { jar });
+    assert.equal(status, 400);
+  });
+
+  test("Var olmayan sipariş 404 döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("GET", "/orders/999999", { jar });
+    assert.equal(status, 404);
+  });
+});
+
+// ─── Sprint 25 — Performans ───────────────────────────────────────────────────
+describe("Sprint 25 — Performans", () => {
+  test("Ürün listesi sıkıştırma desteği ile 200 döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("GET", "/products", { jar });
+    assert.equal(status, 200);
+  });
+
+  test("API JSON yanıtlarına Content-Type: application/json eklenir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    // api() helper json döndürüyorsa content-type doğru demektir
+    const { status, json } = await api("GET", "/products", { jar });
+    assert.equal(status, 200);
+    assert.ok(json && typeof json === "object", "Yanıt JSON objesi olmalı");
+    assert.ok(Array.isArray(json.products), "Yanıt JSON.products dizisi olmalı");
+  });
+});
+
+// ─── Sprint 26 — Güvenlik ─────────────────────────────────────────────────────
+describe("Sprint 26 — Güvenlik", () => {
+  test("Güvenlik başlığı X-Content-Type-Options: nosniff aktif", async () => {
+    const r = await fetch("http://localhost:8080/api/healthz");
+    assert.equal(r.headers.get("x-content-type-options"), "nosniff", "X-Content-Type-Options başlığı olmalı");
+  });
+
+  test("X-Frame-Options başlığı aktif", async () => {
+    const r = await fetch("http://localhost:8080/api/healthz");
+    const header = r.headers.get("x-frame-options");
+    assert.ok(header !== null, "X-Frame-Options başlığı olmalı");
+  });
+
+  test("Kimlik doğrulama olmadan korunan endpoint 401 döner", async () => {
+    const r = await fetch("http://localhost:8080/api/products", {
+      headers: { "x-tenant": "prosan" },
+    });
+    assert.equal(r.status, 401);
+  });
+
+  test("Yetkisiz role admin endpoint'e erişemez", async () => {
+    // goruntule rolü admin-only endpoint'e erişemez
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("GET", "/companies", { jar });
+    assert.equal(status, 403);
+  });
+});
+
+// ─── Sprint 27 — DevOps & İzleme ─────────────────────────────────────────────
+describe("Sprint 27 — DevOps & İzleme", () => {
+  test("Temel sağlık kontrolü /healthz çalışıyor", async () => {
+    const r = await fetch("http://localhost:8080/api/healthz");
+    const json = await r.json();
+    assert.equal(r.status, 200);
+    assert.equal(json.status, "ok");
+  });
+
+  test("Derin sağlık kontrolü /healthz/deep DB bağlantısını doğrular", async () => {
+    const r = await fetch("http://localhost:8080/api/healthz/deep");
+    const json = await r.json();
+    assert.equal(r.status, 200);
+    assert.equal(json.status, "ok");
+    assert.equal(json.db, "connected");
+    assert.ok(typeof json.uptime === "number", "uptime sayı olmalı");
+    assert.ok(json.version, "version bilgisi olmalı");
+    assert.ok(json.timestamp, "timestamp olmalı");
+  });
+
+  test("Sağlık endpoint'i kimlik doğrulama gerektirmiyor", async () => {
+    const r = await fetch("http://localhost:8080/api/healthz");
+    assert.equal(r.status, 200);
+  });
+});

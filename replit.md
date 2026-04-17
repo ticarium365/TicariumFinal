@@ -76,9 +76,33 @@ The project utilizes a monorepo structure managed by `pnpm workspaces`.
 | 15 | E-Ticaret Entegrasyonu (6 platform, CRUD, ürün/sipariş/stok sync, log) | ✅ TAMAMLANDI |
 | 11 | Abonelik Sistemi v2 (planlar, abone ol/iptal/yenile, kullanım, faturalar, 4 limit türü) | ✅ TAMAMLANDI |
 | 12 | Dosya/Evrak Yönetimi (kategoriler, GCS presigned upload, filtre/arama, indir, tenant izolasyonu) | ✅ TAMAMLANDI |
-| 21–29 | Bildirimler → Personel → Kampanya → Public API → Marketplace → QA/Mobil | ⏳ DEVAM EDİYOR |
+| 21 | Akıllı Bildirim Sistemi (7 tip, kural CRUD, toggle, test, kullanıcı tercihleri, tenant izolasyonu) | ✅ TAMAMLANDI |
+| 22 | Personel Yönetimi (departmanlar, personel CRUD, toggle, izin talepleri, onay/red, tenant izolasyonu) | ✅ TAMAMLANDI |
+| 23 | Kampanya & İndirim Yönetimi (yüzde/sabit/buy-x-get-y, kapsam, tarih, kupon, apply endpoint) | ✅ TAMAMLANDI |
+| 20 | Public API (Bearer token auth, 12-char prefix, /info/products/inventory/campaigns/stats, scope RBAC) | ✅ TAMAMLANDI |
+| 16 | Katalog Yönetimi (catalog settings CRUD, public /catalog endpoint, enabled/disabled toggle) | ✅ TAMAMLANDI |
+| 17 | Sipariş Yönetimi (orders CRUD, status workflow, public order creation via catalog) | ✅ TAMAMLANDI |
+| 18 | Müşteri Grupları (customer groups + members, discount_pct, CRUD, tenant izolasyonu) | ✅ TAMAMLANDI |
+| 19 | Sipariş & Katalog Analitik (/orders/analytics period, /catalog-analytics, bySource, topProducts) | ✅ TAMAMLANDI |
+| 24 | QA & Giriş Doğrulama (orders/customer-groups eksik alan, geçersiz ID, 404 edge case testleri) | ✅ TAMAMLANDI |
+| 25 | Performans (compression middleware, 5MB body limit, JSON content-type doğrulama) | ✅ TAMAMLANDI |
+| 26 | Güvenlik (helmet security headers, X-Content-Type-Options, X-Frame-Options, role-based 403) | ✅ TAMAMLANDI |
+| 27 | DevOps & İzleme (GET /healthz/deep — DB bağlantısı, uptime, version, timestamp) | ✅ TAMAMLANDI |
+| 28–29 | Mobil (Expo React Native — Barkod tarayıcı, stok yönetimi, 4 tab: Panel/Tarayıcı/Ürünler/Satışlar) | ✅ TAMAMLANDI |
 
-**Testler:** 270/270 geçiyor — 32 suite (API integration)
+**Testler:** 383/383 geçiyor — 44 suite (API integration)
+
+### Mobil Uygulama (Sprint 28–29)
+- **Artifact**: `artifacts/smsystems-mobile` (Expo Router, port 21079)
+- **Auth**: Session tabanlı (AsyncStorage cookie jar, X-Tenant header)
+- **Ekranlar**:
+  - `/login` — Kullanıcı adı/şifre girişi, hata gösterimi, haptics
+  - `/(tabs)/index` — Dashboard: bugünkü ciro, 4 istatistik kartı, kritik stok uyarıları
+  - `/(tabs)/scanner` — CameraView barkod tarayıcı + manuel giriş, stok +/- hızlı güncelleme
+  - `/(tabs)/products` — Ürün listesi, debounced arama, stok durum göstergesi
+  - `/(tabs)/sales` — Satış geçmişi, bugün özet kartı
+- **Tema**: Dark/light mode desteği (koyu: #0F1117 arkaplan, mavi #4D9FFF primary, teal #00C9A7 accent)
+- **Paketler**: expo-camera@~17.0.10, @react-native-async-storage/async-storage@2.2.0
 
 ### Yeni Rotalar & Sayfalar (Sprint 5–10)
 - `/suppliers`, `/suppliers/:id` — Tedarikçi yönetimi

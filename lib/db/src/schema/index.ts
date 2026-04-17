@@ -19,3 +19,7 @@ export * from "./ext_integrations";
 export * from "./subscriptions";
 export * from "./documents";
 export * from "./notification_rules";
+export * from "./personnel";
+export * from "./campaigns";
+export * from "./catalog";
+export * from "./customer_groups";

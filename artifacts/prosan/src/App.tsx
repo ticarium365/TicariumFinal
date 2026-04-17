@@ -43,6 +43,8 @@ import IntegrationsPage from "@/pages/settings/integrations";
 import SubscriptionPage from "@/pages/settings/subscription";
 import DocumentsPage from "@/pages/documents/index";
 import NotificationSettingsPage from "@/pages/settings/notifications";
+import PersonnelPage from "@/pages/personnel";
+import CampaignsPage from "@/pages/campaigns";
 
 const queryClient = new QueryClient();
 
@@ -211,6 +213,14 @@ function AuthenticatedRouter() {
 
         <Route path="/settings/notifications">
           {() => <ProtectedRoute component={NotificationSettingsPage} roles={["admin"]} />}
+        </Route>
+
+        <Route path="/personnel">
+          {() => <ProtectedRoute component={PersonnelPage} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+
+        <Route path="/campaigns">
+          {() => <ProtectedRoute component={CampaignsPage} roles={["admin", "staff", "viewer"]} />}
         </Route>
 
         <Route path="/users">

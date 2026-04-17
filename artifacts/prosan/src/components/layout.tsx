@@ -31,6 +31,7 @@ import {
   Webhook,
   FileText,
   Bell,
+  Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./notification-center";
@@ -102,6 +103,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/finance", label: "Kasa / Finans", icon: Wallet, roles: ["admin", "staff", "viewer"] },
     { href: "/branches", label: "Şubeler", icon: GitBranch, roles: ["admin", "staff", "viewer"] },
     { href: "/documents", label: "Evrak Yönetimi", icon: FileText, roles: ["admin", "staff", "viewer"] },
+    { href: "/personnel", label: "Personel", icon: Users, roles: ["admin", "staff", "viewer"] },
+    { href: "/campaigns", label: "Kampanyalar", icon: Tag, roles: ["admin", "staff", "viewer"] },
     { href: "/reports", label: "Raporlar", icon: BarChart3, roles: ["admin", "viewer"] },
     { href: "/reports/daily-summary", label: "Günlük Kapanış", icon: CalendarCheck, roles: ["admin", "viewer"] },
     { href: "/users", label: "Kullanıcılar", icon: Users, roles: ["admin"] },

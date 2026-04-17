@@ -1,0 +1,387 @@
+SMSYSTEMS ROADMAP — EK FAZLAR
+(Mevcut Sprint 7–29 devam ediyor kabul edilerek, sadece yeni büyüme katmanları)
+
+NOT:
+Sprint 7–29 zaten yürüdüğü için burada tekrar yok.
+Aşağıdakiler mevcut ürünün üstüne eklenecek yeni gelir ve büyüme katmanlarıdır.
+
+==================================================
+FAZ A — B2B TEDARİK AĞI
+
+SPRINT 30 — Supplier Network Launch
+
+AMAÇ:
+Firmalar birbirini bulsun, ürün sorsun, ticaret başlasın.
+
+Özellikler:
+
+- firma rehberi
+- şehir bazlı arama
+- sektör bazlı arama
+- ürün bazlı arama
+- firma profili sayfası
+- iletişim butonu
+- haritada gösterim
+- online/offline durumu
+- güven puanı
+- yorum / değerlendirme
+
+Firma izin paneli:
+
+[ ] ürün göster
+[ ] stok göster
+[ ] fiyat göster
+[ ] konum göster
+[ ] telefon göster
+[ ] teklif al
+[ ] sipariş al
+[ ] anonim görün
+
+DEFINITION OF DONE:
+Firmalar sistem içinde birbirini bulabiliyor.
+
+==================================================
+
+SPRINT 31 — Live Inventory Marketplace
+
+AMAÇ:
+Bağlı firmaların stokları canlı aransın.
+
+Özellikler:
+
+- ürün arama motoru
+- hangi firmada var
+- kaç adet var
+- fiyat karşılaştırma
+- en yakın firma
+- aynı gün teslim etiketi
+- son güncelleme zamanı
+- offline supplier alarmı
+- filtreler:
+  şehir
+  kategori
+  fiyat
+  teslim süresi
+
+Arama örnekleri:
+
+“100 adet kablo”
+“25 mm vana”
+“İstanbul boya”
+
+DEFINITION OF DONE:
+Canlı envanter ağı aktif.
+
+==================================================
+
+SPRINT 32 — Teklif / B2B Chat Sistemi
+
+AMAÇ:
+Firmalar sistem içinden pazarlık yapabilsin.
+
+Özellikler:
+
+- teklif iste
+- fiyat ver
+- toplu teklif isteği
+- mesajlaşma
+- siparişe çevir
+- geçmiş konuşmalar
+- dosya gönderimi
+- teklif PDF
+
+DEFINITION OF DONE:
+Firmalar WhatsApp yerine panelden iş yapabiliyor.
+
+==================================================
+
+SPRINT 33 — Partner Order Routing
+
+AMAÇ:
+Ağ üstünden sipariş dağıtımı.
+
+Özellikler:
+
+- supplier order oluştur
+- manual supplier seç
+- cheapest supplier
+- nearest supplier
+- fastest supplier
+- split shipment
+- sipariş onay akışı
+- sevk edildi / teslim edildi
+
+DEFINITION OF DONE:
+Ağ içi ticaret otomatik yönetiliyor.
+
+==================================================
+
+SPRINT 34 — Revenue Engine
+
+AMAÇ:
+Network’ten para kazanmak.
+
+Gelir Modelleri:
+
+- işlem başı komisyon
+- premium üyelik
+- sponsorlu görünürlük
+- lead generation fee
+- reklamlı ürün listeleme
+- tedarikçi vitrin alanı
+
+Panel:
+
+- gelir dashboard
+- komisyon raporu
+- supplier performansı
+
+DEFINITION OF DONE:
+Network gelir üretmeye başlıyor.
+
+==================================================
+FAZ B — E-TİCARET BÜYÜME PLATFORMU
+
+SPRINT 35 — Auto Store Builder
+
+AMAÇ:
+Her müşteriye otomatik satış sitesi açmak.
+
+Özellikler:
+
+- firmaadi.smsystems.shop
+- özel domain bağlama
+- hazır temalar
+- mobil uyumlu
+- ürünler otomatik gelsin
+- kategori sayfaları
+- kampanya banner alanı
+- whatsapp sipariş
+- ödeme altyapısı
+- SEO uyumlu ürün sayfası
+
+DEFINITION OF DONE:
+Müşteri 1 günde e-ticaret sitesi açabiliyor.
+
+==================================================
+
+SPRINT 36 — Commerce Feed Engine
+
+AMAÇ:
+ERP verisi tüm satış kanallarına aksın.
+
+Özellikler:
+
+- ürünü ekle → siteye düşsün
+- ürünü ekle → marketplace’e düşsün
+- fiyat güncelle → tüm kanallara gitsin
+- stok değişti → senkronize olsun
+- instagram katalog feed
+- google merchant feed
+
+DEFINITION OF DONE:
+Tek panelden çok kanal satış mümkün.
+
+==================================================
+
+SPRINT 37 — Ads Manager
+
+AMAÇ:
+Müşteri reklam bütçesi versin, biz yönetelim.
+
+Özellikler:
+
+- Meta Ads bağlantısı
+- Google Ads bağlantısı
+- TikTok Ads opsiyonel
+- aylık bütçe tanımı
+- ürün bazlı kampanya
+- ROAS paneli
+- sipariş başı maliyet
+- remarketing kitleleri
+
+DEFINITION OF DONE:
+Müşteri reklam bütçesini platformdan yönetebiliyor.
+
+==================================================
+
+SPRINT 38 — Growth Intelligence
+
+AMAÇ:
+Veriden satış önerisi üretmek.
+
+Özellikler:
+
+- hangi ürün reklama uygun
+- hangi şehirde talep var
+- hangi ürün stok eritilmeli
+- fiyat artır/indir önerisi
+- kampanya önerisi
+- müşteri tekrar kazanım önerisi
+- mevsimsel satış tahmini
+
+DEFINITION OF DONE:
+Platform büyüme önerileri sunuyor.
+
+==================================================
+FAZ C — KARGO VE LOJİSTİK
+
+SPRINT 39 — Shipping Hub
+
+AMAÇ:
+Tüm kargo süreçleri tek panelden.
+
+Entegrasyonlar:
+
+- Yurtiçi
+- Aras
+- MNG
+- Sürat
+- HepsiJET
+- Trendyol Express
+
+Özellikler:
+
+- anlaşmalı fiyatlar
+- otomatik etiket
+- kargo çağır
+- takip no üret
+- desi hesaplama
+- teslim raporu
+- iadeli kargo süreci
+
+DEFINITION OF DONE:
+Kargo operasyonu tek merkezden yönetiliyor.
+
+==================================================
+
+SPRINT 40 — Smart Fulfillment
+
+AMAÇ:
+Siparişi en doğru noktadan gönder.
+
+Özellikler:
+
+- en yakın şubeden sevk
+- en uygun kargo seçimi
+- stok olan tedarikçiden dropship
+- teslim süresi tahmini
+- bölgesel sevkiyat karar motoru
+
+DEFINITION OF DONE:
+Siparişler akıllı şekilde yönlendiriliyor.
+
+==================================================
+FAZ D — AÇIK PLATFORM
+
+SPRINT 41 — Public API v2
+
+AMAÇ:
+Geliştirici ekosistemi kurmak.
+
+Özellikler:
+
+- public docs portal
+- sdk paketleri
+- webhook marketplace
+- partner tokens
+- app marketplace
+
+DEFINITION OF DONE:
+3. taraf yazılımlar platforma bağlanabiliyor.
+
+==================================================
+
+SPRINT 42 — White Label / Franchise
+
+AMAÇ:
+Sistemi başkaları satsın.
+
+Özellikler:
+
+- bayi paneli
+- reseller pricing
+- white label domain
+- özel logo
+- alt bayi sistemi
+- komisyon takibi
+
+DEFINITION OF DONE:
+Satış ağı ile büyüme başlıyor.
+
+==================================================
+FAZ E — PREMIUM VERİ VE YAPAY ZEKA
+
+SPRINT 43 — Demand Forecasting
+
+- hangi ürün bitecek
+- ne zaman sipariş verilmeli
+- sezonluk talep tahmini
+- fazla stok alarmı
+
+==================================================
+
+SPRINT 44 — AI Sales Assistant
+
+- ürün önerisi
+- çapraz satış önerisi
+- müşteriye özel teklif önerisi
+- reklam bütçe önerisi
+
+==================================================
+
+SPRINT 45 — Benchmark Engine
+
+- aynı sektörde anonim kıyas
+- ortalama kâr marjı
+- satış trend karşılaştırması
+- kategori büyüme analizi
+
+==================================================
+EN KRİTİK YOL
+
+Önce:
+30 → 31 → 33 → 34
+
+Sonra:
+35 → 36 → 37
+
+Sonra:
+39 → 40
+
+Sonra:
+41 → 42
+
+Sonra:
+43 → 44 → 45
+
+==================================================
+BÜYÜK RESİM
+
+Bugün:
+stok/cari/satış yazılımı
+
+Yarın:
+işletme işletim sistemi
+
+Sonra:
+B2B tedarik ağı
+
+Sonra:
+e-ticaret büyüme platformu
+
+Sonra:
+Türkiye KOBİ Commerce OS
+
+==================================================
+PARA NEREDEN GELİR?
+
+1. SaaS abonelik
+2. Kurulum
+3. Entegrasyon ücreti
+4. Reklam yönetim geliri
+5. Sipariş komisyonu
+6. Premium görünürlük
+7. Kargo komisyonu
+8. Bayilik ağı
+9. Veri ürünleri

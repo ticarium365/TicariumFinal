@@ -3,12 +3,24 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
 import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+import compression from "compression";
 import router from "./routes/index.js";
+import publicApiRouter from "./routes/public-api.js";
 import { logger } from "./lib/logger.js";
 import { tenantMiddleware } from "./middlewares/tenant.js";
 
 const app: Express = express();
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
+// ─── Güvenlik başlıkları (Sprint 26) ─────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+
+// ─── Yanıt sıkıştırma (Sprint 25) ────────────────────────────────────────────
+app.use(compression());
 
 app.use(
   pinoHttp({
@@ -35,8 +47,9 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// İstek gövdesi boyut sınırı (Sprint 25)
+app.use(express.json({ limit: "5mb" }));
+app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret) {
@@ -71,7 +84,11 @@ const loginRateLimit = rateLimit({
 
 app.use("/api/auth/login", loginRateLimit);
 
-// Tenant middleware — tüm /api route'larından önce çalışır
+// Public API — tenant middleware olmadan, API key ile kimlik doğrulama
+// /api/public/v1/* rotaları tenant middleware'i bypass eder
+app.use("/api", publicApiRouter);
+
+// Tenant middleware — session tabanlı rotalar için
 app.use("/api", tenantMiddleware);
 app.use("/api", router);
 

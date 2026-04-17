@@ -102,6 +102,75 @@ router.post("/notification-rules", requireRole(["admin"]), async (req: Request, 
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// KULLANICI TERCİHLERİ  (preferences — ":id" rotasından ÖNCE olmalı)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GET /notification-rules/preferences
+router.get("/notification-rules/preferences", async (req: Request, res: Response) => {
+  const companyId = (req as any).companyId as number;
+  const userId = req.session?.user?.id as number;
+  try {
+    const prefs = await db.select().from(notificationPreferencesTable)
+      .where(and(
+        eq(notificationPreferencesTable.userId, userId),
+        eq(notificationPreferencesTable.companyId, companyId),
+      ));
+    const prefMap = Object.fromEntries(prefs.map((p) => [p.type, p.enabled]));
+    const result = NOTIFICATION_TYPES.map((type) => ({
+      type,
+      label: NOTIFICATION_TYPE_LABELS[type],
+      enabled: prefMap[type] !== undefined ? prefMap[type] : true,
+    }));
+    res.json({ preferences: result });
+  } catch (err) {
+    req.log.error({ err }, "preferences get error");
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+// PUT /notification-rules/preferences
+router.put("/notification-rules/preferences", async (req: Request, res: Response) => {
+  const companyId = (req as any).companyId as number;
+  const userId = req.session?.user?.id as number;
+  const UpdatePrefsBodyLocal = z.object({
+    preferences: z.array(z.object({ type: z.string(), enabled: z.boolean() })),
+  });
+  const parsed = UpdatePrefsBodyLocal.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Geçersiz veri", details: parsed.error.flatten() });
+    return;
+  }
+  try {
+    for (const pref of parsed.data.preferences) {
+      const existing = await db.select({ id: notificationPreferencesTable.id })
+        .from(notificationPreferencesTable)
+        .where(and(
+          eq(notificationPreferencesTable.userId, userId),
+          eq(notificationPreferencesTable.companyId, companyId),
+          eq(notificationPreferencesTable.type, pref.type),
+        ));
+      if (existing.length > 0) {
+        await db.update(notificationPreferencesTable)
+          .set({ enabled: pref.enabled, updatedAt: new Date() })
+          .where(eq(notificationPreferencesTable.id, existing[0]!.id));
+      } else {
+        await db.insert(notificationPreferencesTable).values({
+          userId, companyId, type: pref.type, enabled: pref.enabled,
+        });
+      }
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "preferences update error");
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ID BAZLI KURAL OPERASYONLARI
+// ─────────────────────────────────────────────────────────────────────────────
+
 // PUT /notification-rules/:id — kural güncelle
 router.put("/notification-rules/:id", requireRole(["admin"]), async (req: Request, res: Response) => {
   const companyId = (req as any).companyId as number;
@@ -180,76 +249,6 @@ router.post("/notification-rules/:id/test", requireRole(["admin"]), async (req: 
     res.json({ ok: true, message: "Test bildirimi gönderildi" });
   } catch (err) {
     req.log.error({ err }, "rule test error");
-    res.status(500).json({ error: "Sunucu hatası" });
-  }
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// KULLANICI TERCİHLERİ
-// ─────────────────────────────────────────────────────────────────────────────
-
-// GET /notification-rules/preferences — kullanıcı tercihlerini getir
-router.get("/notification-rules/preferences", async (req: Request, res: Response) => {
-  const companyId = (req as any).companyId as number;
-  const userId = req.session?.user?.id as number;
-  try {
-    const prefs = await db.select().from(notificationPreferencesTable)
-      .where(and(
-        eq(notificationPreferencesTable.userId, userId),
-        eq(notificationPreferencesTable.companyId, companyId),
-      ));
-
-    // Her tip için tercih yoksa default (enabled=true) ekle
-    const prefMap = Object.fromEntries(prefs.map((p) => [p.type, p.enabled]));
-    const result = NOTIFICATION_TYPES.map((type) => ({
-      type,
-      label: NOTIFICATION_TYPE_LABELS[type],
-      enabled: prefMap[type] !== undefined ? prefMap[type] : true,
-    }));
-
-    res.json({ preferences: result });
-  } catch (err) {
-    req.log.error({ err }, "preferences get error");
-    res.status(500).json({ error: "Sunucu hatası" });
-  }
-});
-
-// PUT /notification-rules/preferences — kullanıcı tercihlerini güncelle
-router.put("/notification-rules/preferences", async (req: Request, res: Response) => {
-  const companyId = (req as any).companyId as number;
-  const userId = req.session?.user?.id as number;
-  const parsed = UpdatePrefsBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Geçersiz veri", details: parsed.error.flatten() });
-    return;
-  }
-  try {
-    for (const pref of parsed.data.preferences) {
-      // Upsert: varsa güncelle, yoksa ekle
-      const existing = await db.select({ id: notificationPreferencesTable.id })
-        .from(notificationPreferencesTable)
-        .where(and(
-          eq(notificationPreferencesTable.userId, userId),
-          eq(notificationPreferencesTable.companyId, companyId),
-          eq(notificationPreferencesTable.type, pref.type),
-        ));
-
-      if (existing.length > 0) {
-        await db.update(notificationPreferencesTable)
-          .set({ enabled: pref.enabled, updatedAt: new Date() })
-          .where(eq(notificationPreferencesTable.id, existing[0].id));
-      } else {
-        await db.insert(notificationPreferencesTable).values({
-          userId,
-          companyId,
-          type: pref.type,
-          enabled: pref.enabled,
-        });
-      }
-    }
-    res.json({ ok: true });
-  } catch (err) {
-    req.log.error({ err }, "preferences update error");
     res.status(500).json({ error: "Sunucu hatası" });
   }
 });
