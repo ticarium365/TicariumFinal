@@ -31,6 +31,7 @@ import catalogSettingsRouter from "./catalog-settings.js";
 import ordersManageRouter from "./orders-manage.js";
 import customerGroupsRouter from "./customer-groups.js";
 import orderAnalyticsRouter from "./order-analytics.js";
+import networkRouter from "./network.js";
 
 const router: IRouter = Router();
 
@@ -66,5 +67,6 @@ router.use(catalogSettingsRouter);
 router.use(orderAnalyticsRouter);
 router.use(ordersManageRouter);
 router.use(customerGroupsRouter);
+router.use("/network", networkRouter);
 
 export default router;

@@ -142,6 +142,31 @@ The project utilizes a monorepo structure managed by `pnpm workspaces`.
 - `cash_registers` — Kasa tanımları (companyId, name, openingBalance, currentBalance, isDefault)
 - `cash_movements` — Kasa hareketleri (registerId, type, direction, amount, balanceBefore, balanceAfter)
 
+## Sprint 30 — B2B Tedarik Ağı (TAMAMLANDI)
+
+### Yeni DB Tabloları
+- `company_network_profiles` — Ağ profili (sektör, şehir, açıklama, telefon, görünürlük bayrakları, etiketler, güven puanı)
+- `company_network_reviews` — Firmalar arası değerlendirmeler (puan 1-5, yorum, kiracı izolasyonu)
+
+### Yeni API Endpoint'leri (`/api/network`)
+- `GET /api/network` — Herkese açık firma listesi (şehir/sektör filtreleri, sayfalama)
+- `GET /api/network/my-profile` — Giriş yapmış firmanın ağ profili (yoksa otomatik oluşturur)
+- `PUT /api/network/my-profile` — Profil güncelleme (gizlilik bayrakları, etiketler, sektor, şehir vb.)
+- `GET /api/network/companies/:subdomain` — Herkese açık firma profili (değerlendirmelerle)
+- `POST /api/network/companies/:subdomain/reviews` — Değerlendirme gönder
+- `GET /api/network/meta/sectors` — Sektör listesi
+- `GET /api/network/meta/cities` — Şehir listesi
+
+### Yeni Frontend Sayfaları (PROSAN)
+- `/network` — B2B firma dizini (arama, şehir/sektör filtresi, kart grid, sayfalama)
+- `/network/my-profile` — Ağ profili yönetimi (görünürlük, anonim mod, etiketler, izinler)
+- `/network/:subdomain` — Firma profili detayı + değerlendirme formu
+
+### Diğer Değişiklikler
+- `artifacts/prosan/src/lib/api.ts` oluşturuldu (`apiBase = "/api"` export)
+- Sidebar'a "B2B Ağı" (Network ikonu) menü öğesi eklendi
+- `App.tsx`'e 3 yeni route eklendi
+
 ## External Dependencies
 
 - **PostgreSQL**: Primary database for all application data.

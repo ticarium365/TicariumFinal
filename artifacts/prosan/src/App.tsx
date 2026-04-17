@@ -45,6 +45,9 @@ import DocumentsPage from "@/pages/documents/index";
 import NotificationSettingsPage from "@/pages/settings/notifications";
 import PersonnelPage from "@/pages/personnel";
 import CampaignsPage from "@/pages/campaigns";
+import NetworkPage from "@/pages/network/index";
+import CompanyProfilePage from "@/pages/network/company-profile";
+import MyNetworkProfilePage from "@/pages/network/my-profile";
 
 const queryClient = new QueryClient();
 
@@ -221,6 +224,18 @@ function AuthenticatedRouter() {
 
         <Route path="/campaigns">
           {() => <ProtectedRoute component={CampaignsPage} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+
+        <Route path="/network">
+          {() => <ProtectedRoute component={NetworkPage} />}
+        </Route>
+
+        <Route path="/network/my-profile">
+          {() => <ProtectedRoute component={MyNetworkProfilePage} roles={["admin"]} />}
+        </Route>
+
+        <Route path="/network/:subdomain">
+          {(params) => <ProtectedRoute component={() => <CompanyProfilePage subdomain={params.subdomain} />} />}
         </Route>
 
         <Route path="/users">

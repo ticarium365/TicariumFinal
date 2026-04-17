@@ -23,3 +23,4 @@ export * from "./personnel";
 export * from "./campaigns";
 export * from "./catalog";
 export * from "./customer_groups";
+export * from "./network";
