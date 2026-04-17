@@ -67,18 +67,28 @@ The project utilizes a monorepo structure managed by `pnpm workspaces`.
 | 1–4 | Temel altyapı, Onboarding, Bildirimler, Müşteri/Cari Takibi | ✅ TAMAMLANDI |
 | 5 | Tedarikçi/Alış Yönetimi (CRUD, Alış Faturası, Stok Girişi) | ✅ TAMAMLANDI |
 | 6 | Gelişmiş Raporlama (Kâr/Müşteri/Tedarikçi/Stok analizleri, CSV exportlar, 5 sekme) | ✅ TAMAMLANDI |
-| 7 | Barkod/Etiket Merkezi (4 şablon, toplu seçim, termal uyumluluk, QR, PDF) | ✅ TAMAMLANDI |
-| 8–18 | Sayım/Stok Düzeltme → E-ticaret katalog | ⏳ BEKLIYOR |
+| 7 | Barkod/Etiket Merkezi (4 şablon, toplu seçim, A4/termal, QR, PDF) | ✅ TAMAMLANDI |
+| 8 | Stok Sayım Merkezi (sayım oturumu, barkodlu sayım, fark raporu, toplu düzeltme, CSV) | ✅ TAMAMLANDI |
+| 10 | Kasa/Gider/Finans Merkezi (gider kategorileri, gider yönetimi, kasa hareketleri, özet, aylık rapor, CSV) | ✅ TAMAMLANDI |
+| 9 | Çok Şubeli Yapı (şube CRUD, şube stok seviyeleri, şubeler arası transfer, kullanıcı atama) | ✅ TAMAMLANDI |
+| 13 | Entegrasyon Çekirdeği (webhook CRUD, test ping, teslimat logu, API key yönetimi, HMAC imzalama) | ✅ TAMAMLANDI |
+| 14 | Muhasebe Entegrasyonu (5 sağlayıcı, CRUD, sync simülasyonu, log, credential maskeleme) | ✅ TAMAMLANDI |
+| 15 | E-Ticaret Entegrasyonu (6 platform, CRUD, ürün/sipariş/stok sync, log) | ✅ TAMAMLANDI |
+| 11 | Abonelik Sistemi v2 (planlar, abone ol/iptal/yenile, kullanım, faturalar, 4 limit türü) | ✅ TAMAMLANDI |
+| 12 | Dosya/Evrak Yönetimi (kategoriler, GCS presigned upload, filtre/arama, indir, tenant izolasyonu) | ✅ TAMAMLANDI |
+| 21–29 | Bildirimler → Personel → Kampanya → Public API → Marketplace → QA/Mobil | ⏳ DEVAM EDİYOR |
 
-**Testler:** 128/128 geçiyor — 20 suite (API integration), E2E (Playwright) Sprint 7 onaylandı
+**Testler:** 270/270 geçiyor — 32 suite (API integration)
 
-### Yeni Rotalar & Sayfalar (Sprint 5–7)
+### Yeni Rotalar & Sayfalar (Sprint 5–10)
 - `/suppliers`, `/suppliers/:id` — Tedarikçi yönetimi
 - `/purchases`, `/purchases/new` — Alış faturası yönetimi
 - `/reports` — Gelişmiş raporlar (Satış/Kâr/Müşteri/Tedarikçi/Stok sekmeleri + CSV export)
-- `/barcodes` — Etiket Merkezi (Termal/Fiyat/Raf/QR şablonlar, JsBarcode + QRCodeSVG, toplu yazdırma)
+- `/barcodes` — Etiket Merkezi (Termal/Fiyat/Raf/QR şablonlar, A4 ızgara yazdırma)
+- `/stock-counts`, `/stock-counts/:id` — Stok Sayım Merkezi (oturum yönetimi, barkod sayımı, fark/düzeltme)
+- `/finance` — Kasa/Finans Merkezi (özet dashboard, gider yönetimi, kasa hareketleri)
 
-### Yeni Backend Rotalar (Sprint 5–7)
+### Yeni Backend Rotalar (Sprint 5–10)
 - `GET /api/reports/profit` — Ürün/kategori/aylık kâr analizi
 - `GET /api/reports/customer-analytics` — Müşteri ciro + borç analizi
 - `GET /api/reports/supplier-analytics` — Tedarikçi harcama + borç analizi
@@ -86,6 +96,27 @@ The project utilizes a monorepo structure managed by `pnpm workspaces`.
 - `GET /api/reports/export/sales` — Satış CSV export (BOM+)
 - `GET /api/reports/export/purchases` — Alış CSV export
 - `GET /api/reports/export/stock` — Stok CSV export
+- `GET/POST /api/stock-counts` — Sayım oturumu CRUD
+- `POST /api/stock-counts/:id/items` — Barkod/kod ile sayım kalemi upsert
+- `POST /api/stock-counts/:id/load-all` — Tüm ürünleri oturuma yükle
+- `POST /api/stock-counts/:id/close` — Oturumu kapat
+- `POST /api/stock-counts/:id/approve` — Toplu stok düzeltme onayla
+- `GET /api/stock-counts/:id/export` — Fark raporu CSV
+- `GET/POST /api/finance/expense-categories` — Gider kategorileri
+- `PUT /api/finance/expense-categories/:id` — Kategori güncelle
+- `GET/POST /api/finance/expenses` — Gider CRUD
+- `DELETE /api/finance/expenses/:id` — Gider sil
+- `GET /api/finance/expenses/export` — Gider CSV export
+- `GET /api/finance/cash` — Kasa listesi
+- `GET/POST /api/finance/cash/:id/movements` — Kasa hareketleri
+- `GET /api/finance/summary` — Finans özeti (gelir/gider/kasa)
+- `GET /api/finance/monthly-summary` — Aylık finans özeti
+
+### DB Şeması (Sprint 10 ek tablolar)
+- `expense_categories` — Gider kategorileri (companyId, name, icon, color)
+- `expenses` — Gider kayıtları (companyId, categoryId, amount, description, expenseDate, paymentMethod)
+- `cash_registers` — Kasa tanımları (companyId, name, openingBalance, currentBalance, isDefault)
+- `cash_movements` — Kasa hareketleri (registerId, type, direction, amount, balanceBefore, balanceAfter)
 
 ## External Dependencies
 

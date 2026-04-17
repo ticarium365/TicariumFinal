@@ -35,6 +35,14 @@ import SupplierDetail from "@/pages/suppliers/detail";
 import PurchasesList from "@/pages/purchases/index";
 import NewPurchase from "@/pages/purchases/new";
 import BarcodesPage from "@/pages/barcodes/index";
+import StockCountsPage from "@/pages/stock-counts/index";
+import StockCountDetail from "@/pages/stock-counts/detail";
+import FinancePage from "@/pages/finance/index";
+import BranchesPage from "@/pages/branches/index";
+import IntegrationsPage from "@/pages/settings/integrations";
+import SubscriptionPage from "@/pages/settings/subscription";
+import DocumentsPage from "@/pages/documents/index";
+import NotificationSettingsPage from "@/pages/settings/notifications";
 
 const queryClient = new QueryClient();
 
@@ -171,6 +179,38 @@ function AuthenticatedRouter() {
 
         <Route path="/barcodes">
           {() => <ProtectedRoute component={BarcodesPage} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+
+        <Route path="/stock-counts">
+          {() => <ProtectedRoute component={StockCountsPage} roles={["admin", "staff"]} />}
+        </Route>
+
+        <Route path="/stock-counts/:id">
+          {(params) => <ProtectedRoute component={() => <StockCountDetail id={params.id} />} roles={["admin", "staff"]} />}
+        </Route>
+
+        <Route path="/finance">
+          {() => <ProtectedRoute component={FinancePage} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+
+        <Route path="/branches">
+          {() => <ProtectedRoute component={BranchesPage} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+
+        <Route path="/settings/integrations">
+          {() => <ProtectedRoute component={IntegrationsPage} roles={["admin"]} />}
+        </Route>
+
+        <Route path="/settings/subscription">
+          {() => <ProtectedRoute component={SubscriptionPage} roles={["admin"]} />}
+        </Route>
+
+        <Route path="/documents">
+          {() => <ProtectedRoute component={DocumentsPage} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+
+        <Route path="/settings/notifications">
+          {() => <ProtectedRoute component={NotificationSettingsPage} roles={["admin"]} />}
         </Route>
 
         <Route path="/users">

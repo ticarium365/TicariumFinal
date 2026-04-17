@@ -26,6 +26,10 @@ tags:
     description: Reports
   - name: settings
     description: Company settings
+  - name: Storage
+    description: Object storage upload and serving endpoints.
+  - name: documents
+    description: Document and file management
 
 paths:
   /healthz:
@@ -587,6 +591,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/CompanySettings"
 
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestUploadUrlBody'
+      responses:
+        '200':
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestUploadUrlResponse'
+        '400':
+          description: Missing or invalid fields.
+
 components:
   schemas:
     HealthStatus:
@@ -1116,3 +1141,35 @@ components:
           type: string
         address:
           type: string
+
+    RequestUploadUrlBody:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+
+    RequestUploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+        metadata:
+          type: object
+          properties:
+            name:
+              type: string
+            size:
+              type: integer
+            contentType:
+              type: string

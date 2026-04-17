@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { db, usersTable, productsTable } from "@workspace/db";
+import { seedSubscriptionPlans } from "./routes/subscriptions.js";
 import { sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import seedProductsRaw from "./seed-products.json";
@@ -40,13 +41,6 @@ async function seedDefaultUsers() {
     .select({ count: sql<number>`count(*)::int` })
     .from(usersTable);
 
-  if (count > 0) {
-    logger.info({ count }, "Users already exist, skipping user seed");
-    return;
-  }
-
-  logger.info("No users found, seeding default accounts...");
-
   const defaultUsers = [
     { username: "admin",     password: "admin123",  fullName: "Yönetici",       role: "admin"  as const },
     { username: "talha",     password: "talha123",  fullName: "Talha",          role: "admin"  as const },
@@ -56,18 +50,37 @@ async function seedDefaultUsers() {
     { username: "goruntule", password: "staff123",  fullName: "Görüntüleyici",  role: "viewer" as const },
   ];
 
-  for (const u of defaultUsers) {
-    const passwordHash = await bcrypt.hash(u.password, 10);
-    await db.insert(usersTable).values({
-      username: u.username,
-      passwordHash,
-      fullName: u.fullName,
-      role: u.role,
-    });
-    logger.info({ username: u.username, role: u.role }, "User seeded");
+  if (count === 0) {
+    logger.info("No users found, seeding all default accounts...");
+    for (const u of defaultUsers) {
+      const passwordHash = await bcrypt.hash(u.password, 10);
+      await db.insert(usersTable).values({
+        username: u.username, passwordHash, fullName: u.fullName, role: u.role,
+      });
+      logger.info({ username: u.username, role: u.role }, "User seeded");
+    }
+  } else {
+    // Upsert: eksik kullanıcıları ekle (yeni kullanıcılar eklendikçe seed genişleyebilir)
+    const { eq: eql } = await import("drizzle-orm");
+    // İlk şirketi bul (prosan = co1)
+    const { companiesTable: co } = await import("@workspace/db");
+    const [firstCompany] = await db.select({ id: co.id }).from(co).orderBy(co.id).limit(1);
+    const fallbackCompanyId = firstCompany?.id ?? 1;
+
+    for (const u of defaultUsers) {
+      const existing = await db.select({ id: usersTable.id }).from(usersTable).where(eql(usersTable.username, u.username));
+      if (existing.length === 0) {
+        const passwordHash = await bcrypt.hash(u.password, 10);
+        await db.insert(usersTable).values({
+          username: u.username, passwordHash, fullName: u.fullName, role: u.role,
+          companyId: fallbackCompanyId,
+        });
+        logger.info({ username: u.username, role: u.role }, "Missing user seeded");
+      }
+    }
   }
 
-  logger.info("Default users seeded successfully");
+  logger.info("Default users seed complete");
 }
 
 async function seedDefaultProducts() {
@@ -117,6 +130,12 @@ async function runSeeds() {
     await seedDefaultProducts();
   } catch (err) {
     logger.error({ err }, "Failed to seed products");
+  }
+
+  try {
+    await seedSubscriptionPlans();
+  } catch (err) {
+    logger.error({ err }, "Failed to seed subscription plans");
   }
 }
 

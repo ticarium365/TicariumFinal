@@ -16,6 +16,15 @@ import notificationsRouter from "./notifications.js";
 import customersRouter from "./customers.js";
 import suppliersRouter from "./suppliers.js";
 import purchasesRouter from "./purchases.js";
+import stockCountsRouter from "./stock-counts.js";
+import financeRouter from "./finance.js";
+import branchesRouter from "./branches.js";
+import integrationsRouter from "./integrations.js";
+import extIntegrationsRouter from "./ext-integrations.js";
+import subscriptionsRouter from "./subscriptions.js";
+import storageRouter from "./storage.js";
+import documentsRouter from "./documents.js";
+import notificationRulesRouter from "./notification-rules.js";
 
 const router: IRouter = Router();
 
@@ -36,5 +45,14 @@ router.use("/notifications", notificationsRouter);
 router.use("/customers", customersRouter);
 router.use("/suppliers", suppliersRouter);
 router.use("/purchases", purchasesRouter);
+router.use("/stock-counts", stockCountsRouter);
+router.use("/finance", financeRouter);
+router.use("/branches", branchesRouter);
+router.use("/integrations", integrationsRouter);
+router.use("/ext-integrations", extIntegrationsRouter);
+router.use("/subscriptions", subscriptionsRouter);
+router.use(storageRouter);
+router.use(documentsRouter);
+router.use(notificationRulesRouter);
 
 export default router;
