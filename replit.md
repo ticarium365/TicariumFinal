@@ -11,7 +11,7 @@ Platform markası **SMSYSTEMS**; kiracı markası dinamik olarak API'dan çekili
 ## Test Komutu
 
 ```bash
-# API integration testleri (71 test, 15 suite) — server çalışırken çalıştırın
+# API integration testleri (91 test, 17 suite) — server çalışırken çalıştırın
 pnpm --filter @workspace/api-server run test
 ```
 
@@ -19,9 +19,9 @@ Testler `artifacts/api-server/tests/integration.test.mjs` dosyasındadır. Node.
 
 **Not:** Rate limiter production dışında devre dışı (`skip: () => NODE_ENV !== "production"`). Test çalıştırmadan önce kullanıcıların `is_active=true` olduğundan emin olun.
 
-**Suite'ler (15):**
+**Suite'ler (17):**
 1. Auth · 2. Ürünler · 3. Satış ve Stok · 4. Soft Delete & Restore · 5. Tenant İzolasyonu · 6. Düşük Stok Alarmları · 7. Toplu Stok Güncellemesi · 8. Günlük Kapanış Özeti · 9. Super Admin
-10. Ayarlar · 11. Onboarding · 12. Logo Yükleme · 13. Demo Sıfırlama · 14. Bildirimler · 15. Morning Brief ve Şablonlar
+10. Ayarlar · 11. Onboarding · 12. Logo Yükleme · 13. Demo Sıfırlama · 14. Bildirimler · 15. Morning Brief ve Şablonlar · 16. Müşteri CRUD · 17. Cari İşlemler ve Tahsilat
 
 ---
 
@@ -398,7 +398,14 @@ Her kayıtta: `company_id, user_id, username, action, entity, entity_id, details
 | Sprint 1 | Temel Altyapı (Bulk stok, Günlük kapanış, Ödeme yöntemi) | ✅ TAMAMLANDI |
 | Sprint 2 | Onboarding Paketi (Sihirbaz, Logo, Tema, Demo reset, WelcomeTour) | ✅ TAMAMLANDI |
 | Sprint 3 | Kullanım Alışkanlığı Paketi (Morning Brief, Bildirimler, Şablonlar) | ✅ TAMAMLANDI |
-| Sprint 4–18 | Gelecek sprintler (Cari/Müşteri → E-ticaret katalog) | ⏳ BEKLIYOR |
+| Sprint 4 | Cari / Müşteri Takibi (CRUD, Tahsilat, Cari Hareketler, Satış Bağlama) | ✅ TAMAMLANDI |
+| Sprint 5–18 | Gelecek sprintler (Tedarikçi/Alış → E-ticaret katalog) | ⏳ BEKLIYOR |
+
+### Sprint 4 Özeti
+- **DB**: `customers` tablosu (company_id, code, type, name, phone, email, city, creditLimit, currentBalance), `customer_transactions` (debit/credit, type), `sales.customer_id` alanı eklendi
+- **Backend**: `/api/customers` CRUD (list, get, create, update, soft-delete, restore), `/api/customers/:id/transactions`, `/api/customers/:id/payment`, `/api/customers/:id/adjustment`, `/api/customers/:id/statement`, `/api/customers/:id/sales`, `/api/customers/top-debtors`; satış oluştururken `customerId` desteği (otomatik debit kaydı)
+- **Frontend**: `/customers` listesi (arama, filtre, bakiye badge, mobil kart), `/customers/:id` detay sayfası (hareketler/satışlar/bilgiler tabları), `CustomerModal` (yeni/düzenle), `PaymentModal` (tahsilat), nav'a Müşteriler linki eklendi
+- **Testler**: 91/91 geçiyor (17 suite: +2 yeni Sprint 4 suite'i — 16. Müşteri CRUD, 17. Cari İşlemler)
 
 ### Sprint 3 Özeti
 - **DB**: `notifications` tablosu eklendi (company_id, user_id, type, title, message, is_read, entity_type, entity_id)

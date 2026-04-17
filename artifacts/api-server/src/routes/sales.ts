@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { db, salesTable, productsTable, stockMovementsTable } from "@workspace/db";
+import { db, salesTable, productsTable, stockMovementsTable, customersTable, customerTransactionsTable } from "@workspace/db";
 import { eq, and, gte, lte, desc, count, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { Errors } from "../lib/errors.js";
@@ -120,12 +120,12 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 router.post("/", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const { productId, quantity, unitPrice, paymentMethod } = req.body;
+    const { productId, quantity, unitPrice, paymentMethod, customerId } = req.body;
     if (!productId || !quantity || !unitPrice) {
       res.status(400).json({ error: "Bad Request", message: "Zorunlu alanlar eksik" });
       return;
     }
-    const validPaymentMethods = ["cash", "card", "transfer", "other"];
+    const validPaymentMethods = ["cash", "card", "transfer", "other", "credit"];
     const pm = validPaymentMethods.includes(paymentMethod) ? paymentMethod : null;
 
     const [product] = await db.select().from(productsTable).where(
@@ -140,6 +140,22 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
     if (product.stock < qty) {
       res.status(400).json(Errors.insufficientStock(product.stock));
       return;
+    }
+
+    // Müşteri validasyonu
+    let customer = null;
+    if (customerId) {
+      const rows = await db.select().from(customersTable)
+        .where(and(eq(customersTable.id, parseInt(customerId)), eq(customersTable.companyId, cid)));
+      if (!rows.length) {
+        res.status(404).json({ error: "Not Found", message: "Müşteri bulunamadı" });
+        return;
+      }
+      if (!rows[0].isActive) {
+        res.status(400).json({ error: "Bad Request", message: "Pasif müşteriye satış yapılamaz" });
+        return;
+      }
+      customer = rows[0];
     }
 
     const totalPrice = parseFloat(unitPrice) * qty;
@@ -159,18 +175,48 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
       userId: req.session.user?.id,
       soldBy: req.session.user?.fullName,
       paymentMethod: pm,
+      customerId: customer ? customer.id : null,
     }).returning();
 
     await db.update(productsTable)
       .set({ stock: product.stock - qty, updatedAt: new Date() })
       .where(eq(productsTable.id, product.id));
 
+    // Müşteriye bağlıysa cari debit kaydı
+    if (customer && sale) {
+      await db.insert(customerTransactionsTable).values({
+        companyId: cid,
+        customerId: customer.id,
+        type: "sale",
+        direction: "debit",
+        amount: totalPrice,
+        referenceType: "sale",
+        referenceId: sale.id,
+        description: `Satış: ${product.name} x${qty}`,
+        createdBy: req.session.user?.id ?? null,
+      });
+      // Bakiye güncelle
+      const balRows = await db.select({
+        debit: sql<number>`COALESCE(SUM(CASE WHEN direction='debit' THEN amount ELSE 0 END), 0)`,
+        credit: sql<number>`COALESCE(SUM(CASE WHEN direction='credit' THEN amount ELSE 0 END), 0)`,
+      }).from(customerTransactionsTable).where(and(
+        eq(customerTransactionsTable.customerId, customer.id),
+        eq(customerTransactionsTable.companyId, cid),
+      ));
+      const newBalance = Number(balRows[0]?.debit ?? 0) - Number(balRows[0]?.credit ?? 0);
+      await db.update(customersTable).set({ currentBalance: newBalance, updatedAt: new Date() })
+        .where(and(eq(customersTable.id, customer.id), eq(customersTable.companyId, cid)));
+
+      await audit({ req, action: "SALE_LINKED_CUSTOMER", entity: "customer", entityId: customer.id,
+        details: { saleId: sale.id, amount: totalPrice } });
+    }
+
     await audit({
       req,
       action: "SALE_CREATE",
       entity: "sale",
       entityId: sale!.id,
-      details: { productId: product.id, productName: product.name, quantity: qty, unitPrice, totalPrice },
+      details: { productId: product.id, productName: product.name, quantity: qty, unitPrice, totalPrice, customerId: customer?.id },
     });
 
     res.status(201).json(sale);

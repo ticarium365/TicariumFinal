@@ -1,0 +1,564 @@
+SPRINT 6 — Gelişmiş Raporlama Modülü
+
+AMAÇ:
+SMSYSTEMS’i “veri tutan sistem” seviyesinden çıkarıp “karar verdiren sistem” seviyesine taşımak. Bu sprint sonunda kullanıcı sadece satış ve stok görmekle kalmayacak; hangi ürün iyi gidiyor, hangi kategori kazandırıyor, hangi personel performanslı, nerede kâr düşüyor, iade oranı nerede yükselmiş gibi sorulara net cevap alabilecek.
+
+Bu sprint sonunda kullanıcı:
+
+* tarih aralıklı gelişmiş raporlar alabilecek
+* ürün / kategori / marka bazlı satış performansını görebilecek
+* personel bazlı satış performansını görebilecek
+* iade oranlarını inceleyebilecek
+* kârlılık ve düşük marjlı ürünleri görebilecek
+* raporları Excel / CSV / PDF olarak dışa aktarabilecek
+
+==================================================
+GENEL TESLİM KURALLARI
+======================
+
+* Multi-tenant izolasyonu zorunlu
+* company_id scope tüm sorgularda uygulanacak
+* auth + role kontrolü net olacak
+* standart error formatı kullanılacak
+* audit log gerekiyorsa export işlemlerinde çalışacak
+* integration test yazılacak
+* responsive UI olacak
+* docs güncellenecek
+* tüm rapor endpoint’leri tarih filtresi destekleyecek
+* timezone hesabı tenant local time’a göre yapılacak
+
+==================================================
+RAPOR MODÜLLERİ
+===============
+
+1. Satış Trend Raporu
+2. Ürün Performans Raporu
+3. Kategori Performans Raporu
+4. Marka Performans Raporu
+5. Personel Satış Performansı
+6. Kârlılık Raporu
+7. Düşük Kâr Marjlı Ürünler
+8. İade Oranı Raporu
+9. Ödeme Yöntemi Analizleri
+10. Stok Risk Raporu
+
+==================================================
+BACKEND API TASARIMI
+====================
+
+1. Satış Trendi
+
+GET /api/reports/sales-trend?from=YYYY-MM-DD&to=YYYY-MM-DD&groupBy=day|week|month
+
+Response:
+{
+points: [
+{
+label,
+salesCount,
+revenue,
+returnedCount,
+returnedAmount,
+netRevenue
+}
+],
+totals: {
+salesCount,
+revenue,
+returnedCount,
+returnedAmount,
+netRevenue
+}
+}
+
+---
+
+2. Ürün Performansı
+
+GET /api/reports/products?from=YYYY-MM-DD&to=YYYY-MM-DD&search=&category=&brand=&sortBy=revenue|quantity|profit|returnRate&page=1&pageSize=20
+
+Response:
+{
+items: [
+{
+productId,
+productCode,
+name,
+category,
+brand,
+quantitySold,
+revenue,
+estimatedCost,
+estimatedProfit,
+returnCount,
+returnRate,
+currentStock
+}
+],
+pagination
+}
+
+---
+
+3. Kategori Performansı
+
+GET /api/reports/categories?from=YYYY-MM-DD&to=YYYY-MM-DD
+
+Response:
+{
+items: [
+{
+category,
+quantitySold,
+revenue,
+estimatedProfit,
+returnRate
+}
+]
+}
+
+---
+
+4. Marka Performansı
+
+GET /api/reports/brands?from=YYYY-MM-DD&to=YYYY-MM-DD
+
+---
+
+5. Personel Performansı
+
+GET /api/reports/users?from=YYYY-MM-DD&to=YYYY-MM-DD
+
+Response:
+{
+items: [
+{
+userId,
+fullName,
+salesCount,
+revenue,
+returnedCount,
+netRevenue,
+averageTicket
+}
+]
+}
+
+---
+
+6. Kârlılık Raporu
+
+GET /api/reports/profitability?from=YYYY-MM-DD&to=YYYY-MM-DD&groupBy=product|category|brand
+
+Mantık:
+estimatedProfit = revenue - estimatedCost
+
+Not:
+İlk sürümde estimatedCost için ürünün satış anındaki cost snapshot’ı yoksa,
+mevcut/son maliyet veya sale item’a eklenen maliyet snapshot alanı kullanılmalı.
+
+En doğru yaklaşım:
+sale_items tablosuna cost_snapshot alanı eklemek.
+
+---
+
+7. Düşük Kâr Marjlı Ürünler
+
+GET /api/reports/low-margin?from=YYYY-MM-DD&to=YYYY-MM-DD&threshold=10
+
+Response:
+{
+items: [
+{
+productId,
+name,
+revenue,
+estimatedProfit,
+marginPct
+}
+]
+}
+
+---
+
+8. İade Raporu
+
+GET /api/reports/returns?from=YYYY-MM-DD&to=YYYY-MM-DD&groupBy=product|category|user
+
+---
+
+9. Ödeme Yöntemi Analizi
+
+GET /api/reports/payment-methods?from=YYYY-MM-DD&to=YYYY-MM-DD
+
+Response:
+{
+items: [
+{
+paymentMethod,
+salesCount,
+revenue,
+sharePct
+}
+]
+}
+
+---
+
+10. Stok Risk Raporu
+
+GET /api/reports/stock-risk
+
+Response:
+{
+critical,
+low,
+overstock(optional),
+items: [
+{
+productId,
+productCode,
+name,
+stockQuantity,
+minStockLevel,
+category,
+brand
+}
+]
+}
+
+==================================================
+VERİ MODELİ / ŞEMA GÜNCELLEMELERİ
+=================================
+
+Önerilen geliştirmeler:
+
+1. sale_items tablosuna alan ekle:
+
+* cost_snapshot numeric nullable
+* profit_snapshot numeric nullable optional
+
+Satış anındaki maliyet dondurulsun.
+
+2. products üzerinde:
+
+* category index
+* brand index
+* is_active + company_id index
+* gerekirse trgm search indexler devam etsin
+
+3. report export jobs için ileride:
+   report_exports
+   id
+   company_id
+   type
+   filters jsonb
+   status
+   file_url nullable
+   created_by
+   created_at
+
+İlk sürümde şart değil, sync export olabilir.
+
+==================================================
+BACKEND İŞ KURALLARI
+====================
+
+* viewer raporları görebilir ama export yetkisi opsiyonel
+
+* staff rapor görebilir
+
+* admin tam yetkili
+
+* super_admin tenant seçmeden tenant raporlarını göremez
+
+* from > to olamaz
+
+* maksimum tarih aralığı ilk sürümde 365 gün olabilir
+
+* boş veri dönerse 200 + empty result
+
+* raporlar yalnız aktif tenant verisi için çalışır
+
+* iade hesapları net şekilde ayrılmalı
+
+* netRevenue = revenue - returnedAmount
+
+* returnRate mantığı sabit ve dokümante olmalı
+
+Önerilen returnRate:
+returnCount / totalSoldCount veya returnedQuantity / soldQuantity
+Birini seçip her yerde aynı uygula.
+
+==================================================
+KÂRLILIK HESABI DETAYI
+======================
+
+İlk sürüm için öneri:
+
+sale item oluşurken:
+
+* unit_cost_snapshot
+* total_cost_snapshot
+
+sakla.
+
+Böylece sonradan ürün maliyeti değişse bile geçmiş rapor bozulmaz.
+
+Rapor formülleri:
+
+revenue = sum(sale_items.total_price)
+estimatedCost = sum(sale_items.total_cost_snapshot)
+estimatedProfit = revenue - estimatedCost
+marginPct = estimatedProfit / revenue * 100
+
+Eğer snapshot henüz yoksa:
+
+* geçici fallback ile current purchase_price kullanılabilir
+* ama bu dokümana “yaklaşık kârlılık” diye yazılmalı
+
+==================================================
+FRONTEND EKRANLARI
+==================
+
+1. Ana Raporlar Sayfası
+
+Kartlar:
+
+* satış trendi
+* ürün performansı
+* kategori analizi
+* marka analizi
+* personel performansı
+* kârlılık
+* iade raporu
+* stok risk
+
+Üstte ortak filtre:
+
+* tarih aralığı
+* kategori
+* marka
+* kullanıcı
+* ödeme yöntemi
+* hızlı seçimler:
+  bugün / bu hafta / bu ay / son 30 gün / son 90 gün
+
+---
+
+2. Satış Trendi Ekranı
+
+* çizgi grafik veya bar chart
+* toplam satış
+* net ciro
+* iade
+* grup: gün / hafta / ay
+
+---
+
+3. Ürün Performansı Ekranı
+
+Kolonlar:
+
+* ürün kodu
+* ad
+* kategori
+* marka
+* satılan adet
+* ciro
+* tahmini maliyet
+* tahmini kâr
+* iade oranı
+* mevcut stok
+
+Özellikler:
+
+* sıralama
+* pagination
+* export
+
+---
+
+4. Kategori / Marka Ekranı
+
+* tablo + grafik
+* pay yüzdesi
+* kâr katkısı
+
+---
+
+5. Personel Performansı
+
+* satış sayısı
+* toplam ciro
+* ortalama fiş tutarı
+* iade sayısı
+* net ciro
+
+---
+
+6. Kârlılık Ekranı
+
+* en kârlı ürünler
+* en düşük marjlı ürünler
+* zarar eden ürünler(optional)
+* filtreleme
+
+---
+
+7. Stok Risk Ekranı
+
+* kritik stok
+* düşük stok
+* kategori filtresi
+* hızlı ürün aksiyonu linkleri
+
+==================================================
+UI / UX DETAYLARI
+=================
+
+* tüm raporlarda loading skeleton
+* boş veri için empty state
+* grafik + tablo birlikte olsun
+* export butonu görünür yerde
+* mobilde grafik sadeleşsin
+* tablo kolon gizleme opsiyonu opsiyonel
+* renk mantığı tutarlı:
+  negatif/kritik kırmızı
+  düşük sarı
+  pozitif yeşil
+
+==================================================
+EXPORT ÖZELLİKLERİ
+==================
+
+İlk sürüm:
+
+* Excel export
+* CSV export
+* basic print/PDF
+
+Export endpoint örnekleri:
+GET /api/reports/products/export
+GET /api/reports/profitability/export
+GET /api/reports/sales-trend/export
+
+Kurallar:
+
+* export edilen veri filtrelerle aynı olmalı
+* export işlemleri audit log’a yazılabilir:
+  REPORT_EXPORT
+
+==================================================
+AUDIT LOG OLAYLARI
+==================
+
+REPORT_EXPORT
+REPORT_VIEW optional
+LOW_MARGIN_REPORT_VIEW optional
+PROFITABILITY_REPORT_VIEW optional
+
+Not:
+Her rapor görüntülemeyi loglamak şart değil.
+Ama export’ları loglamak mantıklı.
+
+==================================================
+INTEGRATION TESTLER
+===================
+
+1. sales-trend auth koruması
+2. tenant isolation
+3. tarih filtresi doğruluğu
+4. grouped totals doğruluğu
+5. products report pagination
+6. category totals doğruluğu
+7. brand totals doğruluğu
+8. user performance doğruluğu
+9. payment method breakdown doğruluğu
+10. stock risk endpoint doğruluğu
+11. export endpoint success
+12. invalid date range -> 400
+13. super_admin tenant seçmeden erişemiyor mu
+14. iade dahil net revenue hesabı doğru mu
+15. cost snapshot varsa kârlılık doğru mu
+
+==================================================
+PERFORMANS / INDEX / TEKNİK NOTLAR
+==================================
+
+Önemli:
+Bu sprint ağır sorgu sprintidir.
+Kodu yazıp bırakmayın; sorguları optimize edin.
+
+Önerilen indexler:
+
+* sales(company_id, created_at)
+* sales(company_id, user_id, created_at)
+* sales(company_id, returned, created_at)
+* sale_items(company_id, product_id)
+* products(company_id, category)
+* products(company_id, brand)
+
+Teknik öneriler:
+
+* büyük raporlarda aggregation SQL seviyesinde yapılsın
+* N+1 sorgu yapılmasın
+* count + data query ayrımı düzgün olsun
+* gerekirse materialized summary sonraki sprintte düşünülür
+* export büyükse ileride async job’a taşınabilir
+
+==================================================
+DOKÜMANTASYON
+=============
+
+replit.md içine ekle:
+
+* rapor modülü
+* kârlılık hesap mantığı
+* cost snapshot açıklaması
+* return rate formülü
+* export endpoint listesi
+* role permission matrix
+
+==================================================
+SPRINT UYGULAMA SIRASI
+======================
+
+1. Rapor ihtiyaçlarını mevcut şemaya göre doğrula
+2. sale_items cost snapshot alanını ekle
+3. sales / sale_items oluşturma akışını snapshot ile güncelle
+4. sales-trend endpoint
+5. products/categories/brands reports
+6. users report
+7. profitability + low-margin
+8. payment methods + stock risk
+9. export endpoint’leri
+10. frontend reports pages
+11. grafikler + filtreler
+12. integration testler
+13. performans tuning
+14. docs güncelle
+
+==================================================
+DEFINITION OF DONE
+==================
+
+* Tüm ana raporlar çalışıyor
+* tarih filtreleri doğru
+* tenant izolasyonu sağlam
+* kârlılık mantığı tutarlı
+* export çalışıyor
+* testler yeşil
+* UI responsive
+* performans kabul edilebilir seviyede
+
+==================================================
+İŞ DEĞERİ
+=========
+
+Bu sprint sonunda sistem sadece kayıt tutmaz,
+işletmeye karar aldırır.
+
+Patron için “bakıp yöneteceği ekran” oluşur.
+Bu da ürünün değer algısını ciddi artırır
+ve üst paket satışını kolaylaştırır.

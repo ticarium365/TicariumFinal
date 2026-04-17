@@ -28,6 +28,8 @@ import CompaniesAdmin from "@/pages/admin/companies";
 import AdminPayments from "@/pages/admin/payments";
 import PlatformSettings from "@/pages/admin/platform-settings";
 import Onboarding from "@/pages/onboarding/index";
+import CustomersList from "@/pages/customers/index";
+import CustomerDetail from "@/pages/customers/detail";
 
 const queryClient = new QueryClient();
 
@@ -136,6 +138,14 @@ function AuthenticatedRouter() {
 
         <Route path="/reports/daily-summary">
           {() => <ProtectedRoute component={DailySummary} roles={["admin", "viewer"]} />}
+        </Route>
+
+        <Route path="/customers">
+          {() => <ProtectedRoute component={CustomersList} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+
+        <Route path="/customers/:id">
+          {(params) => <ProtectedRoute component={() => <CustomerDetail id={params.id} />} roles={["admin", "staff", "viewer"]} />}
         </Route>
 
         <Route path="/users">

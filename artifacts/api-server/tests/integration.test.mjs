@@ -839,3 +839,199 @@ describe("15. Morning Brief ve Şablonlar", () => {
     assert.ok(json.restock_request_whatsapp.includes("PROSAN"), "firma adı şablonda yer almalı");
   });
 });
+
+// ---------------------------------------------------------------------------
+// 16. MÜŞTERİ CRUD (Sprint 4)
+// ---------------------------------------------------------------------------
+describe("16. Müşteri CRUD", () => {
+  let createdId = 0;
+  const code = `TST-${Date.now()}`;
+
+  test("Admin müşteri oluşturabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("POST", "/customers", {
+      jar,
+      body: { code, name: "Test Müşteri A.Ş.", type: "company", phone: "05551234567", city: "Ankara" },
+    });
+    assert.equal(status, 201, JSON.stringify(json));
+    assert.ok(json.customer?.id, "id olmalı");
+    assert.equal(json.customer.code, code, "kod eşleşmeli");
+    createdId = json.customer.id;
+  });
+
+  test("Duplicate kod engellenir — 409", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("POST", "/customers", {
+      jar,
+      body: { code, name: "Başka Müşteri" },
+    });
+    assert.equal(status, 409, "çift kod 409 vermeli");
+  });
+
+  test("Müşteri listesi döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/customers", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(Array.isArray(json.customers), "customers dizi olmalı");
+    assert.ok(typeof json.total === "number", "total sayısal olmalı");
+  });
+
+  test("Müşteri detayı döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/customers/${createdId}`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.equal(json.customer.id, createdId, "doğru müşteri");
+  });
+
+  test("Müşteri güncellenebilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("PUT", `/customers/${createdId}`, {
+      jar,
+      body: { city: "İstanbul", phone: "05559876543" },
+    });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.equal(json.customer.city, "İstanbul", "şehir güncellenmeli");
+  });
+
+  test("Auth olmadan müşteri listesi — 401", async () => {
+    const jar = new CookieJar();
+    const { status } = await api("GET", "/customers", { jar });
+    assert.equal(status, 401);
+  });
+
+  test("Tenant izolasyonu: co2 co1 müşterisini göremez", async () => {
+    const { jar } = await login("nihat_admin", "nihat123", "nihatturizm");
+    const { json } = await api("GET", "/customers", { jar });
+    const found = (json.customers ?? []).find((c) => c.id === createdId);
+    assert.ok(!found, "farklı tenant müşterisi görünmemeli");
+  });
+
+  test("Müşteri soft delete edilebilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("DELETE", `/customers/${createdId}`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(json.ok, "ok:true döner");
+  });
+
+  test("Silinmiş müşteri aktif filtresiyle görünmez", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { json } = await api("GET", "/customers?active=true", { jar });
+    const found = (json.customers ?? []).find((c) => c.id === createdId);
+    assert.ok(!found, "soft deleted müşteri aktif listede olmamalı");
+  });
+
+  test("Müşteri geri yüklenebilir (restore)", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("PATCH", `/customers/${createdId}/restore`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(json.ok, "ok:true");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 17. CARİ İŞLEMLER VE TAHSİLAT (Sprint 4)
+// ---------------------------------------------------------------------------
+describe("17. Cari İşlemler ve Tahsilat", () => {
+  let cariId = 0;
+  const cariCode = `CAR-${Date.now()}`;
+
+  test("Kurulum: müşteri oluştur", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("POST", "/customers", {
+      jar,
+      body: { code: cariCode, name: "Cari Test Müşteri", openingBalance: 0 },
+    });
+    assert.equal(status, 201, JSON.stringify(json));
+    cariId = json.customer.id;
+  });
+
+  test("Satış müşteriye bağlanınca debit oluşur", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    // Önce ürün bul
+    const { json: pJson } = await api("GET", "/products?limit=1", { jar });
+    const product = pJson.products?.[0];
+    if (!product) return; // ürün yoksa atla
+    const { status: sStatus, json: sJson } = await api("POST", "/sales", {
+      jar,
+      body: { productId: product.id, quantity: 1, unitPrice: product.salePrice || 10, paymentMethod: "credit", customerId: cariId },
+    });
+    assert.equal(sStatus, 201, JSON.stringify(sJson));
+    assert.equal(sJson.customerId, cariId, "customerId kaydedilmeli");
+  });
+
+  test("Satış sonrası müşteri bakiyesi arttı", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { json } = await api("GET", `/customers/${cariId}`, { jar });
+    assert.ok(json.customer.currentBalance > 0, `bakiye arttı: ${json.customer.currentBalance}`);
+  });
+
+  test("Cari hareket listesi döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/customers/${cariId}/transactions`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(Array.isArray(json.transactions), "transactions dizi olmalı");
+    assert.ok(json.transactions.length > 0, "en az 1 hareket olmalı");
+  });
+
+  test("Tahsilat alındıktan sonra bakiye düşer", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const beforeRes = await api("GET", `/customers/${cariId}`, { jar });
+    const before = beforeRes.json.customer.currentBalance;
+
+    const payAmount = 100;
+    const { status, json } = await api("POST", `/customers/${cariId}/payment`, {
+      jar,
+      body: { amount: payAmount, paymentMethod: "cash", note: "Test tahsilatı" },
+    });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(json.ok, "ok:true");
+    assert.ok(json.newBalance < before || json.newBalance === before - payAmount,
+      `bakiye düşmeli: ${before} -> ${json.newBalance}`);
+  });
+
+  test("Viewer tahsilat alamaz — 403", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("POST", `/customers/${cariId}/payment`, {
+      jar,
+      body: { amount: 50, paymentMethod: "cash" },
+    });
+    assert.equal(status, 403, "viewer 403 almalı");
+  });
+
+  test("Sıfır tutar tahsilat reddedilir — 400", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("POST", `/customers/${cariId}/payment`, {
+      jar,
+      body: { amount: 0 },
+    });
+    assert.equal(status, 400, "0 tutar 400 vermeli");
+  });
+
+  test("Hesap ekstresi endpoint çalışıyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/customers/${cariId}/statement`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(json.customer, "customer alanı olmalı");
+    assert.ok(Array.isArray(json.transactions), "transactions dizi olmalı");
+    assert.ok(typeof json.currentBalance === "number", "currentBalance sayısal olmalı");
+    // Running balance kontrolü
+    if (json.transactions.length > 0) {
+      assert.ok(typeof json.transactions[0].runningBalance === "number", "runningBalance olmalı");
+    }
+  });
+
+  test("Müşteri satış geçmişi endpoint çalışıyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/customers/${cariId}/sales`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(Array.isArray(json.sales), "sales dizi olmalı");
+  });
+
+  test("En borçlu müşteriler endpoint çalışıyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/customers/top-debtors", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(Array.isArray(json.customers), "customers dizi olmalı");
+  });
+});
+

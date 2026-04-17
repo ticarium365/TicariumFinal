@@ -13,6 +13,7 @@ import companiesRouter from "./companies.js";
 import paymentRouter from "./payment.js";
 import alertsRouter from "./alerts.js";
 import notificationsRouter from "./notifications.js";
+import customersRouter from "./customers.js";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use("/companies", companiesRouter);
 router.use("/payment", paymentRouter);
 router.use("/alerts", alertsRouter);
 router.use("/notifications", notificationsRouter);
+router.use("/customers", customersRouter);
 
 export default router;

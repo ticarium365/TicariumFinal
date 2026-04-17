@@ -1,0 +1,470 @@
+SPRINT 5 — Tedarikçi / Alış Yönetimi Modülü
+
+AMAÇ:
+SMSYSTEMS’i sadece satış ve stok yöneten sistem olmaktan çıkarıp satın alma, tedarikçi borcu, maliyet takibi ve ürün giriş operasyonunu yöneten tam işletme sistemine çevirmek.
+
+Bu sprint sonunda kullanıcı:
+
+* tedarikçi ekleyebilecek
+* alış faturası girebilecek
+* ürün stoğunu alış ile artırabilecek
+* tedarikçi borcunu takip edebilecek
+* ürün maliyet geçmişini görebilecek
+* alış raporları alabilecek
+
+==================================================
+GENEL TESLİM KURALLARI
+======================
+
+* Multi-tenant izolasyonu zorunlu
+* company_id scope tüm sorgularda uygulanacak
+* standart error formatı kullanılacak
+* audit log aktif olacak
+* integration test yazılacak
+* responsive UI olacak
+* docs güncellenecek
+
+==================================================
+VERİTABANI ŞEMASI
+=================
+
+1. suppliers
+
+id
+company_id
+code                     (unique company bazlı)
+name
+tax_office nullable
+tax_number nullable
+phone nullable
+email nullable
+city nullable
+district nullable
+address nullable
+contact_person nullable
+opening_balance numeric default 0
+current_balance numeric default 0
+notes nullable
+is_active boolean default true
+created_at
+updated_at
+
+Index:
+(company_id, code) unique
+(company_id, name)
+(company_id, phone)
+
+---
+
+2. purchases
+
+id
+company_id
+supplier_id
+invoice_no nullable
+invoice_date
+subtotal_amount
+tax_amount default 0
+discount_amount default 0
+total_amount
+payment_status (unpaid | partial | paid)
+note nullable
+created_by
+created_at
+updated_at
+
+---
+
+3. purchase_items
+
+id
+company_id
+purchase_id
+product_id
+quantity
+unit_cost
+line_total
+created_at
+
+---
+
+4. supplier_transactions
+
+id
+company_id
+supplier_id
+type
+(source: purchase | payment | adjustment | refund)
+
+direction
+(debit | credit)
+
+amount
+reference_type nullable
+reference_id nullable
+description nullable
+created_by
+created_at
+
+Mantık:
+debit  = firmaya borcumuz arttı
+credit = firmaya borcumuz azaldı
+
+==================================================
+BAKİYE HESAP MANTIĞI
+====================
+
+current_balance = toplam debit - toplam credit
+
+Örnek:
+20.000 alış faturası = debit
+8.000 ödeme = credit
+
+Borç = 12.000
+
+==================================================
+BACKEND API
+===========
+
+1. Tedarikçi CRUD
+
+GET /api/suppliers
+GET /api/suppliers/:id
+POST /api/suppliers
+PUT /api/suppliers/:id
+DELETE /api/suppliers/:id   (soft delete)
+PATCH /api/suppliers/:id/restore
+
+---
+
+2. Alış Faturası
+
+GET /api/purchases
+GET /api/purchases/:id
+
+POST /api/purchases
+
+Body:
+{
+supplierId,
+invoiceNo,
+invoiceDate,
+items: [
+{
+productId,
+quantity,
+unitCost
+}
+],
+taxAmount,
+discountAmount,
+note
+}
+
+İşlem Sonucu:
+
+* purchases kaydı oluşur
+* purchase_items oluşur
+* products.stock_quantity artar
+* purchase price güncellenir (kurala göre)
+* stock_movements içine purchase hareketi oluşur
+* supplier_transactions içine debit oluşur
+* supplier.current_balance artar
+
+PUT /api/purchases/:id
+(ilk sürümde sınırlı düzenleme)
+
+---
+
+3. Tedarikçi Ödeme
+
+POST /api/suppliers/:id/payment
+
+Body:
+{
+amount,
+paymentMethod,
+note
+}
+
+İşlem:
+
+* supplier_transactions içine credit
+* current_balance düşer
+* audit log
+
+---
+
+4. Manuel Düzeltme
+
+POST /api/suppliers/:id/adjustment
+
+Body:
+{
+amount,
+direction,
+note
+}
+
+---
+
+5. Raporlar
+
+GET /api/purchases/recent
+GET /api/purchases/summary
+GET /api/suppliers/top-creditors
+GET /api/suppliers/:id/statement
+GET /api/products/:id/cost-history
+
+==================================================
+BACKEND İŞ KURALLARI
+====================
+
+* viewer alış faturası giremez
+
+* viewer ödeme giremez
+
+* staff opsiyonel sadece alış girebilir
+
+* admin tam yetki
+
+* quantity > 0 olmalı
+
+* unitCost >= 0
+
+* items boş olamaz
+
+* silinmiş tedarikçiye işlem yapılamaz
+
+* silinmiş ürüne alış girilemez
+
+* aynı fatura no duplicate warning verebilir
+
+* ödeme amount > 0
+
+==================================================
+ÜRÜN MALİYET KURALI
+===================
+
+İlk sürüm seçenek:
+
+Varsayılan:
+last_cost yöntemi
+
+Yani son alış fiyatı purchase_price olur.
+
+Opsiyonel gelecek sürüm:
+weighted_average_cost
+
+Not:
+Satış geçmişi bozulmamalı.
+
+==================================================
+AUDIT LOG OLAYLARI
+==================
+
+SUPPLIER_CREATE
+SUPPLIER_UPDATE
+SUPPLIER_DELETE
+SUPPLIER_RESTORE
+PURCHASE_CREATE
+PURCHASE_UPDATE
+SUPPLIER_PAYMENT
+SUPPLIER_ADJUSTMENT
+PRODUCT_COST_UPDATED
+
+==================================================
+FRONTEND EKRANLARI
+==================
+
+1. Tedarikçiler Sayfası
+
+Kolonlar:
+
+* Kod
+* Ad
+* Telefon
+* Şehir
+* Borç
+* Durum
+
+Özellikler:
+
+* arama
+* filtre
+* aktif/pasif
+* yeni tedarikçi
+
+---
+
+2. Tedarikçi Detay
+
+Kart:
+
+* isim
+* telefon
+* borç
+* adres
+* notlar
+
+Tablar:
+
+A) Hareketler
+B) Alış Faturaları
+C) Bilgiler
+
+---
+
+3. Alış Faturası Giriş Ekranı
+
+Alanlar:
+
+* tedarikçi seç
+* fatura no
+* tarih
+* ürün satırları ekle
+* qty
+* birim maliyet
+* vergi
+* iskonto
+* not
+
+Canlı hesap:
+ara toplam
+genel toplam
+
+---
+
+4. Hızlı Ödeme Modalı
+
+* tutar
+* yöntem
+* not
+
+==================================================
+UI / UX DETAYLARI
+=================
+
+* borç varsa kırmızı badge
+* sıfırsa gri
+* ödeme alındıktan sonra canlı bakiye güncelle
+* ürün satırlarında autocomplete
+* klavye hızlı giriş destekli
+
+==================================================
+RAPORLAR
+========
+
+1. Son 30 Gün Alış Toplamı
+2. En Çok Alış Yapılan Tedarikçi
+3. Maliyet Artan Ürünler
+4. Borcu En Yüksek Tedarikçiler
+5. Son Ödemeler
+
+==================================================
+IMPORT / EXPORT
+===============
+
+1. Supplier import/export
+
+Kolonlar:
+code
+name
+phone
+email
+city
+opening_balance
+
+2. Purchase export
+
+* tarih aralığı
+* tedarikçi bazlı
+* ürün bazlı
+
+==================================================
+INTEGRATION TESTLER
+===================
+
+1. tedarikçi oluşturma
+2. duplicate code engeli
+3. tenant isolation
+4. soft delete / restore
+5. purchase create
+6. stock arttı mı
+7. stock movement oluştu mu
+8. supplier debit oluştu mu
+9. supplier payment credit oluştu mu
+10. bakiye doğru mu
+11. cost update doğru mu
+12. auth kontrolü
+
+==================================================
+PERFORMANS
+==========
+
+Index:
+
+suppliers:
+(company_id, name)
+(company_id, current_balance)
+
+purchases:
+(company_id, supplier_id, invoice_date)
+
+purchase_items:
+(company_id, product_id)
+
+supplier_transactions:
+(company_id, supplier_id, created_at)
+
+==================================================
+DOKÜMANTASYON
+=============
+
+replit.md içine ekle:
+
+* tedarikçi modülü
+* alış akışı
+* maliyet güncelleme mantığı
+* borç hesaplama
+* endpoint listesi
+
+==================================================
+SPRINT UYGULAMA SIRASI
+======================
+
+1. DB schema
+2. supplier routes
+3. purchases routes
+4. stock integration
+5. supplier payments
+6. frontend suppliers page
+7. purchase form
+8. reports
+9. import/export
+10. tests
+11. docs
+
+==================================================
+DEFINITION OF DONE
+==================
+
+* Tedarikçi oluşturuluyor
+* Alış faturası giriliyor
+* Stok artıyor
+* Maliyet güncelleniyor
+* Borç oluşuyor
+* Ödeme giriliyor
+* Cari hareketler görünüyor
+* Testler yeşil
+* UI responsive
+* Tenant güvenliği sağlam
+
+==================================================
+İŞ DEĞERİ
+=========
+
+Bu sprint sonunda sistem yalnız satış tarafı değil,
+satın alma tarafını da yönettiği için işletme için vazgeçilmez olur.
+
+Müşteri başka programa ihtiyaç duymaz.
