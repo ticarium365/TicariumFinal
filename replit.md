@@ -11,13 +11,17 @@ Platform markası **SMSYSTEMS**; kiracı markası dinamik olarak API'dan çekili
 ## Test Komutu
 
 ```bash
-# API integration testleri (40 test, 9 suite) — server çalışırken çalıştırın
+# API integration testleri (56 test, 13 suite) — server çalışırken çalıştırın
 pnpm --filter @workspace/api-server run test
 ```
 
 Testler `artifacts/api-server/tests/integration.test.mjs` dosyasındadır. Node.js `node:test` + native `fetch` kullanır, ek bağımlılık gerekmez. Çalışan sunucuya (port 8080) gerçek HTTP istekleri atar.
 
-**Suite'ler:** 1. Auth · 2. Ürünler · 3. Satış ve Stok · 4. Soft Delete & Restore · 5. Tenant İzolasyonu · 6. Düşük Stok Alarmları · 7. Toplu Stok Güncellemesi · 8. Günlük Kapanış Özeti · 9. Super Admin
+**Not:** Rate limiter production dışında devre dışı (`skip: () => NODE_ENV !== "production"`). Test çalıştırmadan önce kullanıcıların `is_active=true` olduğundan emin olun.
+
+**Suite'ler (13):**
+1. Auth · 2. Ürünler · 3. Satış ve Stok · 4. Soft Delete & Restore · 5. Tenant İzolasyonu · 6. Düşük Stok Alarmları · 7. Toplu Stok Güncellemesi · 8. Günlük Kapanış Özeti · 9. Super Admin
+10. Ayarlar · 11. Onboarding · 12. Logo Yükleme · 13. Demo Sıfırlama
 
 ---
 
@@ -384,6 +388,23 @@ Her kayıtta: `company_id, user_id, username, action, entity, entity_id, details
 - Stok negatife düşemez: satış sırasında `product.stock < quantity` kontrolü yapılır, `400` döner
 - İade ikinci kez yapılamaz: `sale.returned === true` ise `400` döner
 - Kullanıcılar yalnızca kendi şirket kapsamındaki verilere erişebilir
+
+---
+
+## Sprint İlerleme Durumu
+
+| Sprint | Başlık | Durum |
+|--------|--------|-------|
+| Sprint 1 | Temel Altyapı (Bulk stok, Günlük kapanış, Ödeme yöntemi) | ✅ TAMAMLANDI |
+| Sprint 2 | Onboarding Paketi (Sihirbaz, Logo, Tema, Demo reset, WelcomeTour) | ✅ TAMAMLANDI |
+| Sprint 3–18 | Gelecek sprintler (AI stok tahmini → E-ticaret katalog) | ⏳ BEKLIYOR |
+
+### Sprint 2 Özeti
+- **DB**: `company_settings` genişletildi — `logo_url`, `primary_color`, `onboarding_completed`, `currency`, `tax_rate`, `website`, `tax_number`
+- **Backend**: `/api/settings` PUT (yeni alanlar), `/api/settings/onboarding-status`, `/api/settings/onboarding-complete`, `/api/settings/logo` (POST/DELETE base64), `/api/settings/reset-demo`
+- **Frontend**: 4 adımlı Onboarding wizard (`/onboarding`), `WelcomeTour` (localStorage tabanlı 4 adım), Settings sayfası (logo yükleme + tema rengi seçici + demo reset + QR)
+- **Testler**: 56/56 geçiyor (13 suite: +4 yeni Sprint 2 suite'i)
+- **Rate Limiter**: Development ortamında devre dışı (production'da aktif)
 
 ---
 

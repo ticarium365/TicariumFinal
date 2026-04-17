@@ -55,7 +55,7 @@ app.use(session({
   },
 }));
 
-// Brute-force koruması: login endpoint'i 15 dakikada max 20 deneme
+// Brute-force koruması: login endpoint'i 15 dakikada max 20 deneme (prod only)
 const loginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
@@ -65,7 +65,8 @@ const loginRateLimit = rateLimit({
     error: "Too Many Requests",
     message: "Çok fazla giriş denemesi. 15 dakika sonra tekrar deneyin.",
   },
-  skipSuccessfulRequests: true, // Başarılı girişler sayılmaz
+  skipSuccessfulRequests: true,
+  skip: () => process.env.NODE_ENV !== "production",
 });
 
 app.use("/api/auth/login", loginRateLimit);

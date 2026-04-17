@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation } from "wouter";
+import { WelcomeTour } from "./welcome-tour";
 import { useAuth } from "./auth-context";
 import { useCompany } from "./company-context";
 import { usePaymentStatus } from "@/hooks/use-payment-status";
@@ -218,6 +219,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </main>
+
+      <WelcomeTour />
     </div>
   );
 }

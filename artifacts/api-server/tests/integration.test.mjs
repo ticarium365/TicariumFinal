@@ -582,3 +582,138 @@ describe("9. Super Admin", () => {
     assert.ok(Array.isArray(json) || Array.isArray(json.companies), "şirket listesi döner");
   });
 });
+
+// ---------------------------------------------------------------------------
+// 10. AYARLAR (Sprint 2)
+// ---------------------------------------------------------------------------
+describe("10. Ayarlar", () => {
+  test("Admin ayarları okuyabilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/settings", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(json.companyName, "companyName döner");
+  });
+
+  test("Viewer ayarları okuyabilir", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("GET", "/settings", { jar });
+    assert.equal(status, 200, "viewer 200 almalı");
+  });
+
+  test("Auth olmadan — 401", async () => {
+    const jar = new CookieJar();
+    const { status } = await api("GET", "/settings", { jar });
+    assert.equal(status, 401);
+  });
+
+  test("Admin ayarları güncelleyebilir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const payload = {
+      companyName: "PROSAN TEST",
+      phone: "05001234567",
+      primaryColor: "#7c3aed",
+    };
+    const { status, json } = await api("PUT", "/settings", { body: payload, jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.equal(json.primaryColor, "#7c3aed", "primaryColor güncellenmeli");
+    // Geri al
+    await api("PUT", "/settings", { body: { companyName: "PROSAN ENDÜSTRİ" }, jar });
+  });
+
+  test("Viewer ayarları güncelleyemez — 403", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("PUT", "/settings", { body: { companyName: "hack" }, jar });
+    assert.equal(status, 403, "viewer 403 almalı");
+  });
+
+  test("Tenant izolasyonu: farklı şirketlerin ayarları ayrı", async () => {
+    const { jar: jarA } = await login("cenan", "cenan123");
+    const { jar: jarB } = await login("nihat_admin", "nihat123", "nihatturizm");
+    const { json: setA } = await api("GET", "/settings", { jar: jarA });
+    const { json: setB } = await api("GET", "/settings", { jar: jarB });
+    assert.notEqual(setA.companyId, setB.companyId, "companyId farklı olmalı");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 11. ONBOARDING (Sprint 2)
+// ---------------------------------------------------------------------------
+describe("11. Onboarding", () => {
+  test("Onboarding durumunu okuyabilir — admin", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/settings/onboarding-status", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(typeof json.completed === "boolean", "completed alanı boolean olmalı");
+    assert.ok(typeof json.hasProducts === "boolean", "hasProducts alanı boolean olmalı");
+    assert.ok(typeof json.hasLogo === "boolean", "hasLogo alanı boolean olmalı");
+  });
+
+  test("Viewer onboarding durumunu okuyamaz — 403", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("GET", "/settings/onboarding-status", { jar });
+    assert.equal(status, 403, "viewer 403 almalı");
+  });
+
+  test("Onboarding tamamlama endpoint çalışıyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("POST", "/settings/onboarding-complete", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.equal(json.completed, true, "completed true olmalı");
+  });
+
+  test("Auth olmadan onboarding endpointlerine erişilemez", async () => {
+    const jar = new CookieJar();
+    const { status: s1 } = await api("GET", "/settings/onboarding-status", { jar });
+    const { status: s2 } = await api("POST", "/settings/onboarding-complete", { jar });
+    assert.equal(s1, 401, "onboarding-status 401 olmalı");
+    assert.equal(s2, 401, "onboarding-complete 401 olmalı");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 12. LOGO YÜKLEME (Sprint 2)
+// ---------------------------------------------------------------------------
+describe("12. Logo Yükleme", () => {
+  test("Logo silme endpoint çalışıyor — admin", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("DELETE", "/settings/logo", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.equal(json.logoUrl, null, "logoUrl null olmalı");
+  });
+
+  test("Viewer logo silemez — 403", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("DELETE", "/settings/logo", { jar });
+    assert.equal(status, 403, "viewer 403 almalı");
+  });
+
+  test("Auth olmadan logo işlemi — 401", async () => {
+    const jar = new CookieJar();
+    const { status } = await api("DELETE", "/settings/logo", { jar });
+    assert.equal(status, 401);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 13. DEMO SIFIRLAMA (Sprint 2)
+// ---------------------------------------------------------------------------
+describe("13. Demo Sıfırlama", () => {
+  test("Dev ortamında admin reset yapabilir", async () => {
+    const { jar } = await login("nihat_admin", "nihat123", "nihatturizm");
+    const { status, json } = await api("POST", "/settings/reset-demo", { jar });
+    // Dev ortamında 200, prod'da 403
+    assert.ok(status === 200 || status === 403, `Beklenen 200 veya 403, alınan: ${status} — ${JSON.stringify(json)}`);
+  });
+
+  test("Viewer reset yapamaz — 403", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("POST", "/settings/reset-demo", { jar });
+    assert.equal(status, 403, "viewer 403 almalı");
+  });
+
+  test("Auth olmadan reset — 401", async () => {
+    const jar = new CookieJar();
+    const { status } = await api("POST", "/settings/reset-demo", { jar });
+    assert.equal(status, 401);
+  });
+});

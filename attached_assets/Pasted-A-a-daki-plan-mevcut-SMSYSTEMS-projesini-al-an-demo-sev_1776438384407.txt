@@ -1,0 +1,673 @@
+Aşağıdaki plan, mevcut SMSYSTEMS projesini “çalışan demo” seviyesinden “ilk müşteriyi alıp büyüyebilen SaaS ürün” seviyesine taşımak için toplu master roadmap’tir. Mevcut mimariyi koruyarak, sprint sprint ilerle. Her sprint sonunda: endpoint’ler standart error formatı kullansın, audit log bağlansın, integration testler güncellensin, replit.md dokümantasyonu güncellensin.
+
+GENEL KURAL SETİ
+
+* Multi-tenant izolasyonundan taviz verme
+* Tüm yeni CRUD işlemlerinde company_id izolasyonu zorunlu
+* Admin/staff/viewer/super_admin yetki kuralları net uygulanacak
+* Hata formatı her yerde standart kalacak:
+  { error: { code, message, details } }
+* Kritik işlemler audit log’a yazılacak
+* Tüm yeni endpoint’ler için integration test eklenecek
+* Yeni ekranlar mobil uyumlu olacak
+* Fiziksel silme yerine mümkün olduğunca soft delete yaklaşımı kullanılacak
+* Tüm import/export işlemlerinde tenant bazlı veri güvenliği korunacak
+
+FAZ 1 — ÇEKİRDEK OPERASYON VE ONBOARDING
+
+SPRINT 1 — Toplu Stok Güncelleme + Günlük Kapanış
+Amaç:
+
+* Depo operasyonunu hızlandırmak
+* Gün sonu kullanım alışkanlığı oluşturmak
+
+1. Toplu Stok Güncelleme
+   Backend:
+
+* GET /api/stock/import-template
+* POST /api/stock/import
+* Kabul edilen formatlar: .xlsx, .xls, .csv
+* max 5MB
+* Kolonlar:
+  product_code, barcode, quantity, mode, note
+* mode:
+  set, add, subtract
+* Eşleme:
+  önce product_code, sonra barcode
+* Kurallar:
+  quantity negatif olamaz
+  subtract sonucu stok negatif olamaz
+  inactive ürün işlenemez
+  set sonucu 0 olabilir, negatif olamaz
+  aynı dosyada aynı ürün birden çok kez geçebilir, sırayla işlenir
+* Başarılı her işlem için stock_movements kaydı oluşsun
+* Toplu işlem için audit log oluşsun
+* Dry-run/preview desteği:
+  önce önizleme yap, sonra onayla uygula
+* Response:
+  { total, updated, skipped, errors: [{ row, code, message }] }
+
+Frontend:
+
+* “Toplu Stok Güncelle” butonu
+* Modal/drawer
+* Dosya seçme / sürükle bırak
+* Şablon indir
+* Dry-run özeti:
+  kaç satır başarılı
+  kaç hata
+  ürün bazlı değişim önizlemesi
+* Uygulama sonrası sonuç özeti
+* Liste refresh
+
+Test:
+
+* set/add/subtract
+* yetersiz stok
+* inactive ürün
+* ürün bulunamadı
+* tenant isolation
+* role auth
+* audit log
+* stock movement kayıtları
+
+2. Günlük Kapanış Özeti
+   Backend:
+
+* GET /api/reports/daily-summary?date=YYYY-MM-DD
+* Response:
+  totalSalesCount
+  totalRevenue
+  totalReturnedCount
+  totalReturnedAmount
+  paymentBreakdown
+  topProducts
+  lowStockCount
+  createdAtRange
+  optional netRevenue
+* Tenant bazlı çalışsın
+* Şirket local timezone’a göre gün hesabı yapılsın
+
+Frontend:
+
+* Dashboard veya reports altında “Günlük Kapanış”
+* Tarih seçici
+* KPI kartları:
+  satış adedi
+  toplam ciro
+  iade
+  kritik stok
+* ödeme yöntemi dağılımı
+* en çok satan 5 ürün
+* yazdır / print
+
+Test:
+
+* boş gün
+* iade içeren gün
+* payment breakdown doğruluğu
+* top product doğruluğu
+* tenant isolation
+* auth koruması
+
+SPRINT 2 — Onboarding Paketi
+Amaç:
+
+* Yeni müşteri 1 günde ayağa kalksın
+
+1. İlk Kurulum Sihirbazı
+
+* Firma adı
+* logo yükleme
+* primary color
+* ilk admin kullanıcı
+* temel şirket ayarları
+* para birimi / vergi ayarı opsiyonel
+* ilk ürün yükleme adımı
+
+2. Excel Import v2
+
+* kategori yoksa otomatik oluştur
+* marka yoksa otomatik oluştur
+* kolon eşleme ekranı
+* duplicate çözüm seçeneği:
+  atla / güncelle / yeni oluşturma engeli
+* örnek veri validasyonu güçlendirilsin
+
+3. Hoş Geldin Turu
+
+* ürün ekleme
+* satış oluşturma
+* barkod ekranı
+* stok güncelleme
+* rapor ekranı
+
+4. Demo Verisi Yönetimi
+
+* demo tenant için tek tuş temizleme
+* test verisi sıfırlama (yalnızca dev/demo)
+
+Test:
+
+* wizard tamamlanmadan kritik sayfalara zorunlu akış opsiyonu
+* logo ve ayarların tenant bazlı kaydı
+* import v2 validation
+
+SPRINT 3 — Kullanım Alışkanlığı Paketi
+Amaç:
+
+* Müşteri her gün sisteme girsin
+
+1. Sabah Açılış Kartı
+
+* kritik stok sayısı
+* dünkü satış özeti
+* bekleyen ödeme/abonelik durumu
+* en çok satan ürün özeti
+
+2. Gün Sonu PDF Özeti
+
+* günlük kapanıştan PDF üret
+* yazdırılabilir düzen
+* tarih + şirket adı + özet tablolar
+
+3. Bildirim Merkezi v1
+
+* düşük stok
+* trial bitiş yaklaşımı
+* ödeme bekliyor
+* kritik ürünler
+
+4. WhatsApp / E-posta Günlük Özet Hazırlığı
+
+* önce template üret
+* kanal entegrasyonunu sonraki sprintte aç
+
+FAZ 2 — SATIŞI KAPATAN MODÜLLER
+
+SPRINT 4 — Cari / Müşteri Takibi
+Amaç:
+
+* Ürünü “stok programı”ndan “işletme aracı”na çevirmek
+
+Backend:
+
+* customer_accounts / customer_transactions tabloları
+* müşteri kartı CRUD
+* borç/alacak işlemleri
+* vadeli satış desteği
+* tahsilat kaydı
+* cari ekstre endpoint’i
+
+Frontend:
+
+* müşteri listesi
+* müşteri detay
+* bakiye kartı
+* hareket listesi
+* tahsilat girişi
+* satış ekranında müşteri seçimi
+
+Rapor:
+
+* en borçlu müşteriler
+* tahsilat özeti
+* vadesi yaklaşan alacaklar
+
+Audit/Test:
+
+* müşteri oluşturma/güncelleme
+* tahsilat
+* tenant isolation
+* satış bağlantısı
+
+SPRINT 5 — Tedarikçi ve Alış Yönetimi
+Amaç:
+
+* Tedarik zinciri görünür olsun
+
+Backend:
+
+* suppliers tablosu
+* purchase_orders / purchases
+* alış hareketi
+* tedarikçi borcu
+* ürün maliyet geçmişi
+
+Frontend:
+
+* tedarikçi listesi
+* alış faturası giriş ekranı
+* tedarikçi detay
+* borç takibi
+* geçmiş alışlar
+
+Rapor:
+
+* en çok alınan ürün
+* tedarikçi bazlı alış hacmi
+* maliyet değişim geçmişi
+
+Kurallar:
+
+* alış işlemi stoğu artırır
+* purchase_price güncelleme politikası net olsun
+* geçmiş satış kârlılığı bozulmamalı
+
+SPRINT 6 — Gelişmiş Raporlama
+Amaç:
+
+* Patron ekranı oluşturmak
+
+Raporlar:
+
+* gün/hafta/ay satış trendi
+* ödeme yöntemi trendi
+* en çok satan ürünler
+* kategori bazlı satış
+* marka bazlı satış
+* personel bazlı satış
+* kârlılık raporu
+* düşük kâr marjlı ürünler
+* iade oranı raporu
+
+Frontend:
+
+* filtreli rapor ekranları
+* tarih aralığı
+* export to excel/csv
+* baskı düzeni
+
+Teknik:
+
+* ağır sorgular optimize edilsin
+* gerektiğinde materialized summary veya cache yaklaşımı düşünülsün
+
+FAZ 3 — MAĞAZA / DEPO OPERASYONU DERİNLEŞTİRME
+
+SPRINT 7 — Barkod / Etiket Merkezi
+Amaç:
+
+* Sahadaki kullanım değerini artırmak
+
+Özellikler:
+
+* tekli barkod yazdırma
+* toplu barkod yazdırma
+* raf etiketi yazdırma
+* fiyat etiketi
+* QR katalog etiketi
+* ürün listesinden seçerek baskı alma
+
+Kurallar:
+
+* tenant markası ve logo desteği
+* yazdırma şablonları özelleştirilebilir olsun
+
+SPRINT 8 — Sayım ve Stok Düzeltme Merkezi
+Amaç:
+
+* Gerçek depo sayımı kolaylaşsın
+
+Özellikler:
+
+* sayım oturumu oluştur
+* barkod okutarak sayım
+* Excel ile sayım sonucu yükleme
+* sistem stok / sayılan stok farkı
+* fark onay ekranı
+* toplu düzeltme
+* fark raporu
+
+Kurallar:
+
+* sayım oturumu kapatılmadan kesin güncelleme yapılmasın
+* onay sonrası stock_movements kayıtları oluşsun
+* audit log zorunlu
+
+SPRINT 9 — Çok Şubeli Yapı
+Amaç:
+
+* Daha büyük müşterilere satış
+
+Backend:
+
+* branches tablosu
+* branch_stock
+* branch_users veya yetki eşleme
+* branch transfer hareketleri
+
+Frontend:
+
+* şube seçici
+* şube bazlı stok görüntüleme
+* transfer ekranı
+* şube raporları
+
+Kurallar:
+
+* kullanıcı yalnızca yetkili olduğu şubeyi görür
+* transfer stok hareketi çift yönlü kayıt üretir
+* super_admin platform geneli, admin şirket geneli, branch manager şube geneli mantığı düşünülebilir
+
+FAZ 4 — FİNANS VE YÖNETİM
+
+SPRINT 10 — Kasa / Gider / Finans Merkezi
+Amaç:
+
+* Günlük işletme kontrolü
+
+Özellikler:
+
+* kasa hareketleri
+* gider girişi
+* gider kategorileri
+* banka hesapları
+* günlük net kâr tahmini
+* ödeme takvimi
+
+Rapor:
+
+* günlük gider
+* aylık gider kırılımı
+* kasa durumu
+* net nakit görünümü
+
+SPRINT 11 — Abonelik Sistemi v2
+Amaç:
+
+* SaaS gelir modelini profesyonelleştirmek
+
+Özellikler:
+
+* kredi kartı ile ödeme
+* plan yükseltme/düşürme
+* otomatik yenileme
+* fatura / tahsilat geçmişi
+* kupon / kampanya kodu
+* bayi / reseller kodu opsiyonel
+
+Kurallar:
+
+* payment status state machine net olsun
+* webhook idempotency
+* başarısız yenileme akışları
+* grace period
+
+SPRINT 12 — Dosya ve Kanıt Yönetimi
+Amaç:
+
+* Evrak ve ödeme kanıtı işlerini sağlamlaştırmak
+
+Özellikler:
+
+* receipt upload
+* pdf/jpg/png desteği
+* dosya boyutu sınırı
+* güvenli saklama
+* signed URL veya kontrollü erişim
+* belge silme/pasife alma
+* müşteri/tedarikçi evrak ekleri
+
+Audit:
+
+* kim yükledi, ne zaman yükledi, kim görüntüledi
+
+FAZ 5 — AKILLI OTOMASYON VE PREMIUM ÖZELLİKLER
+
+SPRINT 13 — Akıllı Bildirimler
+Amaç:
+
+* Sistemi “reaktif” değil “proaktif” yapmak
+
+Kurallar ve bildirimler:
+
+* bu ürün 3 güne biter
+* bu kategori satışta düşüşte
+* şu müşteri 30 gündür gelmedi
+* şu ürünün kârı düşmüş
+* trial bitiyor
+* ödeme gecikti
+* kritik stok tekrar oluştu
+
+Kanallar:
+
+* uygulama içi
+* e-posta
+* WhatsApp hazırlığı
+* webhook opsiyonu
+
+SPRINT 14 — Personel ve Performans
+Amaç:
+
+* Personel takibi isteyen işletmeleri çekmek
+
+Özellikler:
+
+* kasiyer bazlı satış
+* vardiya aç/kapat
+* personel hedefleri
+* prim kuralları
+* performans raporu
+* yetki değişim logları
+
+SPRINT 15 — Fiyatlandırma / Kampanya Motoru
+Amaç:
+
+* Satış tarafını güçlendirmek
+
+Özellikler:
+
+* kampanyalı fiyat
+* tarih aralıklı indirim
+* kategoriye özel indirim
+* marka bazlı indirim
+* müşteri bazlı fiyat
+* çoklu fiyat listesi
+
+Kurallar:
+
+* öncelik sırası net olsun
+* kampanya çakışması çözümü
+* geçmiş satışlar etkilenmesin
+
+SPRINT 16 — API / Entegrasyon Katmanı
+Amaç:
+
+* B2B ve entegrasyon kabiliyeti
+
+Özellikler:
+
+* API key yönetimi
+* rate limit
+* tenant-scoped API tokens
+* webhook’lar
+* dış sistemler için sipariş / ürün / stok endpoint’leri
+* public catalog genişletme
+
+FAZ 6 — ÖLÇEKLENME VE KURUMSALLAŞMA
+
+SPRINT 17 — Test Altyapısı Derinleştirme
+
+* mevcut integration testlere ek olarak E2E test
+* barkod, satış, import, ödeme, low stock, reports kritik akışları otomatikleştir
+* fixture / seed stratejisi
+* test tenant’ları
+* CI pipeline
+
+SPRINT 18 — Performans ve Ölçek
+
+* ağır sorgular için index review
+* cache stratejisi
+* queue/job altyapısı
+* export/pdf işlemlerini async yap
+* background worker
+* log korelasyonu
+* pagination standardı
+* EXPLAIN ANALYZE ile sorgu takibi
+
+SPRINT 19 — Güvenlik Sertleştirme v2
+
+* 2FA opsiyonu
+* şifre politikası
+* şüpheli giriş algısı
+* oturum cihaz listesi
+* force logout
+* IP log
+* audit ekranı
+* erişim reddi olayları görünür olsun
+
+SPRINT 20 — DevOps / Operasyon
+
+* staging/prod ayrımı
+* deploy pipeline
+* rollback stratejisi
+* backup/restore prosedürü
+* uptime monitor
+* error tracking
+* log dashboard
+* env yönetimi
+* secret rotation
+
+FAZ 7 — PAZARLAMA VE ÜRÜNLEŞTİRME
+
+SPRINT 21 — Paketleme ve Plan Yapısı
+
+* Starter / Pro / Business / Enterprise planları
+* feature flag sistemi
+* plan bazlı limitler
+* kullanıcı sayısı limiti
+* ürün sayısı limiti
+* rapor/export limitleri
+
+SPRINT 22 — Beyaz Etiket / Marka Özelleştirme
+
+* tenant logo
+* tenant renkleri
+* özel giriş ekranı
+* PDF raporlarında tenant markası
+* özel domain hazırlığı
+
+SPRINT 23 — Satış Destek Özellikleri
+
+* teklif oluşturma
+* sipariş fişi/PDF
+* hızlı paylaşım
+* WhatsApp sipariş özeti
+* müşteriye ürün kataloğu gönderimi
+
+SPRINT 24 — Mobil Hazırlık
+
+* mevcut web responsive düzenini iyileştir
+* mobil kullanım analizi çıkar
+* hangi ekranlar native ister belirle
+* barkod ve satış akışı optimize et
+* ancak native mobil uygulamayı en sona bırak
+
+EK TEKNİK GÖREVLER — HER SPRINTTE PARALEL
+
+* Reusable form validation ortaklaştır
+* Zod şemalarını güncel tut
+* Orval client regenerate akışını düzenli çalıştır
+* sayfa bazlı loading/error/empty-state standardı oluştur
+* toast mesajları standartlaşsın
+* tarih/saat/para formatlama ortak util ile yapılsın
+* permission guard bileşenleri ortaklaştırılsın
+* tablo/pagination/filter componentleri reusable hale getirilsin
+
+VERİ MODELİ ÖNERİLERİ
+İleride eklenecek muhtemel tablolar:
+
+* customers
+* customer_transactions
+* suppliers
+* purchases
+* purchase_items
+* branches
+* branch_stocks
+* stock_counts
+* stock_count_items
+* expenses
+* cash_movements
+* notifications
+* files
+* api_keys
+* campaigns
+* price_lists
+* user_devices
+* shift_sessions
+
+HER YENİ MODÜL İÇİN ZORUNLU CHECKLIST
+
+1. DB schema
+2. Drizzle export/index güncelle
+3. route
+4. auth/role kontrolü
+5. audit log
+6. standard error handling
+7. integration test
+8. UI ekranı
+9. loading/error/empty state
+10. replit.md güncelle
+11. gerekiyorsa import/export desteği
+12. gerekiyorsa rapor ve filtreler
+
+ÖNCELİK SIRASI — İŞ DEĞERİNE GÖRE
+En yüksek iş değeri:
+
+1. Toplu stok güncelleme
+2. Günlük kapanış
+3. Onboarding wizard
+4. Excel import v2
+5. Cari modülü
+6. Tedarikçi modülü
+7. Gelişmiş rapor
+8. Sayım merkezi
+9. Çok şube
+10. Abonelik v2
+
+ŞİMDİLİK YAPILMAYACAKLAR
+
+* Native mobil uygulama
+* Gereksiz karmaşık AI özellikleri
+* Çok ağır dashboard animasyonları
+* Aşırı erken microservice ayrımı
+* İhtiyaç yokken gerçek zamanlı websocket karmaşası
+
+İLK MÜŞTERİYİ ALDIRAN EN KRİTİK 5 ŞEY
+
+* Excel ile hızlı veri taşıma
+* günlük kapanış özeti
+* düşük stok alarmı
+* toplu stok güncelleme
+* müşteri/cari takibi
+
+İLK 10 MÜŞTERİYİ TUTAN EN KRİTİK 5 ŞEY
+
+* kullanım kolaylığı
+* performans
+* raporların netliği
+* veri güveni ve audit log
+* hızlı destek ve onboarding
+
+UYGULAMA SIRASI
+Önce:
+
+* Sprint 1, 2, 3
+  Sonra:
+* Sprint 4, 5, 6
+  Sonra:
+* Sprint 8, 9, 10
+  Sonra:
+* Sprint 11, 12, 13
+  Sonra:
+* Sprint 17, 18, 19, 20
+  En son:
+* Sprint 21 ve sonrası
+
+KISA TESLİM KURALI
+Her sprint sonunda şu soruya cevap ver:
+
+* Bu iş müşterinin parasını, zamanını veya günlük operasyonunu ne kadar iyileştirdi?
+
+Eğer cevap zayıfsa, sprint önceliğini yeniden değerlendir.

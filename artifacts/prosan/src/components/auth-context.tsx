@@ -1,34 +1,48 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useGetMe, User } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { getGetMeQueryKey } from "@workspace/api-client-react";
 
 interface AuthContextType {
-  user: User | null;
+  user: (User & { onboardingCompleted?: boolean | null }) | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  needsOnboarding: boolean;
+  checkAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
   isAuthenticated: false,
+  needsOnboarding: false,
+  checkAuth: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const { data: user, isLoading, error } = useGetMe({
-    query: {
-      retry: false,
-    },
+    query: { retry: false },
   });
 
   const [, setLocation] = useLocation();
+
+  const needsOnboarding =
+    !!user &&
+    (user as any).role === "admin" &&
+    (user as any).onboardingCompleted === false;
 
   useEffect(() => {
     if (!isLoading && error) {
       setLocation("/login");
     }
   }, [isLoading, error, setLocation]);
+
+  const checkAuth = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+  }, [queryClient]);
 
   if (isLoading) {
     return (
@@ -41,9 +55,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: user || null,
+        user: (user as any) || null,
         isLoading,
         isAuthenticated: !!user,
+        needsOnboarding,
+        checkAuth,
       }}
     >
       {children}

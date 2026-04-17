@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -27,17 +27,23 @@ import Settings from "@/pages/settings/index";
 import CompaniesAdmin from "@/pages/admin/companies";
 import AdminPayments from "@/pages/admin/payments";
 import PlatformSettings from "@/pages/admin/platform-settings";
+import Onboarding from "@/pages/onboarding/index";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({
   component: Component,
   roles,
+  skipOnboardingCheck,
+  noLayout,
 }: {
   component: React.ComponentType;
   roles?: string[];
+  skipOnboardingCheck?: boolean;
+  noLayout?: boolean;
 }) {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, needsOnboarding } = useAuth();
+  const [, navigate] = useLocation();
 
   if (isLoading) return null;
 
@@ -46,7 +52,12 @@ function ProtectedRoute({
     return null;
   }
 
-  if (roles && user && !roles.includes(user.role)) {
+  if (!skipOnboardingCheck && needsOnboarding) {
+    navigate("/onboarding");
+    return null;
+  }
+
+  if (roles && user && !roles.includes((user as any).role)) {
     return (
       <Layout>
         <div className="p-8 text-center">
@@ -55,6 +66,10 @@ function ProtectedRoute({
         </div>
       </Layout>
     );
+  }
+
+  if (noLayout) {
+    return <Component />;
   }
 
   return (
@@ -141,6 +156,10 @@ function AuthenticatedRouter() {
 
         <Route path="/admin/platform-settings">
           {() => <ProtectedRoute component={PlatformSettings} roles={["super_admin"]} />}
+        </Route>
+
+        <Route path="/onboarding">
+          {() => <ProtectedRoute component={Onboarding} roles={["admin"]} skipOnboardingCheck noLayout />}
         </Route>
 
         <Route component={NotFound} />

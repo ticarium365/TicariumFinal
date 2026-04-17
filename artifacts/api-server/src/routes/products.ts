@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { db, productsTable, productViewsTable, salesTable } from "@workspace/db";
 import { eq, ilike, and, lte, or, desc, asc, count, gte, sql } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, requireAdmin } from "../middlewares/auth.js";
 import multer from "multer";
 import * as XLSX from "xlsx";
 
@@ -204,10 +204,11 @@ router.get("/import-template", requireAuth, async (_req: Request, res: Response)
   res.send(buf);
 });
 
-// POST /api/products/import — Excel/CSV içe aktar
+// POST /api/products/import — Excel/CSV içe aktar (admin zorunlu)
 router.post(
   "/import",
   requireAuth,
+  requireAdmin,
   upload.single("file"),
   async (req: Request, res: Response) => {
     try {

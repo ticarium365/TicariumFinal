@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, companySettingsTable } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { Errors } from "../lib/errors.js";
@@ -102,8 +102,19 @@ router.post("/logout", async (req: Request, res: Response) => {
   });
 });
 
-router.get("/me", requireAuth, (req: Request, res: Response) => {
+router.get("/me", requireAuth, async (req: Request, res: Response) => {
   const user = req.session.user!;
+
+  let onboardingCompleted: boolean | null = null;
+  if (user.role === "admin" && user.companyId) {
+    try {
+      const [s] = await db.select({ onboardingCompleted: companySettingsTable.onboardingCompleted })
+        .from(companySettingsTable)
+        .where(eq(companySettingsTable.companyId, user.companyId));
+      onboardingCompleted = s?.onboardingCompleted ?? false;
+    } catch { /* hata durumunda null bırak */ }
+  }
+
   res.json({
     id: user.id,
     username: user.username,
@@ -113,6 +124,7 @@ router.get("/me", requireAuth, (req: Request, res: Response) => {
     isActive: user.isActive,
     companyId: user.companyId,
     createdAt: new Date(),
+    onboardingCompleted,
   });
 });
 
