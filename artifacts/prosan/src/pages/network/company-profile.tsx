@@ -224,7 +224,7 @@ export default function CompanyProfilePage({ subdomain }: Props) {
           )}
 
           {(profile.acceptOffers || profile.acceptOrders) && (
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 flex flex-wrap gap-2 items-center">
               {profile.acceptOffers && (
                 <div className="flex items-center gap-1.5 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
                   <CheckCircle2 className="h-4 w-4" />
@@ -236,6 +236,14 @@ export default function CompanyProfilePage({ subdomain }: Props) {
                   <Package className="h-4 w-4" />
                   Sipariş Kabul Ediyor
                 </div>
+              )}
+              {profile.acceptOffers && user && (
+                <Link href={`/b2b/quotes/new?company=${profile.companySubdomain}`}>
+                  <Button size="sm" className="ml-auto">
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Teklif İste
+                  </Button>
+                </Link>
               )}
             </div>
           )}

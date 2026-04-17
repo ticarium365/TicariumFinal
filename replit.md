@@ -142,6 +142,14 @@ The project utilizes a monorepo structure managed by `pnpm workspaces`.
 - `cash_registers` — Kasa tanımları (companyId, name, openingBalance, currentBalance, isDefault)
 - `cash_movements` — Kasa hareketleri (registerId, type, direction, amount, balanceBefore, balanceAfter)
 
+## Sprint 31 — B2B RFQ / Teklif Sistemi (TAMAMLANDI)
+
+- Yeni tablolar: `b2b_quote_requests`, `b2b_quote_items`, `b2b_messages`.
+- API: `/api/b2b/quotes` altında inbox/outbox/stats listeleri, oluşturma, satıcı yanıtı (`/respond`), alıcı kararı (`/decision`), iptal ve mesajlaşma (`GET/POST /:id/messages`).
+- Frontend: PROSAN tarafında `/b2b/quotes`, `/b2b/quotes/new`, `/b2b/quotes/:id` sayfaları, sidebar bağlantısı, firma profilinden "Teklif İste" akışı.
+- Bildirim entegrasyonu: her aşamada karşı tarafa `notifications` kaydı düşülür (`b2b_quote_request`, `b2b_quote_response`, `b2b_quote_decision`, `b2b_message`).
+- Önemli not: `companies` tablosunda alanlar `primaryColor` / `logoUrl`'dır; B2B select'lerinde bu isimler kullanılmalı (yanlış alan adı `orderSelectedFields` patlamasına yol açıyor).
+
 ## Sprint 30 — B2B Tedarik Ağı (TAMAMLANDI)
 
 ### Yeni DB Tabloları

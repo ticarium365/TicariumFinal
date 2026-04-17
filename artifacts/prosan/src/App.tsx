@@ -48,6 +48,9 @@ import CampaignsPage from "@/pages/campaigns";
 import NetworkPage from "@/pages/network/index";
 import CompanyProfilePage from "@/pages/network/company-profile";
 import MyNetworkProfilePage from "@/pages/network/my-profile";
+import QuotesListPage from "@/pages/b2b/quotes-list";
+import QuoteNewPage from "@/pages/b2b/quote-new";
+import QuoteDetailPage from "@/pages/b2b/quote-detail";
 
 const queryClient = new QueryClient();
 
@@ -236,6 +239,18 @@ function AuthenticatedRouter() {
 
         <Route path="/network/:subdomain">
           {(params) => <ProtectedRoute component={() => <CompanyProfilePage subdomain={params.subdomain} />} />}
+        </Route>
+
+        <Route path="/b2b/quotes">
+          {() => <ProtectedRoute component={QuotesListPage} roles={["admin", "staff"]} />}
+        </Route>
+
+        <Route path="/b2b/quotes/new">
+          {() => <ProtectedRoute component={QuoteNewPage} roles={["admin", "staff"]} />}
+        </Route>
+
+        <Route path="/b2b/quotes/:id">
+          {(params) => <ProtectedRoute component={() => <QuoteDetailPage id={params.id} />} roles={["admin", "staff"]} />}
         </Route>
 
         <Route path="/users">
