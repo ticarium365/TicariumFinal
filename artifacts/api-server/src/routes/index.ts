@@ -14,6 +14,8 @@ import paymentRouter from "./payment.js";
 import alertsRouter from "./alerts.js";
 import notificationsRouter from "./notifications.js";
 import customersRouter from "./customers.js";
+import suppliersRouter from "./suppliers.js";
+import purchasesRouter from "./purchases.js";
 
 const router: IRouter = Router();
 
@@ -32,5 +34,7 @@ router.use("/payment", paymentRouter);
 router.use("/alerts", alertsRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/customers", customersRouter);
+router.use("/suppliers", suppliersRouter);
+router.use("/purchases", purchasesRouter);
 
 export default router;

@@ -947,10 +947,10 @@ describe("17. Cari İşlemler ve Tahsilat", () => {
 
   test("Satış müşteriye bağlanınca debit oluşur", async () => {
     const { jar } = await login("cenan", "cenan123");
-    // Önce ürün bul
-    const { json: pJson } = await api("GET", "/products?limit=1", { jar });
-    const product = pJson.products?.[0];
-    if (!product) return; // ürün yoksa atla
+    // Stok > 0 olan ilk ürünü bul
+    const { json: pJson } = await api("GET", "/products?limit=100", { jar });
+    const product = (pJson.products ?? []).find((p) => p.stock > 0);
+    if (!product) return; // stoklu ürün yoksa atla
     const { status: sStatus, json: sJson } = await api("POST", "/sales", {
       jar,
       body: { productId: product.id, quantity: 1, unitPrice: product.salePrice || 10, paymentMethod: "credit", customerId: cariId },
@@ -1035,3 +1035,260 @@ describe("17. Cari İşlemler ve Tahsilat", () => {
   });
 });
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 18. TEDARİKÇİ CRUD
+// ─────────────────────────────────────────────────────────────────────────────
+describe("18. Tedarikçi CRUD", () => {
+  let supplierId;
+  const code = `SUPP-TEST-${Date.now()}`;
+
+  test("Tedarikçi listesi boş veya dizi döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/suppliers", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(Array.isArray(json.suppliers), "suppliers dizi olmalı");
+    assert.ok(typeof json.total === "number", "total sayısal olmalı");
+  });
+
+  test("Tedarikçi oluşturulur", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("POST", "/suppliers", {
+      jar,
+      body: { code, name: "Test Tedarikçi A.Ş.", phone: "0212 555 00 00", city: "İstanbul", openingBalance: 5000 },
+    });
+    assert.equal(status, 201, JSON.stringify(json));
+    assert.ok(json.supplier.id, "id dönmeli");
+    assert.equal(json.supplier.code, code);
+    assert.equal(json.supplier.currentBalance, 5000, "Açılış bakiyesi currentBalance'a yansımalı");
+    supplierId = json.supplier.id;
+  });
+
+  test("Aynı kodla ikinci tedarikçi oluşturulamaz", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("POST", "/suppliers", {
+      jar,
+      body: { code, name: "Kopya Tedarikçi" },
+    });
+    assert.equal(status, 409, JSON.stringify(json));
+  });
+
+  test("Tedarikçi detayı döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/suppliers/${supplierId}`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.equal(json.supplier.id, supplierId);
+  });
+
+  test("Tedarikçi güncellenir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("PUT", `/suppliers/${supplierId}`, {
+      jar,
+      body: { name: "Test Tedarikçi (Güncellendi)", phone: "0212 666 00 00" },
+    });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.equal(json.supplier.name, "Test Tedarikçi (Güncellendi)");
+  });
+
+  test("Tedarikçi bakiye düzeltmesi yapılır", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("POST", `/suppliers/${supplierId}/adjustment`, {
+      jar,
+      body: { amount: 1000, direction: "debit", note: "Test düzeltme" },
+    });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(typeof json.newBalance === "number", "newBalance sayısal olmalı");
+  });
+
+  test("Tedarikçi ödeme kaydedilir ve bakiye güncellenir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const balBefore = (await api("GET", `/suppliers/${supplierId}`, { jar })).json.supplier.currentBalance;
+    const { status, json } = await api("POST", `/suppliers/${supplierId}/payment`, {
+      jar,
+      body: { amount: 500, paymentMethod: "nakit", note: "Test ödeme" },
+    });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.equal(json.newBalance, balBefore - 500, "Bakiye 500 azalmalı");
+  });
+
+  test("Tedarikçi cari hareketleri listelenir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/suppliers/${supplierId}/transactions`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(Array.isArray(json.transactions), "transactions dizi olmalı");
+    assert.ok(json.transactions.length >= 3, "En az 3 hareket olmalı (açılış+düzeltme+ödeme)");
+  });
+
+  test("Hesap ekstresi endpoint çalışıyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/suppliers/${supplierId}/statement`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(json.supplier, "supplier alanı olmalı");
+    assert.ok(Array.isArray(json.transactions), "transactions dizi olmalı");
+    if (json.transactions.length > 0) {
+      assert.ok(typeof json.transactions[0].runningBalance === "number", "runningBalance olmalı");
+    }
+  });
+
+  test("En borçlu tedarikçiler endpoint çalışıyor", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/suppliers/top-creditors", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(Array.isArray(json.suppliers), "suppliers dizi olmalı");
+  });
+
+  test("Tedarikçi silinir (soft-delete)", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("DELETE", `/suppliers/${supplierId}`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(json.ok, "ok dönmeli");
+  });
+
+  test("Silinmiş tedarikçi geri yüklenir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("PATCH", `/suppliers/${supplierId}/restore`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(json.ok, "ok dönmeli");
+  });
+
+  test("Viewer tedarikçi oluşturamaz", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("POST", "/suppliers", {
+      jar,
+      body: { code: `V-SUPP-${Date.now()}`, name: "Viewer Tedarikçisi" },
+    });
+    assert.equal(status, 403);
+  });
+
+  test("co2 tedarikçisi co1'den görünmez", async () => {
+    const { jar: j2 } = await login("nihat_admin", "nihat123", "nihat");
+    const code2 = `NIT-SUPP-${Date.now()}`;
+    const { json: createJson } = await api("POST", "/suppliers", {
+      jar: j2,
+      body: { code: code2, name: "Nihat Tedarikçi" },
+    });
+    const newId = createJson.supplier?.id;
+    if (!newId) return;
+    const { jar: j1 } = await login("cenan", "cenan123");
+    const { status } = await api("GET", `/suppliers/${newId}`, { jar: j1 });
+    assert.equal(status, 404, "Farklı tenant tedarikçisi görünmemeli");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 19. ALIŞ FATURASI VE STOK GİRİŞİ
+// ─────────────────────────────────────────────────────────────────────────────
+describe("19. Alış Faturası ve Stok Girişi", () => {
+  let purchSuppId;
+  let testProductId;
+
+  before(async () => {
+    const { jar } = await login("cenan", "cenan123");
+    // Tedarikçi oluştur
+    const { json: sJson } = await api("POST", "/suppliers", {
+      jar,
+      body: { code: `PURCH-SUPP-${Date.now()}`, name: "Alış Test Tedarikçi" },
+    });
+    purchSuppId = sJson.supplier?.id;
+    // Ürün oluştur
+    const { json: pJson } = await api("POST", "/products", {
+      jar,
+      body: {
+        productCode: `PURCH-PRD-${Date.now()}`,
+        name: "Alış Test Ürün",
+        purchasePrice: 10,
+        salePrice: 15,
+        stock: 0,
+        minStock: 5,
+      },
+    });
+    testProductId = pJson.id;
+  });
+
+  test("Alış faturası oluşturulur ve stok artar", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const stockBefore = (await api("GET", `/products/${testProductId}`, { jar })).json.stock;
+    const { status, json } = await api("POST", "/purchases", {
+      jar,
+      body: {
+        supplierId: purchSuppId,
+        invoiceNo: `FAT-${Date.now()}`,
+        invoiceDate: new Date().toISOString(),
+        taxAmount: 0,
+        discountAmount: 0,
+        items: [{ productId: testProductId, quantity: 20, unitCost: 12 }],
+      },
+    });
+    assert.equal(status, 201, JSON.stringify(json));
+    assert.ok(json.purchase.id, "purchase.id dönmeli");
+    // Stok arttı mı?
+    const stockAfter = (await api("GET", `/products/${testProductId}`, { jar })).json.stock;
+    assert.equal(stockAfter, stockBefore + 20, "Stok 20 artmalı");
+  });
+
+  test("Alış faturası tedarikçiye debit transaction açar", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/suppliers/${purchSuppId}/transactions`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    const purchaseTxs = json.transactions.filter((t) => t.type === "purchase" && t.direction === "debit");
+    assert.ok(purchaseTxs.length > 0, "Alış debit transaction olmalı");
+  });
+
+  test("Alış faturası tedarikçi bakiyesini artırır", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { json } = await api("GET", `/suppliers/${purchSuppId}`, { jar });
+    assert.ok(json.supplier.currentBalance > 0, "Tedarikçi bakiyesi pozitif olmalı");
+  });
+
+  test("Alış faturası listesi döner", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", "/purchases", { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.ok(Array.isArray(json.purchases), "purchases dizi olmalı");
+  });
+
+  test("Alış faturası tedarikçiye göre filtrelenir", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status, json } = await api("GET", `/purchases?supplierId=${purchSuppId}`, { jar });
+    assert.equal(status, 200, JSON.stringify(json));
+    const all = json.purchases;
+    assert.ok(all.every((p) => p.supplierId === purchSuppId), "Yalnızca bu tedarikçinin faturaları dönmeli");
+  });
+
+  test("Alış faturası ürün maliyeti günceller", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { json } = await api("GET", `/products/${testProductId}`, { jar });
+    assert.equal(json.purchasePrice, 12, "Maliyet faturadaki unitCost ile eşleşmeli");
+  });
+
+  test("Tedarikçisiz fatura oluşturulamaz", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("POST", "/purchases", {
+      jar,
+      body: { invoiceDate: new Date().toISOString(), items: [{ productId: testProductId, quantity: 5, unitCost: 10 }] },
+    });
+    assert.equal(status, 400);
+  });
+
+  test("Kalemsiz fatura oluşturulamaz", async () => {
+    const { jar } = await login("cenan", "cenan123");
+    const { status } = await api("POST", "/purchases", {
+      jar,
+      body: { supplierId: purchSuppId, invoiceDate: new Date().toISOString(), items: [] },
+    });
+    assert.equal(status, 400);
+  });
+
+  test("Viewer fatura oluşturamaz", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const { status } = await api("POST", "/purchases", {
+      jar,
+      body: {
+        supplierId: purchSuppId,
+        invoiceDate: new Date().toISOString(),
+        items: [{ productId: testProductId, quantity: 1, unitCost: 10 }],
+      },
+    });
+    assert.equal(status, 403);
+  });
+});

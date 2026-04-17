@@ -30,6 +30,10 @@ import PlatformSettings from "@/pages/admin/platform-settings";
 import Onboarding from "@/pages/onboarding/index";
 import CustomersList from "@/pages/customers/index";
 import CustomerDetail from "@/pages/customers/detail";
+import SuppliersList from "@/pages/suppliers/index";
+import SupplierDetail from "@/pages/suppliers/detail";
+import PurchasesList from "@/pages/purchases/index";
+import NewPurchase from "@/pages/purchases/new";
 
 const queryClient = new QueryClient();
 
@@ -146,6 +150,22 @@ function AuthenticatedRouter() {
 
         <Route path="/customers/:id">
           {(params) => <ProtectedRoute component={() => <CustomerDetail id={params.id} />} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+
+        <Route path="/suppliers">
+          {() => <ProtectedRoute component={SuppliersList} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+
+        <Route path="/suppliers/:id">
+          {() => <ProtectedRoute component={SupplierDetail} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+
+        <Route path="/purchases">
+          {() => <ProtectedRoute component={PurchasesList} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+
+        <Route path="/purchases/new">
+          {() => <ProtectedRoute component={NewPurchase} roles={["admin", "staff"]} />}
         </Route>
 
         <Route path="/users">

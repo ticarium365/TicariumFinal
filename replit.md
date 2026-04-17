@@ -19,9 +19,9 @@ Testler `artifacts/api-server/tests/integration.test.mjs` dosyasındadır. Node.
 
 **Not:** Rate limiter production dışında devre dışı (`skip: () => NODE_ENV !== "production"`). Test çalıştırmadan önce kullanıcıların `is_active=true` olduğundan emin olun.
 
-**Suite'ler (17):**
+**Suite'ler (19):**
 1. Auth · 2. Ürünler · 3. Satış ve Stok · 4. Soft Delete & Restore · 5. Tenant İzolasyonu · 6. Düşük Stok Alarmları · 7. Toplu Stok Güncellemesi · 8. Günlük Kapanış Özeti · 9. Super Admin
-10. Ayarlar · 11. Onboarding · 12. Logo Yükleme · 13. Demo Sıfırlama · 14. Bildirimler · 15. Morning Brief ve Şablonlar · 16. Müşteri CRUD · 17. Cari İşlemler ve Tahsilat
+10. Ayarlar · 11. Onboarding · 12. Logo Yükleme · 13. Demo Sıfırlama · 14. Bildirimler · 15. Morning Brief ve Şablonlar · 16. Müşteri CRUD · 17. Cari İşlemler ve Tahsilat · 18. Tedarikçi CRUD · 19. Alış Faturası ve Stok Girişi
 
 ---
 
@@ -399,7 +399,14 @@ Her kayıtta: `company_id, user_id, username, action, entity, entity_id, details
 | Sprint 2 | Onboarding Paketi (Sihirbaz, Logo, Tema, Demo reset, WelcomeTour) | ✅ TAMAMLANDI |
 | Sprint 3 | Kullanım Alışkanlığı Paketi (Morning Brief, Bildirimler, Şablonlar) | ✅ TAMAMLANDI |
 | Sprint 4 | Cari / Müşteri Takibi (CRUD, Tahsilat, Cari Hareketler, Satış Bağlama) | ✅ TAMAMLANDI |
-| Sprint 5–18 | Gelecek sprintler (Tedarikçi/Alış → E-ticaret katalog) | ⏳ BEKLIYOR |
+| Sprint 5 | Tedarikçi / Alış Yönetimi (CRUD, Alış Faturası, Stok Girişi, Maliyet Güncellemesi) | ✅ TAMAMLANDI |
+| Sprint 6–18 | Gelecek sprintler (Gelişmiş Raporlama → E-ticaret katalog) | ⏳ BEKLIYOR |
+
+### Sprint 5 Özeti
+- **DB**: `suppliers` (code, name, taxOffice, taxNumber, phone, email, city, district, address, contactPerson, openingBalance, currentBalance), `purchases` (invoiceNo, invoiceDate, subtotal, tax, discount, total, paymentStatus), `purchase_items` (productId, quantity, unitCost, lineTotal), `supplier_transactions` (debit/credit) tabloları eklendi
+- **Backend**: `/api/suppliers` CRUD (list, get, create, update, soft-delete, restore), `/api/suppliers/:id/transactions`, `/api/suppliers/:id/payment`, `/api/suppliers/:id/adjustment`, `/api/suppliers/:id/statement`, `/api/suppliers/top-creditors`; `/api/purchases` (list, get, create, summary); alış faturası kaydında otomatik stok artışı + `purchasePrice` güncelleme + `stockMovements` girişi + tedarikçi debit transaction
+- **Frontend**: `/suppliers` listesi (arama, aktif/pasif filtre, borç badge, mobil kart), `/suppliers/:id` detay sayfası (Hareketler/Alış Faturaları/Bilgiler tabları), SupplierModal (yeni/düzenle), SupplierPaymentModal, `/purchases` liste sayfası, `/purchases/new` form sayfası (tedarikçi/ürün seç, kalem ekle, KDV/iskonto, sağ özet panel), nav'a Tedarikçiler + Alış Faturaları linkleri
+- **Testler**: 114/114 geçiyor (19 suite: +2 yeni Sprint 5 suite'i — 18. Tedarikçi CRUD, 19. Alış Faturası ve Stok Girişi)
 
 ### Sprint 4 Özeti
 - **DB**: `customers` tablosu (company_id, code, type, name, phone, email, city, creditLimit, currentBalance), `customer_transactions` (debit/credit, type), `sales.customer_id` alanı eklendi
