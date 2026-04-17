@@ -1,0 +1,484 @@
+SPRINT 7 — Barkod / Etiket Merkezi
+AMAÇ:
+Sahada kullanım değerini artırmak.
+
+* toplu barkod basımı
+* fiyat etiketi
+* raf etiketi
+* QR ürün etiketi
+* yazdırma şablonları
+* tenant logo/renk desteği
+* ürün listesinden seçerek toplu baskı
+* PDF export
+* thermal printer uyumluluk hazırlığı
+* test + docs
+
+DEFINITION OF DONE:
+Etiketler yazdırılabiliyor, barkodlar okunuyor, tenant markalı çıktı alınabiliyor.
+
+==================================================
+
+SPRINT 8 — Sayım ve Stok Düzeltme Merkezi
+AMAÇ:
+Gerçek depo sayımını kolaylaştırmak.
+
+* stock_count_sessions
+* sayım oturumu aç/kapat
+* barkod ile ürün sayımı
+* excel sayım yükleme
+* sistem stok vs sayılan stok farkı
+* fark raporu
+* toplu düzeltme onayı
+* audit log
+* sayım sonrası stock_movements oluştur
+* sayım raporu PDF
+
+DEFINITION OF DONE:
+Firma yılda/ayda stok sayımını sistem üzerinden yapabiliyor.
+
+==================================================
+
+SPRINT 9 — Çok Şubeli Yapı
+AMAÇ:
+Büyük müşterilere satış yapılabilsin.
+
+* branches tablosu
+* branch_users yetki eşleme
+* branch_stock
+* şube transfer ekranı
+* transfer hareketleri
+* şube bazlı satış raporu
+* şube filtreleri
+* kullanıcı yalnız yetkili şubeyi görsün
+* merkezi admin tüm şubeleri görebilsin
+
+DEFINITION OF DONE:
+Tek tenant altında çok şubeli işletme yönetilebiliyor.
+
+==================================================
+
+SPRINT 10 — Kasa / Gider / Finans Merkezi
+AMAÇ:
+Günlük işletme finansını yönetmek.
+
+* kasa hareketleri
+* gider girişleri
+* gider kategorileri
+* banka hesapları
+* nakit giriş/çıkış
+* günlük net kâr tahmini
+* aylık finans özeti
+* kasa mutabakat ekranı
+* ödeme takvimi
+
+DEFINITION OF DONE:
+İşletme satış + gider + kasa akışını tek yerden görüyor.
+
+==================================================
+
+SPRINT 11 — Abonelik Sistemi v2
+AMAÇ:
+SaaS gelir modelini büyütmek.
+
+* kredi kartı ödeme
+* plan yükseltme/düşürme
+* otomatik yenileme
+* fatura geçmişi
+* kupon sistemi
+* grace period
+* başarısız ödeme retry
+* webhook idempotency
+* reseller kodu opsiyonel
+
+DEFINITION OF DONE:
+Abonelik manuel havaleden otomatik sisteme geçiyor.
+
+==================================================
+
+SPRINT 12 — Dosya / Evrak Yönetimi
+AMAÇ:
+Belge ve kanıt süreçlerini profesyonelleştirmek.
+
+* receipt upload
+* pdf/png/jpg desteği
+* signed URL
+* dosya erişim yetkileri
+* müşteri evrak ekleri
+* tedarikçi evrak ekleri
+* belge geçmişi
+* kim yükledi logu
+* boyut / mime validation
+
+DEFINITION OF DONE:
+Dekontlar ve evraklar güvenli şekilde yönetiliyor.
+
+==================================================
+
+SPRINT 13 — Entegrasyon Çekirdeği
+AMAÇ:
+Logo, Mikro, Paraşüt vb sistemlere hazır altyapı kurmak.
+
+Yeni yapılar:
+
+* integration_providers
+* company_integrations
+* sync_logs
+* webhook_events
+
+Özellikler:
+
+* entegrasyon paneli
+* api key / oauth yönetimi
+* bağlantı testi
+* son sync zamanı
+* hata logları
+* aktif/pasif connector
+
+Connector interface:
+connect()
+disconnect()
+syncProducts()
+syncStock()
+syncOrders()
+pushInvoice()
+healthCheck()
+
+DEFINITION OF DONE:
+Yeni entegrasyon eklemek için standart altyapı hazır.
+
+==================================================
+
+SPRINT 14 — Muhasebe Entegrasyonları
+AMAÇ:
+Kurumsal firmaları almak.
+
+* Paraşüt connector
+* Logo connector
+* Mikro connector
+
+İlk sync:
+
+* ürün kartları
+* müşteri kartları
+* satış faturası export
+* stok eşleme
+* cari hareket export
+
+DEFINITION OF DONE:
+Müşteri muhasebe programını bırakmadan SMSYSTEMS kullanabiliyor.
+
+==================================================
+
+SPRINT 15 — E-Ticaret Entegrasyonları
+AMAÇ:
+Online satış yapan firmaları almak.
+
+* Shopify
+* WooCommerce
+* Trendyol
+* Hepsiburada
+* N11
+
+İlk sürüm:
+
+* sipariş çekme
+* stok gönderme
+* fiyat güncelleme
+* sipariş durumu sync
+
+DEFINITION OF DONE:
+Offline + online stok tek panelden yönetiliyor.
+
+==================================================
+
+SPRINT 16 — Marketplace Core
+AMAÇ:
+Müşteri onayı ile tedarik ağı kurmak.
+
+Yeni tablolar:
+
+* supplier_network_members
+* supplier_permissions
+* shared_products
+* shared_stock_feeds
+* partner_orders
+* commissions
+
+Panel izinleri:
+[ ] ürün paylaş
+[ ] stok paylaş
+[ ] fiyat paylaş
+[ ] sipariş al
+[ ] anonim görün
+[ ] sadece seçili firmalara açık
+
+DEFINITION OF DONE:
+Firmalar kendi stoklarını kontrollü biçimde paylaşabiliyor.
+
+==================================================
+
+SPRINT 17 — Canlı Envanter Feed
+AMAÇ:
+Bağlı firmaların stoklarını canlı göstermek.
+
+* stok sync cron
+* webhook stock updates
+* offline supplier uyarısı
+* son güncelleme zamanı
+* ürün arama ekranı
+* hangi firmada var
+* kaç adet var
+* fiyat karşılaştırma
+* şehir/mesafe bilgisi opsiyonel
+
+DEFINITION OF DONE:
+Canlı tedarik ağı ekranı çalışıyor.
+
+==================================================
+
+SPRINT 18 — Sipariş Dağıtım Sistemi
+AMAÇ:
+Network üstünden satış yapmak.
+
+Sipariş akışları:
+
+* manual supplier seç
+* cheapest supplier
+* nearest supplier
+* priority supplier
+
+Özellikler:
+
+* partner order oluştur
+* durum takibi
+* komisyon hesapla
+* sevkiyat akışı
+* ödeme paylaşımı
+
+DEFINITION OF DONE:
+Ağdaki firmalara sipariş dağıtılabiliyor.
+
+==================================================
+
+SPRINT 19 — Komisyon / Gelir Modeli
+AMAÇ:
+Network’ten para kazanmak.
+
+* işlem başı komisyon
+* aylık üyelik
+* premium görünürlük
+* lead generation
+* partner raporları
+* gelir dashboard
+
+DEFINITION OF DONE:
+Marketplace gelir modeli aktif.
+
+==================================================
+
+SPRINT 20 — Public API v1
+AMAÇ:
+Dış yazılımlar bağlanabilsin.
+
+* API keys
+* tenant scoped tokens
+* rate limit
+* docs portal
+* webhook subscriptions
+
+Endpoint örnek:
+GET /public/products
+GET /public/stock
+POST /public/orders
+
+Webhook:
+order.created
+stock.changed
+product.updated
+payment.received
+
+DEFINITION OF DONE:
+Geliştiriciler dış sistem kurabiliyor.
+
+==================================================
+
+SPRINT 21 — Akıllı Bildirimler
+AMAÇ:
+Sistem öneri sunsun.
+
+* ürün bitecek
+* satış düştü
+* müşteri kayboldu
+* fiyat arttır
+* kâr düştü
+* trial bitiyor
+* ödeme gecikti
+
+Kanallar:
+
+* uygulama içi
+* email
+* whatsapp hazırlık
+
+DEFINITION OF DONE:
+Sistem proaktif hale geliyor.
+
+==================================================
+
+SPRINT 22 — Personel Yönetimi
+AMAÇ:
+İşletme iç operasyonu güçlendirmek.
+
+* vardiya aç/kapat
+* personel hedefleri
+* prim sistemi
+* satış performansı
+* kasiyer bazlı işlem raporu
+* rol değişim logları
+
+DEFINITION OF DONE:
+Personel yönetimi temel seviyede hazır.
+
+==================================================
+
+SPRINT 23 — Kampanya Motoru
+AMAÇ:
+Satış artırmak.
+
+* kategori indirimi
+* tarihli kampanya
+* marka indirimi
+* müşteri bazlı fiyat
+* fiyat listeleri
+* kampanya çakışma kuralları
+
+DEFINITION OF DONE:
+Fiyatlama merkezi aktif.
+
+==================================================
+
+SPRINT 24 — Test & QA Güçlendirme
+AMAÇ:
+Bozulmayan ürün.
+
+* E2E test
+* regression suite
+* load test
+* fixture sistemi
+* CI test pipeline
+* smoke tests
+
+DEFINITION OF DONE:
+Deploy öncesi güvenli test altyapısı var.
+
+==================================================
+
+SPRINT 25 — Performance Sprint
+AMAÇ:
+Hızlı ve ölçeklenebilir sistem.
+
+* redis cache
+* queue workers
+* async exports
+* db tuning
+* query profiling
+* pagination standardı
+* search optimization
+
+DEFINITION OF DONE:
+Yoğun kullanımda performans güçlü.
+
+==================================================
+
+SPRINT 26 — Security Sprint
+AMAÇ:
+Kurumsal güvenlik.
+
+* 2FA
+* device sessions
+* suspicious login alert
+* IP logs
+* force logout
+* password policy
+* audit screen
+
+DEFINITION OF DONE:
+Kurumsal müşteriye güven veren yapı oluşur.
+
+==================================================
+
+SPRINT 27 — DevOps Sprint
+AMAÇ:
+Profesyonel operasyon.
+
+* CI/CD
+* rollback
+* backup restore
+* uptime monitor
+* error tracking
+* staging/prod pipeline
+* secret management
+
+DEFINITION OF DONE:
+Kesintisiz operasyon altyapısı hazır.
+
+==================================================
+
+SPRINT 28 — Mobil Hazırlık
+AMAÇ:
+Mobil kullanımı optimize etmek.
+
+* responsive iyileştirme
+* PWA mode
+* camera barcode akışı
+* mobile navigation
+* offline cache basic
+
+DEFINITION OF DONE:
+Web uygulama mobilde güçlü çalışıyor.
+
+==================================================
+
+SPRINT 29 — Native Mobil Uygulama
+AMAÇ:
+Son aşamada mobil app.
+
+* satış yap
+* barkod okut
+* stok bak
+* bildirim al
+* sipariş yönet
+* dashboard gör
+
+DEFINITION OF DONE:
+iOS / Android temel app hazır.
+
+==================================================
+
+# ÖNCELİK SIRASI
+
+İlk Para Getiren:
+4,5,6,13,14,15
+
+En Büyük Büyüme:
+16,17,18,19,20
+
+Kurumsallaşma:
+24,25,26,27
+
+==================================================
+
+# NET YOL
+
+Şimdi sırayla:
+Sprint 4
+Sprint 5
+Sprint 6
+Sprint 13
+Sprint 14
+Sprint 15
+Sprint 16+
+
+Önce müşteri al,
+sonra ekosistem kur,
+sonra pazar yeri ol.
