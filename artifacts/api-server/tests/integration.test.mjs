@@ -4693,3 +4693,74 @@ describe("Sprint 65 — Bütçe & Tahmin zemini", () => {
     assert.ok(r.json && typeof r.json === "object", "JSON cevap bekleniyor");
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sprint 51-55 — Pazaryeri canlı mod hazırlık
+// (Mock provider üzerinde idempotent order ingest doğrulaması)
+// ─────────────────────────────────────────────────────────────────────────────
+describe("Sprint 51-55 — Marketplace order ingest idempotency", () => {
+  let accountId = null;
+
+  before(async () => {
+    // PROSAN'a marketplace.basic içeren plan abone et
+    const { jar } = await login("talha", "talha123");
+    const plansResp = await api("GET", "/subscriptions/plans", { jar });
+    if (plansResp.status === 200) {
+      const plans = plansResp.json.plans || plansResp.json;
+      const target = plans.find((p) => {
+        try { return JSON.parse(p.features).includes("marketplace.basic"); } catch { return false; }
+      });
+      if (target) {
+        await api("POST", "/subscriptions/subscribe", {
+          jar, body: { planId: target.id, billingCycle: "monthly" },
+        });
+      }
+    }
+    // Mock provider hesabı yarat (yoksa)
+    const acc = await api("POST", "/marketplace/accounts", {
+      jar, body: { provider: "mock", name: "MockAcc-Sprint51", sandbox: true,
+        credentials: { accountKey: "sprint51-test" } },
+    });
+    if (acc.status === 201) accountId = acc.json.id;
+    else {
+      // çakışma vs. olabilir, listede var mı bak
+      const list = await api("GET", "/marketplace/accounts", { jar });
+      const found = (list.json || []).find((a) => a.name === "MockAcc-Sprint51");
+      accountId = found?.id || null;
+    }
+  });
+
+  async function waitJobDone(jar, jobId, maxMs = 15000) {
+    const t0 = Date.now();
+    while (Date.now() - t0 < maxMs) {
+      const r = await api("GET", `/marketplace/jobs`, { jar });
+      const job = (r.json || []).find((j) => j.id === jobId);
+      if (job && (job.status === "completed" || job.status === "failed")) return job;
+      await new Promise((res) => setTimeout(res, 500));
+    }
+    throw new Error(`Job ${jobId} timeout`);
+  }
+
+  test("pull_orders job → mock siparişi marketplace_orders tablosuna idempotent yazar", async () => {
+    if (!accountId) { console.warn("accountId yok, test atlandı"); return; }
+    const { jar } = await login("talha", "talha123");
+    // 1. pull
+    const j1 = await api("POST", "/marketplace/jobs", {
+      jar, body: { accountId, jobType: "pull_orders", payload: {} },
+    });
+    assert.equal(j1.status, 201);
+    const job1 = await waitJobDone(jar, j1.json.id);
+    assert.equal(job1.status, "completed", `1. job tamamlanmalı, lastError=${job1.lastError}`);
+    assert.ok(job1.result?.count >= 1, "en az 1 mock sipariş çekilmeli");
+    assert.ok(job1.result?.inserted >= 1, "ilk pull insert olmalı");
+
+    // 2. pull (aynı sipariş) — upsert path, insert sayısı artmamalı
+    const j2 = await api("POST", "/marketplace/jobs", {
+      jar, body: { accountId, jobType: "pull_orders", payload: {} },
+    });
+    const job2 = await waitJobDone(jar, j2.json.id);
+    assert.equal(job2.status, "completed");
+    assert.equal(job2.result?.updated, job1.result.inserted, "ikinci pull tüm satırları update yolundan geçirmeli");
+    assert.equal(job2.result?.inserted ?? 0, 0, "ikinci pull yeni insert üretmemeli (idempotent)");
+  });
+});

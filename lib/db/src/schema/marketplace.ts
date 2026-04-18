@@ -183,3 +183,40 @@ export const syncJobsTable = pgTable("sync_jobs", {
   index("sync_jobs_status_priority_idx").on(t.status, t.priority, t.scheduledAt),
   index("sync_jobs_company_idx").on(t.companyId, t.createdAt),
 ]);
+
+// ────────────────────────────────────────────────────────────
+// Marketplace orders — pull_orders ile çekilen siparişler
+// (Sprint 51-55 live-mode hazırlık: idempotent ingest)
+// ────────────────────────────────────────────────────────────
+export const marketplaceOrdersTable = pgTable("marketplace_orders", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companiesTable.id, { onDelete: "cascade" }),
+  accountId: integer("account_id").notNull().references(() => channelAccountsTable.id, { onDelete: "cascade" }),
+  channelKey: text("channel_key").notNull(),       // trendyol|hepsiburada|n11|...
+  externalOrderId: text("external_order_id").notNull(), // sağlayıcıdaki sipariş kimliği
+  externalOrderNumber: text("external_order_number"),   // gösterim numarası (TY-1234)
+  status: text("status").notNull().default("new"),
+  // new | accepted | shipped | delivered | cancelled | returned | invoiced
+  customerName: text("customer_name"),
+  customerEmail: text("customer_email"),
+  customerPhone: text("customer_phone"),
+  shippingAddress: jsonb("shipping_address").$type<any>(),
+  totalAmount: real("total_amount").notNull().default(0),
+  currency: text("currency").notNull().default("TRY"),
+  itemsJson: jsonb("items_json").$type<any[]>().notNull().default([]),
+  rawPayload: jsonb("raw_payload").$type<any>(),    // sağlayıcı orijinal gövdesi (audit)
+  orderedAt: timestamp("ordered_at", { withTimezone: true }),
+  // Sale entegrasyonu — pulled order opsiyonel olarak satışa dönüştürülür
+  convertedSaleId: integer("converted_sale_id"),
+  convertedAt: timestamp("converted_at", { withTimezone: true }),
+  pulledAt: timestamp("pulled_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  // İdempotent ingest: aynı sağlayıcının aynı siparişi 2 kere insert edilmez
+  uniqueIndex("mp_orders_unique_external").on(t.companyId, t.accountId, t.externalOrderId),
+  index("mp_orders_company_status_idx").on(t.companyId, t.status, t.pulledAt),
+  index("mp_orders_account_idx").on(t.accountId, t.pulledAt),
+]);
+
+export type MarketplaceOrder = typeof marketplaceOrdersTable.$inferSelect;
+export type InsertMarketplaceOrder = typeof marketplaceOrdersTable.$inferInsert;
