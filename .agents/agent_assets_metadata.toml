@@ -35,3 +35,9 @@ id = "frWvPekfvtuhrU0bNM5Ws"
 uri = "file://docs/ROADMAP-2026-04.md"
 type = "text"
 title = "Ticarium365 Yol Haritası — Nisan 2026"
+
+[[outputs]]
+id = "Np2-tYng0y4DxThfgiVSh"
+uri = "file://docs/TECHNICAL-DOCUMENTATION.md"
+type = "text"
+title = "Ticarium365 — Teknik Dökümantasyon (Nisan 2026)"
