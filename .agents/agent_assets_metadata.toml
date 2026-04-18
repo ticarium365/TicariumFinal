@@ -23,3 +23,9 @@ id = "f81U5yBcoRvwF6zq5v4ME"
 uri = "file://TEKNIK_DOKUMAN.md"
 type = "text"
 title = "Ticarium365 — Teknik Dokümantasyon (Güncel)"
+
+[[outputs]]
+id = "NgYwyy1L1CzW4w0g-gZFn"
+uri = "file://TEKNIK_DOKUMAN.docx"
+type = "word_document"
+title = "Ticarium365 — Teknik Dokümantasyon (Word)"

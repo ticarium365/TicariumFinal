@@ -8,6 +8,7 @@
     "seed": "tsx ./src/seed.ts",
     "import-products": "tsx ./src/import-products.ts",
     "backup": "tsx ./src/db-backup.ts",
+    "md2docx": "tsx ./src/md-to-docx.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
@@ -19,6 +20,7 @@
     "@replit/object-storage": "^1.0.0",
     "@workspace/db": "workspace:*",
     "bcryptjs": "^2.4.3",
+    "docx": "^9.6.1",
     "xlsx": "^0.18.5"
   }
 }
