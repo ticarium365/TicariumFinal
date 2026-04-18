@@ -7,6 +7,7 @@ import helmet from "helmet";
 import compression from "compression";
 import router from "./routes/index.js";
 import publicApiRouter from "./routes/public-api.js";
+import contactRouter from "./routes/contact.js";
 import { logger } from "./lib/logger.js";
 import { tenantMiddleware } from "./middlewares/tenant.js";
 
@@ -83,6 +84,23 @@ const loginRateLimit = rateLimit({
 });
 
 app.use("/api/auth/login", loginRateLimit);
+
+// Anonim "Sizi arayalım" formu için spam koruması: 10 dakikada IP başına 5 talep
+const contactRateLimit = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "Too Many Requests",
+    message: "Çok fazla iletişim talebi. Lütfen daha sonra tekrar deneyin.",
+  },
+  skip: () => process.env.NODE_ENV !== "production",
+});
+app.use("/api/contact", contactRateLimit);
+
+// Contact router — anonim form POST + super-admin yönetim, tenant middleware'i bypass eder
+app.use("/api/contact", contactRouter);
 
 // Public API — tenant middleware olmadan, API key ile kimlik doğrulama
 // /api/public/v1/* rotaları tenant middleware'i bypass eder

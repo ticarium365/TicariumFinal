@@ -11,6 +11,10 @@ import NotFound from "@/pages/not-found";
 // Pages
 import Login from "@/pages/login";
 import KarsilastirPage from "@/pages/karsilastir";
+import HakkimizdaPage from "@/pages/hakkimizda";
+import AmacimizPage from "@/pages/amacimiz";
+import PaketlerPage from "@/pages/paketler";
+import IletisimPage from "@/pages/iletisim";
 import Catalog from "@/pages/catalog/index";
 import Dashboard from "@/pages/dashboard";
 import ProductsList from "@/pages/products/index";
@@ -140,6 +144,10 @@ function AuthenticatedRouter() {
         <Route path="/karsilastir" component={KarsilastirPage} />
         <Route path="/neden-ticarium365" component={KarsilastirPage} />
         <Route path="/neden-smsystems" component={KarsilastirPage} />
+        <Route path="/hakkimizda" component={HakkimizdaPage} />
+        <Route path="/amacimiz" component={AmacimizPage} />
+        <Route path="/paketler" component={PaketlerPage} />
+        <Route path="/iletisim" component={IletisimPage} />
 
         <Route path="/">
           {() => {

@@ -36,3 +36,4 @@ export * from "./budgets";
 export * from "./production";
 export * from "./loyalty";
 export * from "./currency";
+export * from "./contact_requests";

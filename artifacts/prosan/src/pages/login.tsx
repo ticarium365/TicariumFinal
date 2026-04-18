@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Lock, User, Store, TrendingUp, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PublicNav } from "@/components/public-nav";
 
 const NAVY = "hsl(222 47% 15%)";
 const NAVY_2 = "hsl(222 47% 20%)";
@@ -48,7 +49,9 @@ export default function Login() {
   );
 
   return (
-    <div className="min-h-screen w-full flex" style={{ background: "hsl(216 33% 97%)" }}>
+    <div className="min-h-screen w-full flex flex-col" style={{ background: "hsl(216 33% 97%)" }}>
+      <PublicNav />
+      <div className="flex-1 w-full flex">
       {/* Sol panel — Ticarium365 brand */}
       <div
         className="hidden lg:flex flex-col justify-between w-[460px] shrink-0 p-12 relative overflow-hidden"
@@ -172,6 +175,7 @@ export default function Login() {
             </p>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
