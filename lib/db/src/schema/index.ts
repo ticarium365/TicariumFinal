@@ -31,3 +31,4 @@ export * from "./channels";
 export * from "./einvoice";
 export * from "./marketplace";
 export * from "./profit";
+export * from "./accountant";

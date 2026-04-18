@@ -88,5 +88,9 @@ router.use("/channels", channelsRouter);
 router.use("/einvoice", einvoiceRouter);
 router.use("/marketplace", marketplaceRouter);
 router.use("/profit", profitRouter);
+import accountantRouter from "./accountant.js";
+import reportsOfficialRouter from "./reports-official.js";
+router.use("/accountant", accountantRouter);
+router.use("/reports-official", reportsOfficialRouter);
 
 export default router;
