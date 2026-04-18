@@ -1,0 +1,372 @@
+SMSYSTEMS ROADMAP — FINANCE & DOCUMENT ECOSYSTEM
+(Yeni Nesil Sprint Planı — Canlıya Çıkacak Seviye)
+
+NOT:
+Bu faz mevcut ürünün üstüne eklenecek yeni katmandır.
+Artık hedef sadece stok/satış değil;
+
+* finans merkezi
+* belge merkezi
+* banka akışı
+* e-fatura akışı
+* muhasebe otomasyonu
+* AI finans asistanı
+
+==================================================
+FAZ I — FİNANSAL İŞLETİM SİSTEMİ
+================================
+
+SPRINT 56 — Belge & Fatura Merkezi
+
+AMAÇ:
+İşletmeye gelen/giden tüm belgeler tek merkezde toplansın.
+
+Özellikler:
+
+* gelen fatura kutusu
+* giden fatura kutusu
+* alış faturaları
+* satış faturaları
+* e-arşiv PDF arşivi
+* dekont merkezi
+* gider fişleri
+* belge klasörleri
+* mail ile otomatik belge alma
+* sürükle bırak yükleme
+
+Belge Durumları:
+
+* yeni
+* işlendi
+* onay bekliyor
+* iptal
+* arşiv
+
+Entegrasyonlar:
+
+* e-fatura servis sağlayıcıları
+* mail kutusu entegrasyonu
+* drive yedekleme
+
+DEFINITION OF DONE:
+Şirket evrakları tek yerde yönetiliyor.
+
+==================================================
+
+SPRINT 57 — OCR + Akıllı Belge İşleme
+
+AMAÇ:
+Belgeler elle girilmesin.
+
+Özellikler:
+
+* PDF fatura oku
+* fotoğraftan fiş oku
+* tablo satırlarını çıkar
+* tedarikçiyi tanı
+* vergi no oku
+* KDV oku
+* ürünleri algıla
+* belge tipini tanı
+
+Akış:
+
+Belge yükle →
+OCR →
+Önizleme →
+Düzelt →
+İşle
+
+DEFINITION OF DONE:
+Belgeden veri giriş süresi minimuma iner.
+
+==================================================
+
+SPRINT 58 — Otomatik Alış / Gider Dönüşümü
+
+AMAÇ:
+Okunan belge otomatik muhasebeleşsin.
+
+Özellikler:
+
+* alış faturasına çevir
+* stoğa ekle
+* supplier borcu oluştur
+* gider fişine çevir
+* kategori öner
+* KDV ayrıştır
+
+Buton:
+
+[Alışa Dönüştür]
+[Gidere Dönüştür]
+
+DEFINITION OF DONE:
+Belge → kayıt dönüşümü tek tuş.
+
+==================================================
+
+SPRINT 59 — Banka Entegrasyon Merkezi
+
+AMAÇ:
+Para akışı sisteme bağlansın.
+
+Entegrasyonlar:
+
+* Open Banking API’leri
+* Banka CSV import
+* Banka PDF statement parse
+* Manuel hareket giriş
+
+Destek:
+
+* İş Bankası
+* Garanti
+* Akbank
+* Yapı Kredi
+* Ziraat
+* Vakıfbank
+* diğerleri adapter modeliyle
+
+Özellikler:
+
+* günlük hareket çek
+* bakiye göster
+* çoklu hesap desteği
+* banka kartları
+
+DEFINITION OF DONE:
+Şirket banka akışı panelde görülüyor.
+
+==================================================
+
+SPRINT 60 — Tahsilat / Ödeme Eşleştirme Motoru
+
+AMAÇ:
+Gelen giden para boşa düşmesin.
+
+Özellikler:
+
+* müşteri ödemesini eşleştir
+* supplier ödemesini eşleştir
+* otomatik açıklama analizi
+* referans no ile eşleşme
+* kısmi ödeme desteği
+* fazla ödeme bakiyesi
+
+Örnek:
+
+“ABC LTD EFT” →
+müşteri bulunur →
+cariye işlenir
+
+DEFINITION OF DONE:
+Tahsilat operasyonu yarı otomatik olur.
+
+==================================================
+
+SPRINT 61 — Finans Dashboard Pro
+
+AMAÇ:
+Patron ekranı.
+
+Göster:
+
+* günlük kasa akışı
+* banka toplam bakiye
+* açık alacak
+* açık borç
+* net nakit pozisyonu
+* bu ay gelir
+* bu ay gider
+* tahsilat bekleyenler
+* son 20 hareket
+
+Filtre:
+
+* şube bazlı
+* hesap bazlı
+* tarih bazlı
+
+DEFINITION OF DONE:
+Tek ekranda finans görünür.
+
+==================================================
+
+SPRINT 62 — E-Fatura / E-Arşiv Merkezi
+
+AMAÇ:
+Resmi süreçler sisteme bağlansın.
+
+Entegrasyonlar:
+
+* QNB eFinans
+* Uyumsoft
+* Foriba
+* EDM
+* Türkkep
+
+Özellikler:
+
+* gelen e-fatura kutusu
+* giden e-fatura gönder
+* iptal / red
+* durum takibi
+* müşteri faturalaştırma
+* PDF çıktılar
+
+DEFINITION OF DONE:
+Resmi belge akışı panelden yönetiliyor.
+
+==================================================
+
+SPRINT 63 — Muhasebe Köprüsü
+
+AMAÇ:
+Muhasebeciyle veri savaşı bitsin.
+
+Entegrasyonlar:
+
+* Logo
+* Mikro
+* Paraşüt
+* Netsis
+* ETA
+
+Özellikler:
+
+* satışları aktar
+* giderleri aktar
+* cari hareketleri aktar
+* banka hareketleri aktar
+* fiş oluşturma export
+
+DEFINITION OF DONE:
+Muhasebe tarafına veri otomatik gidiyor.
+
+==================================================
+
+SPRINT 64 — Nakit Akışı Tahmin Motoru
+
+AMAÇ:
+Önceden görmek.
+
+Özellikler:
+
+* 7 günlük nakit tahmini
+* 30 günlük nakit tahmini
+* yaklaşan ödemeler
+* tahsilat gecikme riski
+* personel/kira uyarıları
+
+DEFINITION OF DONE:
+Patron sürpriz yaşamıyor.
+
+==================================================
+
+SPRINT 65 — AI CFO
+
+AMAÇ:
+Finans danışmanı gibi çalışsın.
+
+Bildirimler:
+
+* Bu ay gider %18 artmış
+* Reklam bütçesi verimsiz
+* Şu müşteri sürekli geç ödüyor
+* Şu tedarikçi pahalı kaldı
+* X üründen fazla stok var
+* Nakit açığı 12 gün sonra oluşabilir
+
+DEFINITION OF DONE:
+Sistem yorum yapıyor.
+
+==================================================
+FAZ J — OPERASYONEL DERİNLEŞME
+==============================
+
+SPRINT 66 — Sözleşme & Evrak Merkezi
+
+* kira kontratı
+* personel evrakı
+* müşteri sözleşmesi
+* tedarikçi anlaşması
+* süre bitiş hatırlatmaları
+
+==================================================
+
+SPRINT 67 — Onay Akışları
+
+* ödeme onayı
+* gider onayı
+* indirim onayı
+* yüksek tutar satın alma onayı
+
+==================================================
+
+SPRINT 68 — İç İletişim / Görev Sistemi
+
+* personel görevleri
+* satın alma talepleri
+* stok talep fişi
+* notlar
+
+==================================================
+EN KRİTİK YOL
+=============
+
+56
+57
+58
+59
+60
+61
+62
+63
+
+Sonra:
+
+64
+65
+
+==================================================
+PARA GETİREN KISIM
+==================
+
+1. Finans dashboard
+2. E-fatura merkezi
+3. Banka entegrasyonu
+4. Muhasebe köprüsü
+5. AI CFO premium paket
+
+==================================================
+BÜYÜK RESİM
+===========
+
+Bugün:
+stok/cari/satış
+
+Yarın:
+şirket işletim sistemi
+
+Sonra:
+ticaret + finans + büyüme merkezi
+
+Sonra:
+KOBİ’lerin vazgeçilmez platformu
+
+==================================================
+NET GERÇEK
+==========
+
+Bir firma seni bırakabilir mi?
+
+* stok sende
+* satış sende
+* cari sende
+* banka sende
+* fatura sende
+* reklam sende
+* e-ticaret sende
+
+Kolay kolay bırakamaz.
