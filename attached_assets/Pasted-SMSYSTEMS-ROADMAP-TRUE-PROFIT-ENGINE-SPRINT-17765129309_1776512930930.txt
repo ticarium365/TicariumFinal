@@ -1,0 +1,217 @@
+SMSYSTEMS ROADMAP — TRUE PROFIT ENGINE
+
+==================================================
+SPRINT 72 — Gerçek Karlılık & Raf Maliyeti Motoru
+=================================================
+
+AMAÇ:
+
+Ürün satışındaki görünen kâr ile gerçek kârı ayırmak.
+
+Kullanıcı şunu görebilsin:
+
+* bu ürün para kazandırıyor mu?
+* rafta bekledikçe zarar mı yazıyor?
+* hızlı satıp düşük marj mı iyi?
+* yavaş satıp yüksek marj mı iyi?
+* sermaye kilitleniyor mu?
+
+==================================================
+ANA KAVRAMLAR
+=============
+
+1. Brüt Kar
+
+Satış Fiyatı - Alış Maliyeti
+
+2. Net Kar
+
+Brüt Kar - dağıtılmış gider payı
+
+3. Gerçek Kar
+
+Net Kar - zaman maliyeti - finansman maliyeti - stok riski
+
+==================================================
+MODÜL 1 — RAF MALİYETİ
+======================
+
+Ürün rafta durdukça maliyet oluşur.
+
+Hesapta kullanılacak girdiler:
+
+* depo kirası
+* mağaza kirası
+* raf alanı m2
+* elektrik
+* personel operasyon süresi
+* bozulma/fire riski
+* sermaye bağlama maliyeti
+
+Örnek:
+
+100.000 TL stok taşıyorsun
+Aylık kira+maaş yükü var
+
+Ürün başına günlük raf maliyeti hesaplanır.
+
+==================================================
+MODÜL 2 — ZAMAN BAZLI KAR
+=========================
+
+Örnek:
+
+Senaryo A:
+
+100 al
+120 sat
+10 günde sat
+
+Kar = 20
+
+Senaryo B:
+
+100 al
+110 sat
+3 kez sat / 10 gün içinde
+
+Kar = 30
+
+Sistem bunu gösterecek:
+
+"Daha hızlı devir ile daha fazla kazanç"
+
+==================================================
+MODÜL 3 — STOK DEVİR HIZI
+=========================
+
+Göster:
+
+* ürün kaç günde satılıyor
+* yılda kaç kez dönüyor
+* para kaç gün bağlı kalıyor
+
+Formül:
+
+Yıllık Satılan Maliyet / Ortalama Stok
+
+==================================================
+MODÜL 4 — SERMAYE MALİYETİ
+==========================
+
+Opsiyonel giriş:
+
+Aylık sermaye maliyeti %X
+
+Örnek:
+
+100 TL ürün
+10 gün rafta kaldı
+
+Paranın alternatif getirisi düşülür.
+
+==================================================
+MODÜL 5 — GİDER DAĞITIM MOTORU
+==============================
+
+Aylık giderler:
+
+* kira
+* maaş
+* SGK
+* elektrik
+* reklam
+* temizlik
+* genel giderler
+
+Dağıtım seçenekleri:
+
+* ciroya göre
+* adet satışa göre
+* kategoriye göre
+* raf alanına göre
+* manuel oran
+
+==================================================
+MODÜL 6 — ÜRÜN KAR RAPORU
+=========================
+
+Ürün ekranında göster:
+
+Ürün: X
+
+Alış: 100
+Satış: 120
+
+Brüt Kar: 20
+Gider Payı: 8
+Raf Maliyeti: 5
+Finansman Maliyeti: 2
+
+Gerçek Kar: 5
+
+Durum:
+Düşük Verim
+
+==================================================
+MODÜL 7 — AKILLI ÖNERİLER
+=========================
+
+* Bu ürünü daha hızlı çevir
+* Fiyatı 114 yap, devir hızlanabilir
+* Bu ürün rafta zarar yazıyor
+* Satışı yavaş, yerine hızlı ürün koy
+* Bu kategori alan işgal ediyor
+* X ürün çok karlı ama stok az
+
+==================================================
+MODÜL 8 — DASHBOARD
+===================
+
+* en karlı ürünler
+* zarar yazan ürünler
+* rafta çürüyen stok
+* sermaye kilitleyen ürünler
+* hızlı devir yıldız ürünler
+* kategori bazlı gerçek marj
+
+==================================================
+VERİ TABLOLARI
+==============
+
+product_profit_snapshots
+holding_cost_rules
+expense_allocations
+inventory_turnover_metrics
+
+==================================================
+FORMÜL BASİT SÜRÜM
+==================
+
+Gerçek Kar =
+
+Satış Fiyatı
+
+* Alış Fiyatı
+* Komisyon
+* KDV etkisi
+* Dağıtılmış gider
+* Raf maliyeti
+* Finansman maliyeti
+
+==================================================
+DEFINITION OF DONE
+==================
+
+Kullanıcı artık sadece satış değil,
+gerçek para kazanıp kazanmadığını görür.
+
+==================================================
+TİCARİ DEĞER
+============
+
+Rakipler stok gösterir.
+
+Biz:
+
+hangi ürün para kazandırıyor gösteririz.
