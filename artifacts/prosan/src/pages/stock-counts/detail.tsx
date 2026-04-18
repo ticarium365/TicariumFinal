@@ -257,9 +257,9 @@ export default function StockCountDetail({ id }: { id: string }) {
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-bold truncate">{session.name}</h1>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
-              isOpen ? "text-amber-600 bg-amber-50 border-amber-200" :
-              isClosed ? "text-blue-600 bg-blue-50 border-blue-200" :
-              "text-green-600 bg-green-50 border-green-200"
+              isOpen ? "text-amber-600 bg-amber-500/10 border-amber-500/20" :
+              isClosed ? "text-blue-600 bg-blue-500/10 border-blue-500/20" :
+              "text-green-600 bg-green-500/10 border-green-500/20"
             }`}>
               {isOpen ? "Açık" : isClosed ? "Kapalı" : "Onaylandı"}
             </span>
@@ -421,7 +421,7 @@ export default function StockCountDetail({ id }: { id: string }) {
                   const displayQty = rawQty !== undefined ? rawQty : String(item.countedQty);
                   const diff = item.diff;
                   return (
-                    <tr key={item.id} className={`hover:bg-muted/20 ${diff !== 0 && !item.isAdjusted ? "bg-amber-50/30" : ""}`}>
+                    <tr key={item.id} className={`hover:bg-muted/20 ${diff !== 0 && !item.isAdjusted ? "bg-amber-500/10/30" : ""}`}>
                       <td className="px-4 py-3">
                         <p className="font-medium">{item.productName}</p>
                         <p className="text-xs text-muted-foreground font-mono">{item.productCode}</p>
@@ -489,9 +489,9 @@ export default function StockCountDetail({ id }: { id: string }) {
 
       {/* Onayla özet (sadece closed) */}
       {isClosed && pendingItems.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between gap-4">
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-center justify-between gap-4">
           <div>
-            <p className="font-semibold text-blue-800">{pendingItems.length} ürün düzeltme bekliyor</p>
+            <p className="font-semibold text-blue-300">{pendingItems.length} ürün düzeltme bekliyor</p>
             <p className="text-sm text-blue-600">Onaylandığında stoklar güncellenir ve hareket kaydı oluşur</p>
           </div>
           <Button className="bg-green-600 hover:bg-green-700 shrink-0" onClick={() => setConfirmApprove(true)}>
@@ -505,7 +505,7 @@ export default function StockCountDetail({ id }: { id: string }) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-card rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-full bg-amber-500/15 flex items-center justify-center">
                 <Lock className="h-5 w-5 text-amber-600" />
               </div>
               <div>
@@ -530,7 +530,7 @@ export default function StockCountDetail({ id }: { id: string }) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-card rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-full bg-green-500/15 flex items-center justify-center">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
               </div>
               <div>

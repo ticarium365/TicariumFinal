@@ -273,7 +273,7 @@ export default function BankingPage() {
                           {tx.balance ? fmtTL(Number(tx.balance)) : "—"}
                         </td>
                         <td className="px-4 py-2 text-center">
-                          {tx.status === "matched" && <Badge className="bg-emerald-100 text-emerald-700">Eşleşti</Badge>}
+                          {tx.status === "matched" && <Badge className="bg-emerald-500/15 text-emerald-300">Eşleşti</Badge>}
                           {tx.status === "unmatched" && <Badge variant="outline">Bekliyor</Badge>}
                           {tx.status === "ignored" && <Badge variant="secondary">Yok sayıldı</Badge>}
                         </td>

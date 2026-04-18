@@ -44,12 +44,12 @@ interface Stats {
 }
 
 const STATUS_META: Record<string, { label: string; color: string; icon: any }> = {
-  pending: { label: "Beklemede", color: "bg-amber-50 text-amber-700 border-amber-200", icon: Hourglass },
-  confirmed: { label: "Onaylandı", color: "bg-blue-50 text-blue-700 border-blue-200", icon: CheckCircle2 },
-  shipped: { label: "Kargoda", color: "bg-violet-50 text-violet-700 border-violet-200", icon: Truck },
-  delivered: { label: "Teslim Edildi", color: "bg-cyan-50 text-cyan-700 border-cyan-200", icon: PackageCheck },
-  completed: { label: "Tamamlandı", color: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
-  cancelled: { label: "İptal", color: "bg-rose-50 text-rose-700 border-rose-200", icon: XCircle },
+  pending: { label: "Beklemede", color: "bg-amber-500/10 text-amber-300 border-amber-500/20", icon: Hourglass },
+  confirmed: { label: "Onaylandı", color: "bg-blue-500/10 text-blue-300 border-blue-500/20", icon: CheckCircle2 },
+  shipped: { label: "Kargoda", color: "bg-violet-500/10 text-violet-300 border-violet-500/20", icon: Truck },
+  delivered: { label: "Teslim Edildi", color: "bg-cyan-500/10 text-cyan-300 border-cyan-500/20", icon: PackageCheck },
+  completed: { label: "Tamamlandı", color: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20", icon: CheckCircle2 },
+  cancelled: { label: "İptal", color: "bg-rose-500/10 text-rose-300 border-rose-500/20", icon: XCircle },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -194,12 +194,12 @@ export default function OrdersListPage() {
 
         {currentStats && (
           <div className="flex flex-wrap gap-2 mt-4">
-            <StatChip label="Beklemede" value={currentStats.pending} color="bg-amber-50 text-amber-700 border-amber-200" />
-            <StatChip label="Onaylandı" value={currentStats.confirmed} color="bg-blue-50 text-blue-700 border-blue-200" />
-            <StatChip label="Kargoda" value={currentStats.shipped} color="bg-violet-50 text-violet-700 border-violet-200" />
-            <StatChip label="Teslim" value={currentStats.delivered} color="bg-cyan-50 text-cyan-700 border-cyan-200" />
-            <StatChip label="Tamamlandı" value={currentStats.completed} color="bg-emerald-50 text-emerald-700 border-emerald-200" />
-            <StatChip label="İptal" value={currentStats.cancelled} color="bg-rose-50 text-rose-700 border-rose-200" />
+            <StatChip label="Beklemede" value={currentStats.pending} color="bg-amber-500/10 text-amber-300 border-amber-500/20" />
+            <StatChip label="Onaylandı" value={currentStats.confirmed} color="bg-blue-500/10 text-blue-300 border-blue-500/20" />
+            <StatChip label="Kargoda" value={currentStats.shipped} color="bg-violet-500/10 text-violet-300 border-violet-500/20" />
+            <StatChip label="Teslim" value={currentStats.delivered} color="bg-cyan-500/10 text-cyan-300 border-cyan-500/20" />
+            <StatChip label="Tamamlandı" value={currentStats.completed} color="bg-emerald-500/10 text-emerald-300 border-emerald-500/20" />
+            <StatChip label="İptal" value={currentStats.cancelled} color="bg-rose-500/10 text-rose-300 border-rose-500/20" />
           </div>
         )}
 

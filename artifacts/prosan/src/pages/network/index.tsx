@@ -79,7 +79,7 @@ function CompanyCard({ company }: { company: NetworkCompany }) {
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             {company.isOnline && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
                 Çevrimiçi
               </span>
@@ -124,10 +124,10 @@ function CompanyCard({ company }: { company: NetworkCompany }) {
           <StarRating score={company.trustScore} count={company.reviewCount} />
           <div className="flex items-center gap-1.5">
             {company.acceptOffers && (
-              <Badge variant="outline" className="text-xs border-blue-200 text-blue-700">Teklif Alır</Badge>
+              <Badge variant="outline" className="text-xs border-blue-500/20 text-blue-300">Teklif Alır</Badge>
             )}
             {company.acceptOrders && (
-              <Badge variant="outline" className="text-xs border-green-200 text-green-700">Sipariş Alır</Badge>
+              <Badge variant="outline" className="text-xs border-green-500/20 text-green-300">Sipariş Alır</Badge>
             )}
           </div>
         </div>

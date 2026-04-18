@@ -192,7 +192,7 @@ export default function CompanyProfilePage({ subdomain }: Props) {
                   )}
                 </div>
                 {profile.isOnline && (
-                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 shrink-0">
+                  <Badge className="bg-emerald-500/10 text-emerald-300 border-emerald-500/20 shrink-0">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block mr-1.5 animate-pulse" />
                     Çevrimiçi
                   </Badge>
@@ -250,13 +250,13 @@ export default function CompanyProfilePage({ subdomain }: Props) {
           {(profile.acceptOffers || profile.acceptOrders) && (
             <div className="mt-4 flex flex-wrap gap-2 items-center">
               {profile.acceptOffers && (
-                <div className="flex items-center gap-1.5 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
+                <div className="flex items-center gap-1.5 text-sm text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-1.5">
                   <CheckCircle2 className="h-4 w-4" />
                   Teklif Kabul Ediyor
                 </div>
               )}
               {profile.acceptOrders && (
-                <div className="flex items-center gap-1.5 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
+                <div className="flex items-center gap-1.5 text-sm text-green-300 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-1.5">
                   <Package className="h-4 w-4" />
                   Sipariş Kabul Ediyor
                 </div>

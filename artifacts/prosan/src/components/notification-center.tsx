@@ -13,7 +13,7 @@ const TYPE_CONFIG: Record<string, { icon: typeof Bell; color: string; bg: string
   stock_zero: { icon: PackageX, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
   low_stock: { icon: AlertTriangle, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
   daily_summary: { icon: CheckCheck, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
-  system: { icon: Info, color: "text-slate-600", bg: "bg-slate-50 dark:bg-slate-900/30" },
+  system: { icon: Info, color: "text-muted-foreground", bg: "bg-muted/30 dark:bg-slate-900/30" },
 };
 
 function timeAgo(dateStr: string) {
@@ -53,7 +53,7 @@ export function NotificationCenter() {
         <Button
           variant="ghost"
           size="icon"
-          className={`h-8 w-8 relative hover:bg-white/10 ${unread > 0 ? "text-amber-400 hover:text-amber-300" : "text-slate-400 hover:text-white"}`}
+          className={`h-8 w-8 relative hover:bg-card/10 ${unread > 0 ? "text-amber-400 hover:text-amber-300" : "text-muted-foreground/70 hover:text-white"}`}
           title={unread > 0 ? `${unread} okunmamış bildirim` : "Bildirimler"}
         >
           <Bell className="h-4 w-4" />

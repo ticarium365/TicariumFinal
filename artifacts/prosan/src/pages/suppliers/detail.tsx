@@ -23,10 +23,10 @@ async function apiFetch(path: string) {
 
 function TxBadge({ direction }: { direction: string }) {
   if (direction === "debit") return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">Borç</span>
+    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-500/10 text-orange-300 border border-orange-500/20">Borç</span>
   );
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200">Ödeme</span>
+    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/10 text-green-300 border border-green-500/20">Ödeme</span>
   );
 }
 
@@ -112,9 +112,9 @@ export default function SupplierDetail() {
 
       {/* Özet kartlar */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
-        <div className={`rounded-xl border p-4 ${s.currentBalance > 0 ? "bg-orange-50 border-orange-200" : "bg-card"}`}>
+        <div className={`rounded-xl border p-4 ${s.currentBalance > 0 ? "bg-orange-500/10 border-orange-500/20" : "bg-card"}`}>
           <p className="text-xs text-muted-foreground mb-1">Güncel Borç</p>
-          <p className={`text-xl font-bold ${s.currentBalance > 0 ? "text-orange-700" : "text-foreground"}`}>
+          <p className={`text-xl font-bold ${s.currentBalance > 0 ? "text-orange-300" : "text-foreground"}`}>
             {s.currentBalance.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
           </p>
         </div>
@@ -176,7 +176,7 @@ export default function SupplierDetail() {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground"><TxTypeLabel type={tx.type} /></td>
                         <td className="px-4 py-3"><TxBadge direction={tx.direction} /></td>
-                        <td className={`px-4 py-3 text-right font-semibold ${tx.direction === "debit" ? "text-orange-700" : "text-green-700"}`}>
+                        <td className={`px-4 py-3 text-right font-semibold ${tx.direction === "debit" ? "text-orange-300" : "text-green-300"}`}>
                           {tx.direction === "debit" ? "+" : "−"} {tx.amount.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
                         </td>
                         <td className="px-4 py-3 text-muted-foreground text-xs">{tx.description ?? "—"}</td>
@@ -227,7 +227,7 @@ export default function SupplierDetail() {
                 <tbody className="divide-y">
                   {purchases.map((p: { id: number; invoiceDate: string; invoiceNo?: string; totalAmount: number; paymentStatus: string }) => {
                     const statusLabel: Record<string, string> = { unpaid: "Ödenmedi", partial: "Kısmi", paid: "Ödendi" };
-                    const statusColor: Record<string, string> = { unpaid: "bg-red-50 text-red-700 border-red-200", partial: "bg-yellow-50 text-yellow-700 border-yellow-200", paid: "bg-green-50 text-green-700 border-green-200" };
+                    const statusColor: Record<string, string> = { unpaid: "bg-red-500/10 text-red-300 border-red-500/20", partial: "bg-yellow-500/10 text-yellow-300 border-yellow-500/20", paid: "bg-green-500/10 text-green-300 border-green-500/20" };
                     return (
                       <tr key={p.id} className="hover:bg-muted/30">
                         <td className="px-4 py-3 text-muted-foreground">{new Date(p.invoiceDate).toLocaleDateString("tr-TR")}</td>

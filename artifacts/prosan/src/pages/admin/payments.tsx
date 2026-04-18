@@ -24,9 +24,9 @@ interface Transfer {
 }
 
 function StatusBadge({ status }: { status: Transfer["status"] }) {
-  if (status === "confirmed") return <Badge className="bg-green-100 text-green-700 border-green-200">Onaylandı</Badge>;
-  if (status === "rejected") return <Badge className="bg-red-100 text-red-700 border-red-200">Reddedildi</Badge>;
-  return <Badge className="bg-orange-100 text-orange-700 border-orange-200">Bekliyor</Badge>;
+  if (status === "confirmed") return <Badge className="bg-green-500/15 text-green-300 border-green-500/20">Onaylandı</Badge>;
+  if (status === "rejected") return <Badge className="bg-red-500/15 text-red-300 border-red-500/20">Reddedildi</Badge>;
+  return <Badge className="bg-orange-500/15 text-orange-300 border-orange-500/20">Bekliyor</Badge>;
 }
 
 export default function AdminPaymentsPage() {
@@ -88,7 +88,7 @@ export default function AdminPaymentsPage() {
 
       {/* Bekleyen */}
       {pending.length > 0 && (
-        <Card className="border-orange-200">
+        <Card className="border-orange-500/20">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Clock className="h-4 w-4 text-orange-500" />
@@ -97,23 +97,23 @@ export default function AdminPaymentsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {pending.map((t) => (
-              <div key={t.id} className="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-lg px-4 py-3">
+              <div key={t.id} className="flex items-center justify-between bg-orange-500/10 border border-orange-100 rounded-lg px-4 py-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-slate-800">{t.companyName}</span>
+                    <span className="font-semibold text-foreground">{t.companyName}</span>
                     <Badge variant="outline" className="text-xs">{t.senderName}</Badge>
                   </div>
-                  <p className="text-sm text-slate-600 mt-0.5">
-                    <span className="font-bold text-slate-800">{Number(t.amount).toLocaleString("tr-TR")} ₺</span>
-                    {t.referenceNote && <span className="ml-2 text-slate-400">• {t.referenceNote}</span>}
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    <span className="font-bold text-foreground">{Number(t.amount).toLocaleString("tr-TR")} ₺</span>
+                    {t.referenceNote && <span className="ml-2 text-muted-foreground/70">• {t.referenceNote}</span>}
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">{new Date(t.createdAt).toLocaleString("tr-TR")}</p>
+                  <p className="text-xs text-muted-foreground/70 mt-0.5">{new Date(t.createdAt).toLocaleString("tr-TR")}</p>
                 </div>
                 <div className="flex gap-2 ml-3">
                   <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => openAction(t, "confirm")}>
                     <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Onayla
                   </Button>
-                  <Button size="sm" variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" onClick={() => openAction(t, "reject")}>
+                  <Button size="sm" variant="outline" className="border-red-500/20 text-red-400 hover:bg-red-500/150/150/10" onClick={() => openAction(t, "reject")}>
                     <XCircle className="h-3.5 w-3.5 mr-1" /> Reddet
                   </Button>
                 </div>
@@ -142,10 +142,10 @@ export default function AdminPaymentsPage() {
                       <span className="font-medium text-sm">{t.companyName}</span>
                       <StatusBadge status={t.status} />
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {t.senderName} • {Number(t.amount).toLocaleString("tr-TR")} ₺ • {new Date(t.createdAt).toLocaleDateString("tr-TR")}
                     </p>
-                    {t.adminNote && <p className="text-xs text-slate-400 mt-0.5 italic">"{t.adminNote}"</p>}
+                    {t.adminNote && <p className="text-xs text-muted-foreground/70 mt-0.5 italic">"{t.adminNote}"</p>}
                   </div>
                 </div>
               ))}
@@ -162,11 +162,11 @@ export default function AdminPaymentsPage() {
           </DialogHeader>
           {selected && (
             <div className="space-y-4">
-              <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
-                <p><span className="text-slate-500">Firma:</span> <strong>{selected.companyName}</strong></p>
-                <p><span className="text-slate-500">Tutar:</span> <strong>{Number(selected.amount).toLocaleString("tr-TR")} ₺</strong></p>
-                <p><span className="text-slate-500">Gönderen:</span> {selected.senderName}</p>
-                {selected.referenceNote && <p><span className="text-slate-500">Referans:</span> {selected.referenceNote}</p>}
+              <div className="bg-muted/30 rounded-lg p-3 text-sm space-y-1">
+                <p><span className="text-muted-foreground">Firma:</span> <strong>{selected.companyName}</strong></p>
+                <p><span className="text-muted-foreground">Tutar:</span> <strong>{Number(selected.amount).toLocaleString("tr-TR")} ₺</strong></p>
+                <p><span className="text-muted-foreground">Gönderen:</span> {selected.senderName}</p>
+                {selected.referenceNote && <p><span className="text-muted-foreground">Referans:</span> {selected.referenceNote}</p>}
               </div>
               {action === "confirm" && (
                 <div className="space-y-1.5">

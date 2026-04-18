@@ -263,7 +263,7 @@ export default function BudgetsPage() {
                 </TableBody>
               </Table>
               {comparison?.orphanCats?.length > 0 && (
-                <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-md text-sm flex items-start gap-2">
+                <div className="mt-4 p-3 bg-amber-500/10 dark:bg-amber-900/20 border border-amber-500/30 dark:border-amber-700 rounded-md text-sm flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <strong>Bütçesiz harcamalar:</strong> {comparison.orphanCats.length} kategoride toplam {fmt(comparison.orphanCats.reduce((s: number, x: any) => s + x.actual, 0))} harcama yapılmış ama bütçe planı yok.

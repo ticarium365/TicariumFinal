@@ -306,7 +306,7 @@ export default function ChannelsBulkPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-amber-200 bg-amber-50/30">
+      <Card className="border-amber-500/20 bg-amber-500/10/30">
         <CardContent className="p-4 flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="text-sm flex-1">

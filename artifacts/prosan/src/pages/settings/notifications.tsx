@@ -33,7 +33,7 @@ function typeIcon(type: string) {
     case "overdue_payment": return <Users className={`${cls} text-red-500`} />;
     case "new_purchase": return <Package className={`${cls} text-indigo-500`} />;
     case "stock_count_closed": return <ClipboardList className={`${cls} text-cyan-500`} />;
-    default: return <Bell className={`${cls} text-gray-400`} />;
+    default: return <Bell className={`${cls} text-muted-foreground/70`} />;
   }
 }
 
@@ -152,7 +152,7 @@ export default function NotificationSettingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Bildirim Ayarları</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Bildirim kurallarını ve tercihlerinizi yönetin</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Bildirim kurallarını ve tercihlerinizi yönetin</p>
         </div>
         {tab === "rules" && (
           <Button onClick={() => { setEditRule(null); setRuleModal(true); }}>
@@ -162,13 +162,13 @@ export default function NotificationSettingsPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-muted p-1 rounded-xl w-fit">
         {(["rules", "preferences"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors
-              ${tab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              ${tab === t ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground/90"}`}
           >
             {t === "rules" ? "Bildirim Kuralları" : "Tercihlerim"}
           </button>
@@ -179,42 +179,42 @@ export default function NotificationSettingsPage() {
       {tab === "rules" && (
         <div className="space-y-4">
           {rulesQ.isLoading ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">Yükleniyor...</div>
+            <div className="bg-card rounded-xl border border-border p-8 text-center text-muted-foreground/70">Yükleniyor...</div>
           ) : rules.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-              <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">Henüz bildirim kuralı yok</p>
-              <p className="text-sm text-gray-400 mt-1">İlk kuralınızı eklemek için yukarıdaki butonu kullanın</p>
+            <div className="bg-card rounded-xl border border-border p-12 text-center">
+              <Bell className="h-12 w-12 text-muted-foreground/60 mx-auto mb-3" />
+              <p className="text-muted-foreground font-medium">Henüz bildirim kuralı yok</p>
+              <p className="text-sm text-muted-foreground/70 mt-1">İlk kuralınızı eklemek için yukarıdaki butonu kullanın</p>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-muted/30 border-b border-border">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">KURAL</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">TİP</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">KANAL</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">DURUM</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">İŞLEM</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">KURAL</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">TİP</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">KANAL</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">DURUM</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">İŞLEM</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border/70">
                   {rules.map((rule) => (
-                    <tr key={rule.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={rule.id} className="hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3">
-                        <p className="font-medium text-gray-900">{rule.name}</p>
+                        <p className="font-medium text-foreground">{rule.name}</p>
                         {rule.threshold != null && (
-                          <p className="text-xs text-gray-400">Eşik: {rule.threshold}</p>
+                          <p className="text-xs text-muted-foreground/70">Eşik: {rule.threshold}</p>
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5 text-gray-700">
+                        <span className="inline-flex items-center gap-1.5 text-foreground/90">
                           {typeIcon(rule.type)}
                           {rule.typeLabel}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-muted text-muted-foreground">
                           <Zap className="h-3 w-3" />
                           {rule.channel === "in_app" ? "Uygulama İçi" : "Webhook"}
                         </span>
@@ -224,8 +224,8 @@ export default function NotificationSettingsPage() {
                           onClick={() => toggleMut.mutate(rule.id)}
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors
                             ${rule.isActive
-                              ? "bg-green-50 text-green-700 hover:bg-green-100"
-                              : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+                              ? "bg-green-500/10 text-green-300 hover:bg-green-500/150/150/15"
+                              : "bg-muted text-muted-foreground hover:bg-muted"}`}
                         >
                           <Power className="h-3 w-3" />
                           {rule.isActive ? "Aktif" : "Pasif"}
@@ -236,14 +236,14 @@ export default function NotificationSettingsPage() {
                           <button
                             onClick={() => testMut.mutate(rule.id)}
                             disabled={!rule.isActive}
-                            className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-500 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-blue-500/150/150/10 text-muted-foreground hover:text-blue-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                             title="Test Et"
                           >
                             <Play className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => { setEditRule(rule); setRuleModal(true); }}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-indigo-600 transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
                             title="Düzenle"
                           >
                             <Edit2 className="h-4 w-4" />
@@ -253,7 +253,7 @@ export default function NotificationSettingsPage() {
                               if (confirm(`"${rule.name}" kuralını silmek istediğinizden emin misiniz?`))
                                 delMut.mutate(rule.id);
                             }}
-                            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-500 hover:text-red-600 transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-red-500/150/150/10 text-muted-foreground hover:text-red-400 transition-colors"
                             title="Sil"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -271,17 +271,17 @@ export default function NotificationSettingsPage() {
 
       {/* ─── Tercihler Sekmesi ────────────────────────────────────────────── */}
       {tab === "preferences" && (
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+        <div className="bg-card rounded-xl border border-border divide-y divide-border/70">
           {prefsQ.isLoading ? (
-            <div className="p-8 text-center text-gray-400">Yükleniyor...</div>
+            <div className="p-8 text-center text-muted-foreground/70">Yükleniyor...</div>
           ) : prefs.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">Tercih bulunamadı</div>
+            <div className="p-8 text-center text-muted-foreground/70">Tercih bulunamadı</div>
           ) : (
             prefs.map((pref) => (
               <div key={pref.type} className="flex items-center justify-between px-6 py-4">
                 <div className="flex items-center gap-3">
                   {typeIcon(pref.type)}
-                  <span className="text-sm font-medium text-gray-900">{pref.label}</span>
+                  <span className="text-sm font-medium text-foreground">{pref.label}</span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -290,9 +290,9 @@ export default function NotificationSettingsPage() {
                     checked={pref.enabled}
                     onChange={(e) => handleTogglePref(pref.type, e.target.checked)}
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer
+                  <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer
                     peer-checked:after:translate-x-full peer-checked:after:border-white after:content-['']
-                    after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300
+                    after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border
                     after:border after:rounded-full after:h-5 after:w-5 after:transition-all
                     peer-checked:bg-indigo-600" />
                 </label>
@@ -369,28 +369,28 @@ function RuleModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="font-semibold text-gray-900">{existing ? "Kural Düzenle" : "Yeni Kural Ekle"}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+          <h2 className="font-semibold text-foreground">{existing ? "Kural Düzenle" : "Yeni Kural Ekle"}</h2>
+          <button onClick={onClose} className="text-muted-foreground/70 hover:text-muted-foreground"><X className="h-5 w-5" /></button>
         </div>
         <div className="p-6 space-y-4">
           <div>
-            <label className="text-xs font-medium text-gray-700 block mb-1">Kural Adı *</label>
+            <label className="text-xs font-medium text-foreground/90 block mb-1">Kural Adı *</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="ör. Kritik Stok Uyarısı"
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-700 block mb-1">Bildirim Tipi *</label>
+            <label className="text-xs font-medium text-foreground/90 block mb-1">Bildirim Tipi *</label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-card"
             >
               {types.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
@@ -399,7 +399,7 @@ function RuleModal({
           </div>
           {selectedType?.hasThreshold && (
             <div>
-              <label className="text-xs font-medium text-gray-700 block mb-1">
+              <label className="text-xs font-medium text-foreground/90 block mb-1">
                 Eşik Değeri (bu miktarın altında uyarı ver)
               </label>
               <input
@@ -408,11 +408,11 @@ function RuleModal({
                 onChange={(e) => setThreshold(e.target.value)}
                 min={0}
                 placeholder="ör. 5"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           )}
-          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          {error && <p className="text-sm text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">{error}</p>}
         </div>
         <div className="flex gap-2 px-6 pb-6">
           <Button variant="outline" className="flex-1" onClick={onClose}>İptal</Button>

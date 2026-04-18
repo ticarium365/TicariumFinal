@@ -79,7 +79,7 @@ export default function KargoYonetimi() {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
             <Sparkles className="w-4 h-4 text-emerald-600" />
             <Link href="/eticarium-merkezi" className="hover:underline">e-Ticarium Merkezi</Link>
             <span>/</span>
@@ -88,14 +88,14 @@ export default function KargoYonetimi() {
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Truck className="w-7 h-7 text-emerald-600" /> Kargo Yönetim Merkezi
           </h1>
-          <p className="text-slate-600 mt-1 max-w-2xl">
+          <p className="text-muted-foreground mt-1 max-w-2xl">
             Bölge tanımla, desi/şehir bazlı kargo kuralları kur, ücretsiz kargo eşiği belirle. Test sekmesinden anında fiyat sorgula.
           </p>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
+        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground/70" /></div>
       ) : (
         <Tabs defaultValue="zones">
           <TabsList>
@@ -150,26 +150,26 @@ function ZonesPanel({ zones, reload, canEdit }: { zones: Zone[]; reload: () => v
       </CardHeader>
       <CardContent>
         {zones.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">
-            <MapPin className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+          <div className="text-center py-12 text-muted-foreground">
+            <MapPin className="w-12 h-12 mx-auto mb-3 text-muted-foreground/60" />
             <div>Henüz bölge yok.</div>
             {canEdit && <Button variant="outline" onClick={newZone} className="mt-4"><Plus className="w-4 h-4 mr-2" /> İlk Bölgeyi Oluştur</Button>}
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-3">
             {zones.map(z => (
-              <div key={z.id} className="border rounded-lg p-4 hover:bg-slate-50">
+              <div key={z.id} className="border rounded-lg p-4 hover:bg-muted/30">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <button onClick={() => canEdit && (setEditing(z), setOpen(true))} className="font-semibold hover:text-emerald-700 flex items-center gap-2">
+                    <button onClick={() => canEdit && (setEditing(z), setOpen(true))} className="font-semibold hover:text-emerald-300 flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-emerald-600" />
                       {z.name}
                       {z.isDefault && <Badge variant="secondary">Varsayılan</Badge>}
                     </button>
-                    <div className="text-xs text-slate-500 mt-1">{z.cities.length} şehir: {z.cities.slice(0, 5).join(", ")}{z.cities.length > 5 ? `...+${z.cities.length - 5}` : ""}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{z.cities.length} şehir: {z.cities.slice(0, 5).join(", ")}{z.cities.length > 5 ? `...+${z.cities.length - 5}` : ""}</div>
                   </div>
                   {canEdit && (
-                    <Button variant="ghost" size="sm" onClick={() => remove(z.id)} className="text-red-600 hover:text-red-700">
+                    <Button variant="ghost" size="sm" onClick={() => remove(z.id)} className="text-red-600 hover:text-red-300">
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   )}
@@ -238,7 +238,7 @@ function ZoneDialog({ zone, onClose, onSaved }: { zone: Zone; onClose: () => voi
             <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Şehir ara..." className="mb-2" />
             <div className="border rounded max-h-72 overflow-y-auto p-2 grid grid-cols-3 gap-1">
               {filtered.map(c => (
-                <label key={c} className="flex items-center gap-1 text-xs hover:bg-slate-50 p-1 rounded cursor-pointer">
+                <label key={c} className="flex items-center gap-1 text-xs hover:bg-muted/30 p-1 rounded cursor-pointer">
                   <input type="checkbox" checked={cities.includes(c)} onChange={() => toggle(c)} />
                   <span>{c}</span>
                 </label>
@@ -296,19 +296,19 @@ function RulesPanel({ rules, zones, reload, canEdit }: { rules: Rule[]; zones: Z
       </CardHeader>
       <CardContent>
         {rules.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">
-            <Package className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+          <div className="text-center py-12 text-muted-foreground">
+            <Package className="w-12 h-12 mx-auto mb-3 text-muted-foreground/60" />
             <div>Henüz kural yok.</div>
           </div>
         ) : (
           <div className="space-y-2">
             {rules.map(r => (
-              <div key={r.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-slate-50">
-                <div className="text-xs font-mono text-slate-400 w-10">#{r.priority}</div>
+              <div key={r.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/30">
+                <div className="text-xs font-mono text-muted-foreground/70 w-10">#{r.priority}</div>
                 <Switch checked={r.isActive} onCheckedChange={() => canEdit && toggle(r)} disabled={!canEdit} />
                 <div className="flex-1 min-w-0">
-                  <button onClick={() => canEdit && (setEditing(r), setOpen(true))} className="font-semibold hover:text-emerald-700">{r.name}</button>
-                  <div className="text-xs text-slate-500 flex flex-wrap gap-2 mt-1">
+                  <button onClick={() => canEdit && (setEditing(r), setOpen(true))} className="font-semibold hover:text-emerald-300">{r.name}</button>
+                  <div className="text-xs text-muted-foreground flex flex-wrap gap-2 mt-1">
                     <Badge variant="outline">{zoneName(r.zoneId)}</Badge>
                     <span>{r.minDesi}–{r.maxDesi} desi</span>
                     <span>· ₺{r.price}</span>
@@ -316,7 +316,7 @@ function RulesPanel({ rules, zones, reload, canEdit }: { rules: Rule[]; zones: Z
                     {r.freeOverCartTotal != null && <span className="text-emerald-600">· ₺{r.freeOverCartTotal} üstü ücretsiz</span>}
                   </div>
                 </div>
-                {canEdit && <Button variant="ghost" size="sm" onClick={() => remove(r.id)} className="text-red-600 hover:text-red-700"><Trash2 className="w-4 h-4" /></Button>}
+                {canEdit && <Button variant="ghost" size="sm" onClick={() => remove(r.id)} className="text-red-600 hover:text-red-300"><Trash2 className="w-4 h-4" /></Button>}
               </div>
             ))}
           </div>
@@ -460,19 +460,19 @@ function QuotePanel() {
         <CardHeader><CardTitle>Sonuç</CardTitle></CardHeader>
         <CardContent>
           {!result ? (
-            <div className="text-center text-slate-400 py-12">Sorgu yapılmadı</div>
+            <div className="text-center text-muted-foreground/70 py-12">Sorgu yapılmadı</div>
           ) : (
             <div className="space-y-3">
-              <div className="text-center p-6 border rounded-lg bg-slate-50">
+              <div className="text-center p-6 border rounded-lg bg-muted/30">
                 {result.price === 0 ? (
                   <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto mb-2" />
                 ) : (
                   <Truck className="w-12 h-12 text-emerald-600 mx-auto mb-2" />
                 )}
                 <div className="text-3xl font-bold">{result.price === 0 ? "ÜCRETSİZ" : `₺${result.price}`}</div>
-                <div className="text-sm text-slate-600 mt-1">{result.reason}</div>
+                <div className="text-sm text-muted-foreground mt-1">{result.reason}</div>
               </div>
-              {result.ruleId && <div className="text-xs text-slate-400 text-center">Kural #{result.ruleId} · Bölge #{result.zoneId}</div>}
+              {result.ruleId && <div className="text-xs text-muted-foreground/70 text-center">Kural #{result.ruleId} · Bölge #{result.zoneId}</div>}
               {!result.ruleId && <div className="flex items-center gap-2 text-amber-600 text-xs justify-center"><AlertCircle className="w-3 h-3" /> Eşleşen kural yok — varsayılan davranış</div>}
             </div>
           )}

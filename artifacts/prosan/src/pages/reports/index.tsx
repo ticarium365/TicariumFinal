@@ -151,7 +151,7 @@ function SalesTab({ startDate, endDate }: { startDate: string; endDate: string }
             <div key="n"><p className="font-medium">{p.productName}</p><p className="text-xs text-muted-foreground font-mono">{p.productCode}</p></div>,
             p.quantity,
             fmt(p.revenue),
-            <span className="text-green-700 font-medium">{fmt(p.profit)}</span>,
+            <span className="text-green-300 font-medium">{fmt(p.profit)}</span>,
             <span className={p.profitPercent >= 20 ? "text-green-600" : "text-amber-600"}>{pct(p.profitPercent)}</span>,
           ])}
         />
@@ -209,7 +209,7 @@ function ProfitTab({ startDate, endDate }: { startDate: string; endDate: string 
               m.month,
               fmt(m.revenue),
               fmt(m.cost),
-              <span className="text-green-700 font-medium">{fmt(m.profit)}</span>,
+              <span className="text-green-300 font-medium">{fmt(m.profit)}</span>,
               <span className={m.profitPercent >= 20 ? "text-green-600 font-medium" : "text-amber-600"}>{pct(m.profitPercent)}</span>,
             ])}
           />
@@ -225,7 +225,7 @@ function ProfitTab({ startDate, endDate }: { startDate: string; endDate: string 
             c.category,
             c.quantity,
             fmt(c.revenue),
-            <span className="text-green-700 font-medium">{fmt(c.profit)}</span>,
+            <span className="text-green-300 font-medium">{fmt(c.profit)}</span>,
             pct(c.profitPercent),
           ])}
         />
@@ -241,7 +241,7 @@ function ProfitTab({ startDate, endDate }: { startDate: string; endDate: string 
             p.quantity,
             fmt(p.revenue),
             fmt(p.cost),
-            <span className="text-green-700 font-medium">{fmt(p.profit)}</span>,
+            <span className="text-green-300 font-medium">{fmt(p.profit)}</span>,
             <span className={p.profitPercent >= 20 ? "text-green-600" : "text-amber-600"}>{pct(p.profitPercent)}</span>,
           ])}
         />
@@ -279,7 +279,7 @@ function CustomerTab({ startDate, endDate }: { startDate: string; endDate: strin
             <span className="font-mono text-xs">{c.code}</span>,
             c.transactions,
             fmt(c.revenue),
-            <span className="text-green-700">{fmt(c.profit)}</span>,
+            <span className="text-green-300">{fmt(c.profit)}</span>,
           ])}
           emptyText="Seçilen dönemde müşteri bazlı satış yok"
         />
@@ -292,7 +292,7 @@ function CustomerTab({ startDate, endDate }: { startDate: string; endDate: strin
           rows={(data?.topDebtors ?? []).map((c: { name: string; code: string; balance: number }) => [
             c.name,
             <span className="font-mono text-xs">{c.code}</span>,
-            <span className="text-red-700 font-semibold">{fmt(c.balance)}</span>,
+            <span className="text-red-300 font-semibold">{fmt(c.balance)}</span>,
           ])}
           emptyText="Borçlu müşteri yok"
         />
@@ -362,7 +362,7 @@ function SupplierTab({ startDate, endDate }: { startDate: string; endDate: strin
           rows={(data?.topCreditors ?? []).map((s: { name: string; code: string; balance: number }) => [
             s.name,
             <span className="font-mono text-xs">{s.code}</span>,
-            <span className="text-orange-700 font-semibold">{fmt(s.balance)}</span>,
+            <span className="text-orange-300 font-semibold">{fmt(s.balance)}</span>,
           ])}
           emptyText="Borç yok"
         />

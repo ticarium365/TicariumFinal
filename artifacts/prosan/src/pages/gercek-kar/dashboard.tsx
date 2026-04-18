@@ -168,7 +168,7 @@ export default function GercekKarDashboard() {
           <CardHeader className="pb-2"><CardDescription>Stok Değeri (Alış)</CardDescription></CardHeader>
           <CardContent><div className="text-2xl font-bold">{fmt(t.stockValue)}</div></CardContent>
         </Card>
-        <Card className="border-orange-200 dark:border-orange-900" data-testid="card-today-bleed">
+        <Card className="border-orange-500/20 dark:border-orange-900" data-testid="card-today-bleed">
           <CardHeader className="pb-2"><CardDescription className="flex items-center gap-1"><TrendingDown className="h-3 w-3" />Bugün Kaybediyorsunuz</CardDescription></CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{fmt(t.todayBleed)}</div>

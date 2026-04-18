@@ -173,7 +173,7 @@ export default function FinanceDashboardPage() {
               <div className="text-2xl font-bold">{fmtTLp(k.totalBankBalance)}</div>
             </CardContent>
           </Card>
-          <Card className={isHealthy ? "border-emerald-200" : "border-red-200"}>
+          <Card className={isHealthy ? "border-emerald-500/20" : "border-red-500/20"}>
             <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2">
               {isHealthy ? <ArrowUpRight className="h-4 w-4 text-emerald-600" /> : <ArrowDownRight className="h-4 w-4 text-red-600" />}
               Bu Ay Net Nakit
@@ -186,14 +186,14 @@ export default function FinanceDashboardPage() {
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Receipt className="h-4 w-4" /> Müşteri Alacakları</CardTitle></CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-emerald-700">{fmtTL(k.customersBalance)}</div>
+              <div className="text-2xl font-bold text-emerald-300">{fmtTL(k.customersBalance)}</div>
               <div className="text-xs text-muted-foreground">Tahsil edilecek toplam</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4" /> Tedarikçi Borçları</CardTitle></CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-700">{fmtTL(k.suppliersBalance)}</div>
+              <div className="text-2xl font-bold text-red-300">{fmtTL(k.suppliersBalance)}</div>
               <div className="text-xs text-muted-foreground">{k.unpaidPurchasesCount} ödenmemiş alış</div>
             </CardContent>
           </Card>
@@ -216,7 +216,7 @@ export default function FinanceDashboardPage() {
             <div className="text-xl font-bold">{fmtTL(k.monthExpenses)}</div>
             <div className="text-xs text-muted-foreground">{k.monthExpensesCount} adet</div>
           </CardContent></Card>
-          <Card className={(k.pendingDocs + k.unmatchedTx) > 0 ? "border-amber-300" : ""}>
+          <Card className={(k.pendingDocs + k.unmatchedTx) > 0 ? "border-amber-500/30" : ""}>
             <CardContent className="p-4">
               <div className="text-xs text-muted-foreground flex items-center gap-1">
                 {(k.pendingDocs + k.unmatchedTx) > 0 && <AlertTriangle className="h-3 w-3 text-amber-600" />}
@@ -273,7 +273,7 @@ export default function FinanceDashboardPage() {
                 {safeData.agingReceivables.map(a => (
                   <div key={a.bucket} className="flex justify-between text-sm py-1 border-b last:border-b-0">
                     <span>{a.bucket}</span>
-                    <span className="font-medium text-emerald-700">{fmtTL(a.total)}</span>
+                    <span className="font-medium text-emerald-300">{fmtTL(a.total)}</span>
                   </div>
                 ))}
               </div>
@@ -282,7 +282,7 @@ export default function FinanceDashboardPage() {
                 {safeData.agingPayables.map(a => (
                   <div key={a.bucket} className="flex justify-between text-sm py-1 border-b last:border-b-0">
                     <span>{a.bucket}</span>
-                    <span className="font-medium text-red-700">{fmtTL(a.total)}</span>
+                    <span className="font-medium text-red-300">{fmtTL(a.total)}</span>
                   </div>
                 ))}
               </div>

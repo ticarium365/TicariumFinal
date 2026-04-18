@@ -29,7 +29,7 @@ export default function PazarPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      <header className="border-b bg-white sticky top-0 z-10 shadow-sm">
+      <header className="border-b bg-card sticky top-0 z-10 shadow-sm">
         <div className="container mx-auto py-4 px-4 flex items-center gap-4">
           <div className="flex items-center gap-2">
             <ShoppingBasket className="h-7 w-7 text-orange-500" />
@@ -66,7 +66,7 @@ export default function PazarPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {items.map((it: any) => (
             <Card key={it.id} className="overflow-hidden hover:shadow-lg transition">
-              <div className="aspect-square bg-slate-100 flex items-center justify-center">
+              <div className="aspect-square bg-muted flex items-center justify-center">
                 {it.imageUrl ? (
                   <img src={it.imageUrl} alt={it.name} className="w-full h-full object-cover" />
                 ) : (
@@ -91,7 +91,7 @@ export default function PazarPage() {
         </div>
       </div>
 
-      <footer className="border-t bg-white mt-8 py-6 text-center text-xs text-muted-foreground">
+      <footer className="border-t bg-card mt-8 py-6 text-center text-xs text-muted-foreground">
         Ticarium Pazar — Türkiye'nin yeni nesil B2B/B2C aggregator pazarı
       </footer>
     </div>

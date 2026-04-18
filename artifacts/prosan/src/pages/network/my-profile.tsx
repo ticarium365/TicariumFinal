@@ -162,7 +162,7 @@ export default function MyNetworkProfilePage() {
             {profile.reviewCount} Değerlendirme
           </span>
           {form.isVisible ? (
-            <Badge variant="outline" className="ml-auto border-emerald-200 text-emerald-700">
+            <Badge variant="outline" className="ml-auto border-emerald-500/20 text-emerald-300">
               <Eye className="h-3 w-3 mr-1" /> Ağda Görünür
             </Badge>
           ) : (

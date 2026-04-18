@@ -220,7 +220,7 @@ export default function Settings() {
             <CardContent className="flex flex-col items-center gap-3">
               {form.iban ? (
                 <>
-                  <div className="p-3 bg-white rounded-lg shadow-sm border">
+                  <div className="p-3 bg-card rounded-lg shadow-sm border">
                     <QRCodeSVG value={form.iban} size={160} level="M" includeMargin={false} />
                   </div>
                   <p className="font-mono text-xs break-all text-center text-muted-foreground">{form.iban}</p>
@@ -246,7 +246,7 @@ export default function Settings() {
 
               {logoPreview ? (
                 <div className="relative">
-                  <img src={logoPreview} alt="logo" className="max-h-24 max-w-full mx-auto rounded-lg object-contain border p-2 bg-white" />
+                  <img src={logoPreview} alt="logo" className="max-h-24 max-w-full mx-auto rounded-lg object-contain border p-2 bg-card" />
                   {!logoFile && (
                     <button
                       onClick={handleLogoRemove}

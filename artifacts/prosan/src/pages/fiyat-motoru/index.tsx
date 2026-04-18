@@ -114,7 +114,7 @@ export default function FiyatMotoru() {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
             <Sparkles className="w-4 h-4 text-emerald-600" />
             <Link href="/eticarium-merkezi" className="hover:underline">e-Ticarium Merkezi</Link>
             <span>/</span>
@@ -123,7 +123,7 @@ export default function FiyatMotoru() {
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Tag className="w-7 h-7 text-emerald-600" /> Fiyat Motoru
           </h1>
-          <p className="text-slate-600 mt-1 max-w-2xl">
+          <p className="text-muted-foreground mt-1 max-w-2xl">
             Kanal bazlı fiyat kuralları. Sıralama (önceliğe göre) çalışır — ilk eşleşen kural uygulanır.
             Önce taslak çalıştırıp etki analizini görebilir, sonra uygulayabilirsiniz.
           </p>
@@ -146,10 +146,10 @@ export default function FiyatMotoru() {
           <Card>
             <CardContent className="pt-6">
               {loading ? (
-                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
+                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground/70" /></div>
               ) : rules.length === 0 ? (
-                <div className="text-center py-12 text-slate-500">
-                  <Tag className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                <div className="text-center py-12 text-muted-foreground">
+                  <Tag className="w-12 h-12 mx-auto mb-3 text-muted-foreground/60" />
                   <div>Henüz kural yok.</div>
                   {isAdmin && (
                     <Button onClick={newRule} variant="outline" className="mt-4">
@@ -160,12 +160,12 @@ export default function FiyatMotoru() {
               ) : (
                 <div className="space-y-2">
                   {rules.map((r) => (
-                    <div key={r.id} className="flex items-center gap-4 p-4 border rounded-lg hover:bg-slate-50">
-                      <div className="text-sm font-mono text-slate-400 w-12">#{r.priority}</div>
+                    <div key={r.id} className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/30">
+                      <div className="text-sm font-mono text-muted-foreground/70 w-12">#{r.priority}</div>
                       <Switch checked={r.isActive} onCheckedChange={() => isAdmin && toggleActive(r)} disabled={!isAdmin} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <button onClick={() => isAdmin && (setEditing(r), setOpen(true))} className="font-semibold hover:text-emerald-700">
+                          <button onClick={() => isAdmin && (setEditing(r), setOpen(true))} className="font-semibold hover:text-emerald-300">
                             {r.name}
                           </button>
                           <Badge variant="outline">{MODE_LABEL[r.mode]}: {r.mode === "fixed_price" ? `₺${r.value}` : `${r.value}${r.mode.includes("pct") ? "%" : " TL"}`}</Badge>
@@ -173,7 +173,7 @@ export default function FiyatMotoru() {
                           {!r.channelKey && <Badge variant="secondary">Tüm kanallar</Badge>}
                           {r.roundingMode !== "none" && <Badge variant="outline">{ROUNDING_LABEL[r.roundingMode]}</Badge>}
                         </div>
-                        <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-2">
+                        <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-2">
                           {r.categoryFilter?.length ? <span>Kategoriler: {r.categoryFilter.join(", ")}</span> : null}
                           {r.brandFilter?.length ? <span>· Markalar: {r.brandFilter.join(", ")}</span> : null}
                           {r.productIds?.length ? <span>· {r.productIds.length} ürün</span> : null}
@@ -184,7 +184,7 @@ export default function FiyatMotoru() {
                       </div>
                       {isAdmin && (
                         <Button variant="ghost" size="sm" onClick={() => remove(r.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                                className="text-red-600 hover:text-red-300 hover:bg-red-500/150/10">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       )}
@@ -390,7 +390,7 @@ function PreviewPanel() {
           <div><Label>Ürünler ({selected.size} seçili)</Label>
             <div className="border rounded max-h-72 overflow-y-auto p-2 space-y-1">
               {products.map(p => (
-                <label key={p.id} className="flex items-center gap-2 text-sm hover:bg-slate-50 p-1 rounded cursor-pointer">
+                <label key={p.id} className="flex items-center gap-2 text-sm hover:bg-muted/30 p-1 rounded cursor-pointer">
                   <input type="checkbox" checked={selected.has(p.id)}
                          onChange={() => { const s = new Set(selected); s.has(p.id) ? s.delete(p.id) : s.add(p.id); setSelected(s); }} />
                   <span className="truncate">{p.productCode} — {p.name}</span>
@@ -409,22 +409,22 @@ function PreviewPanel() {
         <CardHeader><CardTitle>Sonuç</CardTitle></CardHeader>
         <CardContent>
           {results.length === 0 ? (
-            <div className="text-center text-slate-400 py-8">Önizleme yapılmadı</div>
+            <div className="text-center text-muted-foreground/70 py-8">Önizleme yapılmadı</div>
           ) : (
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {results.map((r) => (
                 <div key={r.productId} className="flex items-center gap-2 p-2 border rounded text-sm">
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{r.name}</div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-muted-foreground">
                       {r.matchedRuleName ? `Kural: ${r.matchedRuleName}` : <span className="text-amber-600">Eşleşen kural yok</span>}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs text-slate-400 line-through">₺{r.basePrice}</div>
+                    <div className="text-xs text-muted-foreground/70 line-through">₺{r.basePrice}</div>
                     <div className="font-semibold">₺{r.computedPrice}</div>
                   </div>
-                  <div className={`flex items-center gap-1 text-xs w-20 justify-end ${r.delta > 0 ? "text-emerald-600" : r.delta < 0 ? "text-red-600" : "text-slate-400"}`}>
+                  <div className={`flex items-center gap-1 text-xs w-20 justify-end ${r.delta > 0 ? "text-emerald-600" : r.delta < 0 ? "text-red-600" : "text-muted-foreground/70"}`}>
                     {r.delta > 0 ? <TrendingUp className="w-3 h-3" /> : r.delta < 0 ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
                     {r.deltaPct > 0 ? "+" : ""}{r.deltaPct}%
                   </div>
@@ -493,14 +493,14 @@ function ApplyPanel({ canApply, reload }: { canApply: boolean; reload: () => voi
           )}
         </div>
         {result && (
-          <div className="border rounded p-4 bg-slate-50 space-y-2 text-sm">
+          <div className="border rounded p-4 bg-muted/30 space-y-2 text-sm">
             <div className="flex items-center gap-2 font-semibold">
               {result.dryRun ? <AlertCircle className="w-4 h-4 text-amber-600" /> : <Sparkles className="w-4 h-4 text-emerald-600" />}
               {result.dryRun ? "Taslak Sonucu" : "Uygulandı"}
             </div>
             <div>İşlenen ürün: <b>{result.processed}</b></div>
-            <div>Güncellenen: <b className="text-emerald-700">{result.updated}</b></div>
-            <div>Atlanan (eşleşmeyen): <b className="text-slate-500">{result.skipped}</b></div>
+            <div>Güncellenen: <b className="text-emerald-300">{result.updated}</b></div>
+            <div>Atlanan (eşleşmeyen): <b className="text-muted-foreground">{result.skipped}</b></div>
             {result.sample?.length > 0 && (
               <div className="mt-2">
                 <div className="font-semibold text-xs">İlk 5 örnek:</div>

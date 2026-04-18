@@ -541,12 +541,12 @@ export default function BarcodesPage() {
 
               {/* Sayfa bilgisi */}
               {printMode === "a4" && totalLabels > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-                  <div className="flex items-center gap-2 text-blue-800 font-semibold">
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-sm">
+                  <div className="flex items-center gap-2 text-blue-300 font-semibold">
                     <FileText className="h-4 w-4" />
                     A4 Özeti
                   </div>
-                  <div className="mt-1.5 space-y-0.5 text-xs text-blue-700">
+                  <div className="mt-1.5 space-y-0.5 text-xs text-blue-300">
                     <div className="flex justify-between">
                       <span>Sütun sayısı:</span>
                       <strong>{a4Cols}</strong>
@@ -555,7 +555,7 @@ export default function BarcodesPage() {
                       <span>Sayfa başına:</span>
                       <strong>~{approxPerPage} etiket</strong>
                     </div>
-                    <div className="flex justify-between border-t border-blue-200 pt-0.5 mt-1">
+                    <div className="flex justify-between border-t border-blue-500/20 pt-0.5 mt-1">
                       <span>Toplam sayfa:</span>
                       <strong>~{estPages} A4</strong>
                     </div>
@@ -607,9 +607,9 @@ export default function BarcodesPage() {
 
             {/* İpuçları */}
             {printMode === "a4" ? (
-              <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-xs text-green-800 space-y-1">
+              <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 text-xs text-green-300 space-y-1">
                 <p className="font-semibold">A4 Yazdırma İpuçları</p>
-                <ul className="space-y-0.5 list-disc list-inside text-green-700">
+                <ul className="space-y-0.5 list-disc list-inside text-green-300">
                   <li>Yazdır → Kağıt boyutu: A4 seçin</li>
                   <li>Kenar boşluklarını "Minimum" yapın</li>
                   <li>Ölçeği %100 (Gerçek boyut) tutun</li>
@@ -618,9 +618,9 @@ export default function BarcodesPage() {
                 </ul>
               </div>
             ) : (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 space-y-1">
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-300 space-y-1">
                 <p className="font-semibold">Termal Yazıcı İpuçları</p>
-                <ul className="space-y-0.5 list-disc list-inside text-amber-700">
+                <ul className="space-y-0.5 list-disc list-inside text-amber-300">
                   <li>Kağıt genişliğini şablona göre ayarlayın</li>
                   <li>Kenar boşluklarını "Yok" seçin</li>
                   <li>Ölçeği %100 (Gerçek boyut) tutun</li>

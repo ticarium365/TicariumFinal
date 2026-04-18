@@ -345,7 +345,7 @@ export default function ChannelDetailPage({ channelKey }: Props) {
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold">{channelLabel}</h1>
             {credentials?.configured && credentials.mode === "test" && (
-              <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-50">
+              <Badge variant="outline" className="border-amber-500 text-amber-300 bg-amber-500/10">
                 <AlertTriangle className="h-3 w-3 mr-1" />
                 TEST MODU
               </Badge>
@@ -354,13 +354,13 @@ export default function ChannelDetailPage({ channelKey }: Props) {
               <Badge className="bg-emerald-600 text-white">CANLI</Badge>
             )}
             {credentials?.lastSyncStatus === "success" && (
-              <Badge variant="outline" className="border-emerald-500 text-emerald-700">
+              <Badge variant="outline" className="border-emerald-500 text-emerald-300">
                 <CheckCircle2 className="h-3 w-3 mr-1" />
                 Son senkron OK
               </Badge>
             )}
             {credentials?.lastSyncStatus === "error" && (
-              <Badge variant="outline" className="border-red-500 text-red-700">
+              <Badge variant="outline" className="border-red-500 text-red-300">
                 <XCircle className="h-3 w-3 mr-1" />
                 Son senkron hata
               </Badge>
@@ -461,7 +461,7 @@ export default function ChannelDetailPage({ channelKey }: Props) {
                         <span
                           className={
                             r.effectivePrice !== r.product.salePrice
-                              ? "font-bold text-violet-600"
+                              ? "font-bold text-violet-400"
                               : "text-muted-foreground"
                           }
                         >
@@ -480,7 +480,7 @@ export default function ChannelDetailPage({ channelKey }: Props) {
                         <span
                           className={
                             r.effectiveStock !== r.product.stock
-                              ? "font-bold text-violet-600"
+                              ? "font-bold text-violet-400"
                               : "text-muted-foreground"
                           }
                         >
@@ -710,7 +710,7 @@ export default function ChannelDetailPage({ channelKey }: Props) {
             <DialogTitle>{channelLabel} — Bağlantı Ayarları</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+            <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-200">
               <strong>Önemli:</strong> Mevcut gizli alanlar maskeli ("sk***et") gösterilir. Değiştirmek
               istemiyorsanız o alana dokunmayın; sistem mevcut değeri korur. Tamamen yeni bir değer
               yazarsanız üzerine yazılır.
@@ -798,16 +798,16 @@ export default function ChannelDetailPage({ channelKey }: Props) {
                       <td className="px-2 py-1.5 tabular-nums">{l.productId ?? "—"}</td>
                       <td className="px-2 py-1.5">
                         {l.status === "success" ? (
-                          <Badge variant="outline" className="border-emerald-500 text-emerald-700 text-xs">OK</Badge>
+                          <Badge variant="outline" className="border-emerald-500 text-emerald-300 text-xs">OK</Badge>
                         ) : (
-                          <Badge variant="outline" className="border-red-500 text-red-700 text-xs">{l.status}</Badge>
+                          <Badge variant="outline" className="border-red-500 text-red-300 text-xs">{l.status}</Badge>
                         )}
                       </td>
                       <td className="px-2 py-1.5">
                         <Badge variant="outline" className="text-xs">{l.mode}</Badge>
                       </td>
                       <td className="px-2 py-1.5 text-right tabular-nums">{l.durationMs ?? "—"}</td>
-                      <td className="px-2 py-1.5 text-red-700 truncate max-w-xs" title={l.errorMessage ?? ""}>
+                      <td className="px-2 py-1.5 text-red-300 truncate max-w-xs" title={l.errorMessage ?? ""}>
                         {l.errorMessage ?? ""}
                       </td>
                     </tr>

@@ -77,21 +77,21 @@ export default function PublicStorefrontPage() {
   };
   const removeFromCart = (pid: number) => setCart((prev) => prev.filter((x) => x.productId !== pid));
 
-  if (loading) return <FullCenter><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></FullCenter>;
-  if (error) return <FullCenter><div className="text-center"><AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-2" /><div className="text-slate-700">{error}</div></div></FullCenter>;
-  if (!storefront) return <FullCenter><div className="text-slate-500">Mağaza yüklenemedi</div></FullCenter>;
+  if (loading) return <FullCenter><Loader2 className="w-8 h-8 animate-spin text-muted-foreground/70" /></FullCenter>;
+  if (error) return <FullCenter><div className="text-center"><AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-2" /><div className="text-foreground/90">{error}</div></div></FullCenter>;
+  if (!storefront) return <FullCenter><div className="text-muted-foreground">Mağaza yüklenemedi</div></FullCenter>;
 
   if (storefront.status !== "active") {
     return <FullCenter><div className="text-center max-w-sm">
-      <Store className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+      <Store className="w-12 h-12 text-muted-foreground/70 mx-auto mb-3" />
       <h1 className="text-xl font-bold mb-2">{storefront.name}</h1>
-      <p className="text-slate-600">Bu mağaza şu anda yayında değil.</p>
+      <p className="text-muted-foreground">Bu mağaza şu anda yayında değil.</p>
     </div></FullCenter>;
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b sticky top-0 z-30">
+    <div className="min-h-screen bg-muted/30">
+      <header className="bg-card border-b sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             {storefront.themeConfig?.logoUrl ? (
@@ -103,7 +103,7 @@ export default function PublicStorefrontPage() {
             )}
             <div className="min-w-0">
               <h1 className="font-bold truncate">{storefront.name}</h1>
-              <div className="text-xs text-slate-500">Ticarium365 ile güçlendirildi</div>
+              <div className="text-xs text-muted-foreground">Ticarium365 ile güçlendirildi</div>
             </div>
           </div>
           <button onClick={() => setCartOpen(true)} className="relative px-4 py-2 rounded-lg text-white font-medium flex items-center gap-2"
@@ -119,15 +119,15 @@ export default function PublicStorefrontPage() {
 
       <main className="max-w-6xl mx-auto p-4 space-y-4">
         {storefront.themeConfig?.welcomeText && (
-          <div className="bg-white border rounded-lg p-4 text-slate-700">{storefront.themeConfig.welcomeText}</div>
+          <div className="bg-card border rounded-lg p-4 text-foreground/90">{storefront.themeConfig.welcomeText}</div>
         )}
         {products.length === 0 ? (
-          <div className="text-center py-16 text-slate-500">Henüz ürün yok.</div>
+          <div className="text-center py-16 text-muted-foreground">Henüz ürün yok.</div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {products.map((p) => (
-              <div key={p.linkId} className="bg-white border rounded-lg overflow-hidden hover:shadow-md transition flex flex-col">
-                <div className="aspect-square bg-slate-100">
+              <div key={p.linkId} className="bg-card border rounded-lg overflow-hidden hover:shadow-md transition flex flex-col">
+                <div className="aspect-square bg-muted">
                   {p.imageUrl ? (
                     <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" />
                   ) : (
@@ -138,7 +138,7 @@ export default function PublicStorefrontPage() {
                 </div>
                 <div className="p-3 flex-1 flex flex-col">
                   <h3 className="font-medium line-clamp-2 text-sm">{p.title}</h3>
-                  <div className="text-xs text-slate-400 mt-1">{p.productCode}</div>
+                  <div className="text-xs text-muted-foreground/70 mt-1">{p.productCode}</div>
                   <div className="mt-auto pt-3 flex items-center justify-between gap-2">
                     <div className="font-bold text-lg" style={{ color: primary }}>₺{p.price.toFixed(2)}</div>
                     {p.stockQty > 0 ? (
@@ -160,13 +160,13 @@ export default function PublicStorefrontPage() {
       {cartOpen && (
         <div className="fixed inset-0 z-40 flex">
           <div className="flex-1 bg-black/30" onClick={() => setCartOpen(false)} />
-          <div className="w-full sm:w-96 bg-white shadow-xl flex flex-col">
+          <div className="w-full sm:w-96 bg-card shadow-xl flex flex-col">
             <div className="p-4 border-b flex items-center justify-between">
               <h2 className="font-bold text-lg">Sepet ({cartCount})</h2>
               <button onClick={() => { setCartOpen(false); setCheckoutMode(false); }}><X className="w-5 h-5" /></button>
             </div>
             {cart.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center text-slate-400">
+              <div className="flex-1 flex items-center justify-center text-muted-foreground/70">
                 <div className="text-center"><ShoppingCart className="w-12 h-12 mx-auto mb-2 text-slate-300" />Sepetiniz boş</div>
               </div>
             ) : checkoutMode ? (
@@ -180,18 +180,18 @@ export default function PublicStorefrontPage() {
                     <div key={c.productId} className="flex items-center gap-2 p-2 border rounded">
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{c.title}</div>
-                        <div className="text-xs text-slate-500">₺{c.price.toFixed(2)} × {c.qty} = ₺{(c.price * c.qty).toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground">₺{c.price.toFixed(2)} × {c.qty} = ₺{(c.price * c.qty).toFixed(2)}</div>
                       </div>
-                      <button onClick={() => updateQty(c.productId, -1)} className="p-1 border rounded hover:bg-slate-50"><Minus className="w-3 h-3" /></button>
+                      <button onClick={() => updateQty(c.productId, -1)} className="p-1 border rounded hover:bg-muted/30"><Minus className="w-3 h-3" /></button>
                       <span className="w-6 text-center text-sm">{c.qty}</span>
-                      <button onClick={() => updateQty(c.productId, 1)} className="p-1 border rounded hover:bg-slate-50"><Plus className="w-3 h-3" /></button>
+                      <button onClick={() => updateQty(c.productId, 1)} className="p-1 border rounded hover:bg-muted/30"><Plus className="w-3 h-3" /></button>
                       <button onClick={() => removeFromCart(c.productId)} className="p-1 text-red-500"><X className="w-3 h-3" /></button>
                     </div>
                   ))}
                 </div>
-                <div className="p-4 border-t bg-slate-50">
+                <div className="p-4 border-t bg-muted/30">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-slate-600">Ara Toplam</span>
+                    <span className="text-muted-foreground">Ara Toplam</span>
                     <span className="font-bold text-xl">₺{cartTotal.toFixed(2)}</span>
                   </div>
                   <button onClick={() => setCheckoutMode(true)} className="w-full py-3 rounded text-white font-medium" style={{ background: primary }}>
@@ -249,7 +249,7 @@ function CheckoutForm({ storefront, cart, cartTotal, primary, onBack, onSuccess 
           <Check className="w-8 h-8 text-white" />
         </div>
         <h3 className="font-bold text-xl mb-1">Siparişiniz alındı!</h3>
-        <p className="text-slate-600 mb-4">Sipariş No: <span className="font-mono">{done.orderNo}</span></p>
+        <p className="text-muted-foreground mb-4">Sipariş No: <span className="font-mono">{done.orderNo}</span></p>
         {done.redirectUrl && (
           <a href={done.redirectUrl} className="px-4 py-2 rounded text-white font-medium mb-2" style={{ background: primary }}>
             Ödemeye Git
@@ -260,7 +260,7 @@ function CheckoutForm({ storefront, cart, cartTotal, primary, onBack, onSuccess 
             WhatsApp'tan İletişim
           </a>
         )}
-        <button onClick={onSuccess} className="text-slate-500 underline text-sm mt-2">Alışverişe devam et</button>
+        <button onClick={onSuccess} className="text-muted-foreground underline text-sm mt-2">Alışverişe devam et</button>
       </div>
     );
   }
@@ -268,7 +268,7 @@ function CheckoutForm({ storefront, cart, cartTotal, primary, onBack, onSuccess 
   return (
     <>
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        <button onClick={onBack} className="text-sm text-slate-500 hover:text-slate-700">← Sepete dön</button>
+        <button onClick={onBack} className="text-sm text-muted-foreground hover:text-foreground/90">← Sepete dön</button>
         <Input label="Ad Soyad *" value={name} onChange={setName} />
         <Input label="Telefon *" value={phone} onChange={setPhone} placeholder="05xx xxx xx xx" />
         <Input label="E-posta" value={email} onChange={setEmail} />
@@ -276,9 +276,9 @@ function CheckoutForm({ storefront, cart, cartTotal, primary, onBack, onSuccess 
         <Input label="Not" value={note} onChange={setNote} multi />
         {error && <div className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {error}</div>}
       </div>
-      <div className="p-4 border-t bg-slate-50">
+      <div className="p-4 border-t bg-muted/30">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-slate-600">Toplam</span>
+          <span className="text-muted-foreground">Toplam</span>
           <span className="font-bold text-xl">₺{cartTotal.toFixed(2)}</span>
         </div>
         <button onClick={submit} disabled={submitting} className="w-full py-3 rounded text-white font-medium disabled:opacity-50 flex items-center justify-center gap-2" style={{ background: primary }}>
@@ -293,7 +293,7 @@ function CheckoutForm({ storefront, cart, cartTotal, primary, onBack, onSuccess 
 function Input({ label, value, onChange, placeholder, multi }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; multi?: boolean }) {
   return (
     <label className="block">
-      <span className="text-sm text-slate-700">{label}</span>
+      <span className="text-sm text-foreground/90">{label}</span>
       {multi ? (
         <textarea value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
                   className="mt-1 w-full px-3 py-2 border rounded text-sm" rows={2} />
@@ -306,5 +306,5 @@ function Input({ label, value, onChange, placeholder, multi }: { label: string; 
 }
 
 function FullCenter({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">{children}</div>;
+  return <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">{children}</div>;
 }

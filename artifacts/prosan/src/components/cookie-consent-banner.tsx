@@ -62,7 +62,7 @@ export default function CookieConsentBanner() {
     <div
       role="dialog"
       aria-label="Çerez tercihleri"
-      className="fixed inset-x-0 bottom-0 z-[9999] border-t border-emerald-200 bg-white shadow-2xl dark:border-emerald-900 dark:bg-zinc-950"
+      className="fixed inset-x-0 bottom-0 z-[9999] border-t border-emerald-200 bg-card shadow-2xl dark:border-emerald-900 dark:bg-zinc-950"
       data-testid="cookie-consent-banner"
     >
       <div className="mx-auto flex max-w-6xl flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">

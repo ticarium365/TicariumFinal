@@ -56,18 +56,18 @@ function PlanBadge({ company }: { company: Company }) {
     : null;
 
   if (company.planType === "active") {
-    return <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">Aktif Abonelik</Badge>;
+    return <Badge className="bg-green-500/15 text-green-300 border-green-500/20 text-xs">Aktif Abonelik</Badge>;
   }
   if (company.planType === "suspended") {
-    return <Badge className="bg-red-100 text-red-700 border-red-200 text-xs">Askıya Alınmış</Badge>;
+    return <Badge className="bg-red-500/15 text-red-300 border-red-500/20 text-xs">Askıya Alınmış</Badge>;
   }
   if (expired) {
-    return <Badge className="bg-red-100 text-red-700 border-red-200 text-xs">Trial Doldu</Badge>;
+    return <Badge className="bg-red-500/15 text-red-300 border-red-500/20 text-xs">Trial Doldu</Badge>;
   }
   if (daysLeft !== null && daysLeft >= 0) {
-    return <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-xs">Trial • {daysLeft} gün</Badge>;
+    return <Badge className="bg-orange-500/15 text-orange-300 border-orange-500/20 text-xs">Trial • {daysLeft} gün</Badge>;
   }
-  return <Badge className="bg-slate-100 text-slate-600 text-xs">Trial</Badge>;
+  return <Badge className="bg-muted text-muted-foreground text-xs">Trial</Badge>;
 }
 
 export default function CompaniesAdmin() {
@@ -332,7 +332,7 @@ export default function CompaniesAdmin() {
               </p>
             )}
             {planType === "suspended" && (
-              <p className="text-sm text-orange-600 bg-orange-50 rounded p-2 text-xs">
+              <p className="text-sm text-orange-400 bg-orange-500/10 rounded p-2 text-xs">
                 Firma sisteme erişemeyecek ve ödeme sayfasına yönlendirilecek.
               </p>
             )}

@@ -210,7 +210,7 @@ export default function ProductDetail({ id }: { id: string }) {
                     Yazdır
                   </Button>
                 </div>
-                <div className="flex justify-center bg-white rounded-md border p-3">
+                <div className="flex justify-center bg-card rounded-md border p-3">
                   <svg ref={barcodeSvgRef} />
                 </div>
               </div>
@@ -300,9 +300,9 @@ export default function ProductDetail({ id }: { id: string }) {
                   <span className="font-bold text-2xl text-primary">{product.salePrice.toFixed(2)} TL</span>
                 </div>
                 {(product.discountSalePct ?? 0) > 0 && (
-                  <div className="flex justify-between items-center py-2 bg-amber-50 dark:bg-amber-950/20 -mx-4 px-4 rounded-b-md">
+                  <div className="flex justify-between items-center py-2 bg-amber-500/10 dark:bg-amber-950/20 -mx-4 px-4 rounded-b-md">
                     <div>
-                      <span className="text-amber-700 dark:text-amber-400 font-medium text-sm">İskontolu Satış</span>
+                      <span className="text-amber-300 dark:text-amber-400 font-medium text-sm">İskontolu Satış</span>
                       <span className="text-xs text-muted-foreground ml-1">(%{(product.discountSalePct ?? 0).toFixed(1)} marj)</span>
                     </div>
                     <span className="font-bold text-xl text-amber-600 dark:text-amber-400">

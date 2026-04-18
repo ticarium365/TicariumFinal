@@ -308,8 +308,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div
             className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer text-sm mb-1.5 ${
               isItemActive(TOP_ITEM.href)
-                ? "bg-white/10 text-white font-semibold"
-                : "font-medium hover:bg-white/8"
+                ? "bg-card/10 text-white font-semibold"
+                : "font-medium hover:bg-card/8"
             }`}
             style={{ color: isItemActive(TOP_ITEM.href) ? "white" : "hsl(215 25% 75%)" }}
             onClick={() => setIsOpen(false)}
@@ -347,14 +347,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 background: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.4) 0%, transparent 50%)",
               }}
             />
-            <span className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-white/20 shrink-0">
+            <span className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-card/20 shrink-0">
               <HERO_ITEM.icon className="h-4 w-4" />
             </span>
             <div className="relative flex-1 min-w-0">
               <div className="font-bold leading-tight">{HERO_ITEM.label}</div>
               <div className="text-[10px] opacity-90 leading-tight mt-0.5">Tek tıkla tüm kanallar</div>
             </div>
-            <span className="relative text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/25">
+            <span className="relative text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-card/25">
               Yeni
             </span>
           </div>
@@ -370,7 +370,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               type="button"
               onClick={() => toggleGroup(group.id)}
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer text-xs uppercase tracking-wider ${
-                groupHasActive ? "text-white" : "hover:bg-white/5"
+                groupHasActive ? "text-white" : "hover:bg-card/5"
               }`}
               style={{ color: groupHasActive ? "white" : "hsl(215 20% 60%)" }}
               data-testid={`nav-group-${group.id}`}
@@ -392,8 +392,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       <div
                         className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-all cursor-pointer text-sm ${
                           active
-                            ? "bg-white/10 text-white font-semibold"
-                            : "hover:bg-white/5"
+                            ? "bg-card/10 text-white font-semibold"
+                            : "hover:bg-card/5"
                         }`}
                         style={{ color: active ? "white" : "hsl(215 25% 70%)" }}
                         onClick={() => setIsOpen(false)}
@@ -422,7 +422,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-2">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="-ml-2 text-white hover:bg-white/10" data-testid="button-mobile-menu">
+              <Button variant="ghost" size="icon" className="-ml-2 text-white hover:bg-card/10" data-testid="button-mobile-menu">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -449,7 +449,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     <p className="text-xs capitalize" style={{ color: "hsl(215 25% 55%)" }}>{user.role}</p>
                   </div>
                 </div>
-                <Button variant="outline" className="w-full justify-start border-white/10 text-slate-300 hover:text-white hover:bg-white/10 bg-transparent" onClick={handleLogout} data-testid="button-mobile-logout">
+                <Button variant="outline" className="w-full justify-start border-white/10 text-slate-300 hover:text-white hover:bg-card/10 bg-transparent" onClick={handleLogout} data-testid="button-mobile-logout">
                   <LogOut className="mr-2 h-4 w-4" />
                   Çıkış Yap
                 </Button>
@@ -487,7 +487,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <p className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(215 25% 55%)" }}>{user.role}</p>
             </div>
             {user.role !== "super_admin" && <NotificationCenter />}
-            <Button variant="ghost" size="icon" onClick={handleLogout} title="Çıkış Yap" className="h-8 w-8 shrink-0 text-slate-400 hover:text-white hover:bg-white/10" data-testid="button-desktop-logout">
+            <Button variant="ghost" size="icon" onClick={handleLogout} title="Çıkış Yap" className="h-8 w-8 shrink-0 text-muted-foreground/70 hover:text-white hover:bg-card/10" data-testid="button-desktop-logout">
               <LogOut className="h-4 w-4" />
             </Button>
           </div>

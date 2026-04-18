@@ -36,7 +36,7 @@ interface Campaign {
 const statusColors: Record<string, string> = {
   Aktif: "bg-green-100 text-green-800",
   Planlandı: "bg-blue-100 text-blue-800",
-  "Sona Erdi": "bg-gray-100 text-gray-600",
+  "Sona Erdi": "bg-muted text-muted-foreground",
   Pasif: "bg-red-100 text-red-700",
 };
 
@@ -178,13 +178,13 @@ export default function CampaignsPage() {
                 <Badge variant="outline" className="text-xs">{c.discountLabel}</Badge>
                 <Badge variant="outline" className="text-xs">{c.scopeLabel}</Badge>
               </div>
-              <div className="text-sm text-gray-500 mt-1 flex flex-wrap gap-2">
+              <div className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-2">
                 <span className="font-medium text-orange-600">{discountDisplay} indirim</span>
                 <span>• {c.startDate} → {c.endDate}</span>
-                {c.couponCode && <span>• Kupon: <code className="bg-gray-100 px-1 rounded">{c.couponCode}</code></span>}
+                {c.couponCode && <span>• Kupon: <code className="bg-muted px-1 rounded">{c.couponCode}</code></span>}
                 {c.maxUses && <span>• Kullanım: {c.usedCount}/{c.maxUses}</span>}
               </div>
-              {c.description && <p className="text-xs text-gray-400 mt-1">{c.description}</p>}
+              {c.description && <p className="text-xs text-muted-foreground/70 mt-1">{c.description}</p>}
             </div>
           </div>
           {isAdmin && (
@@ -206,7 +206,7 @@ export default function CampaignsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Kampanya Yönetimi</h1>
-          <p className="text-sm text-gray-500 mt-1">İndirim kampanyaları ve promosyonlar</p>
+          <p className="text-sm text-muted-foreground mt-1">İndirim kampanyaları ve promosyonlar</p>
         </div>
         {isAdmin && (
           <Button size="sm" onClick={openAdd}><Plus className="h-4 w-4 mr-2" /> Kampanya Ekle</Button>
@@ -224,7 +224,7 @@ export default function CampaignsPage() {
           <Card key={s.label}>
             <CardContent className="p-4 flex items-center gap-3">
               <s.icon className={`h-8 w-8 ${s.color}`} />
-              <div><p className="text-2xl font-bold">{s.value}</p><p className="text-xs text-gray-500">{s.label}</p></div>
+              <div><p className="text-2xl font-bold">{s.value}</p><p className="text-xs text-muted-foreground">{s.label}</p></div>
             </CardContent>
           </Card>
         ))}
@@ -238,9 +238,9 @@ export default function CampaignsPage() {
 
         <TabsContent value="all">
           {loading ? (
-            <div className="text-center py-12 text-gray-400">Yükleniyor...</div>
+            <div className="text-center py-12 text-muted-foreground/70">Yükleniyor...</div>
           ) : campaigns.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-muted-foreground/70">
               <Tag className="h-12 w-12 mx-auto mb-3 opacity-30" />
               <p>Henüz kampanya yok</p>
               {isAdmin && <Button className="mt-4" onClick={openAdd}><Plus className="h-4 w-4 mr-2" /> Kampanya Ekle</Button>}
@@ -254,7 +254,7 @@ export default function CampaignsPage() {
 
         <TabsContent value="active">
           {activeCampaigns.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-muted-foreground/70">
               <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
               <p>Şu an aktif kampanya yok</p>
             </div>

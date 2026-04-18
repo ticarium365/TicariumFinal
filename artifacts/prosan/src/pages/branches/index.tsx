@@ -168,9 +168,9 @@ export default function BranchesPage() {
   const products = productsQ.data?.products ?? [];
 
   const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-    pending: { label: "Bekliyor", icon: Clock, color: "text-yellow-600 bg-yellow-50" },
-    completed: { label: "Tamamlandı", icon: CheckCircle, color: "text-green-600 bg-green-50" },
-    cancelled: { label: "İptal", icon: Ban, color: "text-gray-500 bg-gray-100" },
+    pending: { label: "Bekliyor", icon: Clock, color: "text-yellow-400 bg-yellow-500/10" },
+    completed: { label: "Tamamlandı", icon: CheckCircle, color: "text-green-400 bg-green-500/10" },
+    cancelled: { label: "İptal", icon: Ban, color: "text-muted-foreground bg-muted" },
   };
 
   return (
@@ -270,7 +270,7 @@ export default function BranchesPage() {
                       <div>
                         <p className="font-semibold">{b.name}</p>
                         {b.isMain && (
-                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">ANA ŞUBE</span>
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">ANA ŞUBE</span>
                         )}
                       </div>
                     </div>

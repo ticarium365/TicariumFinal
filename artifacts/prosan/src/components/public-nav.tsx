@@ -19,7 +19,7 @@ export function PublicNav() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-white/85 backdrop-blur" data-testid="public-nav">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-background/80 backdrop-blur-xl" data-testid="public-nav">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/login" className="flex items-center gap-2.5" data-testid="nav-logo">
           <div
@@ -74,7 +74,7 @@ export function PublicNav() {
 
       {/* Mobile dropdown */}
       {open && (
-        <div className="md:hidden border-t bg-white">
+        <div className="md:hidden border-t border-white/10 bg-background/95 backdrop-blur-xl">
           <div className="container mx-auto px-4 py-3 flex flex-col gap-1">
             {items.map((it) => (
               <Link

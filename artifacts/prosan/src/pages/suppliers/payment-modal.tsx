@@ -59,8 +59,8 @@ export function SupplierPaymentModal({ open, onClose, supplierId, supplierName, 
           <DialogTitle>Tedarikçi Ödemesi</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
-          <div className="rounded-lg bg-orange-50 border border-orange-200 p-3 text-sm">
-            <p className="font-medium text-orange-800">{supplierName}</p>
+          <div className="rounded-lg bg-orange-500/10 border border-orange-500/20 p-3 text-sm">
+            <p className="font-medium text-orange-300">{supplierName}</p>
             <p className="text-orange-600 mt-0.5">
               Mevcut borç: {currentBalance.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
             </p>

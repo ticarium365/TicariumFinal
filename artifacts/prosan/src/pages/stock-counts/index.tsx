@@ -24,9 +24,9 @@ interface StockCountSession {
 }
 
 const STATUS_CONFIG = {
-  open:     { label: "Açık",     icon: Clock,         color: "text-amber-600",  bg: "bg-amber-50 border-amber-200" },
-  closed:   { label: "Kapalı",   icon: XCircle,       color: "text-blue-600",   bg: "bg-blue-50 border-blue-200" },
-  approved: { label: "Onaylandı",icon: CheckCircle2,  color: "text-green-600",  bg: "bg-green-50 border-green-200" },
+  open:     { label: "Açık",     icon: Clock,         color: "text-amber-600",  bg: "bg-amber-500/10 border-amber-500/20" },
+  closed:   { label: "Kapalı",   icon: XCircle,       color: "text-blue-600",   bg: "bg-blue-500/10 border-blue-500/20" },
+  approved: { label: "Onaylandı",icon: CheckCircle2,  color: "text-green-600",  bg: "bg-green-500/10 border-green-500/20" },
 };
 
 export default function StockCountsPage() {

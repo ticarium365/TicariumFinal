@@ -165,7 +165,7 @@ export default function Dashboard() {
               <p className="text-white text-xl font-bold mt-0.5">Barkod ile Satış Yap</p>
               <p className="text-white/70 text-xs mt-0.5">Kamera ile tara, sepete ekle, satışı tamamla</p>
             </div>
-            <div className="bg-white/20 rounded-full p-3.5 shrink-0">
+            <div className="bg-card/20 rounded-full p-3.5 shrink-0">
               <ScanBarcode className="h-8 w-8 text-white" />
             </div>
           </div>

@@ -80,7 +80,7 @@ export default function MagazaDetay() {
   };
 
   if (loading || !sf) {
-    return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
+    return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground/70" /></div>;
   }
 
   const TypeIcon = sf.type === "hosted" ? Store : sf.type === "embedded" ? Layers : Globe;
@@ -91,7 +91,7 @@ export default function MagazaDetay() {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div>
-        <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
           <Sparkles className="w-4 h-4 text-emerald-600" />
           <Link href="/eticarium-merkezi" className="hover:underline">e-Ticarium Merkezi</Link>
           <span>/</span>
@@ -104,11 +104,11 @@ export default function MagazaDetay() {
             <TypeIcon className="w-8 h-8 text-emerald-600" />
             <div>
               <h1 className="text-2xl font-bold">{sf.name}</h1>
-              <div className="flex items-center gap-2 text-sm text-slate-600">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Badge variant="outline">{sf.status === "active" ? "Yayında" : sf.status === "paused" ? "Durduruldu" : "Taslak"}</Badge>
                 {publicUrl && (
                   <a href={publicUrl} target="_blank" rel="noreferrer"
-                     className="text-emerald-700 hover:underline flex items-center gap-1">
+                     className="text-emerald-300 hover:underline flex items-center gap-1">
                     {publicUrl} <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
@@ -220,7 +220,7 @@ function PaymentTab({ sf, onSave, saving, canEdit }: any) {
             <Label>Platform Komisyonu (%)</Label>
             <Input type="number" min={0} max={20} step={0.5} value={commission}
                    onChange={(e) => setCommission(Number(e.target.value))} disabled={!canEdit} />
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               Aylık satış üzerinden Ticarium365'in alacağı komisyon. Anlaşma %0 ise pass-through gibi davranır.
             </div>
           </div>
@@ -293,7 +293,7 @@ function EmbedTab({ sf }: any) {
         <Button variant="outline" className="mt-3" onClick={() => { navigator.clipboard.writeText(snippet); }}>
           Kodu Kopyala
         </Button>
-        <div className="mt-4 text-sm text-slate-600">
+        <div className="mt-4 text-sm text-muted-foreground">
           Not: Müşteri kendi alan adında sattığı için <b>güven oranı yüksek olur</b>. Embed widget Türkçe ve mobil uyumludur.
         </div>
       </CardContent>
@@ -386,7 +386,7 @@ function ProductsTab({ storefrontId, linked, reload, canEdit }: any) {
       </CardHeader>
       <CardContent>
         {linked.length === 0 ? (
-          <div className="text-center py-10 text-slate-500">Henüz ürün eklenmemiş.</div>
+          <div className="text-center py-10 text-muted-foreground">Henüz ürün eklenmemiş.</div>
         ) : (
           <div className="space-y-2">
             {linked.map((l: LinkedProduct) => (
@@ -394,7 +394,7 @@ function ProductsTab({ storefrontId, linked, reload, canEdit }: any) {
                 <Switch checked={l.isActive} onCheckedChange={() => canEdit && toggleActive(l)} disabled={!canEdit} />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{l.customTitle || l.productName}</div>
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-muted-foreground">
                     {l.productCode} · ₺{(l.customPrice ?? l.basePrice).toFixed(2)}
                     {l.customPrice != null && <span className="text-amber-600"> (özel)</span>}
                     · Stok: {l.stock}
@@ -402,7 +402,7 @@ function ProductsTab({ storefrontId, linked, reload, canEdit }: any) {
                 </div>
                 {canEdit && (
                   <Button variant="ghost" size="sm" onClick={() => unlink(l.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                          className="text-red-600 hover:text-red-300 hover:bg-red-500/150/10">
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 )}
@@ -417,13 +417,13 @@ function ProductsTab({ storefrontId, linked, reload, canEdit }: any) {
           <DialogHeader><DialogTitle>Ürün Seç</DialogTitle></DialogHeader>
           <Input placeholder="Ürün ara..." value={search} onChange={(e) => setSearch(e.target.value)} className="mb-2" />
           <div className="flex-1 overflow-y-auto space-y-1">
-            {filtered.length === 0 && <div className="text-center text-slate-400 py-8">Eklenebilir ürün yok</div>}
+            {filtered.length === 0 && <div className="text-center text-muted-foreground/70 py-8">Eklenebilir ürün yok</div>}
             {filtered.map((p) => (
-              <label key={p.id} className="flex items-center gap-3 p-2 border rounded hover:bg-slate-50 cursor-pointer">
+              <label key={p.id} className="flex items-center gap-3 p-2 border rounded hover:bg-muted/30 cursor-pointer">
                 <input type="checkbox" checked={selected.has(p.id)} onChange={() => togglePicker(p.id)} />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm truncate">{p.name}</div>
-                  <div className="text-xs text-slate-500">{p.productCode} · ₺{Number(p.salePrice).toFixed(2)} · Stok: {p.stock}</div>
+                  <div className="text-xs text-muted-foreground">{p.productCode} · ₺{Number(p.salePrice).toFixed(2)} · Stok: {p.stock}</div>
                 </div>
               </label>
             ))}

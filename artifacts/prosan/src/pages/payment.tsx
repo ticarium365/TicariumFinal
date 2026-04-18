@@ -56,12 +56,12 @@ export default function PaymentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-muted/30 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-2xl space-y-4">
         {/* Başlık */}
         <div className="text-center space-y-1 mb-6">
-          <h1 className="text-2xl font-bold text-slate-800">Ticarium365</h1>
-          <p className="text-slate-500 text-sm">
+          <h1 className="text-2xl font-bold text-foreground">Ticarium365</h1>
+          <p className="text-muted-foreground text-sm">
             {status?.isTrialExpired
               ? "Trial süreniz doldu. Sisteme erişmek için ödeme yapın."
               : "Hesabınız askıya alınmış. Ödeme yaparak sisteme erişebilirsiniz."}
@@ -78,24 +78,24 @@ export default function PaymentPage() {
               </div>
               {iban.monthlyPrice && (
                 <CardDescription>
-                  Aylık ücret: <span className="font-semibold text-slate-700">{iban.monthlyPrice} ₺</span>
+                  Aylık ücret: <span className="font-semibold text-foreground/90">{iban.monthlyPrice} ₺</span>
                 </CardDescription>
               )}
             </CardHeader>
             <CardContent className="space-y-3">
               {iban.bankName && (
-                <div className="flex items-center justify-between bg-slate-50 rounded-lg px-4 py-2.5">
+                <div className="flex items-center justify-between bg-muted/30 rounded-lg px-4 py-2.5">
                   <div>
-                    <p className="text-xs text-slate-500">Banka</p>
-                    <p className="font-medium text-slate-800">{iban.bankName}</p>
+                    <p className="text-xs text-muted-foreground">Banka</p>
+                    <p className="font-medium text-foreground">{iban.bankName}</p>
                   </div>
                 </div>
               )}
               {iban.accountHolder && (
-                <div className="flex items-center justify-between bg-slate-50 rounded-lg px-4 py-2.5">
+                <div className="flex items-center justify-between bg-muted/30 rounded-lg px-4 py-2.5">
                   <div>
-                    <p className="text-xs text-slate-500">Hesap Sahibi</p>
-                    <p className="font-medium text-slate-800">{iban.accountHolder}</p>
+                    <p className="text-xs text-muted-foreground">Hesap Sahibi</p>
+                    <p className="font-medium text-foreground">{iban.accountHolder}</p>
                   </div>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyToClipboard(iban.accountHolder!, "Hesap sahibi")}>
                     <Copy className="h-3.5 w-3.5" />
@@ -115,7 +115,7 @@ export default function PaymentPage() {
           </Card>
         ) : (
           <Card>
-            <CardContent className="py-6 text-center text-slate-500 text-sm">
+            <CardContent className="py-6 text-center text-muted-foreground text-sm">
               Ödeme bilgileri henüz tanımlanmamış. Lütfen yöneticinizle iletişime geçin.
             </CardContent>
           </Card>
@@ -184,7 +184,7 @@ export default function PaymentPage() {
         )}
 
         <div className="text-center">
-          <Button variant="ghost" size="sm" className="text-slate-400" onClick={handleLogout}>
+          <Button variant="ghost" size="sm" className="text-muted-foreground/70" onClick={handleLogout}>
             <LogOut className="mr-1.5 h-3.5 w-3.5" />
             Çıkış Yap
           </Button>

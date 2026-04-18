@@ -168,7 +168,7 @@ export default function DailySummaryPage() {
               </CardContent>
             </Card>
 
-            <Card className={data.lowStockCount > 0 ? "border-amber-300" : ""}>
+            <Card className={data.lowStockCount > 0 ? "border-amber-500/30" : ""}>
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Kritik Stok</span>

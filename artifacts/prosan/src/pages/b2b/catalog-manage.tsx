@@ -320,7 +320,7 @@ export default function CatalogManagePage() {
                   <Button size="sm" variant="ghost" onClick={() => toggle(it)} title={it.isPublished ? "Gizle" : "Yayınla"}>
                     {it.isPublished ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => remove(it)} className="text-rose-600 hover:text-rose-700">
+                  <Button size="sm" variant="ghost" onClick={() => remove(it)} className="text-rose-600 hover:text-rose-300">
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>

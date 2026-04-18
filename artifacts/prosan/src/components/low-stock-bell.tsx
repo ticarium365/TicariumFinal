@@ -18,7 +18,7 @@ export function LowStockBell() {
 
   if (count === 0) {
     return (
-      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10 relative" title="Kritik stok yok">
+      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/70 hover:text-white hover:bg-card/10 relative" title="Kritik stok yok">
         <Bell className="h-4 w-4" />
       </Button>
     );
@@ -30,7 +30,7 @@ export function LowStockBell() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-amber-400 hover:text-amber-300 hover:bg-white/10 relative"
+          className="h-8 w-8 text-amber-400 hover:text-amber-300 hover:bg-card/10 relative"
           title={`${count} ürün kritik stokta`}
         >
           <Bell className="h-4 w-4" />

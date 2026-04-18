@@ -34,17 +34,17 @@ function usageBar(current: number, max: number) {
 }
 
 function planIcon(slug: string) {
-  if (slug === "free") return <Zap className="h-5 w-5 text-gray-500" />;
+  if (slug === "free") return <Zap className="h-5 w-5 text-muted-foreground" />;
   if (slug === "starter") return <Star className="h-5 w-5 text-blue-500" />;
   if (slug === "pro") return <TrendingUp className="h-5 w-5 text-purple-500" />;
   return <Crown className="h-5 w-5 text-amber-500" />;
 }
 
 function planColor(slug: string) {
-  if (slug === "free") return "bg-gray-100 border-gray-200";
-  if (slug === "starter") return "bg-blue-50 border-blue-200";
-  if (slug === "pro") return "bg-purple-50 border-purple-200 ring-2 ring-purple-300";
-  return "bg-amber-50 border-amber-200";
+  if (slug === "free") return "bg-muted border-border";
+  if (slug === "starter") return "bg-blue-500/10 border-blue-500/20";
+  if (slug === "pro") return "bg-purple-500/10 border-purple-500/20 ring-2 ring-purple-300";
+  return "bg-amber-500/10 border-amber-500/20";
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -149,7 +149,7 @@ export default function SubscriptionPage() {
           {isLoading ? <div className="py-8 text-center text-muted-foreground">Yükleniyor...</div> : (
             <>
               {/* Plan kartı */}
-              <div className={`border-2 rounded-xl p-5 ${activePlan ? planColor(activePlan.slug) : "bg-gray-50 border-gray-200"}`}>
+              <div className={`border-2 rounded-xl p-5 ${activePlan ? planColor(activePlan.slug) : "bg-muted/30 border-border"}`}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     {activePlan && planIcon(activePlan.slug)}
@@ -159,9 +159,9 @@ export default function SubscriptionPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    {subscription?.status === "active" && <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">Aktif</span>}
-                    {subscription?.status === "grace_period" && <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-semibold">İptal Edildi</span>}
-                    {!subscription && current?.companyPlanType === "trial" && <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">Deneme</span>}
+                    {subscription?.status === "active" && <span className="text-xs px-2 py-0.5 bg-green-500/15 text-green-300 rounded-full font-semibold">Aktif</span>}
+                    {subscription?.status === "grace_period" && <span className="text-xs px-2 py-0.5 bg-amber-500/15 text-amber-300 rounded-full font-semibold">İptal Edildi</span>}
+                    {!subscription && current?.companyPlanType === "trial" && <span className="text-xs px-2 py-0.5 bg-blue-500/15 text-blue-300 rounded-full font-semibold">Deneme</span>}
                   </div>
                 </div>
 
@@ -169,11 +169,11 @@ export default function SubscriptionPage() {
                   <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
                     {subscription.expiresAt && <span>Bitiş: {fmt(subscription.expiresAt)}</span>}
                     {subscription.billingCycle && <span>· {subscription.billingCycle === "monthly" ? "Aylık" : "Yıllık"} faturalandırma</span>}
-                    {subscription.gracePeriodEndsAt && <span className="text-amber-600">· Grace period: {fmt(subscription.gracePeriodEndsAt)}</span>}
+                    {subscription.gracePeriodEndsAt && <span className="text-amber-400">· Grace period: {fmt(subscription.gracePeriodEndsAt)}</span>}
                   </div>
                 )}
                 {current?.trialEndsAt && !subscription && (
-                  <p className="mt-2 text-xs text-amber-600">Deneme bitiş: {fmt(current.trialEndsAt)}</p>
+                  <p className="mt-2 text-xs text-amber-400">Deneme bitiş: {fmt(current.trialEndsAt)}</p>
                 )}
 
                 <div className="mt-4 flex gap-2">
@@ -213,7 +213,7 @@ export default function SubscriptionPage() {
                               <item.icon className="h-3.5 w-3.5 text-muted-foreground" />
                               {item.label}
                             </div>
-                            <span className={`text-xs font-semibold ${isWarning ? "text-amber-600" : "text-muted-foreground"}`}>
+                            <span className={`text-xs font-semibold ${isWarning ? "text-amber-400" : "text-muted-foreground"}`}>
                               {item.current.toLocaleString("tr-TR")} / {lmt(item.max)}
                             </span>
                           </div>
@@ -249,7 +249,7 @@ export default function SubscriptionPage() {
             </button>
             <button onClick={() => setBillingCycle("yearly")}
               className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${billingCycle === "yearly" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>
-              Yıllık <span className="text-xs text-green-600 font-bold">-17%</span>
+              Yıllık <span className="text-xs text-green-400 font-bold">-17%</span>
             </button>
           </div>
 
@@ -336,10 +336,10 @@ export default function SubscriptionPage() {
                         <td className="px-4 py-2.5 text-right font-semibold">₺{Number(inv.amount).toLocaleString("tr-TR")}</td>
                         <td className="px-4 py-2.5">
                           {inv.status === "paid"
-                            ? <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle className="h-3 w-3" />Ödendi</span>
+                            ? <span className="text-xs text-green-400 flex items-center gap-1"><CheckCircle className="h-3 w-3" />Ödendi</span>
                             : inv.status === "failed"
-                              ? <span className="text-xs text-red-600 flex items-center gap-1"><XCircle className="h-3 w-3" />Başarısız</span>
-                              : <span className="text-xs text-amber-600 flex items-center gap-1"><AlertCircle className="h-3 w-3" />Bekliyor</span>}
+                              ? <span className="text-xs text-red-400 flex items-center gap-1"><XCircle className="h-3 w-3" />Başarısız</span>
+                              : <span className="text-xs text-amber-400 flex items-center gap-1"><AlertCircle className="h-3 w-3" />Bekliyor</span>}
                         </td>
                         <td className="px-4 py-2.5 text-xs text-muted-foreground">{fmt(inv.createdAt)}</td>
                         <td className="px-4 py-2.5">

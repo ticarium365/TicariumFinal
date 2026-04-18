@@ -66,7 +66,7 @@ export function MorningBrief() {
       <CardContent className="p-5">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-white/10 rounded-lg">
+            <div className="p-2 bg-card/10 rounded-lg">
               <GreetingIcon greeting={greeting} />
             </div>
             <div>
@@ -88,14 +88,14 @@ export function MorningBrief() {
 
         <div className="grid grid-cols-3 gap-3 mb-4">
           {/* Dün Satış */}
-          <div className="bg-white/8 rounded-xl p-3">
+          <div className="bg-card/8 rounded-xl p-3">
             <p className="text-white/50 text-[10px] uppercase tracking-wider mb-1">Dün Ciro</p>
             <p className="font-bold text-base">{fmt(yesterday.revenue)}</p>
             <p className="text-white/50 text-xs">{yesterday.salesCount} satış</p>
           </div>
 
           {/* Dün Kâr */}
-          <div className="bg-white/8 rounded-xl p-3">
+          <div className="bg-card/8 rounded-xl p-3">
             <p className="text-white/50 text-[10px] uppercase tracking-wider mb-1">Dün Kâr</p>
             <p className="font-bold text-base text-emerald-400">{fmt(yesterday.profit)}</p>
             <p className="text-white/50 text-xs">
@@ -104,7 +104,7 @@ export function MorningBrief() {
           </div>
 
           {/* 7 Gün */}
-          <div className="bg-white/8 rounded-xl p-3">
+          <div className="bg-card/8 rounded-xl p-3">
             <p className="text-white/50 text-[10px] uppercase tracking-wider mb-1">7 Günlük</p>
             <p className="font-bold text-base">{fmt(week.revenue)}</p>
             <p className="text-white/50 text-xs">{week.salesCount} satış</p>
@@ -142,7 +142,7 @@ export function MorningBrief() {
               ))}
               {stock.criticalProducts.length > 3 && (
                 <Link href="/products?lowStock=true">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-white/10 text-white/60 cursor-pointer hover:opacity-80">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-card/10 text-white/60 cursor-pointer hover:opacity-80">
                     +{stock.criticalProducts.length - 3} daha
                   </span>
                 </Link>

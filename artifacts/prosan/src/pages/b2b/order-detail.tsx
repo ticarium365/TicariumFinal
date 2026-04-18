@@ -77,12 +77,12 @@ interface QuoteItem {
 }
 
 const STATUS_META: Record<string, { label: string; color: string; icon: any }> = {
-  pending: { label: "Beklemede", color: "bg-amber-50 text-amber-700 border-amber-200", icon: Hourglass },
-  confirmed: { label: "Onaylandı", color: "bg-blue-50 text-blue-700 border-blue-200", icon: CheckCircle2 },
-  shipped: { label: "Kargoda", color: "bg-violet-50 text-violet-700 border-violet-200", icon: Truck },
-  delivered: { label: "Teslim Edildi", color: "bg-cyan-50 text-cyan-700 border-cyan-200", icon: PackageCheck },
-  completed: { label: "Tamamlandı", color: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
-  cancelled: { label: "İptal", color: "bg-rose-50 text-rose-700 border-rose-200", icon: XCircle },
+  pending: { label: "Beklemede", color: "bg-amber-500/10 text-amber-300 border-amber-500/20", icon: Hourglass },
+  confirmed: { label: "Onaylandı", color: "bg-blue-500/10 text-blue-300 border-blue-500/20", icon: CheckCircle2 },
+  shipped: { label: "Kargoda", color: "bg-violet-500/10 text-violet-300 border-violet-500/20", icon: Truck },
+  delivered: { label: "Teslim Edildi", color: "bg-cyan-500/10 text-cyan-300 border-cyan-500/20", icon: PackageCheck },
+  completed: { label: "Tamamlandı", color: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20", icon: CheckCircle2 },
+  cancelled: { label: "İptal", color: "bg-rose-500/10 text-rose-300 border-rose-500/20", icon: XCircle },
 };
 
 const TIMELINE_ORDER = ["pending", "confirmed", "shipped", "delivered", "completed"];
@@ -265,7 +265,7 @@ export default function OrderDetailPage() {
           )}
 
           {order.status === "cancelled" && (
-            <div className="mt-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-sm text-rose-800">
+            <div className="mt-4 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-sm text-rose-300">
               <strong>İptal edildi:</strong> {order.cancelReason ?? "Sebep belirtilmedi"}
             </div>
           )}
@@ -372,11 +372,11 @@ export default function OrderDetailPage() {
                 </div>
               )}
               {order.trackingNo ? (
-                <div className="rounded-lg bg-violet-50 border border-violet-200 p-3">
-                  <p className="text-xs text-violet-700 font-medium flex items-center gap-1">
+                <div className="rounded-lg bg-violet-500/10 border border-violet-500/20 p-3">
+                  <p className="text-xs text-violet-300 font-medium flex items-center gap-1">
                     <Truck className="h-3 w-3" /> {order.carrier ?? "Kargo"}
                   </p>
-                  <p className="font-mono text-sm font-bold text-violet-900 mt-0.5">{order.trackingNo}</p>
+                  <p className="font-mono text-sm font-bold text-violet-200 mt-0.5">{order.trackingNo}</p>
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground italic">Henüz kargo bilgisi yok</p>

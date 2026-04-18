@@ -108,7 +108,7 @@ export default function RuntimeFlagsAdminPage() {
         </div>
       </div>
 
-      {error && <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+      {error && <div className="mb-4 rounded border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>}
       {loading && <div className="text-sm text-zinc-500">Yükleniyor...</div>}
 
       <table className="w-full border-collapse text-sm" data-testid="table-runtime-flags">
@@ -134,7 +134,7 @@ export default function RuntimeFlagsAdminPage() {
                 <button
                   disabled={savingId === f.id}
                   onClick={() => remove(f.id)}
-                  className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  className="rounded border border-red-500/30 px-2 py-1 text-xs text-red-300 hover:bg-red-500/150/10 disabled:opacity-50"
                   data-testid={`button-delete-flag-${f.id}`}
                 >Sil</button>
               </td>

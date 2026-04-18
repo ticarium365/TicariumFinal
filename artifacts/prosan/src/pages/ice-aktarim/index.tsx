@@ -110,7 +110,7 @@ export default function ImportPage() {
         </p>
       </div>
 
-      <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+      <Card className="bg-blue-500/10 dark:bg-blue-900/20 border-blue-500/20 dark:border-blue-800">
         <CardContent className="pt-4 flex items-start gap-3">
           <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
           <div className="text-sm">
@@ -203,7 +203,7 @@ export default function ImportPage() {
                 )}
 
                 {result && (
-                  <Card className={result.errors?.length ? "border-amber-300" : "border-emerald-300"}>
+                  <Card className={result.errors?.length ? "border-amber-500/30" : "border-emerald-500/30"}>
                     <CardContent className="pt-4">
                       <div className="flex items-center gap-3 mb-3">
                         {result.errors?.length

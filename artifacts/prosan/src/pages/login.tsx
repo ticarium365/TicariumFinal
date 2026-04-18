@@ -49,7 +49,7 @@ export default function Login() {
   );
 
   return (
-    <div className="min-h-screen w-full flex flex-col" style={{ background: "hsl(216 33% 97%)" }}>
+    <div className="min-h-screen w-full flex flex-col bg-background">
       <PublicNav />
       <div className="flex-1 w-full flex">
       {/* Sol panel — Ticarium365 brand */}
@@ -123,9 +123,9 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-border shadow-sm p-8">
+          <div className="t365-glass-strong rounded-2xl shadow-2xl shadow-black/40 p-8 t365-glow-cyan">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>Hoş Geldiniz</h2>
+              <h2 className="text-2xl font-bold tracking-tight text-foreground" style={{ fontFamily: "var(--font-display)" }}>Hoş Geldiniz</h2>
               <p className="text-sm text-muted-foreground mt-1">Hesabınıza giriş yaparak işinize devam edin.</p>
             </div>
 
@@ -179,7 +179,7 @@ export default function Login() {
             </form>
 
             <p className="text-center text-xs text-muted-foreground mt-6">
-              Hesabınız yok mu? <a href="mailto:demo@ticarium365.com" className="font-semibold" style={{ color: NAVY }}>Demo talep edin</a>
+              Hesabınız yok mu? <a href="mailto:demo@ticarium365.com" className="font-semibold text-primary hover:underline">Demo talep edin</a>
             </p>
           </div>
         </div>

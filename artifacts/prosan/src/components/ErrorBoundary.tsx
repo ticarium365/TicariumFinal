@@ -48,19 +48,19 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (!this.state.hasError) return this.props.children;
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-6">
-        <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 text-center">
+      <div className="min-h-screen flex items-center justify-center bg-muted/30 dark:bg-slate-900 p-6">
+        <div className="max-w-md w-full bg-card dark:bg-slate-800 rounded-2xl shadow-xl p-8 text-center">
           <div className="mx-auto w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
             <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
           </div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+          <h1 className="text-xl font-bold text-foreground dark:text-white mb-2">
             Beklenmedik bir hata oluştu
           </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">
+          <p className="text-sm text-muted-foreground dark:text-slate-300 mb-6">
             Hata teknik ekibe iletildi. Sayfayı yenileyip tekrar deneyebilirsiniz.
           </p>
           {this.state.error?.message && (
-            <pre className="text-xs text-left bg-slate-100 dark:bg-slate-900 p-3 rounded-lg overflow-auto max-h-32 mb-6 text-slate-700 dark:text-slate-300">
+            <pre className="text-xs text-left bg-muted dark:bg-slate-900 p-3 rounded-lg overflow-auto max-h-32 mb-6 text-foreground/90 dark:text-slate-300">
               {this.state.error.message}
             </pre>
           )}
@@ -73,7 +73,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </button>
             <button
               onClick={this.handleHome}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium transition text-slate-700 dark:text-slate-200"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border dark:border-slate-600 hover:bg-muted dark:hover:bg-slate-700 text-sm font-medium transition text-foreground/90 dark:text-slate-200"
             >
               <Home className="w-4 h-4" /> Anasayfa
             </button>

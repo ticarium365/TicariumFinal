@@ -301,10 +301,10 @@ export default function FinancePage() {
               {/* KPI kartları */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                  { label: "Satış Cirosu",    value: summary.revenue,       icon: TrendingUp,   color: "text-blue-600",   bg: "bg-blue-50" },
-                  { label: "Satış Kârı",       value: summary.profit,        icon: TrendingUp,   color: "text-green-600",  bg: "bg-green-50" },
-                  { label: "Toplam Gider",     value: summary.totalExpenses, icon: TrendingDown, color: "text-red-600",    bg: "bg-red-50" },
-                  { label: "Net Kâr",          value: summary.netProfit,     icon: PiggyBank,    color: summary.netProfit >= 0 ? "text-emerald-600" : "text-red-600", bg: summary.netProfit >= 0 ? "bg-emerald-50" : "bg-red-50" },
+                  { label: "Satış Cirosu",    value: summary.revenue,       icon: TrendingUp,   color: "text-blue-600",   bg: "bg-blue-500/10" },
+                  { label: "Satış Kârı",       value: summary.profit,        icon: TrendingUp,   color: "text-green-600",  bg: "bg-green-500/10" },
+                  { label: "Toplam Gider",     value: summary.totalExpenses, icon: TrendingDown, color: "text-red-600",    bg: "bg-red-500/10" },
+                  { label: "Net Kâr",          value: summary.netProfit,     icon: PiggyBank,    color: summary.netProfit >= 0 ? "text-emerald-600" : "text-red-600", bg: summary.netProfit >= 0 ? "bg-emerald-500/10" : "bg-red-500/10" },
                 ].map(c => (
                   <div key={c.label} className="bg-card border rounded-xl p-4">
                     <div className={`inline-flex h-9 w-9 rounded-lg ${c.bg} items-center justify-center mb-2`}>
@@ -529,7 +529,7 @@ export default function FinancePage() {
               <div className="divide-y max-h-[500px] overflow-y-auto">
                 {expenses.map(e => (
                   <div key={e.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20">
-                    <div className="h-9 w-9 rounded-lg bg-red-50 flex items-center justify-center text-lg shrink-0">
+                    <div className="h-9 w-9 rounded-lg bg-red-500/10 flex items-center justify-center text-lg shrink-0">
                       {e.categoryIcon ?? "💸"}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -596,8 +596,8 @@ export default function FinancePage() {
                     <button onClick={() => setShowCashForm(false)}><X className="h-4 w-4" /></button>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    {[{ id: "in", label: "Giriş", color: "text-green-600 bg-green-50 border-green-200" },
-                      { id: "out", label: "Çıkış", color: "text-red-600 bg-red-50 border-red-200" }].map(d => (
+                    {[{ id: "in", label: "Giriş", color: "text-green-600 bg-green-500/10 border-green-500/20" },
+                      { id: "out", label: "Çıkış", color: "text-red-600 bg-red-500/10 border-red-500/20" }].map(d => (
                       <button key={d.id} onClick={() => setCashForm(p => ({ ...p, direction: d.id }))}
                         className={`py-2 rounded-lg border-2 text-sm font-semibold transition-all ${cashForm.direction === d.id ? d.color : "border-transparent bg-muted"}`}>
                         {d.label}
@@ -637,7 +637,7 @@ export default function FinancePage() {
                     <div className="divide-y max-h-[400px] overflow-y-auto">
                       {movements.map(m => (
                         <div key={m.id} className="flex items-center gap-3 px-4 py-3">
-                          <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${m.direction === "in" ? "bg-green-100" : "bg-red-100"}`}>
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${m.direction === "in" ? "bg-green-500/15" : "bg-red-500/15"}`}>
                             {m.direction === "in"
                               ? <ArrowUpRight className="h-4 w-4 text-green-600" />
                               : <ArrowDownRight className="h-4 w-4 text-red-600" />}

@@ -71,9 +71,9 @@ const LEAVE_TYPES = [
 ];
 
 const statusColor: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  approved: "bg-green-100 text-green-800",
-  rejected: "bg-red-100 text-red-800",
+  pending: "bg-yellow-500/15 text-yellow-300",
+  approved: "bg-green-500/15 text-green-300",
+  rejected: "bg-red-500/15 text-red-300",
 };
 
 export default function PersonnelPage() {
@@ -243,7 +243,7 @@ export default function PersonnelPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Personel Yönetimi</h1>
-          <p className="text-sm text-gray-500 mt-1">Çalışanlar, departmanlar ve izin takibi</p>
+          <p className="text-sm text-muted-foreground mt-1">Çalışanlar, departmanlar ve izin takibi</p>
         </div>
         {isAdmin && (
           <div className="flex gap-2">
@@ -262,26 +262,26 @@ export default function PersonnelPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
-              <Users className="h-8 w-8 text-blue-600" />
-              <div><p className="text-2xl font-bold">{stats.total}</p><p className="text-xs text-gray-500">Toplam Personel</p></div>
+              <Users className="h-8 w-8 text-blue-400" />
+              <div><p className="text-2xl font-bold">{stats.total}</p><p className="text-xs text-muted-foreground">Toplam Personel</p></div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
-              <UserCheck className="h-8 w-8 text-green-600" />
-              <div><p className="text-2xl font-bold">{stats.active}</p><p className="text-xs text-gray-500">Aktif</p></div>
+              <UserCheck className="h-8 w-8 text-green-400" />
+              <div><p className="text-2xl font-bold">{stats.active}</p><p className="text-xs text-muted-foreground">Aktif</p></div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
-              <UserX className="h-8 w-8 text-gray-400" />
-              <div><p className="text-2xl font-bold">{stats.inactive}</p><p className="text-xs text-gray-500">Pasif</p></div>
+              <UserX className="h-8 w-8 text-muted-foreground/70" />
+              <div><p className="text-2xl font-bold">{stats.inactive}</p><p className="text-xs text-muted-foreground">Pasif</p></div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
               <CalendarCheck className="h-8 w-8 text-orange-500" />
-              <div><p className="text-2xl font-bold">{stats.pendingLeaves}</p><p className="text-xs text-gray-500">Bekleyen İzin</p></div>
+              <div><p className="text-2xl font-bold">{stats.pendingLeaves}</p><p className="text-xs text-muted-foreground">Bekleyen İzin</p></div>
             </CardContent>
           </Card>
         </div>
@@ -299,7 +299,7 @@ export default function PersonnelPage() {
         <TabsContent value="personnel">
           <div className="flex flex-wrap gap-2 mb-4">
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground/70" />
               <Input className="pl-9" placeholder="Ad, pozisyon, telefon..." value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             <Select value={filterActive} onValueChange={setFilterActive}>
@@ -320,9 +320,9 @@ export default function PersonnelPage() {
           </div>
 
           {loading ? (
-            <div className="text-center py-12 text-gray-400">Yükleniyor...</div>
+            <div className="text-center py-12 text-muted-foreground/70">Yükleniyor...</div>
           ) : filteredPersonnel.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-muted-foreground/70">
               <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
               <p>Personel bulunamadı</p>
               {isAdmin && <Button className="mt-4" onClick={openAddPerson}><Plus className="h-4 w-4 mr-2" /> Personel Ekle</Button>}
@@ -333,7 +333,7 @@ export default function PersonnelPage() {
                 <Card key={p.id} className={`${!p.isActive ? "opacity-60" : ""}`}>
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center font-semibold text-blue-700">
+                      <div className="h-10 w-10 rounded-full bg-blue-500/15 flex items-center justify-center font-semibold text-blue-300">
                         {p.firstName[0]}{p.lastName[0]}
                       </div>
                       <div>
@@ -343,7 +343,7 @@ export default function PersonnelPage() {
                             {p.isActive ? "Aktif" : "Pasif"}
                           </Badge>
                         </div>
-                        <div className="text-sm text-gray-500 flex gap-3">
+                        <div className="text-sm text-muted-foreground flex gap-3">
                           <span>{p.position}</span>
                           {p.departmentName && <span>• {p.departmentName}</span>}
                           {p.phone && <span>• {p.phone}</span>}
@@ -357,7 +357,7 @@ export default function PersonnelPage() {
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => openEditPerson(p)}><Edit className="h-4 w-4" /></Button>
                         <Button size="sm" variant="ghost" onClick={() => togglePerson(p)}>
-                          {p.isActive ? <ToggleRight className="h-4 w-4 text-green-600" /> : <ToggleLeft className="h-4 w-4" />}
+                          {p.isActive ? <ToggleRight className="h-4 w-4 text-green-400" /> : <ToggleLeft className="h-4 w-4" />}
                         </Button>
                         <Button size="sm" variant="ghost" className="text-red-500" onClick={() => deletePerson(p)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
@@ -387,7 +387,7 @@ export default function PersonnelPage() {
           </div>
 
           {leaves.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-muted-foreground/70">
               <CalendarCheck className="h-12 w-12 mx-auto mb-3 opacity-30" />
               <p>İzin talebi bulunamadı</p>
             </div>
@@ -402,7 +402,7 @@ export default function PersonnelPage() {
                         <Badge className={`text-xs ${statusColor[l.status] ?? ""}`}>{l.statusLabel}</Badge>
                         <Badge variant="outline" className="text-xs">{l.typeLabel}</Badge>
                       </div>
-                      <div className="text-sm text-gray-500 mt-1">
+                      <div className="text-sm text-muted-foreground mt-1">
                         {l.startDate} → {l.endDate} ({l.days} gün)
                         {l.reason && <span> • {l.reason}</span>}
                       </div>
@@ -411,7 +411,7 @@ export default function PersonnelPage() {
                       <div className="flex gap-1">
                         {l.status === "pending" && (
                           <>
-                            <Button size="sm" variant="ghost" className="text-green-600" onClick={() => approveLeave(l.id)}>
+                            <Button size="sm" variant="ghost" className="text-green-400" onClick={() => approveLeave(l.id)}>
                               <Check className="h-4 w-4" />
                             </Button>
                             <Button size="sm" variant="ghost" className="text-red-500" onClick={() => rejectLeave(l.id)}>
@@ -439,7 +439,7 @@ export default function PersonnelPage() {
             </Button>
           )}
           {departments.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-muted-foreground/70">
               <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
               <p>Henüz departman yok</p>
             </div>
@@ -450,7 +450,7 @@ export default function PersonnelPage() {
                   <CardContent className="p-4 flex items-center justify-between">
                     <div>
                       <p className="font-semibold">{d.name}</p>
-                      {d.description && <p className="text-sm text-gray-500">{d.description}</p>}
+                      {d.description && <p className="text-sm text-muted-foreground">{d.description}</p>}
                     </div>
                     {isAdmin && (
                       <div className="flex gap-1">

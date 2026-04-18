@@ -24,12 +24,12 @@ function BalanceCard({ balance, creditLimit }: { balance: number; creditLimit: n
   const isCredit = balance < 0;
   return (
     <div className={`rounded-xl p-4 border ${
-      isDebt ? "bg-red-50 border-red-200" : isCredit ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"
+      isDebt ? "bg-red-500/10 border-red-500/20" : isCredit ? "bg-green-500/10 border-green-500/20" : "bg-muted/30 border-border"
     }`}>
       <p className="text-xs font-medium text-muted-foreground mb-1">
         {isDebt ? "Borç Bakiyesi" : isCredit ? "Alacak Bakiyesi" : "Bakiye"}
       </p>
-      <p className={`text-2xl font-bold ${isDebt ? "text-red-700" : isCredit ? "text-green-700" : "text-gray-500"}`}>
+      <p className={`text-2xl font-bold ${isDebt ? "text-red-300" : isCredit ? "text-green-300" : "text-muted-foreground"}`}>
         {isDebt ? "" : isCredit ? "-" : ""}
         {Math.abs(balance).toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
       </p>
@@ -37,7 +37,7 @@ function BalanceCard({ balance, creditLimit }: { balance: number; creditLimit: n
         <p className="text-xs text-muted-foreground mt-1">
           Kredi limiti: {creditLimit.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
           {isDebt && balance > creditLimit && (
-            <span className="ml-1 text-red-600 font-semibold">(Limit aşıldı!)</span>
+            <span className="ml-1 text-red-400 font-semibold">(Limit aşıldı!)</span>
           )}
         </p>
       )}
@@ -235,14 +235,14 @@ export default function CustomerDetail({ id }: { id: string }) {
                     <td className="px-4 py-3 text-sm">{tx.description || tx.type}</td>
                     <td className="px-4 py-3 text-right">
                       {tx.direction === "debit" ? (
-                        <span className="text-red-600 font-semibold">
+                        <span className="text-red-400 font-semibold">
                           {tx.amount.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
                         </span>
                       ) : "—"}
                     </td>
                     <td className="px-4 py-3 text-right">
                       {tx.direction === "credit" ? (
-                        <span className="text-green-600 font-semibold">
+                        <span className="text-green-400 font-semibold">
                           {tx.amount.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
                         </span>
                       ) : "—"}

@@ -522,7 +522,7 @@ export default function ProductsList() {
                           value={Number(p.profitPercent).toFixed(1)}
                           type="number"
                           onSave={(v) => handleQuickUpdate(p.id, "profitPercent", v)}
-                          className="font-mono text-sm text-emerald-700"
+                          className="font-mono text-sm text-emerald-300"
                         />
                       </td>
                     )}

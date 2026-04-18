@@ -40,18 +40,18 @@ async function apiFetch(method: string, path: string, body?: unknown) {
 
 function BalanceBadge({ balance }: { balance: number }) {
   if (balance > 0) return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-500/10 text-orange-300 border border-orange-500/20">
       <TrendingUp className="h-3 w-3" />
       {balance.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺ borç
     </span>
   );
   if (balance < 0) return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-500/10 text-green-300 border border-green-500/20">
       {Math.abs(balance).toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺ alacak
     </span>
   );
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground">
       <Minus className="h-3 w-3" />Bakiyesiz
     </span>
   );
@@ -220,7 +220,7 @@ export default function SuppliersList() {
                             </AlertDialog>
                           )}
                           {isAdmin && !s.isActive && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600" onClick={() => restoreMutation.mutate(s.id)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-green-400" onClick={() => restoreMutation.mutate(s.id)}>
                               <RotateCcw className="h-3.5 w-3.5" />
                             </Button>
                           )}

@@ -52,34 +52,34 @@ function StockBadge({ stock, minStock }: { stock: number; minStock: number }) {
 
 function ProductCard({ product }: { product: CatalogProduct }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col gap-3 hover:shadow-md hover:border-orange-300 transition-all duration-200">
+    <div className="bg-card rounded-xl border border-border p-5 flex flex-col gap-3 hover:shadow-md hover:border-primary/40 transition-all duration-200">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-mono text-slate-400 mb-1">{product.productCode}</p>
-          <h3 className="font-semibold text-slate-800 leading-snug line-clamp-2">{product.name}</h3>
+          <p className="text-xs font-mono text-muted-foreground/70 mb-1">{product.productCode}</p>
+          <h3 className="font-semibold text-foreground leading-snug line-clamp-2">{product.name}</h3>
         </div>
         <StockBadge stock={product.stock} minStock={product.minStock} />
       </div>
 
       <div className="flex flex-wrap gap-1.5">
         {product.category && (
-          <span className="text-xs bg-slate-100 text-slate-600 rounded-md px-2 py-0.5 font-medium">
+          <span className="text-xs bg-muted text-muted-foreground rounded-md px-2 py-0.5 font-medium">
             {product.category}
           </span>
         )}
         {product.brand && (
-          <span className="text-xs bg-blue-50 text-blue-700 rounded-md px-2 py-0.5 font-medium">
+          <span className="text-xs bg-blue-500/10 text-blue-300 rounded-md px-2 py-0.5 font-medium">
             {product.brand}
           </span>
         )}
       </div>
 
       {product.description && (
-        <p className="text-xs text-slate-500 line-clamp-2">{product.description}</p>
+        <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
       )}
 
-      <div className="mt-auto pt-2 border-t border-slate-100 flex items-center justify-between">
-        <span className="text-xs text-slate-400">Satış Fiyatı</span>
+      <div className="mt-auto pt-2 border-t border-border/70 flex items-center justify-between">
+        <span className="text-xs text-muted-foreground/70">Satış Fiyatı</span>
         <span className="text-lg font-bold text-orange-600">
           {Number(product.salePrice).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL
         </span>
@@ -121,7 +121,7 @@ export default function CatalogPage() {
   const hasFilters = search || selectedCategory || selectedBrand;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-muted/30">
       {/* Header */}
       <header className="bg-[#1a2435] text-white sticky top-0 z-30 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
@@ -131,12 +131,12 @@ export default function CatalogPage() {
               <div className="flex items-baseline gap-1">
                 <span className="text-xl font-black tracking-tight leading-none">PRO</span>
                 <span className="text-xl font-black tracking-tight leading-none text-orange-400">SAN</span>
-                <span className="text-base font-semibold tracking-widest uppercase text-slate-300 ml-1">ENDÜSTRİ</span>
+                <span className="text-base font-semibold tracking-widest uppercase text-muted-foreground/60 ml-1">ENDÜSTRİ</span>
               </div>
-              <p className="text-xs text-slate-400 font-medium tracking-widest uppercase">ENDÜSTRİYEL ÜRÜNLER</p>
+              <p className="text-xs text-muted-foreground/70 font-medium tracking-widest uppercase">ENDÜSTRİYEL ÜRÜNLER</p>
             </div>
           </div>
-          <div className="hidden md:flex items-center gap-4 text-xs text-slate-300">
+          <div className="hidden md:flex items-center gap-4 text-xs text-muted-foreground/60">
             <a href="tel:02623355556" className="flex items-center gap-1.5 hover:text-orange-400 transition-colors">
               <Phone className="h-3.5 w-3.5" />
               0 262 335 55 56
@@ -153,16 +153,16 @@ export default function CatalogPage() {
       <div className="bg-[#1f2d42] text-white">
         <div className="max-w-7xl mx-auto px-4 py-8">
           <h1 className="text-2xl md:text-3xl font-bold mb-1">Ürün Kataloğu</h1>
-          <p className="text-slate-400 text-sm">Endüstriyel ekipman ve yedek parça stok listesi</p>
+          <p className="text-muted-foreground/70 text-sm">Endüstriyel ekipman ve yedek parça stok listesi</p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Search & Filters Bar */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6 shadow-sm">
+        <div className="bg-card rounded-xl border border-border p-4 mb-6 shadow-sm">
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
               <Input
                 placeholder="Ürün adı, kodu veya marka ara..."
                 className="pl-9"
@@ -172,7 +172,7 @@ export default function CatalogPage() {
             </div>
             <Button
               variant="outline"
-              className={`gap-2 ${showFilters ? "bg-orange-50 border-orange-400 text-orange-700" : ""}`}
+              className={`gap-2 ${showFilters ? "bg-orange-500/10 border-orange-400 text-orange-300" : ""}`}
               onClick={() => setShowFilters(!showFilters)}
             >
               <Filter className="h-4 w-4" />
@@ -181,7 +181,7 @@ export default function CatalogPage() {
             {hasFilters && (
               <Button
                 variant="ghost"
-                className="gap-1 text-slate-500"
+                className="gap-1 text-muted-foreground"
                 onClick={() => { setSearch(""); setSelectedCategory(""); setSelectedBrand(""); }}
               >
                 <X className="h-4 w-4" />
@@ -191,11 +191,11 @@ export default function CatalogPage() {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-100">
+            <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-border/70">
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Kategori</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Kategori</label>
                 <select
-                  className="w-full text-sm border border-slate-200 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  className="w-full text-sm border border-border rounded-md px-3 py-2 bg-card focus:outline-none focus:ring-2 focus:ring-primary"
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
                 >
@@ -206,9 +206,9 @@ export default function CatalogPage() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Marka</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Marka</label>
                 <select
-                  className="w-full text-sm border border-slate-200 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  className="w-full text-sm border border-border rounded-md px-3 py-2 bg-card focus:outline-none focus:ring-2 focus:ring-primary"
                   value={selectedBrand}
                   onChange={(e) => setSelectedBrand(e.target.value)}
                 >
@@ -224,8 +224,8 @@ export default function CatalogPage() {
 
         {/* Result count */}
         {data && (
-          <p className="text-sm text-slate-500 mb-4">
-            <span className="font-semibold text-slate-700">{data.total}</span> ürün bulundu
+          <p className="text-sm text-muted-foreground mb-4">
+            <span className="font-semibold text-foreground/90">{data.total}</span> ürün bulundu
           </p>
         )}
 
@@ -233,18 +233,18 @@ export default function CatalogPage() {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-slate-200 p-5 h-44 animate-pulse">
-                <div className="h-3 bg-slate-100 rounded w-1/3 mb-2" />
-                <div className="h-4 bg-slate-100 rounded w-2/3 mb-4" />
-                <div className="h-3 bg-slate-100 rounded w-1/4 mb-2" />
-                <div className="h-6 bg-slate-100 rounded w-1/3 mt-auto" />
+              <div key={i} className="bg-card rounded-xl border border-border p-5 h-44 animate-pulse">
+                <div className="h-3 bg-muted rounded w-1/3 mb-2" />
+                <div className="h-4 bg-muted rounded w-2/3 mb-4" />
+                <div className="h-3 bg-muted rounded w-1/4 mb-2" />
+                <div className="h-6 bg-muted rounded w-1/3 mt-auto" />
               </div>
             ))}
           </div>
         ) : data?.products.length === 0 ? (
-          <div className="text-center py-20 text-slate-400">
+          <div className="text-center py-20 text-muted-foreground/70">
             <Package className="h-12 w-12 mx-auto mb-4 opacity-40" />
-            <p className="font-medium text-slate-500">Ürün bulunamadı</p>
+            <p className="font-medium text-muted-foreground">Ürün bulunamadı</p>
             <p className="text-sm mt-1">Arama kriterlerini değiştirmeyi deneyin</p>
           </div>
         ) : (
@@ -264,7 +264,7 @@ export default function CatalogPage() {
             >
               Önceki
             </Button>
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-muted-foreground">
               {page} / {data.totalPages}
             </span>
             <Button
@@ -280,7 +280,7 @@ export default function CatalogPage() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-[#1a2435] text-slate-400 mt-16">
+      <footer className="bg-[#1a2435] text-muted-foreground/70 mt-16">
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-3">
@@ -289,9 +289,9 @@ export default function CatalogPage() {
                 <div className="flex items-baseline gap-1">
                   <span className="text-sm font-black text-white">PRO</span>
                   <span className="text-sm font-black text-orange-400">SAN</span>
-                  <span className="text-xs font-semibold text-slate-400 ml-1 uppercase tracking-widest">ENDÜSTRİ</span>
+                  <span className="text-xs font-semibold text-muted-foreground/70 ml-1 uppercase tracking-widest">ENDÜSTRİ</span>
                 </div>
-                <p className="text-xs text-slate-500">Endüstriyel Ürünler</p>
+                <p className="text-xs text-muted-foreground">Endüstriyel Ürünler</p>
               </div>
             </div>
             <div className="flex flex-col gap-2 text-xs">
@@ -309,7 +309,7 @@ export default function CatalogPage() {
               </div>
             </div>
           </div>
-          <div className="border-t border-slate-700 mt-6 pt-4 text-xs text-slate-600 text-center">
+          <div className="border-t border-slate-700 mt-6 pt-4 text-xs text-muted-foreground text-center">
             © {new Date().getFullYear()} PROSAN ENDÜSTRİ — Tüm fiyatlar KDV hariçtir. Stok ve fiyat değişiklik hakkı saklıdır.
           </div>
         </div>

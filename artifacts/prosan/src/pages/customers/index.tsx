@@ -55,19 +55,19 @@ async function apiFetch(method: string, path: string, body?: unknown) {
 
 function BalanceBadge({ balance }: { balance: number }) {
   if (balance > 0) return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-300 border border-red-500/20">
       <TrendingUp className="h-3 w-3" />
       {balance.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
     </span>
   );
   if (balance < 0) return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-500/10 text-green-300 border border-green-500/20">
       <TrendingDown className="h-3 w-3" />
       {Math.abs(balance).toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺ alacak
     </span>
   );
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground">
       <Minus className="h-3 w-3" />
       Bakiye yok
     </span>
@@ -254,7 +254,7 @@ export default function CustomersList() {
                             </AlertDialog>
                           )}
                           {isAdmin && !c.isActive && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600"
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-green-400"
                               onClick={() => restoreMutation.mutate(c.id)}>
                               <RotateCcw className="h-3.5 w-3.5" />
                             </Button>

@@ -172,7 +172,7 @@ export default function ETicariumMerkeziPage() {
             <TabsTrigger
               key={t.key}
               value={t.key}
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm gap-1.5"
+              className="data-[state=active]:bg-card data-[state=active]:shadow-sm gap-1.5"
               data-testid={`hub-tab-${t.key}`}
             >
               <t.icon className="h-3.5 w-3.5" />

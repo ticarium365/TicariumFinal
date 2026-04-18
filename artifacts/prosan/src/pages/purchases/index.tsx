@@ -18,9 +18,9 @@ async function apiFetch(path: string) {
 
 const STATUS_LABEL: Record<string, string> = { unpaid: "Ödenmedi", partial: "Kısmi Ödeme", paid: "Ödendi" };
 const STATUS_COLOR: Record<string, string> = {
-  unpaid: "bg-red-50 text-red-700 border-red-200",
-  partial: "bg-yellow-50 text-yellow-700 border-yellow-200",
-  paid: "bg-green-50 text-green-700 border-green-200",
+  unpaid: "bg-red-500/10 text-red-300 border-red-500/20",
+  partial: "bg-yellow-500/10 text-yellow-300 border-yellow-500/20",
+  paid: "bg-green-500/10 text-green-300 border-green-500/20",
 };
 
 export default function PurchasesList() {

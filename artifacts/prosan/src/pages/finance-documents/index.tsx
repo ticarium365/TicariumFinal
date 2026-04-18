@@ -99,11 +99,11 @@ const STATUS_LABEL: Record<DocStatus, string> = {
   arsiv: "Arşiv",
 };
 const STATUS_COLOR: Record<DocStatus, string> = {
-  yeni: "bg-blue-100 text-blue-800 border-blue-300",
-  islendi: "bg-emerald-100 text-emerald-800 border-emerald-300",
-  onay_bekliyor: "bg-amber-100 text-amber-800 border-amber-300",
-  iptal: "bg-red-100 text-red-800 border-red-300",
-  arsiv: "bg-slate-100 text-slate-700 border-slate-300",
+  yeni: "bg-blue-500/15 text-blue-300 border-blue-500/30",
+  islendi: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  onay_bekliyor: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  iptal: "bg-red-500/15 text-red-300 border-red-500/30",
+  arsiv: "bg-muted text-foreground/90 border-border",
 };
 
 function formatBytes(n: number) {
@@ -407,7 +407,7 @@ export default function FinanceDocumentsPage() {
       {/* Drag overlay */}
       {dragActive && (
         <div className="fixed inset-0 z-50 bg-blue-600/20 border-4 border-dashed border-blue-600 flex items-center justify-center pointer-events-none">
-          <div className="bg-white rounded-xl shadow-xl px-8 py-6 text-center">
+          <div className="bg-card rounded-xl shadow-xl px-8 py-6 text-center">
             <Upload className="h-12 w-12 mx-auto mb-2 text-blue-600" />
             <p className="text-lg font-bold">Belgeleri buraya bırakın</p>
             <p className="text-sm text-muted-foreground">Birden fazla dosyayı aynı anda yükleyebilirsiniz</p>
@@ -666,7 +666,7 @@ export default function FinanceDocumentsPage() {
                   <Badge className={STATUS_COLOR[detail.status]}>{STATUS_LABEL[detail.status]}</Badge>
                   <Badge variant="outline">{DOC_TYPE_LABEL[detail.docType]}</Badge>
                   <Badge variant="outline" className="text-xs">{detail.source}</Badge>
-                  {detail.hasOcr && <Badge variant="outline" className="bg-purple-50">OCR</Badge>}
+                  {detail.hasOcr && <Badge variant="outline" className="bg-purple-500/10">OCR</Badge>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -784,7 +784,7 @@ export default function FinanceDocumentsPage() {
               </div>
 
               {detail.convertedToType && (
-                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-md px-3 py-2 flex items-center gap-2">
+                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm rounded-md px-3 py-2 flex items-center gap-2">
                   <FileCheck2 className="h-4 w-4" />
                   Bu belge <strong>{detail.convertedToType === "purchase" ? "Alış Faturası" : "Gider"}</strong> #{detail.convertedToId} olarak işlendi.
                 </div>
@@ -889,7 +889,7 @@ function FolderItem({ label, icon: Icon, color, active, onClick, count }: any) {
     <button
       onClick={onClick}
       className={`w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded text-sm text-left transition-colors ${
-        active ? "bg-blue-100 text-blue-900 font-medium" : "hover:bg-muted text-foreground"
+        active ? "bg-blue-500/15 text-blue-200 font-medium" : "hover:bg-muted text-foreground"
       }`}
     >
       <span className="flex items-center gap-2 min-w-0">

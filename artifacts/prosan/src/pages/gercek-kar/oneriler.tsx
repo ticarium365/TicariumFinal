@@ -12,9 +12,9 @@ interface Suggestion {
 }
 
 const sevColors: Record<string, string> = {
-  critical: "border-red-300 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20",
-  warning: "border-orange-300 dark:border-orange-900 bg-orange-50/50 dark:bg-orange-950/20",
-  info: "border-blue-300 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20",
+  critical: "border-red-500/30 dark:border-red-900 bg-red-500/10/50 dark:bg-red-950/20",
+  warning: "border-orange-500/30 dark:border-orange-900 bg-orange-500/10/50 dark:bg-orange-950/20",
+  info: "border-blue-500/30 dark:border-blue-900 bg-blue-500/10/50 dark:bg-blue-950/20",
 };
 const sevIcons: Record<string, any> = {
   critical: <AlertTriangle className="h-5 w-5 text-red-600" />,

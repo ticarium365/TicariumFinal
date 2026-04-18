@@ -66,10 +66,10 @@ interface QuoteDetail {
 }
 
 const STATUS_META: Record<string, { label: string; color: string; icon: any }> = {
-  pending: { label: "Yanıt Bekliyor", color: "bg-amber-50 text-amber-700 border-amber-200", icon: Hourglass },
-  quoted: { label: "Yanıtlandı", color: "bg-blue-50 text-blue-700 border-blue-200", icon: FileText },
-  accepted: { label: "Kabul Edildi", color: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
-  rejected: { label: "Reddedildi", color: "bg-rose-50 text-rose-700 border-rose-200", icon: XCircle },
+  pending: { label: "Yanıt Bekliyor", color: "bg-amber-500/10 text-amber-300 border-amber-500/20", icon: Hourglass },
+  quoted: { label: "Yanıtlandı", color: "bg-blue-500/10 text-blue-300 border-blue-500/20", icon: FileText },
+  accepted: { label: "Kabul Edildi", color: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20", icon: CheckCircle2 },
+  rejected: { label: "Reddedildi", color: "bg-rose-500/10 text-rose-300 border-rose-500/20", icon: XCircle },
   cancelled: { label: "İptal Edildi", color: "bg-muted text-muted-foreground border-border", icon: XCircle },
 };
 
@@ -310,7 +310,7 @@ export default function QuoteDetailPage({ id }: Props) {
                     </div>
                   )}
                   {quote.status === "quoted" && !it.isAvailable && (
-                    <Badge variant="outline" className="border-rose-200 text-rose-700">Stokta Yok</Badge>
+                    <Badge variant="outline" className="border-rose-500/20 text-rose-300">Stokta Yok</Badge>
                   )}
                 </div>
                 {it.quotedNote && quote.status === "quoted" && (
@@ -347,15 +347,15 @@ export default function QuoteDetailPage({ id }: Props) {
           })}
 
           {quote.sellerNote && quote.status === "quoted" && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-              <p className="text-xs font-medium text-blue-900 mb-1">Satıcı Notu</p>
-              <p className="text-blue-800">{quote.sellerNote}</p>
+            <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm">
+              <p className="text-xs font-medium text-blue-200 mb-1">Satıcı Notu</p>
+              <p className="text-blue-300">{quote.sellerNote}</p>
             </div>
           )}
           {quote.rejectReason && quote.status === "rejected" && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-sm">
-              <p className="text-xs font-medium text-rose-900 mb-1">Red Nedeni</p>
-              <p className="text-rose-800">{quote.rejectReason}</p>
+            <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-sm">
+              <p className="text-xs font-medium text-rose-200 mb-1">Red Nedeni</p>
+              <p className="text-rose-300">{quote.rejectReason}</p>
             </div>
           )}
         </CardContent>
@@ -423,7 +423,7 @@ export default function QuoteDetailPage({ id }: Props) {
               <Button onClick={() => decide("accepted")} disabled={submitting} className="flex-1 bg-emerald-600 hover:bg-emerald-700">
                 <CheckCircle2 className="h-4 w-4 mr-2" />Kabul Et
               </Button>
-              <Button onClick={() => decide("rejected")} disabled={submitting} variant="outline" className="flex-1 border-rose-300 text-rose-700 hover:bg-rose-50">
+              <Button onClick={() => decide("rejected")} disabled={submitting} variant="outline" className="flex-1 border-rose-500/30 text-rose-300 hover:bg-rose-500/150/10">
                 <XCircle className="h-4 w-4 mr-2" />{showRejectInput ? "Reddi Onayla" : "Reddet"}
               </Button>
             </div>

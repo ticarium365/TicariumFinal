@@ -208,7 +208,7 @@ export default function OnboardingPage() {
 
                 <div
                   className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-                    logoPreview ? "border-green-400 bg-green-50" : "border-border hover:border-primary/50 hover:bg-muted/30"
+                    logoPreview ? "border-green-400 bg-green-500/10" : "border-border hover:border-primary/50 hover:bg-muted/30"
                   }`}
                   onClick={() => fileRef.current?.click()}
                 >
@@ -289,7 +289,7 @@ export default function OnboardingPage() {
             {/* Adım 4 — Tamamlandı */}
             {step === 4 && (
               <div className="text-center space-y-4 py-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 text-green-600">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/15 text-green-600">
                   <CheckCircle2 className="h-9 w-9" />
                 </div>
                 <div>
