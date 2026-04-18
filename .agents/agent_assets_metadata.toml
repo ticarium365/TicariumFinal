@@ -11,3 +11,9 @@ id = "kaw-H31_kpT9xvNF9w4Hi"
 uri = "file://replit.md"
 type = "text"
 title = "SMS — Proje Dokümantasyonu"
+
+[[outputs]]
+id = "-Qbq2vHGQutrQ7hRNYt15"
+uri = "file://docs/SMSYSTEMS-Tam-Dokumantasyon.md"
+type = "text"
+title = "SMSYSTEMS — Tam Dökümantasyon (Tanıtım, Kullanım, Paketleme, KOSGEB)"
