@@ -263,7 +263,7 @@ function getPrintStyle(printMode: PrintMode, cols: number): string {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function BarcodesPage() {
   const { company } = useCompany();
-  const companyName = company?.name ?? "SMSYSTEMS";
+  const companyName = company?.name ?? "Ticarium365";
 
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Map<number, SelectedProduct>>(new Map());

@@ -106,7 +106,7 @@ export default function ImportPage() {
           Veri İçe Aktarımı
         </h1>
         <p className="text-muted-foreground">
-          Paraşüt, Bizim Hesap, Logo, Mikro veya Excel dosyalarınızı SMSYSTEMS'e taşıyın.
+          Paraşüt, Bizim Hesap, Logo, Mikro veya Excel dosyalarınızı Ticarium365'e taşıyın.
         </p>
       </div>
 

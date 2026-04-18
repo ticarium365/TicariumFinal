@@ -130,7 +130,7 @@ export default function OnboardingPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary text-white mb-3 shadow-lg">
             <Sparkles className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold">SMSYSTEMS'e Hoş Geldiniz</h1>
+          <h1 className="text-2xl font-bold">Ticarium365'e Hoş Geldiniz</h1>
           <p className="text-muted-foreground text-sm mt-1">Hızlı kurulumu tamamlayalım</p>
         </div>
 

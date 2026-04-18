@@ -10,7 +10,7 @@ export interface CompanyInfo {
 
 const PLATFORM: CompanyInfo = {
   id: 0,
-  name: "SMSYSTEMS",
+  name: "Ticarium365",
   subdomain: "admin",
   primaryColor: "#2563eb",
   logoUrl: null,

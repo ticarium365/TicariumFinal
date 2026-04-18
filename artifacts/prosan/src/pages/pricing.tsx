@@ -115,7 +115,7 @@ export default function PricingPage() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-7xl">
       <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold mb-3">SMSYSTEMS Paketleri</h1>
+        <h1 className="text-4xl font-bold mb-3">Ticarium365 Paketleri</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           İşletmenizin ihtiyacına göre 5 paket. İlk 30 gün ücretsiz deneme — kredi kartı gerekmez.
         </p>

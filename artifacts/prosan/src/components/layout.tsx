@@ -90,7 +90,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
 
-  const companyName = company?.name ?? "SMS";
+  const companyName = company?.name ?? "Ticarium365";
 
   const handleLogout = async () => {
     try {
@@ -211,8 +211,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
             <SheetContent side="left" className="w-64 p-0" style={{ background: "hsl(222 47% 15%)" }}>
               <SheetHeader className="p-4 border-b text-left" style={{ borderColor: "hsl(222 40% 22%)" }}>
-                <SheetTitle className="text-xl font-bold tracking-tight text-white">{companyName}</SheetTitle>
-                <p className="text-xs" style={{ color: "hsl(215 25% 55%)" }}>Stok Yönetim Sistemi</p>
+                <SheetTitle className="text-xl font-bold tracking-tight text-white" style={{ fontFamily: "var(--font-display)" }}>{companyName}</SheetTitle>
+                <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest flex items-center gap-1" style={{ color: "hsl(215 25% 55%)" }}>
+                  <span>powered by</span>
+                  <span className="text-white">Ticarium<span style={{ color: "hsl(152 76% 50%)" }}>365</span></span>
+                </p>
               </SheetHeader>
               <div className="p-3 flex-1 overflow-y-auto">
                 <TrialBanner />
@@ -244,8 +247,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-60 flex-col h-screen sticky top-0" style={{ background: "hsl(222 47% 15%)" }}>
         <div className="px-5 py-5 border-b" style={{ borderColor: "hsl(222 40% 22%)" }}>
-          <h1 className="text-xl font-bold tracking-tight text-white">{companyName}</h1>
-          <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest" style={{ color: "hsl(215 25% 60%)" }}>Stok Yönetim Sistemi</p>
+          <h1 className="text-xl font-bold tracking-tight text-white" style={{ fontFamily: "var(--font-display)" }}>{companyName}</h1>
+          <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest flex items-center gap-1" style={{ color: "hsl(215 25% 60%)" }}>
+            <span>powered by</span>
+            <span className="text-white">Ticarium<span style={{ color: "hsl(152 76% 50%)" }}>365</span></span>
+          </p>
         </div>
 
         <div className="flex-1 overflow-y-auto p-3">

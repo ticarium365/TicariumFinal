@@ -9,22 +9,22 @@ import {
 
 type Cell = true | false | "partial";
 
-const features: { name: string; smsystems: Cell; bizim: Cell; parasut: Cell; logo: Cell; mikro: Cell; nebim: Cell; note?: string }[] = [
-  { name: "Bulut tabanlı (kurulum yok)", smsystems: true, bizim: true, parasut: true, logo: true, mikro: "partial", nebim: "partial" },
-  { name: "Mobil uygulama (iOS + Android)", smsystems: true, bizim: false, parasut: true, logo: "partial", mikro: "partial", nebim: "partial" },
-  { name: "Barkod okutma + hızlı satış (POS)", smsystems: true, bizim: false, parasut: false, logo: "partial", mikro: true, nebim: true },
-  { name: "Çok şubeli stok / fiyat yönetimi", smsystems: true, bizim: false, parasut: "partial", logo: true, mikro: true, nebim: true },
-  { name: "e-Fatura / e-Arşiv (sağlayıcı seçilebilir)", smsystems: true, bizim: false, parasut: true, logo: true, mikro: true, nebim: true },
-  { name: "Pazaryeri entegrasyonu (Trendyol, HB, N11, vd.)", smsystems: true, bizim: false, parasut: "partial", logo: false, mikro: false, nebim: "partial", note: "11 sağlayıcı, eklenti yok" },
-  { name: "Fiş / Fatura OCR (yapay zeka ile otomatik veri)", smsystems: true, bizim: false, parasut: "partial", logo: false, mikro: false, nebim: false },
-  { name: "Net Kâr Merkezi (gerçek zamanlı kâr)", smsystems: true, bizim: false, parasut: "partial", logo: false, mikro: "partial", nebim: false },
-  { name: "Demirbaş & amortisman takibi", smsystems: true, bizim: false, parasut: true, logo: true, mikro: true, nebim: true },
-  { name: "Personel maaş & SGK gider takibi", smsystems: true, bizim: false, parasut: true, logo: true, mikro: true, nebim: true },
-  { name: "B2B Ağ / Teklif (RFQ)", smsystems: true, bizim: false, parasut: false, logo: false, mikro: false, nebim: false },
-  { name: "Açık API + webhook", smsystems: true, bizim: false, parasut: true, logo: "partial", mikro: false, nebim: false },
-  { name: "Çoklu firma (subdomain)", smsystems: true, bizim: false, parasut: "partial", logo: "partial", mikro: false, nebim: false },
-  { name: "Türkçe arayüz + Türkçe destek", smsystems: true, bizim: true, parasut: true, logo: true, mikro: true, nebim: true },
-  { name: "Şeffaf fiyat (gizli kalem yok)", smsystems: true, bizim: true, parasut: true, logo: false, mikro: false, nebim: false },
+const features: { name: string; ticarium365: Cell; bizim: Cell; parasut: Cell; logo: Cell; mikro: Cell; nebim: Cell; note?: string }[] = [
+  { name: "Bulut tabanlı (kurulum yok)", ticarium365: true, bizim: true, parasut: true, logo: true, mikro: "partial", nebim: "partial" },
+  { name: "Mobil uygulama (iOS + Android)", ticarium365: true, bizim: false, parasut: true, logo: "partial", mikro: "partial", nebim: "partial" },
+  { name: "Barkod okutma + hızlı satış (POS)", ticarium365: true, bizim: false, parasut: false, logo: "partial", mikro: true, nebim: true },
+  { name: "Çok şubeli stok / fiyat yönetimi", ticarium365: true, bizim: false, parasut: "partial", logo: true, mikro: true, nebim: true },
+  { name: "e-Fatura / e-Arşiv (sağlayıcı seçilebilir)", ticarium365: true, bizim: false, parasut: true, logo: true, mikro: true, nebim: true },
+  { name: "Pazaryeri entegrasyonu (Trendyol, HB, N11, vd.)", ticarium365: true, bizim: false, parasut: "partial", logo: false, mikro: false, nebim: "partial", note: "11 sağlayıcı, eklenti yok" },
+  { name: "Fiş / Fatura OCR (yapay zeka ile otomatik veri)", ticarium365: true, bizim: false, parasut: "partial", logo: false, mikro: false, nebim: false },
+  { name: "Net Kâr Merkezi (gerçek zamanlı kâr)", ticarium365: true, bizim: false, parasut: "partial", logo: false, mikro: "partial", nebim: false },
+  { name: "Demirbaş & amortisman takibi", ticarium365: true, bizim: false, parasut: true, logo: true, mikro: true, nebim: true },
+  { name: "Personel maaş & SGK gider takibi", ticarium365: true, bizim: false, parasut: true, logo: true, mikro: true, nebim: true },
+  { name: "B2B Ağ / Teklif (RFQ)", ticarium365: true, bizim: false, parasut: false, logo: false, mikro: false, nebim: false },
+  { name: "Açık API + webhook", ticarium365: true, bizim: false, parasut: true, logo: "partial", mikro: false, nebim: false },
+  { name: "Çoklu firma (subdomain)", ticarium365: true, bizim: false, parasut: "partial", logo: "partial", mikro: false, nebim: false },
+  { name: "Türkçe arayüz + Türkçe destek", ticarium365: true, bizim: true, parasut: true, logo: true, mikro: true, nebim: true },
+  { name: "Şeffaf fiyat (gizli kalem yok)", ticarium365: true, bizim: true, parasut: true, logo: false, mikro: false, nebim: false },
 ];
 
 function CellIcon({ v }: { v: Cell }) {
@@ -96,7 +96,7 @@ export default function KarsilastirPage() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center text-primary-foreground font-bold">S</div>
-            <span className="font-bold text-lg">SMSYSTEMS</span>
+            <span className="font-bold text-lg">Ticarium365</span>
             <Badge variant="secondary" className="ml-2 hidden sm:inline-flex">Karşılaştırma</Badge>
           </div>
           <div className="flex items-center gap-2">
@@ -122,7 +122,7 @@ export default function KarsilastirPage() {
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
           Çoğu rakip ya sadece <strong>ön muhasebe</strong>, ya sadece <strong>perakende</strong>.
-          SMSYSTEMS; satış, stok, e-fatura, pazaryeri ve net kâr — hepsini tek yerden, tek fiyata sunar.
+          Ticarium365; satış, stok, e-fatura, pazaryeri ve net kâr — hepsini tek yerden, tek fiyata sunar.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Link href="/login">
@@ -139,7 +139,7 @@ export default function KarsilastirPage() {
 
       {/* DIFFERENTIATORS */}
       <section className="container mx-auto px-4 py-12">
-        <h2 className="text-3xl font-bold text-center mb-12">9 sebepte SMSYSTEMS farkı</h2>
+        <h2 className="text-3xl font-bold text-center mb-12">9 sebepte Ticarium365 farkı</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {differentiators.map((d, i) => (
             <Card key={i} className="border-2 hover:border-primary/50 transition-colors" data-testid={`diff-${i}`}>
@@ -170,7 +170,7 @@ export default function KarsilastirPage() {
             <thead className="bg-muted/50">
               <tr>
                 <th className="text-left p-4 font-semibold min-w-[280px]">Özellik</th>
-                <th className="p-4 font-bold text-primary bg-primary/5">SMSYSTEMS</th>
+                <th className="p-4 font-bold text-primary bg-primary/5">Ticarium365</th>
                 <th className="p-4 font-medium">Bizim Hesap</th>
                 <th className="p-4 font-medium">Paraşüt</th>
                 <th className="p-4 font-medium">Logo İşbaşı</th>
@@ -185,7 +185,7 @@ export default function KarsilastirPage() {
                     <div>{f.name}</div>
                     {f.note && <div className="text-xs text-muted-foreground mt-0.5">{f.note}</div>}
                   </td>
-                  <td className="p-4 text-center bg-primary/5"><CellIcon v={f.smsystems} /></td>
+                  <td className="p-4 text-center bg-primary/5"><CellIcon v={f.ticarium365} /></td>
                   <td className="p-4 text-center"><CellIcon v={f.bizim} /></td>
                   <td className="p-4 text-center"><CellIcon v={f.parasut} /></td>
                   <td className="p-4 text-center"><CellIcon v={f.logo} /></td>
@@ -202,7 +202,7 @@ export default function KarsilastirPage() {
       <section className="container mx-auto px-4 py-16">
         <h2 className="text-3xl font-bold text-center mb-3">Rakipler — güçlü ve eksik yönler</h2>
         <p className="text-center text-muted-foreground mb-10 max-w-2xl mx-auto">
-          Hangi alternatife baktıysan, SMSYSTEMS'in onu nerede tamamladığını görüyorsun.
+          Hangi alternatife baktıysan, Ticarium365'in onu nerede tamamladığını görüyorsun.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {competitors.map((c) => (
@@ -238,11 +238,11 @@ export default function KarsilastirPage() {
               </CardContent>
             </Card>
           ))}
-          {/* SMSYSTEMS card */}
-          <Card className="flex flex-col border-2 border-primary bg-primary/5 lg:col-span-1" data-testid="competitor-smsystems">
+          {/* Ticarium365 card */}
+          <Card className="flex flex-col border-2 border-primary bg-primary/5 lg:col-span-1" data-testid="competitor-ticarium365">
             <CardHeader>
               <Badge className="w-fit mb-2">Bizim cevabımız</Badge>
-              <CardTitle className="text-primary">SMSYSTEMS</CardTitle>
+              <CardTitle className="text-primary">Ticarium365</CardTitle>
               <div className="text-sm text-muted-foreground mt-1">Tek paket, tüm modüller dahil</div>
               <div className="font-bold text-lg mt-2 text-primary">14 gün ücretsiz, sonra ₺499/ay'dan</div>
             </CardHeader>
@@ -306,7 +306,7 @@ export default function KarsilastirPage() {
       </section>
 
       <footer className="border-t py-8 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} SMSYSTEMS · Türkiye'nin tek panelli KOBİ işletim sistemi
+        © {new Date().getFullYear()} Ticarium365 · Türkiye'nin tek panelli KOBİ işletim sistemi
       </footer>
     </div>
   );

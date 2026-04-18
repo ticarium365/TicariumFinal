@@ -1,8 +1,16 @@
-# SMS — Stok Yönetim Sistemi (Multi-Tenant SaaS)
+# Ticarium365 — 365 gün işinin yanında (Multi-Tenant SaaS)
 
 ## Overview
 
-SMS is a multi-tenant SaaS platform, branded as **SMSYSTEMS**, offering comprehensive stock, barcode, and sales management with dynamic tenant-specific branding. Its core purpose is to provide businesses with efficient tools for inventory control, sales tracking, and managing customer/supplier relationships. Key capabilities include robust stock management with low-stock alerts, detailed sales analytics, customer and supplier relationship management, subscription and payment processing, and a flexible role-based access control system. The project aims to expand with advanced reporting, integrated barcode/labeling centers, and e-commerce catalog synchronization.
+Ticarium365 is a multi-tenant SaaS platform (rebranded from SMSYSTEMS in Apr 2026), offering comprehensive stock, barcode, sales, e-invoice, and marketplace management with dynamic tenant-specific branding (each tenant shows its own name in the sidebar header with a "powered by Ticarium365" subtitle).
+
+### Brand
+- Wordmark: **Ticarium**`365` (emerald 365), display font: Outfit; body: Plus Jakarta Sans / Inter.
+- Logo mark: T`3` square. Slogan: "365 gün işinin yanında."
+- Brand surfaces: `/login` screen, sidebar subtitle, html `<title>`, mobile app name. Tenant brand (company.name) remains primary on the sidebar header.
+- Subscription packages: Stok / Ticaret / İşletme / Büyüme / Kurumsal (legacy plans auto-migrated to Kurumsal v2).
+
+ Its core purpose is to provide businesses with efficient tools for inventory control, sales tracking, and managing customer/supplier relationships. Key capabilities include robust stock management with low-stock alerts, detailed sales analytics, customer and supplier relationship management, subscription and payment processing, and a flexible role-based access control system. The project aims to expand with advanced reporting, integrated barcode/labeling centers, and e-commerce catalog synchronization.
 
 ## User Preferences
 

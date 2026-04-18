@@ -58,7 +58,7 @@ export default function LoginScreen() {
           <View style={[styles.iconBox, { backgroundColor: colors.primary }]}>
             <Feather name="package" size={32} color="#fff" />
           </View>
-          <Text style={[styles.title, { color: colors.foreground }]}>SMSYSTEMS</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>Ticarium365</Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Stok & Barkod Yönetimi</Text>
         </View>
 

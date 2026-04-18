@@ -60,7 +60,7 @@ export default function PaymentPage() {
       <div className="w-full max-w-2xl space-y-4">
         {/* Başlık */}
         <div className="text-center space-y-1 mb-6">
-          <h1 className="text-2xl font-bold text-slate-800">SMSYSTEMS</h1>
+          <h1 className="text-2xl font-bold text-slate-800">Ticarium365</h1>
           <p className="text-slate-500 text-sm">
             {status?.isTrialExpired
               ? "Trial süreniz doldu. Sisteme erişmek için ödeme yapın."

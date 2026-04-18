@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "SMSYSTEMS Mobil",
+    "name": "Ticarium365",
     "slug": "smsystems-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -32,7 +32,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "SMSYSTEMS barkod tarayıcı için kamera iznine ihtiyaç duyar."
+          "cameraPermission": "Ticarium365 barkod tarayıcı için kamera iznine ihtiyaç duyar."
         }
       ]
     ],

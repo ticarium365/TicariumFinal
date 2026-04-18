@@ -138,6 +138,7 @@ function AuthenticatedRouter() {
       <Switch>
         <Route path="/login" component={Login} />
         <Route path="/karsilastir" component={KarsilastirPage} />
+        <Route path="/neden-ticarium365" component={KarsilastirPage} />
         <Route path="/neden-smsystems" component={KarsilastirPage} />
 
         <Route path="/">

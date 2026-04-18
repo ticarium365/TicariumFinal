@@ -50,6 +50,7 @@
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
   --font-sans: var(--app-font-sans);
+  --font-display: var(--app-font-display);
   --font-serif: var(--app-font-serif);
   --font-mono: var(--app-font-mono);
 
@@ -107,9 +108,14 @@
   --sidebar-accent-foreground: 0 0% 100%;
   --sidebar-ring: 221 83% 65%;
 
-  --app-font-sans: 'Inter', system-ui, sans-serif;
+  --app-font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --app-font-display: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: 'Space Mono', ui-monospace, monospace;
+
+  /* Ticarium365 brand accents (login + brand surfaces) */
+  --brand-navy: 222 47% 15%;
+  --brand-emerald: 152 76% 40%;
 
   --radius: 0.5rem;                /* Daha yuvarlak köşeler */
 }
