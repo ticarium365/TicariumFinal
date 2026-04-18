@@ -8,27 +8,51 @@ import { Loader2, Lock, User, Store, TrendingUp, ShieldCheck, Eye, EyeOff } from
 import { useToast } from "@/hooks/use-toast";
 import { PublicNav } from "@/components/public-nav";
 
-const NAVY = "hsl(222 47% 15%)";
-const NAVY_2 = "hsl(222 47% 22%)";
-const EMERALD = "hsl(152 76% 45%)";
-const SOFT_BLUE = "hsl(221 83% 53%)";
-
-function BrandLogo({ size = "lg", onDark = false }: { size?: "sm" | "md" | "lg"; onDark?: boolean }) {
-  const dim = size === "lg" ? "w-12 h-12 text-2xl" : size === "md" ? "w-10 h-10 text-xl" : "w-9 h-9 text-lg";
-  const bg = onDark ? "rgba(255,255,255,0.10)" : NAVY;
-  const fg = onDark ? "#fff" : "#fff";
-  const border = onDark ? "border-white/20" : "border-transparent";
+// ------------------------------------------------------------------
+// Marka rozeti — temiz, mavi gradyan, beyaz "T" + küçük 365 etiketi
+// ------------------------------------------------------------------
+function BrandIcon({ size = 48 }: { size?: number }) {
   return (
-    <div
-      className={`${dim} rounded-xl flex items-center justify-center shadow-lg border ${border} backdrop-blur-md`}
-      style={{ background: bg, color: fg, fontFamily: "var(--font-display)" }}
-      aria-label="Ticarium365"
+    <svg width={size} height={size} viewBox="0 0 48 48" className="shrink-0">
+      <defs>
+        <linearGradient id="t365grad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#3B82F6" />
+          <stop offset="100%" stopColor="#1D4ED8" />
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="48" height="48" rx="11" fill="url(#t365grad)" />
+      {/* Geniş bar + dikey ayak: stilize T */}
+      <path d="M11 14 H37 V20 H27 V36 H21 V20 H11 Z" fill="white" />
+      {/* 365 chip */}
+      <rect x="28" y="30" width="15" height="9" rx="2.5" fill="white" />
+      <text
+        x="35.5"
+        y="36.7"
+        textAnchor="middle"
+        fontFamily="ui-monospace,SFMono-Regular,Menlo,monospace"
+        fontWeight={800}
+        fontSize={6.4}
+        fill="#1D4ED8"
+        letterSpacing="0.2"
+      >
+        365
+      </text>
+    </svg>
+  );
+}
+
+function BrandWordmark({ light = false }: { light?: boolean }) {
+  return (
+    <span
+      className="font-bold text-2xl tracking-tight leading-none"
+      style={{
+        fontFamily: "var(--font-display)",
+        color: light ? "#FFFFFF" : "#0F172A",
+      }}
     >
-      <span className="font-bold leading-none">
-        T<span style={{ color: EMERALD }}>3</span>
-        <span className="text-[0.55em] align-top ml-0.5 opacity-90">65</span>
-      </span>
-    </div>
+      Ticarium
+      <span style={{ color: light ? "#BFDBFE" : "#2563EB" }}>365</span>
+    </span>
   );
 }
 
@@ -46,7 +70,6 @@ export default function Login() {
       await login.mutateAsync({ data: { username, password } });
       window.location.replace("/dashboard");
     } catch (error: any) {
-      // Sade ve net hata mesajı — korkutucu güvenlik diliyle değil
       const apiMessage = error?.response?.data?.message || error?.data?.message;
       toast({
         title: "Giriş yapılamadı",
@@ -57,35 +80,37 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-background">
+    <div
+      className="min-h-screen w-full flex flex-col"
+      style={{ background: "#F8FAFC", color: "#0F172A" }}
+    >
       <PublicNav />
 
       <div className="flex-1 w-full flex">
-        {/* Sol panel — marka tanıtımı (lg ve üstü) */}
+        {/* Sol panel — açık mavi gradyan, beyaz tipografi */}
         <div
           className="hidden lg:flex flex-col justify-between w-[480px] shrink-0 p-12 relative overflow-hidden"
-          style={{ background: `linear-gradient(135deg, ${NAVY} 0%, ${NAVY_2} 100%)` }}
+          style={{
+            background:
+              "linear-gradient(140deg, #1E3A8A 0%, #1D4ED8 45%, #2563EB 100%)",
+          }}
         >
+          {/* Yumuşak ışık efektleri */}
           <div
-            className="absolute -top-32 -right-32 w-[28rem] h-[28rem] rounded-full blur-3xl pointer-events-none"
-            style={{ background: `${EMERALD}26` }}
+            className="absolute -top-40 -right-32 w-[28rem] h-[28rem] rounded-full blur-3xl pointer-events-none"
+            style={{ background: "rgba(147,197,253,0.35)" }}
           />
           <div
             className="absolute -bottom-40 -left-24 w-96 h-96 rounded-full blur-3xl pointer-events-none"
-            style={{ background: `${SOFT_BLUE}26` }}
+            style={{ background: "rgba(96,165,250,0.30)" }}
           />
 
-          {/* Logo + tagline */}
+          {/* Logo + alt başlık */}
           <div className="relative z-10 flex items-center gap-3">
-            <BrandLogo size="lg" onDark />
+            <BrandIcon size={52} />
             <div className="leading-tight">
-              <div
-                className="font-bold text-2xl tracking-tight text-white"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                Ticarium<span style={{ color: EMERALD }}>365</span>
-              </div>
-              <div className="text-[13px] mt-0.5" style={{ color: "rgba(255,255,255,0.65)" }}>
+              <BrandWordmark light />
+              <div className="text-[13px] mt-1 text-blue-100/85">
                 365 gün işinizin yanında
               </div>
             </div>
@@ -98,7 +123,10 @@ export default function Login() {
               style={{ fontFamily: "var(--font-display)" }}
             >
               Türkiye'nin esnafı için <br />
-              <span style={{ color: EMERALD }}>tek panelden</span> yönetim.
+              <span className="text-white/95 underline decoration-blue-300/60 decoration-4 underline-offset-4">
+                tek panelden
+              </span>{" "}
+              yönetim.
             </h2>
 
             <div className="space-y-5">
@@ -122,51 +150,52 @@ export default function Login() {
                 <div key={title} className="flex items-start gap-4">
                   <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: "rgba(255,255,255,0.08)" }}
+                    style={{ background: "rgba(255,255,255,0.16)" }}
                   >
-                    <Icon className="w-5 h-5" style={{ color: EMERALD }} />
+                    <Icon className="w-5 h-5 text-white" />
                   </div>
                   <div>
                     <h3 className="text-white font-medium leading-snug">{title}</h3>
-                    <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.62)" }}>
-                      {desc}
-                    </p>
+                    <p className="text-sm mt-0.5 text-blue-100/80">{desc}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <p className="relative z-10 text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+          <p className="relative z-10 text-xs text-blue-200/70">
             © {new Date().getFullYear()} Ticarium365 · Tüm hakları saklıdır
           </p>
         </div>
 
-        {/* Sağ panel — giriş formu */}
+        {/* Sağ panel — beyaz, mavi vurgu */}
         <div className="flex-1 flex items-center justify-center p-6 md:p-8">
           <div className="w-full max-w-sm">
-            {/* Mobile logo */}
+            {/* Mobil logo */}
             <div className="lg:hidden flex justify-center mb-8">
               <div className="flex items-center gap-3">
-                <BrandLogo size="md" />
-                <span
-                  className="font-bold text-2xl tracking-tight"
-                  style={{ fontFamily: "var(--font-display)", color: NAVY }}
-                >
-                  Ticarium<span style={{ color: EMERALD }}>365</span>
-                </span>
+                <BrandIcon size={44} />
+                <BrandWordmark />
               </div>
             </div>
 
-            <div className="bg-card border border-border rounded-2xl shadow-xl shadow-blue-500/5 p-7 md:p-8">
+            <div
+              className="rounded-2xl p-7 md:p-8"
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                boxShadow:
+                  "0 1px 2px rgba(15,23,42,0.04), 0 12px 32px -8px rgba(37,99,235,0.12)",
+              }}
+            >
               <div className="mb-6">
                 <h2
-                  className="text-2xl font-bold tracking-tight text-foreground"
-                  style={{ fontFamily: "var(--font-display)" }}
+                  className="text-2xl font-bold tracking-tight"
+                  style={{ color: "#0F172A", fontFamily: "var(--font-display)" }}
                 >
                   Hoş geldiniz
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-sm mt-1" style={{ color: "#64748B" }}>
                   Hesabınıza giriş yaparak işinize devam edin.
                 </p>
               </div>
@@ -178,15 +207,25 @@ export default function Login() {
                 action="/api/auth/login"
               >
                 <div className="space-y-1.5">
-                  <Label htmlFor="username">Kullanıcı adı</Label>
+                  <Label htmlFor="username" style={{ color: "#334155" }}>
+                    Kullanıcı adı
+                  </Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <User
+                      className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4"
+                      style={{ color: "#94A3B8" }}
+                    />
                     <Input
                       id="username"
                       name="username"
                       type="text"
                       placeholder="kullanici_adi"
                       className="pl-9 h-11"
+                      style={{
+                        background: "#FFFFFF",
+                        borderColor: "#CBD5E1",
+                        color: "#0F172A",
+                      }}
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       disabled={login.isPending}
@@ -199,23 +238,34 @@ export default function Login() {
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Şifre</Label>
+                    <Label htmlFor="password" style={{ color: "#334155" }}>
+                      Şifre
+                    </Label>
                     <Link
                       href="/sifremi-unuttum"
-                      className="text-xs font-medium text-primary hover:underline"
+                      className="text-xs font-medium hover:underline"
+                      style={{ color: "#2563EB" }}
                       data-testid="link-forgot-password"
                     >
                       Şifremi unuttum
                     </Link>
                   </div>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Lock
+                      className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4"
+                      style={{ color: "#94A3B8" }}
+                    />
                     <Input
                       id="password"
                       name="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       className="pl-9 pr-10 h-11"
+                      style={{
+                        background: "#FFFFFF",
+                        borderColor: "#CBD5E1",
+                        color: "#0F172A",
+                      }}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       disabled={login.isPending}
@@ -226,7 +276,8 @@ export default function Login() {
                       type="button"
                       tabIndex={-1}
                       onClick={() => setShowPassword((s) => !s)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 inline-flex items-center justify-center rounded-md"
+                      style={{ color: "#64748B" }}
                       aria-label={showPassword ? "Şifreyi gizle" : "Şifreyi göster"}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -236,7 +287,11 @@ export default function Login() {
 
                 <Button
                   type="submit"
-                  className="w-full h-11 mt-2 text-base font-semibold"
+                  className="w-full h-11 mt-2 text-base font-semibold border-0"
+                  style={{
+                    background: "#2563EB",
+                    color: "#FFFFFF",
+                  }}
                   disabled={login.isPending || !username || !password}
                   data-testid="btn-login"
                 >
@@ -251,12 +306,16 @@ export default function Login() {
                 </Button>
               </form>
 
-              <div className="mt-6 pt-5 border-t border-border/60 text-center">
-                <p className="text-xs text-muted-foreground">
+              <div
+                className="mt-6 pt-5 text-center"
+                style={{ borderTop: "1px solid #E2E8F0" }}
+              >
+                <p className="text-xs" style={{ color: "#64748B" }}>
                   Hesabınız yok mu?{" "}
                   <a
                     href="mailto:demo@ticarium365.com"
-                    className="font-semibold text-primary hover:underline"
+                    className="font-semibold hover:underline"
+                    style={{ color: "#2563EB" }}
                   >
                     Demo talep edin
                   </a>
@@ -264,9 +323,19 @@ export default function Login() {
               </div>
             </div>
 
-            <p className="text-center text-[11px] text-muted-foreground mt-5 leading-relaxed">
-              Bu siteye girerek <a href="/kvkk" className="underline hover:text-foreground">KVKK Aydınlatma Metni</a> ve{" "}
-              <a href="/kullanim-kosullari" className="underline hover:text-foreground">Kullanım Koşulları</a>'nı kabul etmiş olursunuz.
+            <p
+              className="text-center text-[11px] mt-5 leading-relaxed"
+              style={{ color: "#64748B" }}
+            >
+              Bu siteye girerek{" "}
+              <a href="/kvkk" className="underline hover:text-slate-900">
+                KVKK Aydınlatma Metni
+              </a>{" "}
+              ve{" "}
+              <a href="/kullanim-kosullari" className="underline hover:text-slate-900">
+                Kullanım Koşulları
+              </a>
+              'nı kabul etmiş olursunuz.
             </p>
           </div>
         </div>
