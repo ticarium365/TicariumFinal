@@ -40,7 +40,7 @@ catalogs:
       specifier: ^2.1.1
       version: 2.1.1
     drizzle-orm:
-      specifier: ^0.45.1
+      specifier: 0.45.1
       version: 0.45.1
     framer-motion:
       specifier: ^12.23.24
@@ -173,6 +173,9 @@ importers:
       '@google-cloud/storage':
         specifier: ^7.19.0
         version: 7.19.0
+      '@replit/object-storage':
+        specifier: ^1.0.0
+        version: 1.0.0
       '@types/compression':
         specifier: ^1.8.1
         version: 1.8.1
@@ -873,6 +876,9 @@ importers:
       docx:
         specifier: ^9.6.1
         version: 9.6.1
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)
       xlsx:
         specifier: ^0.18.5
         version: 0.18.5

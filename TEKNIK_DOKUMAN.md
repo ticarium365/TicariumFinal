@@ -511,6 +511,7 @@ pnpm --filter @workspace/prosan run build
 
 | Sürüm | Tarih | Önemli Değişiklikler |
 |-------|-------|----------------------|
+| 1.1.0 | 2026-04-18 | Detaylı health check (DB+Storage+SMTP), Frontend ErrorBoundary + client-error API, Audit log arşivleme script |
 | 1.0.0 | 2026-04-18 | Canlı Öncesi Sertleştirme: rate limit, helmet, audit kapsamı, super admin, backup script, PWA |
 | 0.9.x | 2026-04 | Sprint 73.6 (atomic upsert), 73.7 (concurrent), Sprint 70'ler |
 | 0.8.x | 2026-03 | Pazaryeri stub'ları, e-fatura altyapısı |

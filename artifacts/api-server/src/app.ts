@@ -9,6 +9,7 @@ import router from "./routes/index.js";
 import publicApiRouter from "./routes/public-api.js";
 import publicStorefrontRouter from "./routes/public-storefront.js";
 import { aggregatorPublicRouter } from "./routes/aggregator.js";
+import clientErrorsRouter from "./routes/client-errors.js";
 import contactRouter from "./routes/contact.js";
 import { logger } from "./lib/logger.js";
 import { tenantMiddleware } from "./middlewares/tenant.js";
@@ -152,6 +153,7 @@ app.use("/api/public", publicApiRateLimit);
 // Public API — tenant middleware olmadan, API key ile kimlik doğrulama
 // /api/public/v1/* rotaları tenant middleware'i bypass eder
 // Public storefront — auth/api-key gerektirmez (sırası önemli: requireApiKey'den önce)
+app.use("/api", clientErrorsRouter);
 app.use("/api", publicStorefrontRouter);
 app.use("/api", aggregatorPublicRouter);
 app.use("/api", publicApiRouter);

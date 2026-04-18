@@ -69,6 +69,7 @@ async function buildAll() {
       "googleapis",
       "firebase-admin",
       "@parcel/watcher",
+      "@replit/object-storage",
       "@sentry/profiling-node",
       "@tree-sitter/*",
       "aws-sdk",

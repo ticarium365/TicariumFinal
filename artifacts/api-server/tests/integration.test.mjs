@@ -4080,15 +4080,44 @@ describe("Sprint 27 — DevOps & İzleme", () => {
     assert.equal(json.status, "ok");
   });
 
-  test("Derin sağlık kontrolü /healthz/deep DB bağlantısını doğrular", async () => {
+  test("Derin sağlık kontrolü /healthz/deep alt-bileşenleri (DB+Storage+SMTP) raporlar (sansürlü)", async () => {
     const r = await fetch("http://localhost:8080/api/healthz/deep");
     const json = await r.json();
-    assert.equal(r.status, 200);
-    assert.equal(json.status, "ok");
-    assert.equal(json.db, "connected");
+    assert.ok([200, 503].includes(r.status), "status 200 veya 503 olmalı");
+    assert.ok(["ok", "degraded", "down"].includes(json.status), "status değeri tanımlı kümede olmalı");
+    assert.ok(json.checks, "checks objesi olmalı");
+    assert.ok(json.checks.db, "db check olmalı");
+    assert.equal(json.checks.db.status, "ok", "DB ok olmalı (test ortamı)");
+    assert.ok(json.checks.objectStorage, "objectStorage check olmalı");
+    assert.ok(json.checks.smtp, "smtp check olmalı");
+    // Hassas bilgiler bu public uçtan dışlanmalı
+    assert.equal(json.checks.db.detail, undefined, "public uçta detail dışlanmalı");
+    assert.equal(json.checks.db.latencyMs, undefined, "public uçta latency dışlanmalı");
+    assert.equal(json.nodeVersion, undefined, "public uçta nodeVersion dışlanmalı");
+    assert.equal(json.memory, undefined, "public uçta memory dışlanmalı");
     assert.ok(typeof json.uptime === "number", "uptime sayı olmalı");
     assert.ok(json.version, "version bilgisi olmalı");
     assert.ok(json.timestamp, "timestamp olmalı");
+  });
+
+  test("/healthz/internal kimliksiz erişimi reddeder (403)", async () => {
+    const r = await fetch("http://localhost:8080/api/healthz/internal");
+    assert.equal(r.status, 403);
+  });
+
+  test("/api/client-errors endpoint'i hata raporu kabul eder", async () => {
+    const r = await fetch("http://localhost:8080/api/client-errors", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: "regression test client error",
+        stack: "Error: x\n  at test",
+        url: "http://localhost/test-page",
+      }),
+    });
+    assert.equal(r.status, 200);
+    const json = await r.json();
+    assert.equal(json.ok, true);
   });
 
   test("Sağlık endpoint'i kimlik doğrulama gerektirmiyor", async () => {
