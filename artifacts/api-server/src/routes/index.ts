@@ -76,7 +76,15 @@ router.use("/finance-documents", financeDocumentsRouter);
 router.use("/banking", requireAuth, requireFeature("finance.banking"), bankingRouter);
 router.use("/finance-dashboard", requireAuth, requireFeature("profit.dashboard"), financeDashboardRouter);
 router.use(notificationRulesRouter);
-router.use(requireAuth, requireFeature("hr.staff"), personnelRouter);
+// Personnel router için: hr.staff gate'i SADECE personel modülü yollarında uygulanır.
+// Path filtresi tam segment eşleşmesi ile kapsanır (alt yollarla birlikte) — aksi halde
+// path-prefix'siz mount tüm sonraki rotaları kilitler.
+const _hrStaffGate = requireFeature("hr.staff");
+const _hrPathRe = /^\/(personnel|departments|leave-requests)(\/|$)/;
+router.use(requireAuth, (req, res, next) => {
+  if (_hrPathRe.test(req.path)) return _hrStaffGate(req, res, next);
+  next();
+}, personnelRouter);
 router.use(campaignsRouter);
 router.use(catalogSettingsRouter);
 router.use(orderAnalyticsRouter);

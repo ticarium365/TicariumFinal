@@ -32,6 +32,10 @@ The frontend is built with React and Vite, utilizing Tailwind CSS and `shadcn/ui
 
 The backend is powered by Express 5, with PostgreSQL as the database, managed by Drizzle ORM for type-safe interactions, and Zod for schema validation. API client code and Zod schemas are automatically generated from an OpenAPI specification using Orval. Authentication is session-based, secured with `express-session` and `bcryptjs`, and scoped per company. Barcode scanning uses `@zxing/browser`, and QR codes are generated with `qrcode.react`. The build process leverages `esbuild` for ESM bundling. The monorepo organizes `prosan` (frontend), `api-server` (backend), `lib/db` (database schema), `lib/api-spec`, `lib/api-client-react`, and `lib/api-zod`. Features are gated by a subscription-based feature flag system with a 60-second in-memory cache and automatic cache invalidation.
 
+### Routing — Path-Prefix Discipline (Sprint 62 sırasında bulundu)
+
+Express'te `router.use(middleware, subRouter)` PATH OLMADAN mount edilirse, middleware sadece o subrouter'a değil sonraki TÜM `router.use()` kayıtlarına da sızar. `routes/index.ts:79`'da `requireFeature("hr.staff")` personnel router için path'siz mount edilmişti ve hr.staff özelliği olmayan tenant'lar için `/channels`, `/einvoice`, `/marketplace`, `/profit`, `/budgets`, `/ad-budgets`, `/accountant`, `/audits` gibi sonraki tüm modülleri 403 ile bloke ediyordu. **Fix**: Personnel gate'i sadece `/personnel`, `/departments`, `/leave-requests` segment-anchored regex (`^\/(personnel|departments|leave-requests)(\/|$)/`) ile uygular hâle getirildi. **Kural**: Bundan sonra her `router.use(featureGate, sub)` mount'u açık `/path` prefix'i almalı; aksi halde gate sızar. 4 regresyon testi (`Routing — hr.staff feature gate izolasyonu` describe bloğu) bu sızıntıyı koruma altına aldı.
+
 ### Feature Specifications
 
 - **Multi-Tenancy**: Subdomain-based routing with database isolation via `company_id`.

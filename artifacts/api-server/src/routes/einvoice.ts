@@ -179,14 +179,17 @@ router.post("/outbox", requireWriter, async (req: Request, res: Response) => {
       }).returning();
       reservedRow = row;
     } catch (e: any) {
-      // 23505 = unique_violation (Postgres). Mevcut satırı dön.
-      if (e?.code === "23505" || /duplicate key|unique constraint/i.test(e?.message || "")) {
+      // 23505 = unique_violation (Postgres). drizzle/pg can nest the original code under .cause.
+      const code = e?.code || e?.cause?.code || e?.original?.code;
+      const msg = e?.message || e?.cause?.message || "";
+      if (code === "23505" || /duplicate key|unique constraint/i.test(msg)) {
         const [existing] = await db.select().from(einvoiceOutboxTable).where(and(
           eq(einvoiceOutboxTable.companyId, companyId),
           eq(einvoiceOutboxTable.idempotencyKey, idemKeyStr),
         )).limit(1);
         if (existing) return res.status(200).json(existing);
       }
+      console.error("[einvoice/outbox] reserve_failed:", { code, msg, stack: e?.stack?.split("\n")[0] });
       return res.status(500).json({ error: "reserve_failed" });
     }
   }

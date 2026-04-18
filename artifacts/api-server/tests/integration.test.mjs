@@ -107,7 +107,7 @@ async function createTestProduct(jar, overrides = {}) {
 // ---------------------------------------------------------------------------
 describe("1. Auth", () => {
   test("Başarılı login — kullanıcı ve companyId döner", async () => {
-    const { status, json } = await login("cenan", "cenan123");
+    const { status, json } = await login("admin", "admin123");
     assert.equal(status, 200, JSON.stringify(json));
     assert.equal(json.user.username, "cenan");
     assert.equal(json.user.companyId, 1);
@@ -130,14 +130,14 @@ describe("1. Auth", () => {
   });
 
   test("Login sonrası /auth/me — oturum geçerli", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/auth/me", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.equal(json.username, "cenan");
   });
 
   test("Logout sonrası /auth/me — 401 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     await api("POST", "/auth/logout", { jar });
     const { status } = await api("GET", "/auth/me", { jar });
     assert.equal(status, 401);
@@ -149,7 +149,7 @@ describe("1. Auth", () => {
 // ---------------------------------------------------------------------------
 describe("2. Ürünler", () => {
   test("Ürün oluşturma başarılı — 201 ve id döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await createTestProduct(jar);
     assert.equal(status, 201, JSON.stringify(json));
     assert.ok(json.id, "id dolu olmalı");
@@ -157,7 +157,7 @@ describe("2. Ürünler", () => {
   });
 
   test("Aynı ürün koduyla tekrar oluşturma — 409 DUPLICATE_PRODUCT_CODE", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { productCode } = await createTestProduct(jar);
 
     const { status, json } = await api("POST", "/products", {
@@ -177,7 +177,7 @@ describe("2. Ürünler", () => {
   });
 
   test("Aynı barkodla tekrar oluşturma — 409 DUPLICATE_BARCODE", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const barcode = `B${Date.now()}`;
     await createTestProduct(jar, { barcode });
 
@@ -199,7 +199,7 @@ describe("2. Ürünler", () => {
   });
 
   test("Ürün listesi — toplam > 0 ve isActive filtresi çalışıyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/products?limit=5", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(json.total > 0, "ürün olmalı");
@@ -214,7 +214,7 @@ describe("2. Ürünler", () => {
 // ---------------------------------------------------------------------------
 describe("3. Satış ve Stok", () => {
   test("Satış başarılı — stok azalır", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
 
     const { json: product } = await createTestProduct(jar, { stock: 5, salePrice: 100, purchasePrice: 60 });
     const productId = product.id;
@@ -234,7 +234,7 @@ describe("3. Satış ve Stok", () => {
   });
 
   test("Stok yetersizse — 400 INSUFFICIENT_STOCK", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
 
     const { json: product } = await createTestProduct(jar, { stock: 3 });
     const productId = product.id;
@@ -249,7 +249,7 @@ describe("3. Satış ve Stok", () => {
   });
 
   test("Başka şirketin ürününe satış — 404", async () => {
-    const { jar: jarA } = await login("cenan", "cenan123");
+    const { jar: jarA } = await login("admin", "admin123");
     const { jar: jarB } = await login("nihat_admin", "nihat123", "nihatturizm");
 
     const { json: productA } = await createTestProduct(jarA, { stock: 10 });
@@ -268,7 +268,7 @@ describe("3. Satış ve Stok", () => {
 // ---------------------------------------------------------------------------
 describe("4. Soft Delete & Restore", () => {
   test("Ürünü sil → listeden çıkar, isActive=false olur", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json: product } = await createTestProduct(jar);
     const productId = product.id;
 
@@ -282,7 +282,7 @@ describe("4. Soft Delete & Restore", () => {
   });
 
   test("Admin showInactive=true ile silinmiş ürünü görür", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json: product, productCode } = await createTestProduct(jar);
     const productId = product.id;
 
@@ -296,7 +296,7 @@ describe("4. Soft Delete & Restore", () => {
   });
 
   test("Restore sonrası ürün aktif listeye döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json: product, productCode } = await createTestProduct(jar);
     const productId = product.id;
 
@@ -312,7 +312,7 @@ describe("4. Soft Delete & Restore", () => {
   });
 
   test("Staff rolü restore yapamaz — 403", async () => {
-    const { jar: adminJar } = await login("cenan", "cenan123");
+    const { jar: adminJar } = await login("admin", "admin123");
     const { jar: staffJar } = await login("goruntule", "staff123");
 
     const { json: product } = await createTestProduct(adminJar);
@@ -324,7 +324,7 @@ describe("4. Soft Delete & Restore", () => {
   });
 
   test("Zaten silinmiş ürünü tekrar silme — 404", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json: product } = await createTestProduct(jar);
     const productId = product.id;
 
@@ -339,7 +339,7 @@ describe("4. Soft Delete & Restore", () => {
 // ---------------------------------------------------------------------------
 describe("5. Tenant İzolasyonu", () => {
   test("Şirket A'nın ürünü Şirket B session'ıyla görünmez", async () => {
-    const { jar: jarA } = await login("cenan", "cenan123");
+    const { jar: jarA } = await login("admin", "admin123");
     const { jar: jarB } = await login("nihat_admin", "nihat123", "nihatturizm");
 
     const { json: productA } = await createTestProduct(jarA);
@@ -351,7 +351,7 @@ describe("5. Tenant İzolasyonu", () => {
   });
 
   test("Şirket A'nın ürününü Şirket B güncelleyemez", async () => {
-    const { jar: jarA } = await login("cenan", "cenan123");
+    const { jar: jarA } = await login("admin", "admin123");
     const { jar: jarB } = await login("nihat_admin", "nihat123", "nihatturizm");
 
     const { json: productA } = await createTestProduct(jarA);
@@ -365,7 +365,7 @@ describe("5. Tenant İzolasyonu", () => {
   });
 
   test("Şirket A'nın ürününü Şirket B silemez", async () => {
-    const { jar: jarA } = await login("cenan", "cenan123");
+    const { jar: jarA } = await login("admin", "admin123");
     const { jar: jarB } = await login("nihat_admin", "nihat123", "nihatturizm");
 
     const { json: productA } = await createTestProduct(jarA);
@@ -380,7 +380,7 @@ describe("5. Tenant İzolasyonu", () => {
   });
 
   test("Şirket listesi birbirinden ayrı — total uyuşmaz", async () => {
-    const { jar: jarA } = await login("cenan", "cenan123");
+    const { jar: jarA } = await login("admin", "admin123");
     const { jar: jarB } = await login("nihat_admin", "nihat123", "nihatturizm");
 
     const { json: listA } = await api("GET", "/products?limit=1", { jar: jarA });
@@ -396,7 +396,7 @@ describe("5. Tenant İzolasyonu", () => {
 // ---------------------------------------------------------------------------
 describe("6. Düşük Stok Alarmları", () => {
   test("Düşük stok endpoint'i çalışıyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/alerts/low-stock", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(typeof json.count === "number", "count sayısal olmalı");
@@ -412,7 +412,7 @@ describe("6. Düşük Stok Alarmları", () => {
   });
 
   test("Düşük stok ürünlerin stoku minStock'a eşit veya küçük", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", "/alerts/low-stock", { jar });
     for (const p of json.products) {
       assert.ok(p.stock <= p.minStock, `${p.productCode} stok (${p.stock}) > minStock (${p.minStock})`);
@@ -420,7 +420,7 @@ describe("6. Düşük Stok Alarmları", () => {
   });
 
   test("Tenant izolasyonu: farklı şirketler farklı alarm görir", async () => {
-    const { jar: jarA } = await login("cenan", "cenan123");
+    const { jar: jarA } = await login("admin", "admin123");
     const { jar: jarB } = await login("nihat_admin", "nihat123", "nihatturizm");
     const { json: alertA } = await api("GET", "/alerts/low-stock", { jar: jarA });
     const { json: alertB } = await api("GET", "/alerts/low-stock", { jar: jarB });
@@ -467,7 +467,7 @@ describe("7. Toplu Stok Güncellemesi", () => {
   }
 
   test("Şablon indirme çalışıyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const hdrs = { Cookie: jar.header(), "X-Tenant": jar.tenant };
     const res = await fetch(`${BASE}/stock/import-template`, { headers: hdrs });
     jar.update(res);
@@ -489,7 +489,7 @@ describe("7. Toplu Stok Güncellemesi", () => {
   });
 
   test("Dry-run: olmayan ürün kodu hata döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await stockImportRequest(jar, "product_code,quantity,mode\nNONEXISTENT-999,5,set", true);
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(json.dryRun === true, "dryRun flag olmalı");
@@ -498,14 +498,14 @@ describe("7. Toplu Stok Güncellemesi", () => {
   });
 
   test("Dry-run: geçersiz mod hata döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await stockImportRequest(jar, "product_code,quantity,mode\nPRO-001,5,invalid", true);
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(json.errors.length > 0, "Hata döndürülmeli");
   });
 
   test("Dry-run: negatif miktar hata döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await stockImportRequest(jar, "product_code,quantity,mode\nPRO-001,-5,add", true);
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(json.errors.length > 0, "Negatif miktar hatası döndürülmeli");
@@ -517,7 +517,7 @@ describe("7. Toplu Stok Güncellemesi", () => {
 // ---------------------------------------------------------------------------
 describe("8. Günlük Kapanış Özeti", () => {
   test("Geçerli tarih ile özet döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const today = new Date().toISOString().split("T")[0];
     const { status, json } = await api("GET", `/reports/daily-summary?date=${today}`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
@@ -541,13 +541,13 @@ describe("8. Günlük Kapanış Özeti", () => {
   });
 
   test("Geçersiz tarih formatı — 400", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/reports/daily-summary?date=not-a-date", { jar });
     assert.equal(status, 400, JSON.stringify(json));
   });
 
   test("Tarihsiz çağrı bugünü döndürür", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/reports/daily-summary", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     const today = new Date().toISOString().split("T")[0];
@@ -555,7 +555,7 @@ describe("8. Günlük Kapanış Özeti", () => {
   });
 
   test("Tenant izolasyonu: farklı şirketlerin ciroları birbirinden bağımsız", async () => {
-    const { jar: jarA } = await login("cenan", "cenan123");
+    const { jar: jarA } = await login("admin", "admin123");
     const { jar: jarB } = await login("nihat_admin", "nihat123", "nihatturizm");
     const today = new Date().toISOString().split("T")[0];
     const { json: sumA } = await api("GET", `/reports/daily-summary?date=${today}`, { jar: jarA });
@@ -588,7 +588,7 @@ describe("9. Super Admin", () => {
 // ---------------------------------------------------------------------------
 describe("10. Ayarlar", () => {
   test("Admin ayarları okuyabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/settings", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(json.companyName, "companyName döner");
@@ -607,7 +607,7 @@ describe("10. Ayarlar", () => {
   });
 
   test("Admin ayarları güncelleyebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const payload = {
       companyName: "PROSAN TEST",
       phone: "05001234567",
@@ -627,7 +627,7 @@ describe("10. Ayarlar", () => {
   });
 
   test("Tenant izolasyonu: farklı şirketlerin ayarları ayrı", async () => {
-    const { jar: jarA } = await login("cenan", "cenan123");
+    const { jar: jarA } = await login("admin", "admin123");
     const { jar: jarB } = await login("nihat_admin", "nihat123", "nihatturizm");
     const { json: setA } = await api("GET", "/settings", { jar: jarA });
     const { json: setB } = await api("GET", "/settings", { jar: jarB });
@@ -640,7 +640,7 @@ describe("10. Ayarlar", () => {
 // ---------------------------------------------------------------------------
 describe("11. Onboarding", () => {
   test("Onboarding durumunu okuyabilir — admin", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/settings/onboarding-status", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(typeof json.completed === "boolean", "completed alanı boolean olmalı");
@@ -655,7 +655,7 @@ describe("11. Onboarding", () => {
   });
 
   test("Onboarding tamamlama endpoint çalışıyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/settings/onboarding-complete", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.equal(json.completed, true, "completed true olmalı");
@@ -675,7 +675,7 @@ describe("11. Onboarding", () => {
 // ---------------------------------------------------------------------------
 describe("12. Logo Yükleme", () => {
   test("Logo silme endpoint çalışıyor — admin", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("DELETE", "/settings/logo", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.equal(json.logoUrl, null, "logoUrl null olmalı");
@@ -723,7 +723,7 @@ describe("13. Demo Sıfırlama", () => {
 // ---------------------------------------------------------------------------
 describe("14. Bildirimler", () => {
   test("Admin bildirim sayısını okuyabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/notifications/count", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(typeof json.unread === "number", "unread sayısal olmalı");
@@ -743,7 +743,7 @@ describe("14. Bildirimler", () => {
   });
 
   test("Admin bildirim listesi okuyabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/notifications", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(Array.isArray(json.notifications), "notifications dizi olmalı");
@@ -757,7 +757,7 @@ describe("14. Bildirimler", () => {
   });
 
   test("Admin bildirim üretebilir (generate)", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/notifications/generate", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(typeof json.created === "number", "created sayısal olmalı");
@@ -771,21 +771,21 @@ describe("14. Bildirimler", () => {
   });
 
   test("Tümünü okundu işaretleme çalışıyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", "/notifications/read-all", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(json.ok === true, "ok:true döner");
   });
 
   test("Okunmamış filtresi çalışıyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/notifications?unread=true", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(Array.isArray(json.notifications), "okunmamış listesi dizi olmalı");
   });
 
   test("Mesaj şablonları endpoint çalışıyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/notifications/templates?productName=Test&stock=5&companyName=PROSAN", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(json.low_stock_whatsapp, "whatsapp şablonu olmalı");
@@ -794,7 +794,7 @@ describe("14. Bildirimler", () => {
   });
 
   test("Tenant izolasyonu: iki firma bildirimleri ayrı", async () => {
-    const { jar: jarA } = await login("cenan", "cenan123");
+    const { jar: jarA } = await login("admin", "admin123");
     const { jar: jarB } = await login("nihat_admin", "nihat123", "nihatturizm");
     await api("POST", "/notifications/generate", { jar: jarA });
     await api("POST", "/notifications/generate", { jar: jarB });
@@ -810,7 +810,7 @@ describe("14. Bildirimler", () => {
 // ---------------------------------------------------------------------------
 describe("15. Morning Brief ve Şablonlar", () => {
   test("Admin morning brief okuyabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/dashboard/morning-brief", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(typeof json.greeting === "string", "greeting string olmalı");
@@ -833,7 +833,7 @@ describe("15. Morning Brief ve Şablonlar", () => {
   });
 
   test("Şablon parametreleri doğru render edilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", "/notifications/templates?productName=Çivi&stock=2&companyName=PROSAN", { jar });
     assert.ok(json.low_stock_whatsapp.includes("Çivi"), "ürün adı şablonda yer almalı");
     assert.ok(json.restock_request_whatsapp.includes("PROSAN"), "firma adı şablonda yer almalı");
@@ -848,7 +848,7 @@ describe("16. Müşteri CRUD", () => {
   const code = `TST-${Date.now()}`;
 
   test("Admin müşteri oluşturabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/customers", {
       jar,
       body: { code, name: "Test Müşteri A.Ş.", type: "company", phone: "05551234567", city: "Ankara" },
@@ -860,7 +860,7 @@ describe("16. Müşteri CRUD", () => {
   });
 
   test("Duplicate kod engellenir — 409", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/customers", {
       jar,
       body: { code, name: "Başka Müşteri" },
@@ -869,7 +869,7 @@ describe("16. Müşteri CRUD", () => {
   });
 
   test("Müşteri listesi döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/customers", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(Array.isArray(json.customers), "customers dizi olmalı");
@@ -877,14 +877,14 @@ describe("16. Müşteri CRUD", () => {
   });
 
   test("Müşteri detayı döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/customers/${createdId}`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.equal(json.customer.id, createdId, "doğru müşteri");
   });
 
   test("Müşteri güncellenebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", `/customers/${createdId}`, {
       jar,
       body: { city: "İstanbul", phone: "05559876543" },
@@ -907,21 +907,21 @@ describe("16. Müşteri CRUD", () => {
   });
 
   test("Müşteri soft delete edilebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("DELETE", `/customers/${createdId}`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(json.ok, "ok:true döner");
   });
 
   test("Silinmiş müşteri aktif filtresiyle görünmez", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", "/customers?active=true", { jar });
     const found = (json.customers ?? []).find((c) => c.id === createdId);
     assert.ok(!found, "soft deleted müşteri aktif listede olmamalı");
   });
 
   test("Müşteri geri yüklenebilir (restore)", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PATCH", `/customers/${createdId}/restore`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(json.ok, "ok:true");
@@ -936,7 +936,7 @@ describe("17. Cari İşlemler ve Tahsilat", () => {
   const cariCode = `CAR-${Date.now()}`;
 
   test("Kurulum: müşteri oluştur", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/customers", {
       jar,
       body: { code: cariCode, name: "Cari Test Müşteri", openingBalance: 0 },
@@ -946,7 +946,7 @@ describe("17. Cari İşlemler ve Tahsilat", () => {
   });
 
   test("Satış müşteriye bağlanınca debit oluşur", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     // Stok > 0 olan ilk ürünü bul
     const { json: pJson } = await api("GET", "/products?limit=100", { jar });
     const product = (pJson.products ?? []).find((p) => p.stock > 0);
@@ -960,13 +960,13 @@ describe("17. Cari İşlemler ve Tahsilat", () => {
   });
 
   test("Satış sonrası müşteri bakiyesi arttı", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", `/customers/${cariId}`, { jar });
     assert.ok(json.customer.currentBalance > 0, `bakiye arttı: ${json.customer.currentBalance}`);
   });
 
   test("Cari hareket listesi döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/customers/${cariId}/transactions`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(Array.isArray(json.transactions), "transactions dizi olmalı");
@@ -974,7 +974,7 @@ describe("17. Cari İşlemler ve Tahsilat", () => {
   });
 
   test("Tahsilat alındıktan sonra bakiye düşer", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const beforeRes = await api("GET", `/customers/${cariId}`, { jar });
     const before = beforeRes.json.customer.currentBalance;
 
@@ -999,7 +999,7 @@ describe("17. Cari İşlemler ve Tahsilat", () => {
   });
 
   test("Sıfır tutar tahsilat reddedilir — 400", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", `/customers/${cariId}/payment`, {
       jar,
       body: { amount: 0 },
@@ -1008,7 +1008,7 @@ describe("17. Cari İşlemler ve Tahsilat", () => {
   });
 
   test("Hesap ekstresi endpoint çalışıyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/customers/${cariId}/statement`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(json.customer, "customer alanı olmalı");
@@ -1021,14 +1021,14 @@ describe("17. Cari İşlemler ve Tahsilat", () => {
   });
 
   test("Müşteri satış geçmişi endpoint çalışıyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/customers/${cariId}/sales`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(Array.isArray(json.sales), "sales dizi olmalı");
   });
 
   test("En borçlu müşteriler endpoint çalışıyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/customers/top-debtors", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(Array.isArray(json.customers), "customers dizi olmalı");
@@ -1044,7 +1044,7 @@ describe("18. Tedarikçi CRUD", () => {
   const code = `SUPP-TEST-${Date.now()}`;
 
   test("Tedarikçi listesi boş veya dizi döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/suppliers", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(Array.isArray(json.suppliers), "suppliers dizi olmalı");
@@ -1052,7 +1052,7 @@ describe("18. Tedarikçi CRUD", () => {
   });
 
   test("Tedarikçi oluşturulur", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/suppliers", {
       jar,
       body: { code, name: "Test Tedarikçi A.Ş.", phone: "0212 555 00 00", city: "İstanbul", openingBalance: 5000 },
@@ -1065,7 +1065,7 @@ describe("18. Tedarikçi CRUD", () => {
   });
 
   test("Aynı kodla ikinci tedarikçi oluşturulamaz", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/suppliers", {
       jar,
       body: { code, name: "Kopya Tedarikçi" },
@@ -1074,14 +1074,14 @@ describe("18. Tedarikçi CRUD", () => {
   });
 
   test("Tedarikçi detayı döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/suppliers/${supplierId}`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.equal(json.supplier.id, supplierId);
   });
 
   test("Tedarikçi güncellenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", `/suppliers/${supplierId}`, {
       jar,
       body: { name: "Test Tedarikçi (Güncellendi)", phone: "0212 666 00 00" },
@@ -1091,7 +1091,7 @@ describe("18. Tedarikçi CRUD", () => {
   });
 
   test("Tedarikçi bakiye düzeltmesi yapılır", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/suppliers/${supplierId}/adjustment`, {
       jar,
       body: { amount: 1000, direction: "debit", note: "Test düzeltme" },
@@ -1101,7 +1101,7 @@ describe("18. Tedarikçi CRUD", () => {
   });
 
   test("Tedarikçi ödeme kaydedilir ve bakiye güncellenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const balBefore = (await api("GET", `/suppliers/${supplierId}`, { jar })).json.supplier.currentBalance;
     const { status, json } = await api("POST", `/suppliers/${supplierId}/payment`, {
       jar,
@@ -1112,7 +1112,7 @@ describe("18. Tedarikçi CRUD", () => {
   });
 
   test("Tedarikçi cari hareketleri listelenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/suppliers/${supplierId}/transactions`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(Array.isArray(json.transactions), "transactions dizi olmalı");
@@ -1120,7 +1120,7 @@ describe("18. Tedarikçi CRUD", () => {
   });
 
   test("Hesap ekstresi endpoint çalışıyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/suppliers/${supplierId}/statement`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(json.supplier, "supplier alanı olmalı");
@@ -1131,21 +1131,21 @@ describe("18. Tedarikçi CRUD", () => {
   });
 
   test("En borçlu tedarikçiler endpoint çalışıyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/suppliers/top-creditors", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(Array.isArray(json.suppliers), "suppliers dizi olmalı");
   });
 
   test("Tedarikçi silinir (soft-delete)", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("DELETE", `/suppliers/${supplierId}`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(json.ok, "ok dönmeli");
   });
 
   test("Silinmiş tedarikçi geri yüklenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PATCH", `/suppliers/${supplierId}/restore`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(json.ok, "ok dönmeli");
@@ -1169,7 +1169,7 @@ describe("18. Tedarikçi CRUD", () => {
     });
     const newId = createJson.supplier?.id;
     if (!newId) return;
-    const { jar: j1 } = await login("cenan", "cenan123");
+    const { jar: j1 } = await login("admin", "admin123");
     const { status } = await api("GET", `/suppliers/${newId}`, { jar: j1 });
     assert.equal(status, 404, "Farklı tenant tedarikçisi görünmemeli");
   });
@@ -1183,7 +1183,7 @@ describe("19. Alış Faturası ve Stok Girişi", () => {
   let testProductId;
 
   before(async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     // Tedarikçi oluştur
     const { json: sJson } = await api("POST", "/suppliers", {
       jar,
@@ -1206,7 +1206,7 @@ describe("19. Alış Faturası ve Stok Girişi", () => {
   });
 
   test("Alış faturası oluşturulur ve stok artar", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const stockBefore = (await api("GET", `/products/${testProductId}`, { jar })).json.stock;
     const { status, json } = await api("POST", "/purchases", {
       jar,
@@ -1227,7 +1227,7 @@ describe("19. Alış Faturası ve Stok Girişi", () => {
   });
 
   test("Alış faturası tedarikçiye debit transaction açar", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/suppliers/${purchSuppId}/transactions`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     const purchaseTxs = json.transactions.filter((t) => t.type === "purchase" && t.direction === "debit");
@@ -1235,20 +1235,20 @@ describe("19. Alış Faturası ve Stok Girişi", () => {
   });
 
   test("Alış faturası tedarikçi bakiyesini artırır", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", `/suppliers/${purchSuppId}`, { jar });
     assert.ok(json.supplier.currentBalance > 0, "Tedarikçi bakiyesi pozitif olmalı");
   });
 
   test("Alış faturası listesi döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/purchases", { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok(Array.isArray(json.purchases), "purchases dizi olmalı");
   });
 
   test("Alış faturası tedarikçiye göre filtrelenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/purchases?supplierId=${purchSuppId}`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     const all = json.purchases;
@@ -1256,13 +1256,13 @@ describe("19. Alış Faturası ve Stok Girişi", () => {
   });
 
   test("Alış faturası ürün maliyeti günceller", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", `/products/${testProductId}`, { jar });
     assert.equal(json.purchasePrice, 12, "Maliyet faturadaki unitCost ile eşleşmeli");
   });
 
   test("Tedarikçisiz fatura oluşturulamaz", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/purchases", {
       jar,
       body: { invoiceDate: new Date().toISOString(), items: [{ productId: testProductId, quantity: 5, unitCost: 10 }] },
@@ -1271,7 +1271,7 @@ describe("19. Alış Faturası ve Stok Girişi", () => {
   });
 
   test("Kalemsiz fatura oluşturulamaz", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/purchases", {
       jar,
       body: { supplierId: purchSuppId, invoiceDate: new Date().toISOString(), items: [] },
@@ -1301,7 +1301,7 @@ describe("20. Gelişmiş Raporlar", () => {
   const END   = "2099-12-31";
 
   test("Satış raporu 200 döner ve gerekli alanlar mevcuttur", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/reports/sales?startDate=${START}&endDate=${END}`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok("grossRevenue"    in json, "grossRevenue eksik");
@@ -1313,13 +1313,13 @@ describe("20. Gelişmiş Raporlar", () => {
   });
 
   test("Satış raporu tarih parametresi olmadan 400 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("GET", "/reports/sales", { jar });
     assert.equal(status, 400);
   });
 
   test("Kâr analizi raporu 200 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/reports/profit?startDate=${START}&endDate=${END}`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok("summary"         in json, "summary eksik");
@@ -1336,13 +1336,13 @@ describe("20. Gelişmiş Raporlar", () => {
   });
 
   test("Kâr analizi tarih parametresi olmadan 400 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("GET", "/reports/profit", { jar });
     assert.equal(status, 400);
   });
 
   test("Müşteri analizi raporu 200 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/reports/customer-analytics?startDate=${START}&endDate=${END}`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok("totalCustomers"      in json, "totalCustomers eksik");
@@ -1359,7 +1359,7 @@ describe("20. Gelişmiş Raporlar", () => {
   });
 
   test("Tedarikçi analizi raporu 200 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/reports/supplier-analytics?startDate=${START}&endDate=${END}`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok("totalSuppliers"       in json, "totalSuppliers eksik");
@@ -1370,7 +1370,7 @@ describe("20. Gelişmiş Raporlar", () => {
   });
 
   test("Alış özet raporu 200 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/reports/purchases-summary?startDate=${START}&endDate=${END}`, { jar });
     assert.equal(status, 200, JSON.stringify(json));
     assert.ok("totalPurchases" in json, "totalPurchases eksik");
@@ -1380,7 +1380,7 @@ describe("20. Gelişmiş Raporlar", () => {
   });
 
   test("Tenant izolasyonu — rapor yalnızca kendi tenant verisini döner", async () => {
-    const { jar: jar1 } = await login("cenan", "cenan123");
+    const { jar: jar1 } = await login("admin", "admin123");
     const { json: j1 } = await api("GET", `/reports/sales?startDate=${START}&endDate=${END}`, { jar: jar1 });
     const { jar: jar2 } = await login("nihat_admin", "nihat123", "nihatturizm");
     const { json: j2 } = await api("GET", `/reports/sales?startDate=${START}&endDate=${END}`, { jar: jar2 });
@@ -1390,7 +1390,7 @@ describe("20. Gelişmiş Raporlar", () => {
   });
 
   test("Satış CSV export 200 döner ve CSV içeriği gelir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const headers = { "Cookie": jar.header(), "X-Tenant": "prosan" };
     const res = await fetch(`http://localhost:8080/api/reports/export/sales?startDate=${START}&endDate=${END}`, { headers });
     assert.equal(res.status, 200, "export/sales 200 olmalı");
@@ -1401,7 +1401,7 @@ describe("20. Gelişmiş Raporlar", () => {
   });
 
   test("Alış CSV export 200 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const headers = { "Cookie": jar.header(), "X-Tenant": "prosan" };
     const res = await fetch(`http://localhost:8080/api/reports/export/purchases?startDate=${START}&endDate=${END}`, { headers });
     assert.equal(res.status, 200, "export/purchases 200 olmalı");
@@ -1410,7 +1410,7 @@ describe("20. Gelişmiş Raporlar", () => {
   });
 
   test("Stok CSV export 200 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const headers = { "Cookie": jar.header(), "X-Tenant": "prosan" };
     const res = await fetch(`http://localhost:8080/api/reports/export/stock`, { headers });
     assert.equal(res.status, 200, "export/stock 200 olmalı");
@@ -1435,7 +1435,7 @@ describe("Stok Sayım Merkezi", () => {
 
   // Önceki test çalışmalarından kalan açık oturumları temizle
   before(async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", "/stock-counts", { jar });
     const openSessions = (json.sessions ?? []).filter(s => s.status === "open");
     for (const s of openSessions) {
@@ -1451,14 +1451,14 @@ describe("Stok Sayım Merkezi", () => {
   });
 
   test("Sayım oturumları listelenir (başlangıçta boş olabilir)", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/stock-counts", { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.sessions), "sessions dizisi olmalı");
   });
 
   test("Yeni sayım oturumu açılır", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/stock-counts", {
       jar,
       body: { name: "Test Sayımı Sprint8", notes: "Otomatik test" },
@@ -1471,7 +1471,7 @@ describe("Stok Sayım Merkezi", () => {
   });
 
   test("Açık oturum varken tekrar açılamaz", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/stock-counts", {
       jar,
       body: { name: "Duplicate Sayım" },
@@ -1481,7 +1481,7 @@ describe("Stok Sayım Merkezi", () => {
   });
 
   test("Oturum detayı çekilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/stock-counts/${sessionId}`, { jar });
     assert.equal(status, 200);
     assert.ok(json.session, "session alanı olmalı");
@@ -1490,13 +1490,13 @@ describe("Stok Sayım Merkezi", () => {
   });
 
   test("Var olmayan oturum 404 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("GET", "/stock-counts/999999", { jar });
     assert.equal(status, 404);
   });
 
   test("Barkod ile ürün sayılır ve kalem eklenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     // Önce bir ürün bul
     const { json: pj } = await api("GET", "/products?limit=1", { jar });
     const product = pj?.products?.[0];
@@ -1513,7 +1513,7 @@ describe("Stok Sayım Merkezi", () => {
   });
 
   test("Aynı ürün tekrar sayılınca upsert çalışır", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json: pj } = await api("GET", "/products?limit=1", { jar });
     const product = pj?.products?.[0];
 
@@ -1526,7 +1526,7 @@ describe("Stok Sayım Merkezi", () => {
   });
 
   test("Tüm ürünler oturuma yüklenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/stock-counts/${sessionId}/load-all`, { jar });
     assert.equal(status, 200, `load-all 200 olmalı — ${JSON.stringify(json)}`);
     assert.ok(typeof json.added === "number", "added sayısı olmalı");
@@ -1534,7 +1534,7 @@ describe("Stok Sayım Merkezi", () => {
   });
 
   test("Sayım kalemi CSV export çalışır", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const headers = { "Cookie": jar.header(), "X-Tenant": "prosan" };
     const res = await fetch(`http://localhost:8080/api/stock-counts/${sessionId}/export`, { headers });
     assert.equal(res.status, 200);
@@ -1545,14 +1545,14 @@ describe("Stok Sayım Merkezi", () => {
   });
 
   test("Oturum kapatılır", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/stock-counts/${sessionId}/close`, { jar });
     assert.equal(status, 200, `close 200 olmalı — ${JSON.stringify(json)}`);
     assert.equal(json.session.status, "closed");
   });
 
   test("Kapalı oturuma kalem eklenemez", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json: pj } = await api("GET", "/products?limit=1", { jar });
     const product = pj?.products?.[0];
     const { status, json } = await api("POST", `/stock-counts/${sessionId}/items`, {
@@ -1564,7 +1564,7 @@ describe("Stok Sayım Merkezi", () => {
   });
 
   test("Düzeltmeler onaylanır ve stoklar güncellenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/stock-counts/${sessionId}/approve`, { jar });
     assert.equal(status, 200, `approve 200 olmalı — ${JSON.stringify(json)}`);
     assert.ok(typeof json.adjusted === "number", "adjusted sayısı olmalı");
@@ -1572,7 +1572,7 @@ describe("Stok Sayım Merkezi", () => {
   });
 
   test("Onaylı oturumu tekrar onaylamak 409 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/stock-counts/${sessionId}/approve`, { jar });
     assert.equal(status, 409);
     assert.equal(json.error?.code, "ALREADY_APPROVED");
@@ -1588,7 +1588,7 @@ describe("Stok Sayım Merkezi", () => {
   });
 
   test("Onaylı oturum listede görünür", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/stock-counts", { jar });
     assert.equal(status, 200);
     const found = json.sessions.find(s => s.id === sessionId);
@@ -1604,7 +1604,7 @@ describe("Sprint 10 — Finans: Gider Kategorileri", () => {
   let catId;
 
   test("Kategori oluşturma (admin)", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/finance/expense-categories", {
       jar,
       body: { name: "Test Kira", icon: "🏢", color: "red-500" },
@@ -1615,7 +1615,7 @@ describe("Sprint 10 — Finans: Gider Kategorileri", () => {
   });
 
   test("Kategori listesi döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/finance/expense-categories", { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.categories), "categories dizisi bekleniyor");
@@ -1624,7 +1624,7 @@ describe("Sprint 10 — Finans: Gider Kategorileri", () => {
   });
 
   test("Kategori güncelleme (admin)", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", `/finance/expense-categories/${catId}`, {
       jar,
       body: { name: "Kira Güncel", icon: "🏠", isActive: true },
@@ -1652,7 +1652,7 @@ describe("Sprint 10 — Finans: Gider Kategorileri", () => {
   });
 
   test("Ad olmadan kategori oluşturulamaz", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/finance/expense-categories", {
       jar,
       body: { name: "  " },
@@ -1666,7 +1666,7 @@ describe("Sprint 10 — Finans: Gider Yönetimi", () => {
   let catId;
 
   before(async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("POST", "/finance/expense-categories", {
       jar,
       body: { name: "Elektrik", icon: "💡" },
@@ -1694,7 +1694,7 @@ describe("Sprint 10 — Finans: Gider Yönetimi", () => {
   });
 
   test("Gider tutarı sıfır/negatif reddedilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/finance/expenses", {
       jar,
       body: { amount: 0, description: "Sıfır", expenseDate: "2026-04-01" },
@@ -1703,7 +1703,7 @@ describe("Sprint 10 — Finans: Gider Yönetimi", () => {
   });
 
   test("Açıklama olmadan gider reddedilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/finance/expenses", {
       jar,
       body: { amount: 100, expenseDate: "2026-04-01" },
@@ -1712,7 +1712,7 @@ describe("Sprint 10 — Finans: Gider Yönetimi", () => {
   });
 
   test("Banka ödemeli gider oluşturulabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/finance/expenses", {
       jar,
       body: { amount: 1500, description: "Şubat Kira", expenseDate: "2026-04-05", paymentMethod: "bank" },
@@ -1721,7 +1721,7 @@ describe("Sprint 10 — Finans: Gider Yönetimi", () => {
   });
 
   test("Gider listesi döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/finance/expenses?startDate=2026-04-01&endDate=2026-04-30", { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.expenses));
@@ -1744,21 +1744,21 @@ describe("Sprint 10 — Finans: Gider Yönetimi", () => {
   });
 
   test("Gider silinir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("DELETE", `/finance/expenses/${expenseId}`, { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.ok, true);
   });
 
   test("Olmayan gider silinmeye çalışılırsa 404 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("DELETE", "/finance/expenses/99999999", { jar });
     assert.equal(status, 404, `404 bekleniyor — ${JSON.stringify(json)}`);
   });
 
   test("Viewer rolü gider silemez", async () => {
     // Önce admin ile gider ekle
-    const { jar: adminJar } = await login("cenan", "cenan123");
+    const { jar: adminJar } = await login("admin", "admin123");
     const { json: created } = await api("POST", "/finance/expenses", {
       jar: adminJar,
       body: { amount: 50, description: "Silinmeyen gider", expenseDate: "2026-04-10" },
@@ -1776,7 +1776,7 @@ describe("Sprint 10 — Finans: Kasa Hareketleri", () => {
 
   before(async () => {
     // Nakit gider ekleyerek kasa oluşmasını sağla
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     await api("POST", "/finance/expenses", {
       jar,
       body: { amount: 10, description: "Kasa init", expenseDate: "2026-04-15", paymentMethod: "cash" },
@@ -1787,7 +1787,7 @@ describe("Sprint 10 — Finans: Kasa Hareketleri", () => {
   });
 
   test("Kasa listesi döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/finance/cash", { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.registers));
@@ -1795,7 +1795,7 @@ describe("Sprint 10 — Finans: Kasa Hareketleri", () => {
   });
 
   test("Kasa giriş hareketi eklenebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/finance/cash/${registerId}/movements`, {
       jar,
       body: { type: "income", direction: "in", amount: 500, description: "Manuel kasa girişi" },
@@ -1806,7 +1806,7 @@ describe("Sprint 10 — Finans: Kasa Hareketleri", () => {
   });
 
   test("Kasa çıkış hareketi eklenebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/finance/cash/${registerId}/movements`, {
       jar,
       body: { type: "expense", direction: "out", amount: 100, description: "Manuel kasa çıkışı" },
@@ -1816,7 +1816,7 @@ describe("Sprint 10 — Finans: Kasa Hareketleri", () => {
   });
 
   test("Geçersiz yön reddedilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", `/finance/cash/${registerId}/movements`, {
       jar,
       body: { direction: "sideways", amount: 100, description: "Test" },
@@ -1825,14 +1825,14 @@ describe("Sprint 10 — Finans: Kasa Hareketleri", () => {
   });
 
   test("Kasa hareketleri listesi döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/finance/cash/${registerId}/movements`, { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.movements));
   });
 
   test("Olmayan kasa için 404 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/finance/cash/99999999/movements", {
       jar,
       body: { direction: "in", amount: 100, description: "Test" },
@@ -1843,7 +1843,7 @@ describe("Sprint 10 — Finans: Kasa Hareketleri", () => {
 
 describe("Sprint 10 — Finans: Özet & Rapor", () => {
   test("Finans özeti döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const start = "2026-04-01";
     const end = "2026-04-30";
     const { status, json } = await api("GET", `/finance/summary?startDate=${start}&endDate=${end}`, { jar });
@@ -1856,14 +1856,14 @@ describe("Sprint 10 — Finans: Özet & Rapor", () => {
   });
 
   test("Finans özeti tarih olmadan (bu ay) döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/finance/summary", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok(typeof json.revenue === "number");
   });
 
   test("Aylık özet döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/finance/monthly-summary?year=2026", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.year, 2026);
@@ -1872,7 +1872,7 @@ describe("Sprint 10 — Finans: Özet & Rapor", () => {
   });
 
   test("Gider CSV export çalışır", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const res = await fetch(`${BASE}/finance/expenses/export?startDate=2026-04-01&endDate=2026-04-30`, {
       headers: { Cookie: jar.header(), "X-Tenant": jar.tenant },
     });
@@ -1894,7 +1894,7 @@ describe("Sprint 10 — Finans: Özet & Rapor", () => {
     const { status, json: nihatSummary } = await api("GET", "/finance/summary", { jar: nihat });
     assert.equal(status, 200);
 
-    const { jar: cenan } = await login("cenan", "cenan123");
+    const { jar: cenan } = await login("admin", "admin123");
     const { json: cenanSummary } = await api("GET", "/finance/summary", { jar: cenan });
 
     // İzolasyon: farklı veri olabilir (her ikisi de 200, ama birinin giderini
@@ -1912,7 +1912,7 @@ describe("Sprint 9 — Şube CRUD", () => {
   let branch2Id;
 
   test("Şube oluşturma (admin)", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/branches", {
       jar,
       body: { name: "Merkez Şube", address: "İstanbul", phone: "0212000000", isMain: true },
@@ -1924,7 +1924,7 @@ describe("Sprint 9 — Şube CRUD", () => {
   });
 
   test("İkinci şube oluşturma", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/branches", {
       jar,
       body: { name: "Kadıköy Şubesi", address: "Kadıköy, İstanbul" },
@@ -1934,7 +1934,7 @@ describe("Sprint 9 — Şube CRUD", () => {
   });
 
   test("Şube listesi döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/branches", { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.branches));
@@ -1944,7 +1944,7 @@ describe("Sprint 9 — Şube CRUD", () => {
   });
 
   test("Şube detayı döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/branches/${branchId}`, { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.branch.id, branchId);
@@ -1952,7 +1952,7 @@ describe("Sprint 9 — Şube CRUD", () => {
   });
 
   test("Şube güncelleme (admin)", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", `/branches/${branchId}`, {
       jar,
       body: { name: "Merkez Şube Güncel", address: "Beşiktaş, İstanbul", isActive: true },
@@ -1971,7 +1971,7 @@ describe("Sprint 9 — Şube CRUD", () => {
   });
 
   test("Ad olmadan şube reddedilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/branches", {
       jar,
       body: { name: "  " },
@@ -1980,13 +1980,13 @@ describe("Sprint 9 — Şube CRUD", () => {
   });
 
   test("Olmayan şube 404 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("GET", "/branches/99999999", { jar });
     assert.equal(status, 404);
   });
 
   test("Şube stok listesi döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/branches/${branchId}/stock`, { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok(Array.isArray(json.stocks));
@@ -1994,7 +1994,7 @@ describe("Sprint 9 — Şube CRUD", () => {
   });
 
   test("Şube stok seviyesi güncellenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     // Bir ürün al
     const { json: pj } = await api("GET", "/products?limit=1", { jar });
     const productId = pj.products[0]?.id;
@@ -2009,7 +2009,7 @@ describe("Sprint 9 — Şube CRUD", () => {
   });
 
   test("Ana şube silinemez", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("DELETE", `/branches/${branchId}`, { jar });
     assert.equal(status, 409, `409 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.error?.code, "CANNOT_DELETE_MAIN");
@@ -2018,7 +2018,7 @@ describe("Sprint 9 — Şube CRUD", () => {
   test("Şirket izolasyonu — nihat kendi şubelerini görür", async () => {
     const { jar: nihat } = await login("nihat_admin", "nihat123", "nihatturizm");
     const { json: nihatBranches } = await api("GET", "/branches", { jar: nihat });
-    const { jar: cenan } = await login("cenan", "cenan123");
+    const { jar: cenan } = await login("admin", "admin123");
     const { json: cenanBranches } = await api("GET", "/branches", { jar: cenan });
     // Her şirketin kendi listesi var — karşılıklı erişim yok
     assert.ok(Array.isArray(nihatBranches.branches));
@@ -2038,7 +2038,7 @@ describe("Sprint 9 — Şubeler Arası Transfer", () => {
   let productId;
 
   before(async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     // Şubeleri listele
     const { json: bj } = await api("GET", "/branches", { jar });
     [fromBranchId, toBranchId] = bj.branches.slice(0, 2).map(b => b.id);
@@ -2056,7 +2056,7 @@ describe("Sprint 9 — Şubeler Arası Transfer", () => {
 
   test("Transfer talebi oluşturulur", async () => {
     if (!fromBranchId || !toBranchId || !productId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/branches/transfers", {
       jar,
       body: {
@@ -2073,7 +2073,7 @@ describe("Sprint 9 — Şubeler Arası Transfer", () => {
 
   test("Aynı şubeye transfer reddedilir", async () => {
     if (!fromBranchId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/branches/transfers", {
       jar,
       body: { fromBranchId, toBranchId: fromBranchId, items: [{ productId, quantity: 5 }] },
@@ -2083,7 +2083,7 @@ describe("Sprint 9 — Şubeler Arası Transfer", () => {
 
   test("Ürünsüz transfer reddedilir", async () => {
     if (!fromBranchId || !toBranchId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/branches/transfers", {
       jar,
       body: { fromBranchId, toBranchId, items: [] },
@@ -2092,7 +2092,7 @@ describe("Sprint 9 — Şubeler Arası Transfer", () => {
   });
 
   test("Transfer listesi döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/branches/transfers/list", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok(Array.isArray(json.transfers));
@@ -2104,7 +2104,7 @@ describe("Sprint 9 — Şubeler Arası Transfer", () => {
 
   test("Transfer tamamlanır ve stok güncellenir", async () => {
     if (!transferId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/branches/transfers/${transferId}/complete`, { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.transfer.status, "completed");
@@ -2112,14 +2112,14 @@ describe("Sprint 9 — Şubeler Arası Transfer", () => {
 
   test("Tamamlanmış transfer tekrar tamamlanamaz", async () => {
     if (!transferId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/branches/transfers/${transferId}/complete`, { jar });
     assert.equal(status, 409, `409 bekleniyor — ${JSON.stringify(json)}`);
   });
 
   test("Bekleyen transfer iptal edilebilir", async () => {
     if (!fromBranchId || !toBranchId || !productId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     // Yeni transfer oluştur
     const { json: created } = await api("POST", "/branches/transfers", {
       jar,
@@ -2154,7 +2154,7 @@ describe("Sprint 13 — Entegrasyon Çekirdeği", () => {
 
   // ─── Webhook olayları listesi ──────────────────────────────────────────
   test("Desteklenen webhook olayları listelenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/integrations/webhook-events", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok(Array.isArray(json.events), "events dizisi bekleniyor");
@@ -2166,7 +2166,7 @@ describe("Sprint 13 — Entegrasyon Çekirdeği", () => {
 
   // ─── Webhook CRUD ──────────────────────────────────────────────────────
   test("Admin webhook oluşturabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/integrations/webhooks", {
       jar,
       body: {
@@ -2183,7 +2183,7 @@ describe("Sprint 13 — Entegrasyon Çekirdeği", () => {
   });
 
   test("Webhook listesi döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/integrations/webhooks", { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.webhooks));
@@ -2195,7 +2195,7 @@ describe("Sprint 13 — Entegrasyon Çekirdeği", () => {
   });
 
   test("Webhook geçersiz URL ile oluşturulamaz", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/integrations/webhooks", {
       jar,
       body: { name: "Bad URL", url: "bu-bir-url-degil", events: [] },
@@ -2205,7 +2205,7 @@ describe("Sprint 13 — Entegrasyon Çekirdeği", () => {
 
   test("Webhook güncellenebilir", async () => {
     if (!webhookId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", `/integrations/webhooks/${webhookId}`, {
       jar,
       body: { name: "Güncel Webhook", isActive: false },
@@ -2217,7 +2217,7 @@ describe("Sprint 13 — Entegrasyon Çekirdeği", () => {
 
   test("Webhook test ping gönderilir (fail tolerant — external URL)", async () => {
     if (!webhookId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/integrations/webhooks/${webhookId}/test`, { jar });
     // Dış URL ulaşılamaz olabilir — success/fail ayrımı değil, response şeklini kontrol et
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
@@ -2226,7 +2226,7 @@ describe("Sprint 13 — Entegrasyon Çekirdeği", () => {
 
   test("Webhook teslimat logu listelenir", async () => {
     if (!webhookId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/integrations/webhooks/${webhookId}/deliveries`, { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok(Array.isArray(json.deliveries), "deliveries dizisi olmalı");
@@ -2250,7 +2250,7 @@ describe("Sprint 13 — Entegrasyon Çekirdeği", () => {
 
   test("Webhook silinebilir", async () => {
     if (!webhookId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("DELETE", `/integrations/webhooks/${webhookId}`, { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.ok, true);
@@ -2258,14 +2258,14 @@ describe("Sprint 13 — Entegrasyon Çekirdeği", () => {
 
   test("Silinen webhook bulunamaz", async () => {
     if (!webhookId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("GET", `/integrations/webhooks/${webhookId}/deliveries`, { jar });
     assert.equal(status, 404);
   });
 
   // ─── API Key CRUD ──────────────────────────────────────────────────────
   test("Admin API Key oluşturabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/integrations/api-keys", {
       jar,
       body: { name: "E-Ticaret Entegrasyonu", scopes: "read" },
@@ -2281,7 +2281,7 @@ describe("Sprint 13 — Entegrasyon Çekirdeği", () => {
   });
 
   test("API Key listesinde rawKey dönmez", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/integrations/api-keys", { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.apiKeys));
@@ -2299,7 +2299,7 @@ describe("Sprint 13 — Entegrasyon Çekirdeği", () => {
 
   test("API Key aktif/pasif yapılabilir", async () => {
     if (!apiKeyId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", `/integrations/api-keys/${apiKeyId}`, {
       jar, body: { isActive: false },
     });
@@ -2308,7 +2308,7 @@ describe("Sprint 13 — Entegrasyon Çekirdeği", () => {
   });
 
   test("API Key ad olmadan oluşturulamaz", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/integrations/api-keys", {
       jar, body: { scopes: "read" },
     });
@@ -2317,7 +2317,7 @@ describe("Sprint 13 — Entegrasyon Çekirdeği", () => {
 
   test("API Key silinebilir", async () => {
     if (!apiKeyId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("DELETE", `/integrations/api-keys/${apiKeyId}`, { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.ok, true);
@@ -2338,7 +2338,7 @@ describe("Sprint 14 — Muhasebe Entegrasyonu", () => {
   let accIntegrationId;
 
   test("Muhasebe sağlayıcıları listelenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/ext-integrations/accounting/providers", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok(Array.isArray(json.providers), "providers dizisi bekleniyor");
@@ -2349,7 +2349,7 @@ describe("Sprint 14 — Muhasebe Entegrasyonu", () => {
   });
 
   test("Admin muhasebe entegrasyonu ekleyebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/ext-integrations/accounting", {
       jar,
       body: {
@@ -2368,7 +2368,7 @@ describe("Sprint 14 — Muhasebe Entegrasyonu", () => {
   });
 
   test("Aynı sağlayıcı tekrar eklenemez", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/ext-integrations/accounting", {
       jar,
       body: { provider: "parasut", credentials: {} },
@@ -2377,7 +2377,7 @@ describe("Sprint 14 — Muhasebe Entegrasyonu", () => {
   });
 
   test("Muhasebe entegrasyonları listelenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/ext-integrations/accounting", { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.integrations));
@@ -2388,7 +2388,7 @@ describe("Sprint 14 — Muhasebe Entegrasyonu", () => {
   });
 
   test("Geçersiz sağlayıcı reddedilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/ext-integrations/accounting", {
       jar, body: { provider: "sahte-yazilim", credentials: {} },
     });
@@ -2397,7 +2397,7 @@ describe("Sprint 14 — Muhasebe Entegrasyonu", () => {
 
   test("Senkronizasyon tetiklenebilir (simülasyon)", async () => {
     if (!accIntegrationId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/ext-integrations/accounting/${accIntegrationId}/sync`, {
       jar, body: { syncType: "sales" },
     });
@@ -2409,7 +2409,7 @@ describe("Sprint 14 — Muhasebe Entegrasyonu", () => {
 
   test("Geçersiz syncType reddedilir", async () => {
     if (!accIntegrationId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", `/ext-integrations/accounting/${accIntegrationId}/sync`, {
       jar, body: { syncType: "sahte-tip" },
     });
@@ -2418,7 +2418,7 @@ describe("Sprint 14 — Muhasebe Entegrasyonu", () => {
 
   test("Senkronizasyon logu listelenir", async () => {
     if (!accIntegrationId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/ext-integrations/accounting/${accIntegrationId}/logs`, { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.logs), "logs dizisi olmalı");
@@ -2427,7 +2427,7 @@ describe("Sprint 14 — Muhasebe Entegrasyonu", () => {
 
   test("Muhasebe entegrasyonu güncellenebilir", async () => {
     if (!accIntegrationId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", `/ext-integrations/accounting/${accIntegrationId}`, {
       jar, body: { displayName: "Paraşüt Üretim", isActive: false },
     });
@@ -2438,7 +2438,7 @@ describe("Sprint 14 — Muhasebe Entegrasyonu", () => {
 
   test("Pasif entegrasyon senkronize edilemez", async () => {
     if (!accIntegrationId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", `/ext-integrations/accounting/${accIntegrationId}/sync`, {
       jar, body: { syncType: "sales" },
     });
@@ -2453,7 +2453,7 @@ describe("Sprint 14 — Muhasebe Entegrasyonu", () => {
 
   test("Muhasebe entegrasyonu silinebilir", async () => {
     if (!accIntegrationId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("DELETE", `/ext-integrations/accounting/${accIntegrationId}`, { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.ok, true);
@@ -2468,7 +2468,7 @@ describe("Sprint 15 — E-Ticaret Entegrasyonu", () => {
   let ecIntegrationId;
 
   test("E-ticaret platformları listelenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/ext-integrations/ecommerce/platforms", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok(Array.isArray(json.platforms));
@@ -2478,7 +2478,7 @@ describe("Sprint 15 — E-Ticaret Entegrasyonu", () => {
   });
 
   test("Admin e-ticaret entegrasyonu ekleyebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/ext-integrations/ecommerce", {
       jar,
       body: {
@@ -2497,7 +2497,7 @@ describe("Sprint 15 — E-Ticaret Entegrasyonu", () => {
   });
 
   test("Platform olmadan entegrasyon eklenemez", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/ext-integrations/ecommerce", {
       jar, body: { storeName: "Mağazam" },
     });
@@ -2505,7 +2505,7 @@ describe("Sprint 15 — E-Ticaret Entegrasyonu", () => {
   });
 
   test("Mağaza adı olmadan entegrasyon eklenemez", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/ext-integrations/ecommerce", {
       jar, body: { platform: "n11" },
     });
@@ -2513,7 +2513,7 @@ describe("Sprint 15 — E-Ticaret Entegrasyonu", () => {
   });
 
   test("E-ticaret entegrasyonları listelenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/ext-integrations/ecommerce", { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.integrations));
@@ -2525,7 +2525,7 @@ describe("Sprint 15 — E-Ticaret Entegrasyonu", () => {
 
   test("Ürün senkronizasyonu tetiklenebilir", async () => {
     if (!ecIntegrationId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/ext-integrations/ecommerce/${ecIntegrationId}/sync`, {
       jar, body: { syncType: "product_push" },
     });
@@ -2536,7 +2536,7 @@ describe("Sprint 15 — E-Ticaret Entegrasyonu", () => {
 
   test("Sipariş çekme senkronizasyonu tetiklenebilir", async () => {
     if (!ecIntegrationId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/ext-integrations/ecommerce/${ecIntegrationId}/sync`, {
       jar, body: { syncType: "order_pull" },
     });
@@ -2546,7 +2546,7 @@ describe("Sprint 15 — E-Ticaret Entegrasyonu", () => {
 
   test("Stok güncelleme senkronizasyonu tetiklenebilir", async () => {
     if (!ecIntegrationId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/ext-integrations/ecommerce/${ecIntegrationId}/sync`, {
       jar, body: { syncType: "inventory_update" },
     });
@@ -2556,7 +2556,7 @@ describe("Sprint 15 — E-Ticaret Entegrasyonu", () => {
 
   test("Senkronizasyon logu listelenir (birden fazla kayıt)", async () => {
     if (!ecIntegrationId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/ext-integrations/ecommerce/${ecIntegrationId}/logs`, { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.logs));
@@ -2565,7 +2565,7 @@ describe("Sprint 15 — E-Ticaret Entegrasyonu", () => {
 
   test("E-ticaret entegrasyonu güncellenebilir", async () => {
     if (!ecIntegrationId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", `/ext-integrations/ecommerce/${ecIntegrationId}`, {
       jar, body: { storeName: "Güncel Trendyol Mağazası" },
     });
@@ -2588,7 +2588,7 @@ describe("Sprint 15 — E-Ticaret Entegrasyonu", () => {
 
   test("E-ticaret entegrasyonu silinebilir", async () => {
     if (!ecIntegrationId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("DELETE", `/ext-integrations/ecommerce/${ecIntegrationId}`, { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.ok, true);
@@ -2604,7 +2604,7 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
   let invoiceId;
 
   test("Abonelik planları listelenir (herkese açık)", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/subscriptions/plans", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok(Array.isArray(json.plans), "plans dizisi bekleniyor");
@@ -2617,7 +2617,7 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
   });
 
   test("Mevcut abonelik bilgisi alınabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/subscriptions/current", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok("usage" in json, "usage alanı olmalı");
@@ -2627,14 +2627,14 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
   });
 
   test("Kullanım istatistikleri alınabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/subscriptions/usage", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok(json.usage, "usage olmalı");
   });
 
   test("Admin Pro planına abone olabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     // Pro planın id'sini bul
     const { json: plansJson } = await api("GET", "/subscriptions/plans", { jar });
     const proPlan = plansJson.plans.find(p => p.slug === "pro");
@@ -2651,7 +2651,7 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
   });
 
   test("Abonelik aktif olarak görünüyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/subscriptions/current", { jar });
     assert.equal(status, 200);
     assert.ok(json.subscription?.status === "active", "Abonelik aktif olmalı");
@@ -2659,7 +2659,7 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
   });
 
   test("Aynı plana tekrar abone olunabilir (yenileme)", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json: plansJson } = await api("GET", "/subscriptions/plans", { jar });
     const starterPlan = plansJson.plans.find(p => p.slug === "starter");
     const { status } = await api("POST", "/subscriptions/subscribe", {
@@ -2670,7 +2670,7 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
   });
 
   test("Geçersiz planId reddedilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/subscriptions/subscribe", {
       jar, body: { planId: 9999, billingCycle: "monthly" },
     });
@@ -2678,7 +2678,7 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
   });
 
   test("Geçersiz billingCycle reddedilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json: plansJson } = await api("GET", "/subscriptions/plans", { jar });
     const proPlan = plansJson.plans.find(p => p.slug === "pro");
     const { status } = await api("POST", "/subscriptions/subscribe", {
@@ -2688,7 +2688,7 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
   });
 
   test("Fatura geçmişi listelenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/subscriptions/invoices", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok(Array.isArray(json.invoices));
@@ -2702,7 +2702,7 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
 
   test("Bekleyen fatura ödenebilir", async () => {
     if (!invoiceId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     // Önce fatura durumunu kontrol et
     const { json: invList } = await api("GET", "/subscriptions/invoices", { jar });
     const pendingInv = invList.invoices.find(i => i.status === "pending");
@@ -2714,7 +2714,7 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
   });
 
   test("Zaten ödenmiş fatura tekrar ödenemez", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json: invList } = await api("GET", "/subscriptions/invoices", { jar });
     const paidInv = invList.invoices.find(i => i.status === "paid");
     if (!paidInv) return;
@@ -2724,7 +2724,7 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
   });
 
   test("Abonelik iptal edilebilir (grace period)", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/subscriptions/cancel", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.ok, true);
@@ -2732,7 +2732,7 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
   });
 
   test("İptal sonrası abonelik grace_period statüsünde", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", "/subscriptions/current", { jar });
     assert.ok(
       json.subscription?.status === "grace_period" || json.subscription === null,
@@ -2741,7 +2741,7 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
   });
 
   test("Grace period aboneliği yeniden aktif edilebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     // Önce grace_period'da olduğunu doğrula
     const { json: curr } = await api("GET", "/subscriptions/current", { jar });
     if (curr.subscription?.status !== "grace_period") return;
@@ -2777,7 +2777,7 @@ describe("Sprint 12 — Dosya/Evrak Yönetimi", () => {
   let docId;
 
   before(async () => {
-    const a = await login("cenan", "cenan123");
+    const a = await login("admin", "admin123");
     adminJar = a.jar;
     const s = await login("personel", "staff123");
     staffJar = s.jar;
@@ -2961,7 +2961,7 @@ describe("Sprint 21 — Akıllı Bildirim Sistemi", () => {
   let ruleId;
 
   test("Desteklenen bildirim tipleri listelenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/notification-rules/types", { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.types));
@@ -2973,14 +2973,14 @@ describe("Sprint 21 — Akıllı Bildirim Sistemi", () => {
   });
 
   test("Kural listesi başlangıçta boş", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/notification-rules", { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.rules));
   });
 
   test("Admin kural oluşturabilir (low_stock eşikli)", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/notification-rules", {
       jar,
       body: { name: "Kritik Stok Uyarısı", type: "low_stock", threshold: 5, isActive: true },
@@ -2995,7 +2995,7 @@ describe("Sprint 21 — Akıllı Bildirim Sistemi", () => {
   });
 
   test("Admin kural oluşturabilir (new_sale eşiksiz)", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/notification-rules", {
       jar,
       body: { name: "Satış Bildirimi", type: "new_sale", isActive: true },
@@ -3005,13 +3005,13 @@ describe("Sprint 21 — Akıllı Bildirim Sistemi", () => {
   });
 
   test("Kural listesinde oluşturulan kural görünüyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", "/notification-rules", { jar });
     assert.ok(json.rules.some(r => r.id === ruleId));
   });
 
   test("Kural güncellenebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", `/notification-rules/${ruleId}`, {
       jar,
       body: { name: "Güncellenmiş Stok Uyarısı", threshold: 10 },
@@ -3022,7 +3022,7 @@ describe("Sprint 21 — Akıllı Bildirim Sistemi", () => {
   });
 
   test("Kural toggle (aktif/pasif) çalışıyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PATCH", `/notification-rules/${ruleId}/toggle`, { jar });
     assert.equal(status, 200);
     assert.equal(json.ok, true);
@@ -3034,7 +3034,7 @@ describe("Sprint 21 — Akıllı Bildirim Sistemi", () => {
   });
 
   test("Test bildirimi gönderilebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/notification-rules/${ruleId}/test`, { jar });
     assert.equal(status, 200);
     assert.equal(json.ok, true);
@@ -3042,13 +3042,13 @@ describe("Sprint 21 — Akıllı Bildirim Sistemi", () => {
   });
 
   test("Test bildirimi notifications tablosuna ekleniyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", "/notifications", { jar });
     assert.ok(json.notifications.some(n => n.type === "low_stock"), "low_stock bildirimi olmalı");
   });
 
   test("Kullanıcı tercihleri alınabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/notification-rules/preferences", { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.preferences));
@@ -3057,7 +3057,7 @@ describe("Sprint 21 — Akıllı Bildirim Sistemi", () => {
   });
 
   test("Kullanıcı tercihleri güncellenebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", "/notification-rules/preferences", {
       jar,
       body: {
@@ -3072,7 +3072,7 @@ describe("Sprint 21 — Akıllı Bildirim Sistemi", () => {
   });
 
   test("Güncellenen tercihler kalıcı", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", "/notification-rules/preferences", { jar });
     const newSale = json.preferences.find(p => p.type === "new_sale");
     assert.equal(newSale?.enabled, false, "new_sale kapalı olmalı");
@@ -3094,13 +3094,13 @@ describe("Sprint 21 — Akıllı Bildirim Sistemi", () => {
   });
 
   test("Kural silinebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("DELETE", `/notification-rules/${ruleId}`, { jar });
     assert.equal(status, 204);
   });
 
   test("Silinen kural listede yok", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", "/notification-rules", { jar });
     assert.ok(!json.rules.some(r => r.id === ruleId));
   });
@@ -3115,14 +3115,14 @@ describe("Sprint 22 — Personel Yönetimi", () => {
   let leaveId;
 
   test("Departman listesi başlangıçta boş", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/departments", { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.departments));
   });
 
   test("Admin departman oluşturabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/departments", {
       jar,
       body: { name: "Satış Departmanı", description: "Satış ve pazarlama ekibi" },
@@ -3140,7 +3140,7 @@ describe("Sprint 22 — Personel Yönetimi", () => {
   });
 
   test("Departman güncellenebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", `/departments/${deptId}`, {
       jar,
       body: { name: "Satış & Pazarlama" },
@@ -3150,7 +3150,7 @@ describe("Sprint 22 — Personel Yönetimi", () => {
   });
 
   test("Admin personel oluşturabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/personnel", {
       jar,
       body: {
@@ -3173,13 +3173,13 @@ describe("Sprint 22 — Personel Yönetimi", () => {
   });
 
   test("Personel listesinde görünüyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", "/personnel", { jar });
     assert.ok(json.personnel.some((p) => p.id === personnelId));
   });
 
   test("Personel detayı alınabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/personnel/${personnelId}`, { jar });
     assert.equal(status, 200);
     assert.equal(json.fullName, "Ahmet Yılmaz");
@@ -3187,7 +3187,7 @@ describe("Sprint 22 — Personel Yönetimi", () => {
   });
 
   test("İstatistikler alınabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/personnel/stats", { jar });
     assert.equal(status, 200);
     assert.ok(typeof json.total === "number");
@@ -3197,7 +3197,7 @@ describe("Sprint 22 — Personel Yönetimi", () => {
   });
 
   test("Personel güncellenebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", `/personnel/${personnelId}`, {
       jar,
       body: { position: "Kıdemli Satış Temsilcisi", salary: "30000" },
@@ -3207,7 +3207,7 @@ describe("Sprint 22 — Personel Yönetimi", () => {
   });
 
   test("Personel aktif/pasif toggle çalışıyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PATCH", `/personnel/${personnelId}/toggle`, { jar });
     assert.equal(status, 200);
     assert.equal(json.ok, true);
@@ -3218,7 +3218,7 @@ describe("Sprint 22 — Personel Yönetimi", () => {
   });
 
   test("İzin talebi oluşturulabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/leave-requests", {
       jar,
       body: {
@@ -3237,20 +3237,20 @@ describe("Sprint 22 — Personel Yönetimi", () => {
   });
 
   test("İzin talepleri listeleniyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", "/leave-requests", { jar });
     assert.ok(json.leaveRequests.some((l) => l.id === leaveId));
   });
 
   test("İzin talebi onaylanabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PATCH", `/leave-requests/${leaveId}/approve`, { jar });
     assert.equal(status, 200);
     assert.equal(json.status, "approved");
   });
 
   test("Onaylanan izin personel detayında görünüyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", `/personnel/${personnelId}`, { jar });
     const leave = json.leaves.find((l) => l.id === leaveId);
     assert.ok(leave, "İzin personel detayında görünmeli");
@@ -3273,19 +3273,19 @@ describe("Sprint 22 — Personel Yönetimi", () => {
   });
 
   test("İzin talebi silinebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("DELETE", `/leave-requests/${leaveId}`, { jar });
     assert.equal(status, 204);
   });
 
   test("Personel silinebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("DELETE", `/personnel/${personnelId}`, { jar });
     assert.equal(status, 204);
   });
 
   test("Departman silinebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("DELETE", `/departments/${deptId}`, { jar });
     assert.equal(status, 204);
   });
@@ -3299,21 +3299,21 @@ describe("Sprint 23 — Kampanya & İndirim Yönetimi", () => {
   let fixedCampaignId;
 
   test("Kampanya listesi başlangıçta boş", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/campaigns", { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.campaigns));
   });
 
   test("Aktif kampanya listesi alınabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/campaigns/active", { jar });
     assert.equal(status, 200);
     assert.ok(Array.isArray(json.campaigns));
   });
 
   test("Admin yüzde indirim kampanyası oluşturabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const today = new Date().toISOString().slice(0, 10);
     const future = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
     const { status, json } = await api("POST", "/campaigns", {
@@ -3337,7 +3337,7 @@ describe("Sprint 23 — Kampanya & İndirim Yönetimi", () => {
   });
 
   test("Admin sabit indirim kampanyası oluşturabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const today = new Date().toISOString().slice(0, 10);
     const future = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
     const { status, json } = await api("POST", "/campaigns", {
@@ -3360,26 +3360,26 @@ describe("Sprint 23 — Kampanya & İndirim Yönetimi", () => {
   });
 
   test("Kampanya detayı alınabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/campaigns/${campaignId}`, { jar });
     assert.equal(status, 200);
     assert.equal(json.id, campaignId);
   });
 
   test("Kampanya listesinde görünüyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", "/campaigns", { jar });
     assert.ok(json.campaigns.some((c) => c.id === campaignId));
   });
 
   test("Aktif kampanya listesinde görünüyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", "/campaigns/active", { jar });
     assert.ok(json.campaigns.some((c) => c.id === campaignId));
   });
 
   test("Kampanya güncellenebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", `/campaigns/${campaignId}`, {
       jar,
       body: { name: "Yaz Büyük İndirimi", discountValue: 25 },
@@ -3389,7 +3389,7 @@ describe("Sprint 23 — Kampanya & İndirim Yönetimi", () => {
   });
 
   test("Kampanya toggle (aktif/pasif) çalışıyor", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PATCH", `/campaigns/${campaignId}/toggle`, { jar });
     assert.equal(status, 200);
     assert.equal(json.isActive, false);
@@ -3399,7 +3399,7 @@ describe("Sprint 23 — Kampanya & İndirim Yönetimi", () => {
   });
 
   test("Kampanya uygulama — yeterli tutar", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/campaigns/apply", {
       jar,
       body: { amount: 300, quantity: 1 },
@@ -3413,7 +3413,7 @@ describe("Sprint 23 — Kampanya & İndirim Yönetimi", () => {
   });
 
   test("Kampanya uygulama — sabit indirim min tutar kontrolü", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     // 50TL kampanyası için minAmount=200, burada 100TL ile deneyelim
     const { json } = await api("POST", "/campaigns/apply", { jar, body: { amount: 100, quantity: 1 } });
     // 50TL kampanyası uygulanmamalı (minAmount=200 > 100)
@@ -3437,13 +3437,13 @@ describe("Sprint 23 — Kampanya & İndirim Yönetimi", () => {
   });
 
   test("Kampanya silinebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("DELETE", `/campaigns/${campaignId}`, { jar });
     assert.equal(status, 204);
   });
 
   test("İkinci kampanya da silinebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("DELETE", `/campaigns/${fixedCampaignId}`, { jar });
     assert.equal(status, 204);
   });
@@ -3484,7 +3484,7 @@ describe("Sprint 20 — Public API", () => {
   });
 
   test("Admin 'write' scope ile API anahtarı oluşturabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/integrations/api-keys", {
       jar,
       body: { name: "Test API Anahtarı", scopes: "write" },
@@ -3556,7 +3556,7 @@ describe("Sprint 20 — Public API", () => {
 
   test("Read-only anahtar write endpoint'i çağıramaz", async () => {
     // Read-only anahtar oluştur
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json: keyJson } = await api("POST", "/integrations/api-keys", {
       jar,
       body: { name: "Read Only", scopes: "read" },
@@ -3572,7 +3572,7 @@ describe("Sprint 20 — Public API", () => {
   });
 
   test("API anahtarı silinebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("DELETE", `/integrations/api-keys/${apiKeyId}`, { jar });
     assert.equal(status, 200);
   });
@@ -3603,7 +3603,7 @@ describe("Sprint 16 — Katalog Yönetimi", () => {
   }
 
   test("Admin katalog ayarlarını alabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/catalog-settings", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok("isEnabled" in json, "isEnabled alanı olmalı");
@@ -3611,7 +3611,7 @@ describe("Sprint 16 — Katalog Yönetimi", () => {
   });
 
   test("Admin katalog ayarlarını güncelleyebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", "/catalog-settings", {
       jar,
       body: { isEnabled: true, title: "Test Kataloğu", showPrices: true, allowOrders: true },
@@ -3632,7 +3632,7 @@ describe("Sprint 16 — Katalog Yönetimi", () => {
 
   test("Aktif katalog API anahtarı ile alınabilir", async () => {
     // Önce write scope ile API key oluştur
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json: keyJson } = await api("POST", "/integrations/api-keys", {
       jar,
       body: { name: "Katalog Test Anahtarı", scopes: "write" },
@@ -3646,7 +3646,7 @@ describe("Sprint 16 — Katalog Yönetimi", () => {
   });
 
   test("Katalog devre dışı bırakıldığında 403 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     await api("PUT", "/catalog-settings", { jar, body: { isEnabled: false } });
     const { status } = await publicApi("GET", "/public/v1/catalog", { apiKey: writeApiKey });
     assert.equal(status, 403);
@@ -3656,7 +3656,7 @@ describe("Sprint 16 — Katalog Yönetimi", () => {
 
   test("Temizlik: katalog API anahtarını sil", async () => {
     if (!writeApiKey) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json: listJson } = await api("GET", "/integrations/api-keys", { jar });
     const key = listJson?.apiKeys?.find(k => k.name === "Katalog Test Anahtarı");
     if (key) {
@@ -3688,7 +3688,7 @@ describe("Sprint 17 — Sipariş Yönetimi", () => {
   }
 
   test("Sipariş oluşturmak için ürün ID alınır", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", "/products", { jar });
     const products = json?.products ?? json ?? [];
     productId = Array.isArray(products) ? products[0]?.id : null;
@@ -3697,7 +3697,7 @@ describe("Sprint 17 — Sipariş Yönetimi", () => {
 
   test("Admin sipariş oluşturabilir", async () => {
     if (!productId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/orders", {
       jar,
       body: {
@@ -3725,7 +3725,7 @@ describe("Sprint 17 — Sipariş Yönetimi", () => {
   });
 
   test("Admin sipariş listesini alabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/orders", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok(Array.isArray(json.orders), "orders dizisi olmalı");
@@ -3734,7 +3734,7 @@ describe("Sprint 17 — Sipariş Yönetimi", () => {
 
   test("Sipariş detayı alınabilir", async () => {
     if (!orderId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/orders/${orderId}`, { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.id, orderId);
@@ -3742,7 +3742,7 @@ describe("Sprint 17 — Sipariş Yönetimi", () => {
   });
 
   test("Sipariş istatistikleri alınabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/orders/stats", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok("total" in json, "total alanı olmalı");
@@ -3751,7 +3751,7 @@ describe("Sprint 17 — Sipariş Yönetimi", () => {
 
   test("Sipariş durumu güncellenebilir", async () => {
     if (!orderId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PATCH", `/orders/${orderId}/status`, {
       jar,
       body: { status: "confirmed" },
@@ -3762,7 +3762,7 @@ describe("Sprint 17 — Sipariş Yönetimi", () => {
 
   test("Geçersiz sipariş durumu reddedilir", async () => {
     if (!orderId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("PATCH", `/orders/${orderId}/status`, {
       jar,
       body: { status: "gecersiz_durum" },
@@ -3772,7 +3772,7 @@ describe("Sprint 17 — Sipariş Yönetimi", () => {
 
   test("Onaylanmış sipariş silinemez", async () => {
     if (!orderId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("DELETE", `/orders/${orderId}`, { jar });
     assert.equal(status, 409);
   });
@@ -3780,7 +3780,7 @@ describe("Sprint 17 — Sipariş Yönetimi", () => {
   test("Public API ile katalog sipariş oluşturulabilir", async () => {
     if (!productId) return;
     // Write scope API key oluştur
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json: keyJson } = await api("POST", "/integrations/api-keys", {
       jar,
       body: { name: "Sipariş Test Anahtarı", scopes: "write" },
@@ -3802,7 +3802,7 @@ describe("Sprint 17 — Sipariş Yönetimi", () => {
   test("Bekleyen sipariş silinebilir", async () => {
     if (!orderId) return;
     // Durumu cancelled yap, sonra sil
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     await api("PATCH", `/orders/${orderId}/status`, { jar, body: { status: "cancelled" } });
     const { status, json } = await api("DELETE", `/orders/${orderId}`, { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
@@ -3811,7 +3811,7 @@ describe("Sprint 17 — Sipariş Yönetimi", () => {
 
   test("Temizlik: API anahtarını sil", async () => {
     if (!writeApiKey) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json: listJson } = await api("GET", "/integrations/api-keys", { jar });
     const key = listJson?.apiKeys?.find(k => k.name === "Sipariş Test Anahtarı");
     if (key) {
@@ -3826,14 +3826,14 @@ describe("Sprint 18 — Müşteri Grupları", () => {
   let customerId;
 
   test("Müşteri ID alınır", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { json } = await api("GET", "/customers", { jar });
     const customers = json?.customers ?? json ?? [];
     customerId = Array.isArray(customers) ? customers[0]?.id : null;
   });
 
   test("Admin müşteri grubu oluşturabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", "/customer-groups", {
       jar,
       body: { name: "VIP Müşteriler", description: "En iyi müşteriler", discountPct: 10 },
@@ -3846,7 +3846,7 @@ describe("Sprint 18 — Müşteri Grupları", () => {
   });
 
   test("Geçersiz indirim yüzdesi reddedilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/customer-groups", {
       jar,
       body: { name: "Hatalı Grup", discountPct: 150 },
@@ -3864,7 +3864,7 @@ describe("Sprint 18 — Müşteri Grupları", () => {
   });
 
   test("Müşteri grupları listelenebilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/customer-groups", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok(Array.isArray(json.groups), "groups dizisi olmalı");
@@ -3872,7 +3872,7 @@ describe("Sprint 18 — Müşteri Grupları", () => {
 
   test("Müşteri grubu detayı alınabilir", async () => {
     if (!groupId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", `/customer-groups/${groupId}`, { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.id, groupId);
@@ -3881,7 +3881,7 @@ describe("Sprint 18 — Müşteri Grupları", () => {
 
   test("Müşteri gruba eklenebilir", async () => {
     if (!groupId || !customerId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("POST", `/customer-groups/${groupId}/members`, {
       jar,
       body: { customerId },
@@ -3891,7 +3891,7 @@ describe("Sprint 18 — Müşteri Grupları", () => {
 
   test("Müşteri grubundan çıkarılabilir", async () => {
     if (!groupId || !customerId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("DELETE", `/customer-groups/${groupId}/members/${customerId}`, { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.ok, true);
@@ -3899,7 +3899,7 @@ describe("Sprint 18 — Müşteri Grupları", () => {
 
   test("Müşteri grubu güncellenebilir", async () => {
     if (!groupId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("PUT", `/customer-groups/${groupId}`, {
       jar,
       body: { name: "Platinum Müşteriler", discountPct: 15 },
@@ -3911,7 +3911,7 @@ describe("Sprint 18 — Müşteri Grupları", () => {
 
   test("Müşteri grubu silinebilir", async () => {
     if (!groupId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("DELETE", `/customer-groups/${groupId}`, { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.ok, true);
@@ -3919,7 +3919,7 @@ describe("Sprint 18 — Müşteri Grupları", () => {
 
   test("Silinmiş grup bulunamaz", async () => {
     if (!groupId) return;
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("GET", `/customer-groups/${groupId}`, { jar });
     assert.equal(status, 404);
   });
@@ -3929,7 +3929,7 @@ describe("Sprint 18 — Müşteri Grupları", () => {
 describe("Sprint 19 — Sipariş & Katalog Analitik", () => {
 
   test("Sipariş analitiği alınabilir (varsayılan: month)", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/orders/analytics", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok("totals" in json, "totals olmalı");
@@ -3939,14 +3939,14 @@ describe("Sprint 19 — Sipariş & Katalog Analitik", () => {
   });
 
   test("Sipariş analitiği haftalık periyot ile alınabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/orders/analytics?period=week", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.period, "week");
   });
 
   test("Sipariş analitiği yıllık periyot ile alınabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/orders/analytics?period=year", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.equal(json.period, "year");
@@ -3959,7 +3959,7 @@ describe("Sprint 19 — Sipariş & Katalog Analitik", () => {
   });
 
   test("Katalog analitiği alınabilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/catalog-analytics", { jar });
     assert.equal(status, 200, `200 bekleniyor — ${JSON.stringify(json)}`);
     assert.ok("orderStats" in json, "orderStats olmalı");
@@ -3977,7 +3977,7 @@ describe("Sprint 19 — Sipariş & Katalog Analitik", () => {
 // ─── Sprint 24 — QA & Giriş Doğrulama ────────────────────────────────────────
 describe("Sprint 24 — QA & Giriş Doğrulama", () => {
   test("Sipariş oluşturma: customerName olmadan 400 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/orders", {
       jar,
       body: { items: [{ productId: 1, quantity: 1, unitPrice: 10 }] },
@@ -3986,7 +3986,7 @@ describe("Sprint 24 — QA & Giriş Doğrulama", () => {
   });
 
   test("Sipariş oluşturma: items boş olduğunda 400 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/orders", {
       jar,
       body: { customerName: "Test", items: [] },
@@ -3995,7 +3995,7 @@ describe("Sprint 24 — QA & Giriş Doğrulama", () => {
   });
 
   test("Müşteri grubu: discountPct > 100 reddedilir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/customer-groups", {
       jar,
       body: { name: "Hata Test", discountPct: 999 },
@@ -4004,7 +4004,7 @@ describe("Sprint 24 — QA & Giriş Doğrulama", () => {
   });
 
   test("Müşteri grubu: name olmadan 400 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("POST", "/customer-groups", {
       jar,
       body: { discountPct: 5 },
@@ -4013,13 +4013,13 @@ describe("Sprint 24 — QA & Giriş Doğrulama", () => {
   });
 
   test("Geçersiz ID ile sipariş detayı 400 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("GET", "/orders/abc", { jar });
     assert.equal(status, 400);
   });
 
   test("Var olmayan sipariş 404 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("GET", "/orders/999999", { jar });
     assert.equal(status, 404);
   });
@@ -4028,13 +4028,13 @@ describe("Sprint 24 — QA & Giriş Doğrulama", () => {
 // ─── Sprint 25 — Performans ───────────────────────────────────────────────────
 describe("Sprint 25 — Performans", () => {
   test("Ürün listesi sıkıştırma desteği ile 200 döner", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     const { status } = await api("GET", "/products", { jar });
     assert.equal(status, 200);
   });
 
   test("API JSON yanıtlarına Content-Type: application/json eklenir", async () => {
-    const { jar } = await login("cenan", "cenan123");
+    const { jar } = await login("admin", "admin123");
     // api() helper json döndürüyorsa content-type doğru demektir
     const { status, json } = await api("GET", "/products", { jar });
     assert.equal(status, 200);
@@ -4321,5 +4321,284 @@ describe("PWA & SEO", () => {
       assert.equal(data.display, "standalone");
     }
     // 404 ise frontend dev server build aşamasında olabilir, kırılgan değil
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sprint 62 — E-Fatura provider zinciri (mock + idempotency + iptal + inbox)
+// ─────────────────────────────────────────────────────────────────────────────
+describe("Sprint 62 — E-Fatura", () => {
+  before(async () => {
+    // PROSAN ve NİHAT için einvoice feature'ı içeren plana abone ol (idempotent)
+    for (const tenant of ["prosan", "nihat"]) {
+      const adminUser = tenant === "prosan" ? "talha" : "nihat";
+      const adminPass = tenant === "prosan" ? "talha123" : "nihat123";
+      const { jar } = await login(adminUser, adminPass, tenant);
+      const plansResp = await api("GET", "/subscriptions/plans", { jar });
+      if (plansResp.status !== 200) continue;
+      const plans = plansResp.json.plans || plansResp.json;
+      const target = plans.find(p => {
+        try { return JSON.parse(p.features).includes("einvoice.basic"); }
+        catch { return false; }
+      });
+      if (!target) continue;
+      await api("POST", "/subscriptions/subscribe", {
+        jar, body: { planId: target.id, billingCycle: "monthly" },
+      });
+    }
+  });
+
+  test("Provider listesi (PROVIDER_META) erişilebilir", async () => {
+    const { jar } = await login("talha", "talha123");
+    const { status, json } = await api("GET", "/einvoice/providers", { jar });
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(json));
+    assert.ok(json.find(p => p.key === "mock"), "mock provider listede olmalı");
+    assert.ok(json.find(p => p.key === "parasut"), "parasut provider listede olmalı");
+    assert.ok(json.find(p => p.key === "qnb_efinans"));
+  });
+
+  test("Settings yoksa otomatik mock+sandbox kayıt oluşur", async () => {
+    const { jar } = await login("talha", "talha123");
+    const { status, json } = await api("GET", "/einvoice/settings", { jar });
+    assert.equal(status, 200);
+    assert.ok(json.provider, "provider değeri olmalı");
+    assert.equal(typeof json.sandbox, "boolean");
+  });
+
+  test("Settings güncellenebilir, hassas alanlar maskelenir", async () => {
+    const { jar } = await login("talha", "talha123");
+    // Mock'a sıfırla (test ortamı bağımsız olsun)
+    const r = await api("PUT", "/einvoice/settings", {
+      jar,
+      body: { provider: "mock", sandbox: true, enabled: true, defaultProfile: "TICARIFATURA" },
+    });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.provider, "mock");
+    assert.equal(r.json.enabled, true);
+  });
+
+  test("Bilinmeyen provider 400 döner", async () => {
+    const { jar } = await login("talha", "talha123");
+    const r = await api("PUT", "/einvoice/settings", { jar, body: { provider: "yok_boyle_bir_sey" } });
+    assert.equal(r.status, 400);
+  });
+
+  test("Hassas credential alanları DB'de şifrelenir, GET'te maskelenir", async () => {
+    const { jar } = await login("talha", "talha123");
+    // Önce provider'ı parasut'a al ve credential ver
+    await api("PUT", "/einvoice/settings", {
+      jar,
+      body: { provider: "parasut", config: { username: "user@example.com", password: "secret-pass-123", clientId: "cid", clientSecret: "csec", companyId: "12345" } },
+    });
+    const r = await api("GET", "/einvoice/settings", { jar });
+    assert.equal(r.status, 200);
+    // Hassas alanlar maskelenmiş olmalı
+    assert.equal(r.json.config.password, "********", "password maskelenmeli");
+    assert.equal(r.json.config.clientSecret, "********", "clientSecret maskelenmeli");
+    // Mock'a geri al
+    await api("PUT", "/einvoice/settings", { jar, body: { provider: "mock", sandbox: true } });
+  });
+
+  test("Health check çalıştırılır ve sonuç saklanır", async () => {
+    const { jar } = await login("talha", "talha123");
+    await api("PUT", "/einvoice/settings", { jar, body: { provider: "mock", sandbox: true } });
+    const r = await api("POST", "/einvoice/health-check", { jar });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.ok, true, "mock provider sağlıklı olmalı");
+    assert.ok(r.json.message, "mesaj olmalı");
+    assert.ok(r.json.checkedAt, "tarih olmalı");
+  });
+
+  test("Outbox: fatura oluşturulur, ETTN üretilir", async () => {
+    const { jar } = await login("talha", "talha123");
+    await api("PUT", "/einvoice/settings", { jar, body: { provider: "mock", sandbox: true } });
+    const body = {
+      receiver: { name: "ABC Bilgisayar Ltd.", vkn: "1234567890", taxOffice: "Beşiktaş" },
+      lines: [
+        { name: "Test Ürün", quantity: 2, unitPrice: 100, vatRate: 20 },
+        { name: "Hizmet Bedeli", quantity: 1, unitPrice: 50, vatRate: 20 },
+      ],
+      invoiceType: "SATIS",
+      profile: "TICARIFATURA",
+      scenario: "EFATURA",
+      currency: "TRY",
+    };
+    const r = await api("POST", "/einvoice/outbox", { jar, body });
+    assert.equal(r.status, 201);
+    assert.ok(r.json.id, "id olmalı");
+    assert.ok(r.json.externalId, "ETTN olmalı");
+    assert.ok(r.json.externalNo, "external_no olmalı");
+    assert.equal(r.json.status, "draft");
+    // Toplam: (2*100 + 1*50) * 1.20 = 250 * 1.20 = 300
+    assert.equal(Math.round(r.json.totalAmount), 300, "toplam 300 olmalı (KDV dahil)");
+    assert.equal(Math.round(r.json.taxAmount), 50, "KDV 50 olmalı");
+  });
+
+  test("Outbox: receiver.name yoksa 400 döner", async () => {
+    const { jar } = await login("talha", "talha123");
+    const r = await api("POST", "/einvoice/outbox", {
+      jar,
+      body: { receiver: {}, lines: [{ name: "x", quantity: 1, unitPrice: 10, vatRate: 0 }] },
+    });
+    assert.equal(r.status, 400);
+  });
+
+  test("Outbox: lines boşsa 400 döner", async () => {
+    const { jar } = await login("talha", "talha123");
+    const r = await api("POST", "/einvoice/outbox", {
+      jar,
+      body: { receiver: { name: "X" }, lines: [] },
+    });
+    assert.equal(r.status, 400);
+  });
+
+  test("Idempotency-Key: aynı anahtarla çift POST aynı kaydı döner", async () => {
+    const { jar } = await login("talha", "talha123");
+    const idemKey = `test-idem-${Date.now()}`;
+    const body = {
+      receiver: { name: "Idempotency Test A.Ş.", vkn: "9876543210" },
+      lines: [{ name: "X", quantity: 1, unitPrice: 100, vatRate: 20 }],
+      idempotencyKey: idemKey,
+    };
+    const r1 = await api("POST", "/einvoice/outbox", { jar, body });
+    assert.equal(r1.status, 201);
+    const r2 = await api("POST", "/einvoice/outbox", { jar, body });
+    assert.ok([200, 201].includes(r2.status));
+    assert.equal(r2.json.id, r1.json.id, "aynı id dönmeli");
+  });
+
+  test("Outbox: send akışı (draft → accepted)", async () => {
+    const { jar } = await login("talha", "talha123");
+    await api("PUT", "/einvoice/settings", { jar, body: { provider: "mock", sandbox: true } });
+    const created = await api("POST", "/einvoice/outbox", {
+      jar,
+      body: { receiver: { name: "Send Test" }, lines: [{ name: "x", quantity: 1, unitPrice: 100, vatRate: 20 }] },
+    });
+    assert.equal(created.status, 201);
+    const id = created.json.id;
+    const sent = await api("POST", `/einvoice/outbox/${id}/send`, { jar });
+    assert.equal(sent.status, 200);
+    assert.equal(sent.json.status, "accepted");
+    // İkinci kez send: 409 (artık not_sendable)
+    const sent2 = await api("POST", `/einvoice/outbox/${id}/send`, { jar });
+    assert.equal(sent2.status, 409, "tekrar send çağrısı 409 olmalı");
+  });
+
+  test("Outbox: cancel akışı", async () => {
+    const { jar } = await login("talha", "talha123");
+    await api("PUT", "/einvoice/settings", { jar, body: { provider: "mock", sandbox: true } });
+    const created = await api("POST", "/einvoice/outbox", {
+      jar,
+      body: { receiver: { name: "Cancel Test" }, lines: [{ name: "x", quantity: 1, unitPrice: 50, vatRate: 0 }] },
+    });
+    const id = created.json.id;
+    const cancelled = await api("POST", `/einvoice/outbox/${id}/cancel`, { jar, body: { reason: "Test iptali" } });
+    assert.equal(cancelled.status, 200);
+    assert.equal(cancelled.json.status, "cancelled");
+  });
+
+  test("Outbox: PDF endpoint döner", async () => {
+    const { jar } = await login("talha", "talha123");
+    await api("PUT", "/einvoice/settings", { jar, body: { provider: "mock", sandbox: true } });
+    const created = await api("POST", "/einvoice/outbox", {
+      jar,
+      body: { receiver: { name: "PDF Test" }, lines: [{ name: "x", quantity: 1, unitPrice: 1, vatRate: 0 }] },
+    });
+    const r = await fetch(`${BASE}/einvoice/outbox/${created.json.id}/pdf`, {
+      headers: { Cookie: jar.header(), "X-Tenant": jar.tenant },
+    });
+    assert.equal(r.status, 200);
+    const buf = await r.arrayBuffer();
+    assert.ok(buf.byteLength > 0, "PDF buffer dolu olmalı");
+  });
+
+  test("Inbox: poll mock provider örnek fatura döner", async () => {
+    const { jar } = await login("talha", "talha123");
+    await api("PUT", "/einvoice/settings", { jar, body: { provider: "mock", sandbox: true } });
+    const r = await api("POST", "/einvoice/inbox/poll", { jar, body: {} });
+    assert.equal(r.status, 200);
+    assert.ok(typeof r.json.inserted === "number");
+    assert.ok(typeof r.json.skipped === "number");
+  });
+
+  test("Stats endpoint outbox/inbox sayılarını döner", async () => {
+    const { jar } = await login("talha", "talha123");
+    const r = await api("GET", "/einvoice/stats", { jar });
+    assert.equal(r.status, 200);
+    assert.ok(Array.isArray(r.json.outbox));
+    assert.ok(Array.isArray(r.json.inbox));
+  });
+
+  test("Events endpoint son audit log'ları döner", async () => {
+    const { jar } = await login("talha", "talha123");
+    const r = await api("GET", "/einvoice/events?limit=5", { jar });
+    assert.equal(r.status, 200);
+    assert.ok(Array.isArray(r.json));
+  });
+
+  test("Auth gereklidir — anonim erişim 401", async () => {
+    const r = await fetch(`${BASE}/einvoice/settings`);
+    assert.equal(r.status, 401);
+  });
+
+  test("Tenant izolasyonu: nihat firma A faturasını GET edemez", async () => {
+    const a = await login("talha", "talha123");
+    const created = await api("POST", "/einvoice/outbox", {
+      jar: a.jar,
+      body: { receiver: { name: "Iso Test" }, lines: [{ name: "x", quantity: 1, unitPrice: 1, vatRate: 0 }] },
+    });
+    assert.equal(created.status, 201);
+    const b = await login("nihat_admin", "nihat123", "nihatturizm");
+    if (b.status === 200) {
+      const r = await api("GET", `/einvoice/outbox/${created.json.id}`, { jar: b.jar });
+      assert.equal(r.status, 404, "diğer tenant kendi firmasına ait olmayan kaydı görmemeli");
+    }
+  });
+
+  test("Stub provider (parasut) gerçek çağrıda credential eksikliğini bildirir", async () => {
+    const { jar } = await login("talha", "talha123");
+    await api("PUT", "/einvoice/settings", { jar, body: { provider: "parasut", sandbox: true, config: {} } });
+    const r = await api("POST", "/einvoice/health-check", { jar });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.ok, false, "parasut credential olmadan ok=false dönmeli");
+    assert.match(r.json.message, /Eksik config|uygulanmadı|credential/i);
+    // Geri mock'a al
+    await api("PUT", "/einvoice/settings", { jar, body: { provider: "mock", sandbox: true } });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Routing regresyon — hr.staff gate sızıntısı bug-fix testleri
+// (PROSAN'ın Ticaret planı einvoice.basic'i içerir, hr.staff'ı içermez.)
+// ─────────────────────────────────────────────────────────────────────────────
+describe("Routing — hr.staff feature gate izolasyonu", () => {
+  test("/personnel → hr.staff yoksa 403 FEATURE_LOCKED döner", async () => {
+    const { jar } = await login("talha", "talha123");
+    const r = await api("GET", "/personnel", { jar });
+    assert.equal(r.status, 403);
+    assert.equal(r.json?.error?.code, "FEATURE_LOCKED");
+    assert.equal(r.json?.error?.requiredFeature, "hr.staff");
+  });
+
+  test("/departments → hr.staff yoksa 403 FEATURE_LOCKED döner", async () => {
+    const { jar } = await login("talha", "talha123");
+    const r = await api("GET", "/departments", { jar });
+    assert.equal(r.status, 403);
+    assert.equal(r.json?.error?.requiredFeature, "hr.staff");
+  });
+
+  test("/leave-requests → hr.staff yoksa 403 FEATURE_LOCKED döner", async () => {
+    const { jar } = await login("talha", "talha123");
+    const r = await api("GET", "/leave-requests", { jar });
+    assert.equal(r.status, 403);
+    assert.equal(r.json?.error?.requiredFeature, "hr.staff");
+  });
+
+  test("/einvoice/providers → einvoice.basic varsa hr.staff gate'inden geçer", async () => {
+    const { jar } = await login("talha", "talha123");
+    const r = await api("GET", "/einvoice/providers", { jar });
+    assert.equal(r.status, 200);
+    assert.ok(Array.isArray(r.json));
   });
 });
