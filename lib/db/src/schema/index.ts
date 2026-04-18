@@ -18,6 +18,7 @@ export * from "./integrations";
 export * from "./ext_integrations";
 export * from "./subscriptions";
 export * from "./documents";
+export * from "./finance_documents";
 export * from "./notification_rules";
 export * from "./personnel";
 export * from "./campaigns";

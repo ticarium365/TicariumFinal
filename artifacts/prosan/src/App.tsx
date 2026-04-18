@@ -42,6 +42,7 @@ import BranchesPage from "@/pages/branches/index";
 import IntegrationsPage from "@/pages/settings/integrations";
 import SubscriptionPage from "@/pages/settings/subscription";
 import DocumentsPage from "@/pages/documents/index";
+import FinanceDocumentsPage from "@/pages/finance-documents/index";
 import NotificationSettingsPage from "@/pages/settings/notifications";
 import PersonnelPage from "@/pages/personnel";
 import CampaignsPage from "@/pages/campaigns";
@@ -221,6 +222,10 @@ function AuthenticatedRouter() {
 
         <Route path="/documents">
           {() => <ProtectedRoute component={DocumentsPage} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+
+        <Route path="/finance-documents">
+          {() => <ProtectedRoute component={FinanceDocumentsPage} roles={["admin", "staff", "viewer"]} />}
         </Route>
 
         <Route path="/settings/notifications">

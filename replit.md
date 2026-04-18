@@ -64,6 +64,7 @@ The project utilizes a monorepo structure managed by `pnpm workspaces`.
 
 | Sprint | Kapsam | Durum |
 |--------|--------|-------|
+| **56** | **Belge & Fatura Merkezi** (3 tablo: finance_documents/folders/mailboxes; 9 doc tipi, 5 durum, 5 kaynak; drag-drop upload, klasör/filtre/arama, OCR/dönüşüm alanları hazır) | ✅ **TAMAMLANDI** |
 | 1–4 | Temel altyapı, Onboarding, Bildirimler, Müşteri/Cari Takibi | ✅ TAMAMLANDI |
 | 5 | Tedarikçi/Alış Yönetimi (CRUD, Alış Faturası, Stok Girişi) | ✅ TAMAMLANDI |
 | 6 | Gelişmiş Raporlama (Kâr/Müşteri/Tedarikçi/Stok analizleri, CSV exportlar, 5 sekme) | ✅ TAMAMLANDI |
