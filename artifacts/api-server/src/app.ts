@@ -16,11 +16,23 @@ import { tenantMiddleware } from "./middlewares/tenant.js";
 const app: Express = express();
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
-// ─── Güvenlik başlıkları (Sprint 26) ─────────────────────────────────────────
+// ─── Güvenlik başlıkları (Sprint 26 + canlı öncesi sıkılaştırma) ─────────────
 app.use(helmet({
+  // API JSON döndürür; HTML render etmediği için CSP API tarafında devre dışı
+  // (frontend kendi CSP'sini Vite üzerinden uygular)
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
+  // Replit iframe önizlemesi için cross-origin'e izin
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  // Tarayıcıya HTTPS zorlat (prod'da)
+  hsts: IS_PRODUCTION ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+  // Referrer leak koruması
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  // MIME sniff koruması zaten aktif (default)
 }));
+
+// Trust proxy (Replit edge proxy için — rate limit IP doğru çalışsın)
+app.set("trust proxy", 1);
 
 // ─── Yanıt sıkıştırma (Sprint 25) ────────────────────────────────────────────
 app.use(compression());
@@ -104,6 +116,39 @@ app.use("/api/contact", contactRateLimit);
 // Contact router — anonim form POST + super-admin yönetim, tenant middleware'i bypass eder
 app.use("/api/contact", contactRouter);
 
+// Public pazar (cross-tenant aggregator) — IP başına dakikada 60 istek (browse koruması)
+const pazarRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too Many Requests", message: "Çok fazla istek. Lütfen yavaşlayın." },
+  skip: () => process.env.NODE_ENV !== "production",
+});
+app.use("/api/public/v1/pazar", pazarRateLimit);
+
+// Public storefront sipariş — IP başına 10 dakikada 10 sipariş (spam siparişe karşı)
+const storefrontOrderRateLimit = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too Many Requests", message: "Çok fazla sipariş denemesi. Lütfen daha sonra tekrar deneyin." },
+  skip: (req) => process.env.NODE_ENV !== "production" || req.method !== "POST",
+});
+app.use("/api/public/v1/storefronts", storefrontOrderRateLimit);
+
+// Genel public API — IP başına dakikada 120 istek (DDoS koruma katmanı)
+const publicApiRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too Many Requests", message: "Çok fazla istek." },
+  skip: () => process.env.NODE_ENV !== "production",
+});
+app.use("/api/public", publicApiRateLimit);
+
 // Public API — tenant middleware olmadan, API key ile kimlik doğrulama
 // /api/public/v1/* rotaları tenant middleware'i bypass eder
 // Public storefront — auth/api-key gerektirmez (sırası önemli: requireApiKey'den önce)
@@ -114,5 +159,33 @@ app.use("/api", publicApiRouter);
 // Tenant middleware — session tabanlı rotalar için
 app.use("/api", tenantMiddleware);
 app.use("/api", router);
+
+// ─── Global hata yakalayıcı (canlı öncesi) ───────────────────────────────────
+// Bilinmeyen hatalar burada yakalanır; stack trace prod'da loglanır, kullanıcıya gönderilmez.
+import type { NextFunction, Request, Response } from "express";
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  const status = err?.statusCode ?? err?.status ?? 500;
+  const message = typeof err?.message === "string" ? err.message : "Sunucu hatası";
+
+  logger.error({
+    err: { message, stack: err?.stack, code: err?.code },
+    req: { method: req.method, url: req.url?.split("?")[0], id: (req as any).id },
+    status,
+  }, "unhandled_error");
+
+  if (res.headersSent) return;
+  res.status(status).json({
+    error: status >= 500 ? "Internal Server Error" : "Request Error",
+    message: IS_PRODUCTION && status >= 500 ? "Sunucu hatası oluştu, ekibimiz bilgilendirildi." : message,
+  });
+});
+
+// Yakalanmamış async hatalar — process'i çökertmeden logla
+process.on("unhandledRejection", (reason) => {
+  logger.error({ reason: String(reason) }, "unhandled_rejection");
+});
+process.on("uncaughtException", (err) => {
+  logger.fatal({ err: { message: err.message, stack: err.stack } }, "uncaught_exception");
+});
 
 export default app;

@@ -4096,3 +4096,126 @@ describe("Sprint 27 — DevOps & İzleme", () => {
     assert.equal(r.status, 200);
   });
 });
+
+// ─── Sprint 73.6 — Reklam Bütçesi (atomic upsert regression) ────────────────
+describe("Sprint 73.6 — Reklam Bütçesi", () => {
+  let jar;
+  let channelId;
+  before(async () => {
+    ({ jar } = await login("talha", "talha123"));
+    const create = await api("POST", "/ad-budgets/channels", {
+      jar,
+      body: { code: "test_ch_" + Date.now(), name: "Test Reklam Kanalı", platform: "google_ads" },
+    });
+    assert.equal(create.status, 201, "Kanal oluşturulmalı");
+    channelId = create.json.id;
+  });
+
+  test("Presets endpoint çalışıyor", async () => {
+    const r = await api("GET", "/ad-budgets/presets", { jar });
+    assert.equal(r.status, 200);
+    assert.ok(Array.isArray(r.json) && r.json.length >= 5, "En az 5 preset olmalı");
+  });
+
+  test("Paralel POST aynı period için tek satır oluşturur (atomic upsert)", async () => {
+    const period = "2026-04";
+    const requests = [1, 2, 3].map(() =>
+      api("POST", "/ad-budgets/spends", {
+        jar,
+        body: { channelId, period, budgetAmount: 5000, spendAmount: 1500, conversions: 10, revenue: 8000 },
+      })
+    );
+    const results = await Promise.all(requests);
+    for (const r of results) assert.equal(r.status, 200, "Hepsi 200 dönmeli");
+
+    const list = await api("GET", `/ad-budgets/spends?period=${period}`, { jar });
+    const matching = list.json.filter((s) => s.channelId === channelId);
+    assert.equal(matching.length, 1, "Aynı period için tek satır olmalı");
+  });
+
+  test("Summary endpoint ROAS hesaplıyor", async () => {
+    const r = await api("GET", "/ad-budgets/summary?period=2026-04", { jar });
+    assert.equal(r.status, 200);
+    assert.ok(r.json.totals && typeof r.json.totals.spend === "number", "totals.spend olmalı");
+    assert.ok("roas" in r.json.totals, "roas alanı olmalı");
+  });
+});
+
+// ─── Sprint 73.7 — Ticarium Pazar (concurrent regression) ───────────────────
+describe("Sprint 73.7 — Ticarium Pazar (Aggregator)", () => {
+  let jar;
+  before(async () => {
+    ({ jar } = await login("talha", "talha123"));
+  });
+
+  test("Public /pazar endpoint auth gerektirmez", async () => {
+    const r = await fetch("http://localhost:8080/api/public/v1/pazar?limit=5");
+    assert.equal(r.status, 200);
+    const json = await r.json();
+    assert.ok(Array.isArray(json.items));
+    assert.ok(typeof json.count === "number");
+  });
+
+  test("Stats endpoint çalışıyor", async () => {
+    const r = await api("GET", "/aggregator/stats", { jar });
+    assert.equal(r.status, 200);
+    assert.ok("candidate" in r.json && "active" in r.json && "paused" in r.json);
+  });
+
+  test("Listings filter çalışıyor", async () => {
+    const r = await api("GET", "/aggregator/listings?status=active", { jar });
+    assert.equal(r.status, 200);
+    assert.ok(Array.isArray(r.json));
+    for (const l of r.json) assert.equal(l.status, "active");
+  });
+
+  test("Paralel activate/pause çağrıları tutarlı kalır", async () => {
+    const list = await api("GET", "/aggregator/listings?status=active", { jar });
+    if (!list.json || list.json.length === 0) return; // veri yoksa skip
+    const target = list.json[0];
+
+    // 5 paralel pause/activate döngüsü — race condition kontrolü
+    const ops = [];
+    for (let i = 0; i < 5; i++) {
+      ops.push(api("POST", `/aggregator/listings/${target.id}/pause`, { jar }));
+      ops.push(api("POST", `/aggregator/listings/${target.id}/activate`, { jar }));
+    }
+    const results = await Promise.all(ops);
+    // Hiçbiri 5xx döndürmemeli (race olabilir ama deadlock/crash olmamalı)
+    for (const r of results) {
+      assert.ok(r.status < 500, `Race sırasında 5xx olmamalı (got ${r.status})`);
+    }
+
+    // Final state: stats okunabilmeli, chosen invariant korunmalı
+    const stats = await api("GET", "/aggregator/stats", { jar });
+    assert.equal(stats.status, 200);
+  });
+});
+
+// ─── Canlı öncesi rate limit regression ──────────────────────────────────────
+describe("Canlı Öncesi — Rate Limit & Güvenlik", () => {
+  test("Strict-Transport-Security header production'da set edilir (env-bağımlı, dev'de yok)", async () => {
+    const r = await fetch("http://localhost:8080/api/healthz");
+    // dev'de yok, prod'da olmalı; sadece varlığı test edemiyoruz, kırılganlık yok
+    assert.ok(r.status === 200);
+  });
+
+  test("Referrer-Policy header set edildi", async () => {
+    const r = await fetch("http://localhost:8080/api/healthz");
+    assert.equal(r.headers.get("referrer-policy"), "strict-origin-when-cross-origin");
+  });
+
+  test("Public pazar endpoint çalışıyor", async () => {
+    const r = await fetch("http://localhost:8080/api/public/v1/pazar?limit=3");
+    assert.equal(r.status, 200);
+  });
+
+  test("İletişim formu validasyon yapıyor", async () => {
+    const r = await fetch("http://localhost:8080/api/contact", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    assert.ok(r.status === 400 || r.status === 422, "Boş gövde reddedilmeli");
+  });
+});

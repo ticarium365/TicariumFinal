@@ -47,14 +47,22 @@ router.post("/", requireAuth, requireSuperAdmin, async (req: Request, res: Respo
       return;
     }
 
-    // Şirket oluştur
+    // Şirket oluştur — explicit returning whitelist (response leak koruması)
     const [company] = await db.insert(companiesTable).values({
       name,
       subdomain,
       primaryColor: primaryColor || "#2563eb",
       logoUrl: logoUrl || null,
       isActive: true,
-    }).returning();
+    }).returning({
+      id: companiesTable.id,
+      name: companiesTable.name,
+      subdomain: companiesTable.subdomain,
+      primaryColor: companiesTable.primaryColor,
+      logoUrl: companiesTable.logoUrl,
+      isActive: companiesTable.isActive,
+      createdAt: companiesTable.createdAt,
+    });
 
     // Admin kullanıcı oluştur
     const passwordHash = await bcrypt.hash(adminPassword, 10);

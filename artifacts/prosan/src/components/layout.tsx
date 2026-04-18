@@ -50,6 +50,7 @@ import {
   Store,
   Megaphone,
   ShoppingBasket,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./notification-center";
@@ -159,6 +160,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/settings", label: "Ayarlar", icon: Settings, roles: ["admin"] },
     { href: "/admin/companies", label: "Firma Yönetimi", icon: Building2, roles: ["super_admin"] },
     { href: "/super-admin/talepler", label: "İletişim Talepleri", icon: Inbox, roles: ["super_admin"] },
+    { href: "/super-admin/yeni-firma", label: "Yeni Firma Ekle", icon: Building2, roles: ["super_admin"] },
+    { href: "/super-admin/audit-logs", label: "Denetim Kayıtları", icon: ShieldCheck, roles: ["super_admin"] },
     { href: "/admin/payments", label: "Ödeme Bildirimleri", icon: CreditCard, roles: ["super_admin"] },
     { href: "/admin/platform-settings", label: "Platform Ayarları", icon: Wrench, roles: ["super_admin"] },
     { href: "/admin/billing", label: "Abonelik Yönetimi", icon: CreditCard, roles: ["super_admin"] },

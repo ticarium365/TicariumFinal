@@ -66,6 +66,8 @@ import AdBudgetPage from "@/pages/reklam-butce/index";
 import PazarPage from "@/pages/pazar/index";
 import AggregatorAdminPage from "@/pages/aggregator-admin/index";
 import ContactRequestsAdmin from "@/pages/super-admin/talepler";
+import AuditLogsPage from "@/pages/super-admin/audit-logs";
+import NewTenantWizard from "@/pages/super-admin/yeni-firma";
 import ImportPage from "@/pages/ice-aktarim/index";
 import POSPage from "@/pages/sales/pos";
 import ProductionPage from "@/pages/uretim/index";
@@ -317,6 +319,12 @@ function AuthenticatedRouter() {
         </Route>
         <Route path="/super-admin/talepler">
           {() => <ProtectedRoute component={ContactRequestsAdmin} roles={["super_admin"]} />}
+        </Route>
+        <Route path="/super-admin/audit-logs">
+          {() => <ProtectedRoute component={AuditLogsPage} roles={["super_admin"]} />}
+        </Route>
+        <Route path="/super-admin/yeni-firma">
+          {() => <ProtectedRoute component={NewTenantWizard} roles={["super_admin"]} />}
         </Route>
         <Route path="/ice-aktarim">
           {() => <ProtectedRoute component={ImportPage} roles={["admin", "staff", "super_admin"]} />}
