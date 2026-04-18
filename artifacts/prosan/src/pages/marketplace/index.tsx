@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, RefreshCw, Activity, Trash2, ShoppingCart, ListChecks, Settings as SettingsIcon } from "lucide-react";
+import { Plus, RefreshCw, Activity, Trash2, ShoppingCart, ListChecks, Settings as SettingsIcon, Package, CheckCircle2, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 type Provider = { key: string; label: string; needs: string[] };
 type Account = {
@@ -17,6 +18,13 @@ type Account = {
   lastHealthOk: boolean | null; lastHealthMessage: string | null; lastSyncAt: string | null;
 };
 type Job = { id: number; jobType: string; status: string; accountId: number; attemptCount: number; lastError: string | null; createdAt: string; result: any };
+type MOrder = {
+  id: number; companyId: number; accountId: number; channelKey: string;
+  externalOrderId: string; status: string; totalAmount: number | null;
+  currency: string | null; customerName: string | null; itemsJson: any[];
+  rawJson: any; convertedSaleId: number | null; convertedAt: string | null;
+  pulledAt: string;
+};
 type Log = { id: number; operation: string; status: string; level: string; message: string | null; createdAt: string; itemsProcessed: number; itemsFailed: number };
 
 async function api<T>(url: string, opts: RequestInit = {}): Promise<T> {
@@ -26,10 +34,14 @@ async function api<T>(url: string, opts: RequestInit = {}): Promise<T> {
 }
 
 export default function MarketplacePage() {
+  const { toast } = useToast();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [logs, setLogs] = useState<Log[]>([]);
+  const [orders, setOrders] = useState<MOrder[]>([]);
+  const [orderFilter, setOrderFilter] = useState<"all" | "pending" | "converted">("pending");
+  const [convertingId, setConvertingId] = useState<number | null>(null);
   const [openCreate, setOpenCreate] = useState(false);
   const [editAcc, setEditAcc] = useState<Account | null>(null);
   const [tab, setTab] = useState("accounts");
@@ -47,8 +59,50 @@ export default function MarketplacePage() {
       api<Log[]>("/marketplace/logs"),
     ]);
     setProviders(p); setAccounts(a); setJobs(j); setLogs(l);
+    await loadOrders();
+  }
+
+  async function loadOrders() {
+    const qs = orderFilter === "pending" ? "?converted=false"
+      : orderFilter === "converted" ? "?converted=true" : "";
+    try {
+      const o = await api<MOrder[]>(`/marketplace/orders${qs}`);
+      setOrders(o);
+    } catch (e: any) {
+      // sessizce yut — yetki yoksa
+    }
+  }
+
+  async function convertOrder(orderId: number) {
+    setConvertingId(orderId);
+    try {
+      const r = await fetch(`/api/marketplace/orders/${orderId}/convert-to-sale`, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" }, body: "{}",
+      });
+      const data = await r.json();
+      if (r.ok) {
+        if (data.alreadyConverted) {
+          toast({ title: "Zaten dönüştürülmüş", description: `Satış #${data.primarySaleId}` });
+        } else {
+          const skipMsg = data.skipped?.length ? ` (${data.skipped.length} atlandı)` : "";
+          toast({ title: "Satışa dönüştürüldü", description: `${data.sales.length} satış oluşturuldu${skipMsg}` });
+        }
+        await loadOrders();
+      } else if (r.status === 422) {
+        const reasons = (data.skipped || []).map((s: any) => s.reason).join(", ");
+        toast({ title: "Dönüştürme başarısız", description: `Sebep: ${reasons || "bilinmiyor"}`, variant: "destructive" });
+      } else {
+        toast({ title: "Hata", description: data.error || data.message || "Bilinmeyen hata", variant: "destructive" });
+      }
+    } catch (e: any) {
+      toast({ title: "Bağlantı hatası", description: e.message, variant: "destructive" });
+    } finally {
+      setConvertingId(null);
+    }
   }
   useEffect(() => { refresh().catch(console.error); }, []);
+  useEffect(() => { loadOrders().catch(() => {}); }, [orderFilter]);
   useEffect(() => {
     const t = setInterval(() => { api<Job[]>("/marketplace/jobs").then(setJobs).catch(() => {}); }, 5000);
     return () => clearInterval(t);
@@ -131,6 +185,7 @@ export default function MarketplacePage() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="accounts" data-testid="tab-accounts"><SettingsIcon className="h-4 w-4 mr-1" />Mağazalar ({accounts.length})</TabsTrigger>
+          <TabsTrigger value="orders" data-testid="tab-orders"><Package className="h-4 w-4 mr-1" />Siparişler ({orders.length})</TabsTrigger>
           <TabsTrigger value="jobs" data-testid="tab-jobs"><ListChecks className="h-4 w-4 mr-1" />İşler ({jobs.length})</TabsTrigger>
           <TabsTrigger value="logs" data-testid="tab-logs"><Activity className="h-4 w-4 mr-1" />Loglar</TabsTrigger>
         </TabsList>
@@ -160,6 +215,86 @@ export default function MarketplacePage() {
               </CardHeader>
             </Card>
           ))}
+        </TabsContent>
+
+        <TabsContent value="orders" className="mt-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Label>Filtre:</Label>
+            <Select value={orderFilter} onValueChange={(v: any) => setOrderFilter(v)}>
+              <SelectTrigger className="w-48" data-testid="select-order-filter">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Bekleyen (dönüştürülmemiş)</SelectItem>
+                <SelectItem value="converted">Dönüştürülmüş</SelectItem>
+                <SelectItem value="all">Hepsi</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button size="sm" variant="outline" onClick={() => loadOrders()} data-testid="btn-refresh-orders">
+              <RefreshCw className="h-4 w-4 mr-1" />Yenile
+            </Button>
+          </div>
+          <Card><CardContent className="p-0 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted text-left">
+                <tr>
+                  <th className="p-2">#</th>
+                  <th>Kanal</th>
+                  <th>Mağaza</th>
+                  <th>Sipariş No</th>
+                  <th>Durum</th>
+                  <th>Müşteri</th>
+                  <th>Ürün</th>
+                  <th>Tutar</th>
+                  <th>Çekildi</th>
+                  <th>Aksiyon</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((o) => {
+                  const acc = accounts.find((a) => a.id === o.accountId);
+                  const itemCount = Array.isArray(o.itemsJson) ? o.itemsJson.length : 0;
+                  return (
+                    <tr key={o.id} className="border-t" data-testid={`order-row-${o.id}`}>
+                      <td className="p-2">{o.id}</td>
+                      <td><Badge variant="outline">{o.channelKey}</Badge></td>
+                      <td className="text-xs">{acc?.name || o.accountId}</td>
+                      <td className="font-mono text-xs">{o.externalOrderId}</td>
+                      <td>
+                        <Badge variant={o.status === "invoiced" ? "default" : o.status === "cancelled" ? "destructive" : "secondary"}>
+                          {o.status}
+                        </Badge>
+                      </td>
+                      <td className="text-xs">{o.customerName || "-"}</td>
+                      <td className="text-xs">{itemCount} kalem</td>
+                      <td className="text-right">{o.totalAmount != null ? `${Number(o.totalAmount).toFixed(2)} ${o.currency || "TRY"}` : "-"}</td>
+                      <td className="text-xs">{new Date(o.pulledAt).toLocaleString("tr-TR")}</td>
+                      <td>
+                        {o.convertedSaleId ? (
+                          <span className="inline-flex items-center text-xs text-green-600">
+                            <CheckCircle2 className="h-4 w-4 mr-1" />Satış #{o.convertedSaleId}
+                          </span>
+                        ) : (
+                          <Button size="sm" variant="default"
+                            onClick={() => convertOrder(o.id)}
+                            disabled={convertingId === o.id}
+                            data-testid={`btn-convert-${o.id}`}>
+                            {convertingId === o.id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4 mr-1" />}
+                            Satışa Dönüştür
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {orders.length === 0 && (
+                  <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">
+                    {orderFilter === "pending" ? "Bekleyen sipariş yok. Mağazalar sekmesinden 'Sipariş Çek' butonuna basın." : "Sipariş yok."}
+                  </td></tr>
+                )}
+              </tbody>
+            </table>
+          </CardContent></Card>
         </TabsContent>
 
         <TabsContent value="jobs" className="mt-4">

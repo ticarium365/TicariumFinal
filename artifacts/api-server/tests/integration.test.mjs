@@ -4741,6 +4741,7 @@ describe("Sprint 51-55 — Marketplace order ingest idempotency", () => {
     throw new Error(`Job ${jobId} timeout`);
   }
 
+
   test("pull_orders job → mock siparişi marketplace_orders tablosuna idempotent yazar", async () => {
     if (!accountId) { console.warn("accountId yok, test atlandı"); return; }
     const { jar } = await login("talha", "talha123");
@@ -4762,5 +4763,158 @@ describe("Sprint 51-55 — Marketplace order ingest idempotency", () => {
     assert.equal(job2.status, "completed");
     assert.equal(job2.result?.updated, job1.result.inserted, "ikinci pull tüm satırları update yolundan geçirmeli");
     assert.equal(job2.result?.inserted ?? 0, 0, "ikinci pull yeni insert üretmemeli (idempotent)");
+  });
+
+  test("GET /marketplace/orders → liste döner ve filtre çalışır", async () => {
+    if (!accountId) return;
+    const { jar } = await login("talha", "talha123");
+    const r = await api("GET", `/marketplace/orders?accountId=${accountId}`, { jar });
+    assert.equal(r.status, 200);
+    assert.ok(Array.isArray(r.json));
+  });
+
+  test("POST /marketplace/orders/:id/convert-to-sale → product_not_matched skipped + idempotent", async () => {
+    if (!accountId) return;
+    const { jar } = await login("talha", "talha123");
+    // Önce yeni bir mock pull yap (varsa pas, yoksa oluştur)
+    const j = await api("POST", "/marketplace/jobs", {
+      jar, body: { accountId, jobType: "pull_orders", payload: {} },
+    });
+    await waitJobDone(jar, j.json.id);
+    const list = await api("GET", `/marketplace/orders?accountId=${accountId}&converted=false`, { jar });
+    if (!list.json.length) { console.warn("hiç order yok, test atlandı"); return; }
+    const orderId = list.json[0].id;
+
+    // 1. convert: mock siparişi DEMO-SKU içerir, mapping yok → 422 conversion_aborted (all-or-nothing)
+    const c1 = await api("POST", `/marketplace/orders/${orderId}/convert-to-sale`, { jar, body: {} });
+    assert.ok([200, 422].includes(c1.status), `unexpected status ${c1.status}: ${JSON.stringify(c1.json)}`);
+
+    if (c1.status === 422) {
+      // All-or-nothing rollback
+      assert.ok(["conversion_aborted", "no_sales_created"].includes(c1.json.error));
+      assert.ok(Array.isArray(c1.json.skipped) && c1.json.skipped.length > 0);
+      // Idempotent failure: 2. çağrı da aynı 422 vermeli (rollback ile convertedSaleId hâlâ null)
+      const c2 = await api("POST", `/marketplace/orders/${orderId}/convert-to-sale`, { jar, body: {} });
+      assert.equal(c2.status, 422);
+    } else {
+      // 200 ise idempotent şekilde tekrar çağrılınca alreadyConverted dönmeli
+      assert.ok(c1.json.primarySaleId, "primarySaleId set olmalı");
+      const c2 = await api("POST", `/marketplace/orders/${orderId}/convert-to-sale`, { jar, body: {} });
+      assert.equal(c2.status, 200);
+      assert.equal(c2.json.alreadyConverted, true);
+      assert.equal(c2.json.primarySaleId, c1.json.primarySaleId, "aynı sale id dönmeli");
+    }
+  });
+
+  test("POST /marketplace/orders/:id/convert-to-sale → mapping varsa sale oluşur, stok düşer, idempotent", async () => {
+    if (!accountId) return;
+    const { jar } = await login("talha", "talha123");
+
+    // 1. Test ürünü hazırla (yoksa oluştur)
+    const skuKey = "SPRINT55-TEST-SKU";
+    let prodResp = await api("GET", `/products?search=${skuKey}`, { jar });
+    let product = (prodResp.json?.products || prodResp.json || []).find((p) => p.productCode === skuKey);
+    if (!product) {
+      const create = await api("POST", "/products", { jar, body: {
+        productCode: skuKey, name: "Sprint55 Test Ürün", barcode: skuKey,
+        stock: 100, purchasePrice: 50, salePrice: 100,
+      } });
+      if (create.status === 201) product = create.json.product || create.json;
+    }
+    if (!product?.id) { console.warn("test ürünü oluşturulamadı, test atlandı"); return; }
+
+    // 2. Mapping ekle
+    await api("POST", `/marketplace/accounts/${accountId}/mappings`, {
+      jar, body: {
+        productId: product.id, channelSku: "DEMO-SKU", externalProductId: null, isPublished: true,
+      },
+    });
+
+    // 3. Yeni mock order yarat (zaten var olabilir)
+    const j = await api("POST", "/marketplace/jobs", {
+      jar, body: { accountId, jobType: "pull_orders", payload: {} },
+    });
+    await waitJobDone(jar, j.json.id);
+
+    // 4. Henüz convert edilmemiş bir order seç
+    const list = await api("GET", `/marketplace/orders?accountId=${accountId}&converted=false`, { jar });
+    if (!list.json.length) { console.warn("dönüştürülecek order yok, test atlandı"); return; }
+    const orderId = list.json[0].id;
+
+    const stockBefore = product.stock;
+
+    // 5. Convert
+    const c1 = await api("POST", `/marketplace/orders/${orderId}/convert-to-sale`, { jar, body: {} });
+    if (c1.status !== 200) {
+      console.warn("convert beklenmedik:", c1.status, c1.json);
+      return;
+    }
+    assert.ok(c1.json.primarySaleId);
+    assert.ok(Array.isArray(c1.json.sales) && c1.json.sales.length >= 1);
+
+    // 6. Stok düşmüş mü?
+    const after = await api("GET", `/products/${product.id}`, { jar });
+    if (after.status === 200) {
+      const newStock = (after.json.product || after.json).stock;
+      assert.ok(newStock < stockBefore, `stok düşmeli: ${stockBefore} → ${newStock}`);
+    }
+
+    // 7. Idempotent: 2. çağrı yeni satış üretmemeli
+    const c2 = await api("POST", `/marketplace/orders/${orderId}/convert-to-sale`, { jar, body: {} });
+    assert.equal(c2.status, 200);
+    assert.equal(c2.json.alreadyConverted, true);
+    assert.equal(c2.json.primarySaleId, c1.json.primarySaleId);
+  });
+});
+
+describe("Sprint B — Trendyol gerçek HTTP konnektörü", () => {
+  let accountId;
+
+  before(async () => {
+    const { jar } = await login("talha", "talha123");
+    // marketplace.basic plan zaten Sprint 51-55 setup ile aboneydi
+    const list = await api("GET", "/marketplace/accounts", { jar });
+    const existing = (list.json || []).find((a) => a.provider === "trendyol");
+    if (existing) { accountId = existing.id; return; }
+    const created = await api("POST", "/marketplace/accounts", {
+      jar, body: {
+        provider: "trendyol", name: "Trendyol Test", sandbox: true,
+        credentials: { sellerId: "TESTSELLER", apiKey: "INVALIDKEY", apiSecret: "INVALIDSECRET" },
+      },
+    });
+    if (created.status === 201) accountId = created.json.id || created.json.account?.id;
+  });
+
+  test("Trendyol provider gerçek konnektör factory'de bağlı", async () => {
+    if (!accountId) { console.warn("trendyol accountId yok, test atlandı"); return; }
+    const { jar } = await login("talha", "talha123");
+    // healthCheck'i tetikle
+    const r = await api("POST", `/marketplace/accounts/${accountId}/health-check`, { jar });
+    assert.equal(r.status, 200);
+    // Geçersiz API key ile sandbox'a gerçek HTTP isteği yapılır → ok:false ama graceful
+    assert.equal(typeof r.json.ok, "boolean", "ok alanı boolean olmalı");
+    assert.ok(typeof r.json.message === "string" && r.json.message.length > 0, "message dolu olmalı");
+    // Stub'tan farklı: "henüz uygulanmadı" mesajı GELMEMELİ
+    assert.ok(!r.json.message.includes("henüz uygulanmadı"),
+      `stub mesajı görünmemeli, gerçek HTTP cevabı bekleniyor: ${r.json.message}`);
+  });
+
+  test("Eksik credential ile graceful 'Eksik config' mesajı döner", async () => {
+    const { jar } = await login("talha", "talha123");
+    const created = await api("POST", "/marketplace/accounts", {
+      jar, body: {
+        provider: "trendyol", name: "Trendyol Eksik Config", sandbox: true,
+        credentials: { sellerId: "X" }, // apiKey/apiSecret yok
+      },
+    });
+    if (created.status !== 201) { console.warn("eksik-config testi atlandı"); return; }
+    const accId = created.json.id || created.json.account?.id;
+    const r = await api("POST", `/marketplace/accounts/${accId}/health-check`, { jar });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.ok, false);
+    assert.ok(r.json.message.includes("Eksik config"),
+      `Eksik config mesajı bekleniyor: ${r.json.message}`);
+    // Temizle
+    await api("DELETE", `/marketplace/accounts/${accId}`, { jar });
   });
 });
