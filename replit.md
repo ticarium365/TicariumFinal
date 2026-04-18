@@ -32,6 +32,24 @@ The frontend is built with React and Vite, utilizing Tailwind CSS and `shadcn/ui
 
 The backend is powered by Express 5, with PostgreSQL as the database, managed by Drizzle ORM for type-safe interactions, and Zod for schema validation. API client code and Zod schemas are automatically generated from an OpenAPI specification using Orval. Authentication is session-based, secured with `express-session` and `bcryptjs`, and scoped per company. Barcode scanning uses `@zxing/browser`, and QR codes are generated with `qrcode.react`. The build process leverages `esbuild` for ESM bundling. The monorepo organizes `prosan` (frontend), `api-server` (backend), `lib/db` (database schema), `lib/api-spec`, `lib/api-client-react`, and `lib/api-zod`. Features are gated by a subscription-based feature flag system with a 60-second in-memory cache and automatic cache invalidation.
 
+### Sprint B2B-Vitrin — Cross-Tenant Marketplace (Nisan 2026 tamamlandı)
+**Backend** (`api-server/src/routes/b2b-catalog.ts`):
+- `GET /b2b/catalog/marketplace` — tüm tenantların `isPublished=true` ürünlerini firma bilgisiyle (innerJoin companies) döner. Param: `q` (ürün adı/kod/açıklama/kategori VEYA firma adı/subdomain üzerinde ilike OR), `companyId`, `category`, `sort` (new|price_asc|price_desc|name), `limit` (≤100), `offset`. Auth korumalı (requireAuth) ama tenant filtresi YOK — bilinçli cross-tenant okuma.
+- `GET /b2b/catalog/marketplace/companies` — vitrindeki distinct firmalar (filtre çipi).
+- `GET /b2b/catalog/marketplace/categories` — vitrindeki distinct kategori adları (TR localeCompare).
+
+**Frontend** (`prosan/src/pages/b2b/vitrin.tsx`, route `/b2b/vitrin`):
+- Glass kart sıralı liste (24/sayfa). Arama 300ms debounce. Sıralama, firma & kategori seçicileri.
+- "Teklif İste" → `sessionStorage["b2b_quote_prefill"]` ({subdomain, companyName, items}) + `/b2b/quotes/new?subdomain=…`. Mevcut quote-new sayfası prefill'i otomatik okuyor.
+- AbortController ile rapid-filter race guard. Empty state CTA → `/b2b/catalog`.
+- Mobil responsive: kart desktop'ta 12-col grid, mobilde flex column (görsel+info üst, fiyat+aksiyon alt).
+
+**Sidebar** (`layout.tsx`): B2B & Ağ grubuna **"B2B Vitrin"** (Store icon, en üst) eklendi; mevcut "B2B Katalog" → **"Kendi B2B Katalogum"** olarak yeniden adlandırıldı.
+
+**DB indexler** (`lib/db/src/schema/b2b.ts`): `b2b_cat_published_created_idx (is_published, created_at)`, `b2b_cat_published_price_idx (is_published, list_price)` eklendi (push-force ✓).
+
+**Onay akışı YOK** — kullanıcı kararı: bir firma `isPublished` işaretlediyse herkes görür, satıcı fiyatı dilediği gibi koyar.
+
 ### Sprint 80 — Hardening & Compliance (12 maddelik konsolide plan, Nisan 2026)
 **Yeni şema** (`db:push-force` ✓): `kvkk_consents`, `data_export_requests`, `data_erasure_requests`, `idempotency_keys`, `feature_flags_runtime`, `domain_events`, `inbound_webhooks`, `tcmb_rates`, `expo_push_tokens`, `sms_messages` + `users.kvkkConsentAt/Version`, `marketingConsentAt`, `deletedAt`.
 

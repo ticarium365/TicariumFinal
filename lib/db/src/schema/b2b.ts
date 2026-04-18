@@ -156,6 +156,9 @@ export const b2bCatalogItemsTable = pgTable(
   (t) => [
     index("b2b_cat_company_idx").on(t.companyId, t.isPublished),
     index("b2b_cat_category_idx").on(t.category),
+    // Vitrin (cross-tenant marketplace) default sıralaması için
+    index("b2b_cat_published_created_idx").on(t.isPublished, t.createdAt),
+    index("b2b_cat_published_price_idx").on(t.isPublished, t.listPrice),
   ]
 );
 

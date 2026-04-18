@@ -5,6 +5,7 @@ import {
   Filter,
   Loader2,
   Package,
+  PackageOpen,
   Building2,
   ArrowDownAZ,
   Clock,
@@ -265,10 +266,23 @@ export default function B2BVitrinPage() {
         {!loading && items.length === 0 && (
           <Card className="t365-glass p-12 text-center">
             <Package className="h-10 w-10 mx-auto text-muted-foreground/60 mb-3" />
-            <h3 className="font-semibold text-foreground">Eşleşen ürün bulunamadı</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Farklı bir arama, firma veya kategori deneyin.
+            <h3 className="font-semibold text-foreground">
+              {debouncedQ || companyId !== "all" || category !== "all"
+                ? "Eşleşen ürün bulunamadı"
+                : "Vitrin henüz boş"}
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1 mb-4">
+              {debouncedQ || companyId !== "all" || category !== "all"
+                ? "Farklı bir arama, firma veya kategori deneyin."
+                : "Henüz hiçbir firma vitrine ürün eklemedi. İlk paylaşan sen ol!"}
             </p>
+            {!(debouncedQ || companyId !== "all" || category !== "all") && (
+              <Link href="/b2b/catalog">
+                <Button size="sm" data-testid="button-vitrin-empty-add">
+                  <PackageOpen className="h-4 w-4 mr-2" /> Kendi Katalogumu Düzenle
+                </Button>
+              </Link>
+            )}
           </Card>
         )}
 
@@ -277,23 +291,24 @@ export default function B2BVitrinPage() {
           return (
             <Card
               key={item.id}
-              className="t365-glass t365-card-hover p-4 grid grid-cols-12 gap-4 items-center"
+              className="t365-glass t365-card-hover p-4 md:grid md:grid-cols-12 md:gap-4 md:items-center flex flex-col gap-3"
               data-testid={`vitrin-item-${item.id}`}
             >
-              {/* Görsel */}
-              <div className="col-span-12 md:col-span-1 flex md:block">
-                <div className="h-14 w-14 rounded-lg bg-muted/40 border border-border/60 flex items-center justify-center overflow-hidden shrink-0">
-                  {item.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <Package className="h-6 w-6 text-muted-foreground/50" />
-                  )}
+              {/* Mobil üst satır: görsel + info (flex), Desktop: sadece görsel */}
+              <div className="flex gap-3 md:contents">
+                {/* Görsel */}
+                <div className="md:col-span-1 shrink-0">
+                  <div className="h-14 w-14 rounded-lg bg-muted/40 border border-border/60 flex items-center justify-center overflow-hidden shrink-0">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <Package className="h-6 w-6 text-muted-foreground/50" />
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {/* Ürün bilgisi */}
-              <div className="col-span-12 md:col-span-5 min-w-0">
+                {/* Ürün bilgisi */}
+                <div className="md:col-span-5 min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-semibold text-foreground truncate" title={item.name}>
                     {item.name}
@@ -324,10 +339,11 @@ export default function B2BVitrinPage() {
                     </Badge>
                   )}
                 </div>
+                </div>
               </div>
 
               {/* Firma */}
-              <div className="col-span-6 md:col-span-3 min-w-0">
+              <div className="md:col-span-3 min-w-0">
                 <Link
                   href={`/network/${item.companySubdomain}`}
                   className="inline-flex items-center gap-2 group"
@@ -347,28 +363,31 @@ export default function B2BVitrinPage() {
                 </Link>
               </div>
 
-              {/* Fiyat */}
-              <div className="col-span-3 md:col-span-2 text-right">
-                {price ? (
-                  <>
-                    <div className="t365-numeric text-base font-semibold text-foreground">{price}</div>
-                    <div className="text-[10px] text-muted-foreground">/ {item.unit}</div>
-                  </>
-                ) : (
-                  <span className="text-xs text-muted-foreground italic">Fiyat sor</span>
-                )}
-              </div>
+              {/* Mobil alt satır: fiyat + aksiyon, Desktop: ayrı sütunlar */}
+              <div className="flex items-center justify-between gap-3 md:contents">
+                {/* Fiyat */}
+                <div className="md:col-span-2 md:text-right">
+                  {price ? (
+                    <>
+                      <div className="t365-numeric text-base font-semibold text-foreground">{price}</div>
+                      <div className="text-[10px] text-muted-foreground">/ {item.unit}</div>
+                    </>
+                  ) : (
+                    <span className="text-xs text-muted-foreground italic">Fiyat sor</span>
+                  )}
+                </div>
 
-              {/* Aksiyon */}
-              <div className="col-span-3 md:col-span-1 flex justify-end">
-                <Button
-                  size="sm"
-                  className="h-9 px-3"
-                  onClick={() => handleQuoteRequest(item)}
-                  data-testid={`vitrin-quote-${item.id}`}
-                >
-                  <ShoppingCart className="h-3.5 w-3.5 mr-1.5" /> Teklif İste
-                </Button>
+                {/* Aksiyon */}
+                <div className="md:col-span-1 md:flex md:justify-end">
+                  <Button
+                    size="sm"
+                    className="h-9 px-3"
+                    onClick={() => handleQuoteRequest(item)}
+                    data-testid={`vitrin-quote-${item.id}`}
+                  >
+                    <ShoppingCart className="h-3.5 w-3.5 mr-1.5" /> Teklif İste
+                  </Button>
+                </div>
               </div>
             </Card>
           );
