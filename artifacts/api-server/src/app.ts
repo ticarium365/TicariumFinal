@@ -11,9 +11,15 @@ import publicStorefrontRouter from "./routes/public-storefront.js";
 import { aggregatorPublicRouter } from "./routes/aggregator.js";
 import clientErrorsRouter from "./routes/client-errors.js";
 import contactRouter from "./routes/contact.js";
+import healthzRouter from "./routes/healthz.js";
+import kvkkRouter from "./routes/kvkk.js";
+import webhookReceiversRouter from "./routes/webhook-receivers.js";
 import { logger } from "./lib/logger.js";
 import { tenantMiddleware } from "./middlewares/tenant.js";
+import { initSentry, Sentry } from "./lib/sentry.js";
 import crypto from "node:crypto";
+
+void initSentry();
 
 const app: Express = express();
 
@@ -130,6 +136,18 @@ app.use("/api/contact", contactRateLimit);
 // Contact router — anonim form POST + super-admin yönetim, tenant middleware'i bypass eder
 app.use("/api/contact", contactRouter);
 
+// Healthz / readyz — tenant middleware bypass, monitor için
+app.use("/api", healthzRouter);
+app.use("/api/v1", healthzRouter);
+
+// KVKK consent endpoint'i — anonim kullanıcılar da onay verebilir (cookie consent)
+app.use("/api/kvkk", kvkkRouter);
+app.use("/api/v1/kvkk", kvkkRouter);
+
+// Inbound webhook receiver — tenant middleware ÖNCE mount edilir, raw body parsing ister
+app.use("/api", webhookReceiversRouter);
+app.use("/api/v1", webhookReceiversRouter);
+
 // Public pazar (cross-tenant aggregator) — IP başına dakikada 60 istek (browse koruması)
 const pazarRateLimit = rateLimit({
   windowMs: 60 * 1000,
@@ -173,7 +191,9 @@ app.use("/api", publicApiRouter);
 
 // Tenant middleware — session tabanlı rotalar için
 app.use("/api", tenantMiddleware);
+app.use("/api/v1", tenantMiddleware);
 app.use("/api", router);
+app.use("/api/v1", router);
 
 // ─── Global hata yakalayıcı (canlı öncesi) ───────────────────────────────────
 // Bilinmeyen hatalar burada yakalanır; stack trace prod'da loglanır, kullanıcıya gönderilmez.
@@ -187,6 +207,10 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     req: { method: req.method, url: req.url?.split("?")[0], id: (req as any).id },
     status,
   }, "unhandled_error");
+
+  if (status >= 500) {
+    try { Sentry?.captureException?.(err); } catch { /* sentry off */ }
+  }
 
   if (res.headersSent) return;
   res.status(status).json({

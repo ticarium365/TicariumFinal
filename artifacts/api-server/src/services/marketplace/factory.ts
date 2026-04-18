@@ -9,12 +9,14 @@ import {
   IdeasoftProvider, TicimaxProvider,
 } from "./stub-providers.js";
 import { TrendyolRealProvider } from "./trendyol-provider.js";
+import { HepsiburadaRealProvider } from "./hepsiburada-provider.js";
+import { N11RealProvider } from "./n11-provider.js";
 
 export const MP_REGISTRY: Record<string, new (cfg: MarketplaceAccountConfig) => MarketplaceProvider> = {
   mock: MockMarketplaceProvider,
   trendyol: TrendyolRealProvider,
-  hepsiburada: HepsiburadaProvider,
-  n11: N11Provider,
+  hepsiburada: HepsiburadaRealProvider,
+  n11: N11RealProvider,
   amazon_tr: AmazonTrProvider,
   ciceksepeti: CiceksepetiProvider,
   pttavm: PttAvmProvider,

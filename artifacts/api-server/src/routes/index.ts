@@ -132,4 +132,12 @@ router.use("/pricing-rules", pricingRulesRouter);
 import shippingRouter from "./shipping.js";
 router.use("/shipping", shippingRouter);
 
+// Sprint 80 — KVKK + Multi-currency + Feature flags runtime + SMS/Push
+import featureFlagsRuntimeRouter from "./feature-flags-runtime.js";
+import currencyRatesRouter from "./currency-rates.js";
+import smsPushRouter from "./sms-push.js";
+router.use("/admin", featureFlagsRuntimeRouter);
+router.use("/currency", currencyRatesRouter);
+router.use(smsPushRouter);
+
 export default router;

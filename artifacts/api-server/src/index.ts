@@ -4,6 +4,9 @@ import { db, usersTable, productsTable } from "@workspace/db";
 import { seedSubscriptionPlans } from "./routes/subscriptions.js";
 import { startMarketplaceWorker } from "./services/marketplace/worker.js";
 import { startProfitCron } from "./services/profitEngine.js";
+import { startOutboxWorker } from "./services/queue/outbox-worker.js";
+import { fetchAndStoreTcmbRates } from "./services/currency/tcmb-fetcher.js";
+import { cleanupExpiredIdempotencyKeys } from "./middlewares/idempotency.js";
 import { sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import seedProductsRaw from "./seed-products.json";
@@ -155,4 +158,11 @@ app.listen(port, (err?: Error) => {
   try { startProfitCron(); } catch (e) { logger.error({ err: e }, "Profit cron failed to start"); }
   // Dahili scheduler (db-backup, audit-archive) — opt-in via ENABLE_SCHEDULER=true
   import("./lib/scheduler.js").then(m => m.startScheduler()).catch(e => logger.error({ err: e }, "Scheduler failed to start"));
+  // Sprint 80 — Generic outbox worker (domain_events dispatch)
+  try { startOutboxWorker(5000); } catch (e) { logger.error({ err: e }, "Outbox worker failed to start"); }
+  // Sprint 80 — TCMB EVDS kur senkronu (her 4 saatte + boot'ta)
+  setTimeout(() => { fetchAndStoreTcmbRates().catch(e => logger.warn({ err: e }, "TCMB initial fetch failed")); }, 30_000);
+  setInterval(() => { fetchAndStoreTcmbRates().catch(() => {}); }, 4 * 60 * 60 * 1000);
+  // Sprint 80 — Idempotency key TTL temizliği (saatte bir)
+  setInterval(() => { cleanupExpiredIdempotencyKeys().catch(() => {}); }, 60 * 60 * 1000);
 });

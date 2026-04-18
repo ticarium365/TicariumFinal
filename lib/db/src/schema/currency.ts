@@ -16,3 +16,19 @@ export const currencyRatesTable = pgTable("currency_rates", {
 
 // Şirket başına en son aktif kuru hızlı bulmak için index
 export const currencyRatesUniqueLatest = (currencyRatesTable);
+
+// Sprint 80 — TCMB EVDS resmi kur snapshot (global, tüm tenant ortak)
+import { decimal, date } from "drizzle-orm/pg-core";
+export const tcmbRatesTable = pgTable("tcmb_rates", {
+  id: serial("id").primaryKey(),
+  rateDate: date("rate_date").notNull(),
+  currency: text("currency").notNull(),
+  buyRate: decimal("buy_rate", { precision: 18, scale: 6 }).notNull(),
+  sellRate: decimal("sell_rate", { precision: 18, scale: 6 }).notNull(),
+  source: text("source").notNull().default("tcmb"),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  uniq: uniqueIndex("tcmb_rates_date_currency_uniq").on(t.rateDate, t.currency, t.source),
+}));
+
+export type TcmbRate = typeof tcmbRatesTable.$inferSelect;

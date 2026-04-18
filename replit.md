@@ -32,6 +32,32 @@ The frontend is built with React and Vite, utilizing Tailwind CSS and `shadcn/ui
 
 The backend is powered by Express 5, with PostgreSQL as the database, managed by Drizzle ORM for type-safe interactions, and Zod for schema validation. API client code and Zod schemas are automatically generated from an OpenAPI specification using Orval. Authentication is session-based, secured with `express-session` and `bcryptjs`, and scoped per company. Barcode scanning uses `@zxing/browser`, and QR codes are generated with `qrcode.react`. The build process leverages `esbuild` for ESM bundling. The monorepo organizes `prosan` (frontend), `api-server` (backend), `lib/db` (database schema), `lib/api-spec`, `lib/api-client-react`, and `lib/api-zod`. Features are gated by a subscription-based feature flag system with a 60-second in-memory cache and automatic cache invalidation.
 
+### Sprint 80 — Hardening & Compliance (12 maddelik konsolide plan, Nisan 2026)
+**Yeni şema** (`db:push-force` ✓): `kvkk_consents`, `data_export_requests`, `data_erasure_requests`, `idempotency_keys`, `feature_flags_runtime`, `domain_events`, `inbound_webhooks`, `tcmb_rates`, `expo_push_tokens`, `sms_messages` + `users.kvkkConsentAt/Version`, `marketingConsentAt`, `deletedAt`.
+
+**Backend bileşenleri**:
+- **Sentry** (`lib/sentry.ts`): Tamamen opsiyonel — `SENTRY_DSN` boşsa `dynamic import` hiç çalışmaz, peer deps eksikliği build/runtime'ı kırmaz. `app.ts` 500 handler'da `Sentry?.captureException`.
+- **Healthz** (`routes/healthz.ts`): `/api/healthz` (db ping + uptime + version), `/api/readyz` (k8s ready). `/api/v1` mirror. UptimeRobot uyumlu.
+- **KVKK** (`routes/kvkk.ts`): `POST /kvkk/consent` (anonim cookie + auth user), `GET /kvkk/consent/version` (`v1.2026.04`), `POST/GET /kvkk/data-export`, `POST/DELETE /kvkk/data-erasure` (30 gün soft-delete). Tenant middleware **ÖNCE** mount edilir.
+- **Idempotency** (`middlewares/idempotency.ts`): `Idempotency-Key` header (8-128 alfanumerik) → 24 saat replay; method+path mismatch → 409. POST/PUT/PATCH/DELETE'te zorunlu değil ama destekli. Saat başı TTL temizlik cron.
+- **Rate-limit factory** (`lib/rate-limit-factory.ts`): `public/auth/internal/write` tier'ları, prod-only.
+- **Feature Flags Runtime** (`services/feature-flags-runtime.ts` + `routes/feature-flags-runtime.ts`): Company-scoped > global > rollout pct (sha1(`key:companyId`) % 100). 30s in-memory cache. Admin: `GET/POST/DELETE /api/admin/runtime-flags`, user check: `GET /api/admin/runtime-flags/check/:key`.
+- **TCMB EVDS** (`services/currency/tcmb-fetcher.ts`): `today.xml` parse → `tcmb_rates` (USD/EUR/GBP/CHF, buy/sell decimal(18,6)). Boot'ta + 4 saatte bir sync. Routes: `/api/currency/rates/{latest,history,sync}`.
+- **NetGSM SMS** (`services/sms/netgsm-provider.ts`): GET API, kredi yoksa `no_provider`, response code parse (00/01/02 = ok). `POST /api/sms/send`, mesaj `sms_messages` tablosunda. ENV: `NETGSM_USERNAME/PASSWORD/HEADER`.
+- **Expo Push** (`services/push/expo-push.ts`): Token format validate, multi-device, `DeviceNotRegistered` → otomatik deactivate. `POST /api/push/{register,send}`.
+- **Generic Outbox Worker** (`services/queue/outbox-worker.ts`): `domain_events` tablosu, `FOR UPDATE SKIP LOCKED`, 7 deneme exp backoff (2,4,8,16,32,64,128 dk), 7. başarısızlıkta `dead_letter`. `registerOutboxHandler(eventType, handler)` ile genişletilir. 5sn poll, app.ts `startOutboxWorker(5000)`.
+- **Inbound Webhook Receiver** (`routes/webhook-receivers.ts`): `POST /api/webhooks/:provider/:accountId` — raw body parser, HMAC-SHA256 (`x-hub-signature-256` / `x-signature`), `inbound_webhooks` UNIQUE(provider, externalEventId) ile replay protection. `channelAccounts.settings.webhookSecret` yoksa signature skip. Tenant middleware ÖNCE.
+- **Hepsiburada Real Provider** (`services/marketplace/hepsiburada-provider.ts`): MPOP API, HTTP Basic, **merchantSku öncelikli** (Trendyol'dan kritik fark — barcode değil). `pushStock` → `/listings/.../stock-uploads`, `pushPrice` → `.../price-uploads`, `pullOrders` mapping (open→created, packaged→paid, vb). Sandbox/prod URL ayrımı.
+- **N11 Real Provider** (`services/marketplace/n11-provider.ts`): SOAP/XML envelope helper, `appKey/appSecret` auth, `ProductStockService.UpdateStockBySellerCode`, `OrderService.OrderList`. `pickXml` regex parser (lib bağımsız).
+
+**API v1 mirror**: Tüm router'lar (healthz, kvkk, webhook, tenant routes) `/api` ve `/api/v1` altında çift mount — geriye dönük uyumluluk + versioning hazır.
+
+**RLS scripti** (`scripts/apply-rls.ts`): 40+ tenant tablosuna `tenant_isolation` policy. **Manuel çalıştırma** (henüz aktif değil — `rlsContextMiddleware` ile transaction-scope `SET LOCAL app.current_company_id` gerektirir, opt-in).
+
+**Build dış-bağımlılıklar**: `@sentry/node, @sentry/core/utils/types, import-in-the-middle, require-in-the-middle` build.mjs `external` listesine eklendi (esbuild bundling otomatik atlasın diye).
+
+**Skipped intentionally**: Iyzico (API key yok), self-service signup (Q3), e-Defter (Q3), mobile offline POS (Q4), aggregator scoring (50+ tenant gerekli).
+
 ### Sprint B — Trendyol Gerçek HTTP Konnektörü (Nisan 2026 tamamlandı)
 `services/marketplace/trendyol-provider.ts`: Trendyol Sapigw konnektörü. HTTP Basic auth (`apiKey:apiSecret` base64). Sandbox URL: `stageapigw.trendyol.com/sapigw`, prod: `api.trendyol.com/sapigw`. Required creds: `sellerId, apiKey, apiSecret`. **Methods**: `healthCheck` (`/suppliers/{id}/addresses`, hafif yetki kontrolü), `pushStock` ve `pushPrice` (tek endpoint `/products/price-and-inventory`, barcode bazlı), `pullOrders` (`/suppliers/{id}/orders` + status mapping `created→paid→shipped→delivered/cancelled/returned`). `requireConfig()` helper'ı eksik credential'ı erken yakalar; HTTP/network hataları graceful (`ok:false + message`). Factory artık `trendyol` key'ini stub yerine `TrendyolRealProvider`'a bağlar. 2 integration test (gerçek HTTP / eksik config).
 
