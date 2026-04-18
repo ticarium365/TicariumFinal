@@ -59,3 +59,123 @@ id = "wa-fjGkpf3B50scg6ueH1"
 uri = "file://docs/Ticarium365_Dokumantasyon.md"
 type = "text"
 title = "Ticarium365 Sistem Dökümantasyonu (v1.2026.04)"
+
+[[outputs]]
+id = "2ZvRPxy2xd538pdnfHPAi"
+uri = "file://screenshots/sprint82/login.jpeg"
+type = "image"
+title = "01 — Giriş"
+
+[[outputs]]
+id = "Or45oeaTRURJ_WBP84DIa"
+uri = "file://screenshots/sprint82/dashboard.jpeg"
+type = "image"
+title = "02 — Dashboard"
+
+[[outputs]]
+id = "30XEuJrIyQ0PDIBrUnrzi"
+uri = "file://screenshots/sprint82/products.jpeg"
+type = "image"
+title = "03 — Ürünler"
+
+[[outputs]]
+id = "B_lO65a-Jojtyg4Fy_KIx"
+uri = "file://screenshots/sprint82/sales.jpeg"
+type = "image"
+title = "04 — Satış Ekranı"
+
+[[outputs]]
+id = "q0ujOsirlN_8_osxr98Pv"
+uri = "file://screenshots/sprint82/sales-history.jpeg"
+type = "image"
+title = "05 — Satış Geçmişi"
+
+[[outputs]]
+id = "MqiYsnQ7V7CEaB4zMiOmk"
+uri = "file://screenshots/sprint82/pos.jpeg"
+type = "image"
+title = "06 — POS"
+
+[[outputs]]
+id = "-onl8ypiJNQrM-FVITWiT"
+uri = "file://screenshots/sprint82/stock.jpeg"
+type = "image"
+title = "07 — Stok Hareketleri"
+
+[[outputs]]
+id = "YNhV3-swrW1xqFcTqmDh6"
+uri = "file://screenshots/sprint82/barcodes.jpeg"
+type = "image"
+title = "08 — Barkod Yönetimi"
+
+[[outputs]]
+id = "6Sdbfc0SYG7CIs-aQp4o5"
+uri = "file://screenshots/sprint82/customers.jpeg"
+type = "image"
+title = "09 — Müşteriler (Cari)"
+
+[[outputs]]
+id = "NZZEPeJrDnr0M8q-S4hq4"
+uri = "file://screenshots/sprint82/suppliers.jpeg"
+type = "image"
+title = "10 — Tedarikçiler"
+
+[[outputs]]
+id = "XLL8ivlYJVJKPEoueJzRJ"
+uri = "file://screenshots/sprint82/purchases.jpeg"
+type = "image"
+title = "11 — Alımlar"
+
+[[outputs]]
+id = "zqYaUaCF4-Q0JWvIy1bUR"
+uri = "file://screenshots/sprint82/reports.jpeg"
+type = "image"
+title = "12 — Raporlar"
+
+[[outputs]]
+id = "PQcf1-9swyFfHgM47492J"
+uri = "file://screenshots/sprint82/finance-dashboard.jpeg"
+type = "image"
+title = "13 — Finans Dashboard"
+
+[[outputs]]
+id = "jphgAx6KdmFwq7ICbzHY6"
+uri = "file://screenshots/sprint82/banking.jpeg"
+type = "image"
+title = "14 — Banka & Kasa"
+
+[[outputs]]
+id = "5QzmCdksJCXt6FjttMCSI"
+uri = "file://screenshots/sprint82/muhasebeci.jpeg"
+type = "image"
+title = "15 — Muhasebeci Paneli"
+
+[[outputs]]
+id = "yEnLQqNaGR77mKnFEOlro"
+uri = "file://screenshots/sprint82/einvoice.jpeg"
+type = "image"
+title = "16 — e-Fatura"
+
+[[outputs]]
+id = "OyMJnWYQIf4QNz5k-NFAZ"
+uri = "file://screenshots/sprint82/marketplace.jpeg"
+type = "image"
+title = "17 — Pazaryerleri"
+
+[[outputs]]
+id = "Y-q3RmbnLZoYtQdeBllCL"
+uri = "file://screenshots/sprint82/channels.jpeg"
+type = "image"
+title = "18 — Satış Kanalları"
+
+[[outputs]]
+id = "fOE5dDS3DUkzwRTJhg-yB"
+uri = "file://screenshots/sprint82/settings.jpeg"
+type = "image"
+title = "19 — Ayarlar"
+
+[[outputs]]
+id = "tOftuPqsVDzffVdhkko_M"
+uri = "file://screenshots/sprint82/personnel.jpeg"
+type = "image"
+title = "20 — Personel"
