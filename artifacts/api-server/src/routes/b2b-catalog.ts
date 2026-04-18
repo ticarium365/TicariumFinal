@@ -5,7 +5,7 @@ import {
   b2bCatalogItemsTable,
   productsTable,
 } from "@workspace/db";
-import { eq, and, desc, asc, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, inArray, or, ilike, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { z } from "zod/v4";
 
@@ -45,6 +45,130 @@ router.get("/mine", async (req: Request, res: Response) => {
   } catch (err) {
     req.log.error({ err }, "b2b catalog mine failed");
     res.status(500).json({ error: "Katalog alınamadı" });
+  }
+});
+
+/**
+ * GET /b2b/catalog/marketplace
+ * Tüm tenantların yayınladığı (isPublished=true) B2B katalog ürünlerini
+ * firma bilgisiyle birlikte döner. Cross-tenant — herhangi bir authenticated kullanıcı erişebilir.
+ * Query: q (arama: ürün/firma), category, companyId, sort (new|price_asc|price_desc|name), limit, offset
+ */
+router.get("/marketplace", async (req: Request, res: Response) => {
+  try {
+    const q = String(req.query.q ?? "").trim();
+    const category = String(req.query.category ?? "").trim();
+    const companyIdRaw = String(req.query.companyId ?? "").trim();
+    const sort = String(req.query.sort ?? "new");
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "30"), 10) || 30, 1), 100);
+    const offset = Math.max(parseInt(String(req.query.offset ?? "0"), 10) || 0, 0);
+
+    const conds: any[] = [eq(b2bCatalogItemsTable.isPublished, true)];
+    if (q) {
+      const like = `%${q}%`;
+      conds.push(
+        or(
+          ilike(b2bCatalogItemsTable.name, like),
+          ilike(b2bCatalogItemsTable.code, like),
+          ilike(b2bCatalogItemsTable.description, like),
+          ilike(b2bCatalogItemsTable.category, like),
+          ilike(companiesTable.name, like),
+          ilike(companiesTable.subdomain, like),
+        )
+      );
+    }
+    if (category) conds.push(eq(b2bCatalogItemsTable.category, category));
+    const cid = parseId(companyIdRaw);
+    if (cid) conds.push(eq(b2bCatalogItemsTable.companyId, cid));
+
+    const where = conds.length > 1 ? and(...conds) : conds[0];
+
+    const orderBy =
+      sort === "price_asc"
+        ? [asc(sql`COALESCE(${b2bCatalogItemsTable.listPrice}, 999999999)`), desc(b2bCatalogItemsTable.createdAt)]
+        : sort === "price_desc"
+        ? [desc(sql`COALESCE(${b2bCatalogItemsTable.listPrice}, 0)`), desc(b2bCatalogItemsTable.createdAt)]
+        : sort === "name"
+        ? [asc(b2bCatalogItemsTable.name)]
+        : [desc(b2bCatalogItemsTable.createdAt)];
+
+    const rows = await db
+      .select({
+        id: b2bCatalogItemsTable.id,
+        companyId: b2bCatalogItemsTable.companyId,
+        name: b2bCatalogItemsTable.name,
+        code: b2bCatalogItemsTable.code,
+        description: b2bCatalogItemsTable.description,
+        category: b2bCatalogItemsTable.category,
+        unit: b2bCatalogItemsTable.unit,
+        listPrice: b2bCatalogItemsTable.listPrice,
+        currency: b2bCatalogItemsTable.currency,
+        minOrderQty: b2bCatalogItemsTable.minOrderQty,
+        leadDays: b2bCatalogItemsTable.leadDays,
+        imageUrl: b2bCatalogItemsTable.imageUrl,
+        createdAt: b2bCatalogItemsTable.createdAt,
+        companyName: companiesTable.name,
+        companySubdomain: companiesTable.subdomain,
+      })
+      .from(b2bCatalogItemsTable)
+      .innerJoin(companiesTable, eq(b2bCatalogItemsTable.companyId, companiesTable.id))
+      .where(where)
+      .orderBy(...orderBy)
+      .limit(limit)
+      .offset(offset);
+
+    const [{ total }] = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(b2bCatalogItemsTable)
+      .innerJoin(companiesTable, eq(b2bCatalogItemsTable.companyId, companiesTable.id))
+      .where(where);
+
+    res.json({ items: rows, total, limit, offset });
+  } catch (err) {
+    req.log.error({ err }, "b2b catalog marketplace failed");
+    res.status(500).json({ error: "Vitrin yüklenemedi" });
+  }
+});
+
+/**
+ * GET /b2b/catalog/marketplace/categories
+ * Vitrinde kullanılan farklı kategori adları (filtre çipleri için).
+ */
+router.get("/marketplace/categories", async (_req: Request, res: Response) => {
+  try {
+    const rows = await db
+      .selectDistinct({ category: b2bCatalogItemsTable.category })
+      .from(b2bCatalogItemsTable)
+      .where(eq(b2bCatalogItemsTable.isPublished, true));
+    const cats = rows
+      .map((r) => r.category)
+      .filter((c): c is string => !!c && c.trim().length > 0)
+      .sort((a, b) => a.localeCompare(b, "tr"));
+    res.json(cats);
+  } catch (err) {
+    res.status(500).json({ error: "Kategori listesi alınamadı" });
+  }
+});
+
+/**
+ * GET /b2b/catalog/marketplace/companies
+ * Vitrinde ürünü bulunan firmaların kısa listesi (filtre çipleri için).
+ */
+router.get("/marketplace/companies", async (_req: Request, res: Response) => {
+  try {
+    const rows = await db
+      .selectDistinct({
+        id: companiesTable.id,
+        name: companiesTable.name,
+        subdomain: companiesTable.subdomain,
+      })
+      .from(b2bCatalogItemsTable)
+      .innerJoin(companiesTable, eq(b2bCatalogItemsTable.companyId, companiesTable.id))
+      .where(eq(b2bCatalogItemsTable.isPublished, true))
+      .orderBy(asc(companiesTable.name));
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Firma listesi alınamadı" });
   }
 });
 

@@ -85,6 +85,7 @@ import QuoteDetailPage from "@/pages/b2b/quote-detail";
 import OrdersListPage from "@/pages/b2b/orders-list";
 import OrderDetailPage from "@/pages/b2b/order-detail";
 import CatalogManagePage from "@/pages/b2b/catalog-manage";
+import B2BVitrinPage from "@/pages/b2b/vitrin";
 import ChannelsListPage from "@/pages/channels/channels-list";
 import ChannelDetailPage from "@/pages/channels/channel-detail";
 import ChannelsBulkPage from "@/pages/channels/channels-bulk";
@@ -395,6 +396,10 @@ function AuthenticatedRouter() {
 
         <Route path="/b2b/catalog">
           {() => <ProtectedRoute component={CatalogManagePage} roles={["admin", "staff"]} />}
+        </Route>
+
+        <Route path="/b2b/vitrin">
+          {() => <ProtectedRoute component={B2BVitrinPage} roles={["admin", "staff", "viewer"]} />}
         </Route>
 
         <Route path="/channels">

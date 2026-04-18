@@ -175,10 +175,11 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: "b2b", label: "B2B & Ağ", icon: Network,
     items: [
+      { href: "/b2b/vitrin", label: "B2B Vitrin", icon: Store, roles: ["admin", "staff", "viewer"] },
       { href: "/network", label: "B2B Ağı", icon: Network, roles: ["admin", "staff", "viewer"] },
       { href: "/b2b/quotes", label: "Teklifler", icon: FileText, roles: ["admin", "staff"] },
       { href: "/b2b/orders", label: "Siparişler", icon: Package, roles: ["admin", "staff"] },
-      { href: "/b2b/catalog", label: "B2B Katalog", icon: PackageOpen, roles: ["admin", "staff"] },
+      { href: "/b2b/catalog", label: "Kendi B2B Katalogum", icon: PackageOpen, roles: ["admin", "staff"] },
       { href: "/aggregator", label: "Ticarium Pazar", icon: ShoppingBasket, roles: ["admin"] },
     ],
   },
