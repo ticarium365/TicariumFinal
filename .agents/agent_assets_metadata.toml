@@ -47,3 +47,9 @@ id = "qbHkAlZoiac1s0jWGgPa_"
 uri = "file://docs/STRATEGIC-ANALYSIS-2026-04.md"
 type = "text"
 title = "Ticarium365 — Stratejik Analiz (Nisan 2026)"
+
+[[outputs]]
+id = "vTa2qGVc7saukSa_1b_WW"
+uri = "file://docs/EXTERNAL-REVIEW-RESPONSE-2026-04.md"
+type = "text"
+title = "Dış Mimari Değerlendirme Cevabı — Nisan 2026"
