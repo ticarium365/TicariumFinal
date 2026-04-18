@@ -44,6 +44,13 @@ The backend is powered by Express 5. PostgreSQL is the chosen database, managed 
 - **Mali Müşavir Paneli + Resmi Raporlar**: Accountant collaboration module with invite tokens (`accountant_invites`), cross-company access grants (`accountant_access`), and period closes (`period_closes`). Atomic single-use invite acceptance via conditional `UPDATE pending→accepted` plus email binding. Official reports endpoints under `/api/reports-official` produce KDV beyanı summary (default %20, base = gross / 1.2, output/input/payable/carry-forward), Form Ba/Bs aggregated by VKN (`taxNumber`) with 5.000 TL+ threshold and CSV export, and a basic Mizan (revenue/COGS/expense by category → net profit). Reports gate access to tenant `admin/staff/viewer/super_admin` OR users with active `accountant_access` for the company. Surfaces in `/muhasebeci` page with KDV/Ba-Bs/Mizan/Dönem/Müşavir tabs.
 - **Rakip Konumlandırma (Competitive Landing)**: Public `/karsilastir` (alias `/neden-smsystems`) page outlining 9 differentiators vs Bizim Hesap / Paraşüt / Logo İşbaşı / Mikro Jump / Nebim, 15-row capability comparison table, and 6 competitor positioning cards. `auth-context` whitelists public routes so unauthenticated visitors can land on /karsilastir, /neden-smsystems and /login without redirect.
 
+### Veri İçe Aktarımı (Geçiş Köprüsü) — Sprint 73
+- `/api/import/preview` ve `/api/import/run` rotaları (multer, RFC 4180 yaklaşımı CSV parser, ; veya , ayırıcı otomatik tespit, BOM/UTF-8 desteği).
+- 4 veri türü: müşteriler, tedarikçiler, ürünler, giderler. TR kolon başlıklarına otomatik eşleşme (Unvan/VKN/Vergi Dairesi/Tutar/Kategori vb.).
+- İdempotent: müşteri/tedarikçi VKN ile, ürün productCode (yoksa name+barcode+brand sha1 hash) ile, gider notes alanına yazılan IMP:hash anahtarı ile tekilleştirilir — aynı CSV iki kez çalıştırılınca güncelleme olur, kopya oluşmaz.
+- Frontend `/ice-aktarim` 4 tab (Müşteriler/Tedarikçiler/Ürünler/Giderler), sihirbaz akışı: Örnek CSV indir → dosya seç → Önizle → kolon eşleşmesini onayla → Ön Kontrol (dryRun) → İçe Aktar. Hata özetleri satır numarasıyla gösterilir.
+- Sidebar'da "Veri İçe Aktarımı" (Upload ikonu, admin/staff). Geçiş köprüsü: Paraşüt/Bizim Hesap/Logo/Mikro/Excel'den taşıma.
+
 ## External Dependencies
 
 - **PostgreSQL**: Primary database.

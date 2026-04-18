@@ -90,7 +90,11 @@ router.use("/marketplace", marketplaceRouter);
 router.use("/profit", profitRouter);
 import accountantRouter from "./accountant.js";
 import reportsOfficialRouter from "./reports-official.js";
+import budgetsRouter from "./budgets.js";
+import importsRouter from "./imports.js";
 router.use("/accountant", accountantRouter);
 router.use("/reports-official", reportsOfficialRouter);
+router.use("/budgets", budgetsRouter);
+router.use("/import", importsRouter);
 
 export default router;

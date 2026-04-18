@@ -39,6 +39,8 @@ import {
   Network,
   Inbox,
   Calculator,
+  PieChart,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./notification-center";
@@ -111,6 +113,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/finance-dashboard", label: "Finans Paneli", icon: TrendingUp, roles: ["admin", "viewer"] },
     { href: "/profit", label: "Net Kâr Merkezi", icon: TrendingUp, roles: ["admin", "staff", "viewer"] },
     { href: "/muhasebeci", label: "Mali Müşavir", icon: Calculator, roles: ["admin", "staff", "viewer"] },
+    { href: "/butce", label: "Bütçe & Tahmin", icon: PieChart, roles: ["admin", "staff", "viewer"] },
+    { href: "/ice-aktarim", label: "Veri İçe Aktarımı", icon: Upload, roles: ["admin", "staff"] },
     { href: "/marketplace", label: "Pazaryeri", icon: Radio, roles: ["admin", "staff"] },
     { href: "/banking", label: "Bankacılık", icon: Banknote, roles: ["admin", "staff"] },
     { href: "/branches", label: "Şubeler", icon: GitBranch, roles: ["admin", "staff", "viewer"] },
