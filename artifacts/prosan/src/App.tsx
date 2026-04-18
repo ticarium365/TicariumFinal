@@ -74,6 +74,7 @@ import ProductionPage from "@/pages/uretim/index";
 import LoyaltyPage from "@/pages/sadakat/index";
 import CurrencyPage from "@/pages/doviz/index";
 import NotificationSettingsPage from "@/pages/settings/notifications";
+import NotificationsPage from "@/pages/notifications/index";
 import PersonnelPage from "@/pages/personnel";
 import CampaignsPage from "@/pages/campaigns";
 import NetworkPage from "@/pages/network/index";
@@ -352,6 +353,10 @@ function AuthenticatedRouter() {
 
         <Route path="/settings/notifications">
           {() => <ProtectedRoute component={NotificationSettingsPage} roles={["admin"]} />}
+        </Route>
+
+        <Route path="/bildirimler">
+          {() => <ProtectedRoute component={NotificationsPage} roles={["admin", "super_admin"]} />}
         </Route>
 
         <Route path="/personnel">

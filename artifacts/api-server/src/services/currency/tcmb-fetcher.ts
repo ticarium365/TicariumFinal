@@ -4,7 +4,7 @@ import { logger } from "../../lib/logger.js";
 
 const TCMB_TODAY_URL = "https://www.tcmb.gov.tr/kurlar/today.xml";
 
-const TRACKED = ["USD", "EUR", "GBP", "CHF"];
+const TRACKED = ["USD", "EUR", "GBP", "CHF", "JPY"];
 
 interface TcmbRate { code: string; buy: number; sell: number; }
 

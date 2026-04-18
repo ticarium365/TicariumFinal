@@ -134,6 +134,106 @@ router.get("/top-products", requireAuth, async (req: Request, res: Response) => 
   }
 });
 
+// ---------------------------------------------------------------------------
+// GET /api/dashboard/depleted — stoğu sıfırlanan ilk 10 ürün
+// ---------------------------------------------------------------------------
+router.get("/depleted", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const cid = req.companyId;
+    const products = await db
+      .select({
+        id: productsTable.id,
+        name: productsTable.name,
+        productCode: productsTable.productCode,
+        stock: productsTable.stock,
+        minStock: productsTable.minStock,
+        salePrice: productsTable.salePrice,
+      })
+      .from(productsTable)
+      .where(and(
+        eq(productsTable.companyId, cid),
+        eq(productsTable.isActive, true),
+        eq(productsTable.stock, 0),
+      ))
+      .orderBy(desc(productsTable.id))
+      .limit(10);
+    res.json(products);
+  } catch (err) {
+    req.log?.error({ err }, "Depleted products error");
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/dashboard/depleting — tükenmeye yakın ilk 10 ürün (0 < stock <= minStock)
+// ---------------------------------------------------------------------------
+router.get("/depleting", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const cid = req.companyId;
+    const products = await db
+      .select({
+        id: productsTable.id,
+        name: productsTable.name,
+        productCode: productsTable.productCode,
+        stock: productsTable.stock,
+        minStock: productsTable.minStock,
+        salePrice: productsTable.salePrice,
+      })
+      .from(productsTable)
+      .where(and(
+        eq(productsTable.companyId, cid),
+        eq(productsTable.isActive, true),
+        sql`${productsTable.stock} > 0`,
+        sql`${productsTable.stock} <= ${productsTable.minStock}`,
+      ))
+      .orderBy(productsTable.stock)
+      .limit(10);
+    res.json(products);
+  } catch (err) {
+    req.log?.error({ err }, "Depleting products error");
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/dashboard/cost-warnings — kâr marjı düşük / negatif ilk 10 ürün
+// salePrice <= purchasePrice * 1.05 (yani kâr marjı %5 altında veya zarar)
+// ---------------------------------------------------------------------------
+router.get("/cost-warnings", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const cid = req.companyId;
+    const products = await db
+      .select({
+        id: productsTable.id,
+        name: productsTable.name,
+        productCode: productsTable.productCode,
+        stock: productsTable.stock,
+        purchasePrice: productsTable.purchasePrice,
+        salePrice: productsTable.salePrice,
+      })
+      .from(productsTable)
+      .where(and(
+        eq(productsTable.companyId, cid),
+        eq(productsTable.isActive, true),
+        sql`${productsTable.purchasePrice} > 0`,
+        sql`${productsTable.salePrice} <= ${productsTable.purchasePrice} * 1.05`,
+      ))
+      .orderBy(sql`(${productsTable.salePrice} - ${productsTable.purchasePrice})`)
+      .limit(10);
+
+    const result = products.map((p) => {
+      const margin = p.salePrice - p.purchasePrice;
+      const marginPct = p.purchasePrice > 0 ? (margin / p.purchasePrice) * 100 : 0;
+      return { ...p, margin, marginPct };
+    });
+
+    res.json(result);
+  } catch (err) {
+    req.log?.error({ err }, "Cost warnings error");
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 router.get("/critical-stock", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;

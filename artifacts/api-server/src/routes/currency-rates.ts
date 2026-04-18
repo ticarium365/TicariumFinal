@@ -6,12 +6,27 @@ import { fetchAndStoreTcmbRates, getLatestRate } from "../services/currency/tcmb
 
 const router: IRouter = Router();
 
+// Temsili kurlar — TCMB API entegre olana / DB boş olduğunda kullanılır
+const FALLBACK_RATES: Record<string, { buy: number; sell: number }> = {
+  USD: { buy: 38.45, sell: 38.52 },
+  EUR: { buy: 41.20, sell: 41.30 },
+  GBP: { buy: 48.75, sell: 48.90 },
+  JPY: { buy: 0.255, sell: 0.258 },
+  CHF: { buy: 43.10, sell: 43.25 },
+};
+
 router.get("/rates/latest", requireAuth, async (_req, res) => {
-  const out: Record<string, { buy: number; sell: number; date: string } | null> = {};
-  for (const c of ["USD", "EUR", "GBP", "CHF"]) {
-    out[c] = await getLatestRate(c);
+  const today = new Date().toISOString().slice(0, 10);
+  const out: Record<string, { buy: number; sell: number; date: string; source: string }> = {};
+  for (const c of ["USD", "EUR", "GBP", "JPY"]) {
+    const live = await getLatestRate(c);
+    if (live) {
+      out[c] = { ...live, source: "tcmb" };
+    } else {
+      out[c] = { ...FALLBACK_RATES[c]!, date: today, source: "temsili" };
+    }
   }
-  res.json({ rates: out, base: "TRY" });
+  res.json({ rates: out, base: "TRY", fetchedAt: new Date().toISOString() });
 });
 
 router.get("/rates/history", requireAuth, async (req: Request, res: Response) => {

@@ -1,15 +1,16 @@
-import { useGetDashboardStats, useGetTopProducts, useGetCriticalStock } from "@workspace/api-client-react";
+import { useGetDashboardStats, useGetTopProducts } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import {
-  Package, AlertTriangle, TrendingUp, TrendingDown, ScanBarcode,
-  ShoppingCart, BarChart2, CircleDollarSign,
+  Package, AlertTriangle, TrendingUp, ScanBarcode,
+  ShoppingCart, BarChart2, CircleDollarSign, Bell, Inbox,
+  Banknote, ArrowRight, AlertCircle, PackageX, PackageMinus,
+  Mail, Sparkles,
 } from "lucide-react";
-import { MorningBrief } from "@/components/morning-brief";
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 
@@ -19,6 +20,47 @@ interface DailyStat {
   profit: number;
   count: number;
 }
+
+interface MiniProduct {
+  id: number;
+  name: string;
+  productCode: string;
+  stock: number;
+  minStock?: number;
+  salePrice?: number;
+  purchasePrice?: number;
+  margin?: number;
+  marginPct?: number;
+}
+
+interface NotificationItem {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  entityType?: string | null;
+  entityId?: number | null;
+  createdAt: string;
+}
+
+interface TcmbRates {
+  rates: Record<string, { buy: number; sell: number; date: string; source: string }>;
+  base: string;
+  fetchedAt: string;
+}
+
+const fmt = (v: number) =>
+  v.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " ₺";
+
+const fmtShort = (v: number) => {
+  if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + "M";
+  if (v >= 1_000) return (v / 1_000).toFixed(0) + "K";
+  return String(v);
+};
+
+const fmtKur = (v: number) =>
+  v.toLocaleString("tr-TR", { minimumFractionDigits: v < 1 ? 4 : 2, maximumFractionDigits: v < 1 ? 4 : 2 });
 
 function useDailyStats(days = 30) {
   return useQuery<DailyStat[]>({
@@ -32,49 +74,60 @@ function useDailyStats(days = 30) {
   });
 }
 
-const fmt = (v: number) =>
-  v.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " TL";
+function useMiniList(path: string, key: string) {
+  return useQuery<MiniProduct[]>({
+    queryKey: ["dashboard", key],
+    queryFn: async () => {
+      const res = await fetch(path, { credentials: "include" });
+      if (!res.ok) throw new Error("fetch error");
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+}
 
-const fmtShort = (v: number) => {
-  if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + "M";
-  if (v >= 1_000) return (v / 1_000).toFixed(0) + "K";
-  return String(v);
+function useNotifications() {
+  return useQuery<{ notifications: NotificationItem[]; total: number }>({
+    queryKey: ["dashboard", "notifications"],
+    queryFn: async () => {
+      const res = await fetch(`/api/notifications?limit=10`, { credentials: "include" });
+      if (!res.ok) return { notifications: [], total: 0 };
+      return res.json();
+    },
+    staleTime: 30_000,
+  });
+}
+
+function useTcmbRates() {
+  return useQuery<TcmbRates>({
+    queryKey: ["dashboard", "tcmb-rates"],
+    queryFn: async () => {
+      const res = await fetch(`/api/currency-rates/rates/latest`, { credentials: "include" });
+      if (!res.ok) throw new Error("fetch error");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+const NOTIF_META: Record<string, { icon: any; color: string; label: string }> = {
+  low_stock: { icon: AlertTriangle, color: "text-amber-500", label: "Stok" },
+  stock_zero: { icon: PackageX, color: "text-rose-500", label: "Tükendi" },
+  product_request: { icon: Mail, color: "text-blue-500", label: "Talep" },
+  ecommerce_order: { icon: ShoppingCart, color: "text-emerald-500", label: "E-Ticaret" },
+  system_announcement: { icon: Sparkles, color: "text-purple-500", label: "Yenilik" },
+  daily_summary: { icon: Bell, color: "text-cyan-500", label: "Özet" },
+  system: { icon: Bell, color: "text-muted-foreground", label: "Sistem" },
 };
 
-function StatCard({
-  title, value, sub, icon: Icon, color = "text-foreground", trend,
-}: {
-  title: string;
-  value: string;
-  sub?: string;
-  icon: React.ElementType;
-  color?: string;
-  trend?: number;
-}) {
-  return (
-    <Card className="relative overflow-hidden t365-card-hover">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1 flex-1 min-w-0">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</p>
-            <p className={`text-2xl font-bold tracking-tight truncate t365-numeric ${color}`}>{value}</p>
-            {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
-            {trend !== undefined && (
-              <div className={`flex items-center gap-1 text-xs font-medium ${trend >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                {trend >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                {Math.abs(trend).toFixed(1)}% dünden
-              </div>
-            )}
-          </div>
-          <div className="shrink-0 ml-3">
-            <div className={`rounded-xl p-2.5 bg-muted/60`}>
-              <Icon className={`h-5 w-5 ${color}`} />
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+function relativeTime(iso: string) {
+  const d = new Date(iso);
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return "az önce";
+  if (diff < 3600) return `${Math.floor(diff / 60)}dk`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}sa`;
+  if (diff < 7 * 86400) return `${Math.floor(diff / 86400)}g`;
+  return d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -94,55 +147,102 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-const BarTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
+function ProductMiniRow({ p, accent }: { p: MiniProduct; accent: string }) {
   return (
-    <div className="bg-popover border border-border rounded-lg shadow-lg p-3 text-sm min-w-[160px]">
-      <p className="font-semibold mb-1 text-foreground text-xs truncate max-w-[180px]">{label}</p>
-      <div className="flex justify-between gap-4 text-xs">
-        <span className="text-primary">Satış Adedi</span>
-        <span className="font-mono font-bold">{payload[0]?.value}</span>
+    <Link href={`/products/${p.id}`}>
+      <div className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-muted/60 cursor-pointer transition-colors group">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium truncate group-hover:text-primary transition-colors">{p.name}</p>
+          <p className="text-[10px] text-muted-foreground font-mono">{p.productCode}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          {p.marginPct !== undefined ? (
+            <Badge variant="outline" className={`font-mono text-[10px] h-5 px-1.5 ${accent}`}>
+              {p.marginPct >= 0 ? "+" : ""}{p.marginPct.toFixed(1)}%
+            </Badge>
+          ) : (
+            <Badge variant="outline" className={`font-mono text-[10px] h-5 px-1.5 ${accent}`}>
+              {p.stock}
+            </Badge>
+          )}
+        </div>
       </div>
-    </div>
+    </Link>
   );
-};
+}
+
+function ProductMiniCard({
+  title, icon: Icon, accentClass, items, emptyText, viewAllHref,
+}: {
+  title: string;
+  icon: any;
+  accentClass: string;
+  items?: MiniProduct[];
+  emptyText: string;
+  viewAllHref?: string;
+}) {
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <Icon className={`h-4 w-4 ${accentClass}`} />
+            {title}
+          </span>
+          <Badge variant="secondary" className="text-[10px] h-5">
+            {items?.length ?? 0}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0 flex-1">
+        <div className="space-y-0.5 max-h-[320px] overflow-y-auto pr-1">
+          {items && items.length > 0 ? (
+            items.map((p) => <ProductMiniRow key={p.id} p={p} accent={accentClass} />)
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+              <Package className="h-7 w-7 mb-2 opacity-40" />
+              <p className="text-xs text-center">{emptyText}</p>
+            </div>
+          )}
+        </div>
+        {viewAllHref && items && items.length > 0 && (
+          <Link href={viewAllHref}>
+            <div className="mt-2 pt-2 border-t border-border text-xs text-primary hover:underline flex items-center justify-center gap-1 cursor-pointer">
+              Tümünü Gör <ArrowRight className="h-3 w-3" />
+            </div>
+          </Link>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
   const { data: topProducts } = useGetTopProducts();
-  const { data: criticalStock } = useGetCriticalStock();
   const { data: daily30 } = useDailyStats(30);
-  const { data: daily7 } = useDailyStats(7);
-
-  const totalRevenue30 = daily30?.reduce((s, d) => s + d.revenue, 0) ?? 0;
-  const totalProfit30 = daily30?.reduce((s, d) => s + d.profit, 0) ?? 0;
-
-  // Yesterday vs day before comparison
-  const yesterday = daily30?.[daily30.length - 2];
-  const dayBefore = daily30?.[daily30.length - 3];
-  const revTrend = dayBefore && dayBefore.revenue > 0
-    ? ((yesterday?.revenue ?? 0) - dayBefore.revenue) / dayBefore.revenue * 100
-    : undefined;
-
-  const chartData7 = daily7?.map(d => ({
-    ...d,
-    label: new Date(d.date + "T00:00:00").toLocaleDateString("tr-TR", { weekday: "short" }),
-  })) ?? [];
+  const { data: depleted } = useMiniList("/api/dashboard/depleted", "depleted");
+  const { data: depleting } = useMiniList("/api/dashboard/depleting", "depleting");
+  const { data: costWarnings } = useMiniList("/api/dashboard/cost-warnings", "cost-warnings");
+  const { data: notifData } = useNotifications();
+  const { data: tcmb } = useTcmbRates();
 
   const chartData30 = daily30?.map(d => ({
     ...d,
     label: new Date(d.date + "T00:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "short" }),
   })) ?? [];
 
-  const topData = (topProducts?.topSelling ?? []).slice(0, 8).map(p => ({
-    name: p.name.length > 22 ? p.name.slice(0, 22) + "…" : p.name,
-    satış: p.sales30Days,
-  }));
+  const topList = (topProducts?.topSelling ?? []).slice(0, 10);
+  const notifications = notifData?.notifications ?? [];
+
+  const todayRevenue = stats?.todayGrossRevenue ?? 0;
+  const todaySales = stats?.todaySalesCount ?? 0;
+  const criticalCount = stats?.criticalStockCount ?? 0;
 
   return (
     <div className="space-y-5">
       {/* Başlık */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="t365-heading-accent">
           <h1 className="text-2xl font-bold tracking-tight t365-gradient-text" style={{ fontFamily: "var(--font-display)" }}>
             Ana Panel
@@ -151,10 +251,35 @@ export default function Dashboard() {
             {new Date().toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
           </p>
         </div>
-      </div>
 
-      {/* Günaydın Özet */}
-      <MorningBrief />
+        {/* Üst sağ özet: bugünün cirosu + kritik stok */}
+        <div className="flex items-stretch gap-3">
+          <Card className="flex-1 min-w-[200px] border-primary/30">
+            <CardContent className="px-4 py-3">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <CircleDollarSign className="h-3 w-3 text-primary" />
+                Bugünün Cirosu
+              </p>
+              <p className="text-xl font-bold tracking-tight t365-numeric text-primary mt-0.5">
+                {statsLoading ? "—" : fmt(todayRevenue)}
+              </p>
+              <p className="text-[10px] text-muted-foreground">{todaySales} satış</p>
+            </CardContent>
+          </Card>
+          <Card className={`flex-1 min-w-[180px] ${criticalCount > 0 ? "border-rose-500/40" : "border-emerald-500/30"}`}>
+            <CardContent className="px-4 py-3">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <AlertTriangle className={`h-3 w-3 ${criticalCount > 0 ? "text-rose-500" : "text-emerald-500"}`} />
+                Kritik Stok
+              </p>
+              <p className={`text-xl font-bold tracking-tight t365-numeric mt-0.5 ${criticalCount > 0 ? "text-rose-500" : "text-emerald-500"}`}>
+                {statsLoading ? "—" : criticalCount}
+              </p>
+              <p className="text-[10px] text-muted-foreground">{stats?.totalProducts ?? 0} ürün kayıtlı</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Hızlı Satış Butonu */}
       <Link href="/sales">
@@ -172,40 +297,45 @@ export default function Dashboard() {
         </div>
       </Link>
 
-      {/* Stat Kartları */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Günlük Ciro"
-          value={statsLoading ? "—" : fmt(stats?.todayGrossRevenue ?? 0)}
-          sub={`${stats?.todaySalesCount ?? 0} adet satış`}
-          icon={CircleDollarSign}
-          color="text-primary"
-          trend={revTrend}
-        />
-        <StatCard
-          title="Günlük Kâr"
-          value={statsLoading ? "—" : fmt(stats?.todayProfit ?? 0)}
-          sub={`${stats?.todayProfitPercent?.toFixed(1) ?? 0}% marj`}
-          icon={TrendingUp}
-          color="text-emerald-600"
-        />
-        <StatCard
-          title="30 Günlük Ciro"
-          value={statsLoading ? "—" : fmt(totalRevenue30)}
-          sub={`${fmt(totalProfit30)} kâr`}
-          icon={BarChart2}
-          color="text-blue-600"
-        />
-        <StatCard
-          title="Kritik Stok"
-          value={statsLoading ? "—" : String(stats?.criticalStockCount ?? 0)}
-          sub={`${stats?.totalProducts ?? 0} ürün kayıtlı`}
-          icon={AlertTriangle}
-          color="text-rose-600"
-        />
-      </div>
+      {/* TCMB Kur Widget */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Banknote className="h-4 w-4 text-emerald-500" />
+              Merkez Bankası Kurları
+            </span>
+            {tcmb?.rates && Object.values(tcmb.rates)[0]?.source === "temsili" && (
+              <Badge variant="outline" className="text-[10px] h-5 text-amber-500 border-amber-500/30">
+                Temsili (API bekleniyor)
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {(["USD", "EUR", "GBP", "JPY"] as const).map((cur) => {
+              const r = tcmb?.rates?.[cur];
+              const flag = cur === "USD" ? "🇺🇸" : cur === "EUR" ? "🇪🇺" : cur === "GBP" ? "🇬🇧" : "🇯🇵";
+              return (
+                <div key={cur} className="rounded-lg border border-border bg-muted/20 p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold text-muted-foreground">{flag} {cur}/TRY</span>
+                  </div>
+                  <p className="text-lg font-bold t365-numeric tracking-tight">
+                    {r ? fmtKur(r.sell) : "—"} ₺
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Alış: {r ? fmtKur(r.buy) : "—"}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Ana Grafik - 30 Günlük Ciro & Kâr */}
+      {/* 30 Günlük Ciro & Kâr Grafiği */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
@@ -253,10 +383,10 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Alt Satır: Çok Satanlar + Son 7 Gün */}
-      <div className="grid gap-4 lg:grid-cols-5">
-        {/* Çok Satanlar Bar Chart */}
-        <Card className="lg:col-span-3">
+      {/* Çok Satanlar — LİSTE + Bildirimler */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Çok Satanlar Liste */}
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <ShoppingCart className="h-4 w-4 text-primary" />
@@ -264,71 +394,78 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            {topData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={topData} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                  <XAxis
-                    type="number"
-                    tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={110}
-                  />
-                  <Tooltip content={<BarTooltip />} />
-                  <Bar dataKey="satış" fill="#2563eb" radius={[0, 4, 4, 0]} maxBarSize={18} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">
-                Henüz satış verisi bulunmuyor.
-              </div>
-            )}
+            <div className="space-y-1 max-h-[380px] overflow-y-auto pr-1">
+              {topList.length > 0 ? topList.map((p, i) => (
+                <Link key={p.id} href={`/products/${p.id}`}>
+                  <div className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-muted/60 cursor-pointer transition-colors group">
+                    <div className="flex items-center justify-center h-7 w-7 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">
+                      {i + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{p.name}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono">{p.productCode}</p>
+                    </div>
+                    <Badge variant="secondary" className="font-mono text-xs shrink-0">
+                      {p.sales30Days} adet
+                    </Badge>
+                  </div>
+                </Link>
+              )) : (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <ShoppingCart className="h-8 w-8 mb-2 opacity-40" />
+                  <p className="text-xs">Henüz satış verisi yok</p>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Kritik Stok Listesi */}
-        <Card className="lg:col-span-2">
+        {/* Bildirimler — Son 10 */}
+        <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-rose-500" />
-              Kritik Stok
+            <CardTitle className="text-base flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Bell className="h-4 w-4 text-amber-500" />
+                Bildirimler
+                {notifData && notifData.total > 0 && (
+                  <Badge variant="secondary" className="text-[10px] h-5">{notifData.total}</Badge>
+                )}
+              </span>
+              <Link href="/bildirimler">
+                <span className="text-xs text-primary hover:underline cursor-pointer flex items-center gap-1">
+                  Tümünü Gör <ArrowRight className="h-3 w-3" />
+                </span>
+              </Link>
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-              {criticalStock?.slice(0, 10).map((p) => (
-                <Link key={p.id} href={`/products/${p.id}`}>
-                  <div className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-muted/60 cursor-pointer transition-colors group">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium truncate group-hover:text-primary transition-colors">{p.name}</p>
-                      <p className="text-xs text-muted-foreground">{p.productCode}</p>
+            <div className="space-y-1 max-h-[380px] overflow-y-auto pr-1">
+              {notifications.length > 0 ? notifications.map((n) => {
+                const meta = NOTIF_META[n.type] ?? NOTIF_META.system!;
+                const Icon = meta.icon;
+                return (
+                  <div
+                    key={n.id}
+                    className={`flex items-start gap-2.5 py-2 px-2 rounded-lg hover:bg-muted/60 transition-colors ${!n.isRead ? "bg-primary/5" : ""}`}
+                  >
+                    <div className="rounded-md p-1.5 bg-muted/60 shrink-0">
+                      <Icon className={`h-3.5 w-3.5 ${meta.color}`} />
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-2">
-                      <Badge
-                        variant={p.stock === 0 ? "destructive" : "secondary"}
-                        className="font-mono text-xs h-5 px-1.5"
-                      >
-                        {p.stock}
-                      </Badge>
-                      <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <Badge variant="outline" className="text-[9px] h-4 px-1">{meta.label}</Badge>
+                        {!n.isRead && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                        <span className="text-[10px] text-muted-foreground ml-auto">{relativeTime(n.createdAt)}</span>
+                      </div>
+                      <p className="text-xs font-medium truncate">{n.title}</p>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1">{n.message}</p>
                     </div>
                   </div>
-                </Link>
-              ))}
-              {!criticalStock?.length && (
-                <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground text-center">
-                  <div>
-                    <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
-                    <p>Kritik stokta ürün yok</p>
-                  </div>
+                );
+              }) : (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <Inbox className="h-8 w-8 mb-2 opacity-40" />
+                  <p className="text-xs">Henüz bildirim yok</p>
                 </div>
               )}
             </div>
@@ -336,38 +473,33 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Son 7 Gün Özeti */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-primary" />
-            Son 7 Gün — Günlük Dağılım
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={chartData7} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={fmtShort}
-                width={42}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="revenue" name="Ciro" fill="#2563eb" radius={[4, 4, 0, 0]} maxBarSize={48} />
-              <Bar dataKey="profit" name="Kâr" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={48} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {/* Stok Durumu — 3 Liste: Maliyet Uyarısı / Tükenmiş / Tükenmeye Yakın */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <ProductMiniCard
+          title="Maliyet Altında / Düşük Marj"
+          icon={AlertCircle}
+          accentClass="text-amber-500"
+          items={costWarnings}
+          emptyText="Marj uyarısı verilen ürün yok"
+          viewAllHref="/products?filter=cost-warning"
+        />
+        <ProductMiniCard
+          title="Tükenmiş Ürünler"
+          icon={PackageX}
+          accentClass="text-rose-500"
+          items={depleted}
+          emptyText="Tükenmiş ürün yok"
+          viewAllHref="/products?filter=out-of-stock"
+        />
+        <ProductMiniCard
+          title="Tükenmeye Yakın"
+          icon={PackageMinus}
+          accentClass="text-amber-500"
+          items={depleting}
+          emptyText="Tükenmeye yakın ürün yok"
+          viewAllHref="/products?filter=low-stock"
+        />
+      </div>
     </div>
   );
 }
