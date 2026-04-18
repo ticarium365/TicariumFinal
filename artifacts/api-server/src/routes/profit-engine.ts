@@ -1,9 +1,9 @@
 import { Router, type Request, type Response } from "express";
 import {
   db, holdingCostRulesTable, expenseAllocationsTable,
-  productProfitSnapshotsTable, productsTable,
+  productProfitSnapshotsTable, productsTable, salesTable,
 } from "@workspace/db";
-import { and, eq, desc, sql, inArray } from "drizzle-orm";
+import { and, eq, desc, sql, inArray, gte, lte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { requireFeature } from "../middlewares/features.js";
 import {
@@ -277,6 +277,85 @@ router.get("/advisor", gateAdvisor, requireViewer, async (req: Request, res: Res
   suggestions.sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9));
 
   res.json({ suggestions: suggestions.slice(0, 50) });
+});
+
+// ─── Sprint 73.4 — Kanal Bazlı Karlılık ─────────────────────────────────────
+// Hangi kanal ne kadar gelir / kar getiriyor? Komisyon + kargo dahil.
+router.get("/by-channel", requireViewer, async (req: Request, res: Response) => {
+  const cid = (req as any).session?.user?.companyId as number | undefined;
+  if (!cid) { res.status(401).json({ error: { code: "UNAUTHORIZED" } }); return; }
+  const days = Math.min(365, Math.max(1, Number(req.query.days) || 30));
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const rows = await db.execute(sql`
+    SELECT
+      COALESCE(channel_key, 'pos') AS channel_key,
+      COUNT(*)::int AS order_count,
+      SUM(quantity)::int AS total_qty,
+      SUM(total_price)::float AS revenue,
+      SUM(quantity * purchase_price)::float AS cogs,
+      SUM(commission_amount)::float AS commission,
+      SUM(shipping_cost)::float AS shipping,
+      SUM(profit)::float AS gross_profit
+    FROM sales
+    WHERE company_id = ${cid}
+      AND returned = false
+      AND created_at >= ${since.toISOString()}
+    GROUP BY COALESCE(channel_key, 'pos')
+    ORDER BY revenue DESC NULLS LAST
+  `);
+  const items = (rows.rows as any[]).map((r) => {
+    const revenue = Number(r.revenue) || 0;
+    const cogs = Number(r.cogs) || 0;
+    const commission = Number(r.commission) || 0;
+    const shipping = Number(r.shipping) || 0;
+    const grossProfit = Number(r.gross_profit) || 0;
+    const netProfit = grossProfit - commission - shipping;
+    const netMarginPct = revenue > 0 ? (netProfit / revenue) * 100 : 0;
+    return {
+      channelKey: r.channel_key,
+      orderCount: Number(r.order_count) || 0,
+      totalQty: Number(r.total_qty) || 0,
+      revenue, cogs, commission, shipping, grossProfit, netProfit,
+      netMarginPct,
+    };
+  });
+  const totals = items.reduce((a, x) => ({
+    revenue: a.revenue + x.revenue, cogs: a.cogs + x.cogs,
+    commission: a.commission + x.commission, shipping: a.shipping + x.shipping,
+    grossProfit: a.grossProfit + x.grossProfit, netProfit: a.netProfit + x.netProfit,
+    orderCount: a.orderCount + x.orderCount, totalQty: a.totalQty + x.totalQty,
+  }), { revenue: 0, cogs: 0, commission: 0, shipping: 0, grossProfit: 0, netProfit: 0, orderCount: 0, totalQty: 0 });
+  const totalsWithMargin = { ...totals, netMarginPct: totals.revenue > 0 ? (totals.netProfit / totals.revenue) * 100 : 0 };
+  res.json({ days, items, totals: totalsWithMargin });
+});
+
+// Kanal bazlı en kârlı ürünler
+router.get("/by-channel/:channelKey/top-products", requireViewer, async (req: Request, res: Response) => {
+  const cid = (req as any).session?.user?.companyId as number | undefined;
+  if (!cid) { res.status(401).json({ error: { code: "UNAUTHORIZED" } }); return; }
+  const days = Math.min(365, Math.max(1, Number(req.query.days) || 30));
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const channelKey = req.params.channelKey === "pos" ? null : req.params.channelKey;
+
+  const rows = await db.execute(sql`
+    SELECT
+      product_id,
+      product_name,
+      product_code,
+      SUM(quantity)::int AS qty,
+      SUM(total_price)::float AS revenue,
+      SUM(profit - commission_amount - shipping_cost)::float AS net_profit
+    FROM sales
+    WHERE company_id = ${cid}
+      AND returned = false
+      AND created_at >= ${since.toISOString()}
+      ${channelKey ? sql`AND channel_key = ${channelKey}` : sql`AND (channel_key = 'pos' OR channel_key IS NULL)`}
+    GROUP BY product_id, product_name, product_code
+    ORDER BY net_profit DESC NULLS LAST
+    LIMIT 20
+  `);
+  res.json({ items: rows.rows });
 });
 
 export default router;

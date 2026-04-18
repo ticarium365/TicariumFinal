@@ -98,9 +98,10 @@ const moduleCards: Array<{
   {
     key: "analytics",
     title: "Karlılık Analizi",
-    desc: "Komisyon, kargo, reklam sonrası net kâr ve kanal karşılaştırması. (Yakında)",
+    desc: "Kanal başına net kâr — komisyon ve kargo düşüldükten sonra. En kârlı ürünler.",
     icon: BarChart3,
-    status: "soon",
+    status: "live",
+    href: "/karlilik-kanal",
   },
 ];
 
@@ -322,10 +323,19 @@ export default function ETicariumMerkeziPage() {
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-6">
-          <ComingSoon
-            title="Karlılık & Performans"
-            desc="Kanal bazlı net kâr, komisyon-kargo-reklam sonrası kâr karşılaştırması yakında. Mevcut Gerçek Kâr modülü ile entegre olacak."
-          />
+          <Card>
+            <CardContent className="py-8 text-center space-y-3">
+              <BarChart3 className="h-10 w-10 mx-auto" style={{ color: EMERALD }} />
+              <h3 className="font-semibold text-lg">Kanal Karlılık Analizi</h3>
+              <p className="text-sm text-muted-foreground max-w-lg mx-auto">
+                Hangi kanal gerçekte ne kadar kazandırıyor? POS, hazır mağaza, pazaryeri kanallarınızı
+                komisyon ve kargo maliyetleri çıkarıldıktan sonra karşılaştırın. Her kanalın en kârlı ürünlerini görün.
+              </p>
+              <Button onClick={() => setLocation("/karlilik-kanal")} style={{ background: EMERALD }}>
+                Kanal Karşılaştırmasını Aç <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

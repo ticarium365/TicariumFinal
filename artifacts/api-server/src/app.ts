@@ -7,6 +7,7 @@ import helmet from "helmet";
 import compression from "compression";
 import router from "./routes/index.js";
 import publicApiRouter from "./routes/public-api.js";
+import publicStorefrontRouter from "./routes/public-storefront.js";
 import contactRouter from "./routes/contact.js";
 import { logger } from "./lib/logger.js";
 import { tenantMiddleware } from "./middlewares/tenant.js";
@@ -104,6 +105,8 @@ app.use("/api/contact", contactRouter);
 
 // Public API — tenant middleware olmadan, API key ile kimlik doğrulama
 // /api/public/v1/* rotaları tenant middleware'i bypass eder
+// Public storefront — auth/api-key gerektirmez (sırası önemli: requireApiKey'den önce)
+app.use("/api", publicStorefrontRouter);
 app.use("/api", publicApiRouter);
 
 // Tenant middleware — session tabanlı rotalar için

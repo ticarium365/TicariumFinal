@@ -57,6 +57,8 @@ import MagazaListesi from "@/pages/magaza/index";
 import MagazaDetay from "@/pages/magaza/detail";
 import FiyatMotoru from "@/pages/fiyat-motoru/index";
 import KargoYonetimi from "@/pages/kargo/index";
+import KarlilikKanalPage from "@/pages/karlilik-kanal/index";
+import PublicStorefrontPage from "@/pages/storefront-public/index";
 import ProfitPage from "@/pages/profit/index";
 import MuhasebeciPage from "@/pages/muhasebeci/index";
 import BudgetsPage from "@/pages/butce/index";
@@ -284,6 +286,9 @@ function AuthenticatedRouter() {
         <Route path="/kargo">
           {() => <ProtectedRoute component={KargoYonetimi} roles={["admin", "staff", "viewer"]} />}
         </Route>
+        <Route path="/karlilik-kanal">
+          {() => <ProtectedRoute component={KarlilikKanalPage} roles={["admin", "staff", "viewer"]} />}
+        </Route>
         <Route path="/eticarium-merkezi">
           {() => <ProtectedRoute component={ETicariumMerkeziPage} roles={["admin", "staff", "viewer"]} />}
         </Route>
@@ -437,6 +442,7 @@ function App() {
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <Switch>
               <Route path="/catalog" component={Catalog} />
+              <Route path="/s/:slug" component={PublicStorefrontPage} />
               <Route>
                 {() => <AuthenticatedRouter />}
               </Route>

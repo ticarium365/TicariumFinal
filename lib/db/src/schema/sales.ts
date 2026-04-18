@@ -20,6 +20,11 @@ export const salesTable = pgTable("sales", {
   soldBy: text("sold_by"),
   paymentMethod: text("payment_method"), // 'cash' | 'card' | 'transfer' | 'other' | 'credit'
   customerId: integer("customer_id"),    // nullable FK to customers
+  // Sprint 73.4 — Kanal atfı (boş = pos satışı)
+  channelKey: text("channel_key"),       // 'pos' | 'trendyol' | 'hepsiburada' | 'storefront' | etc.
+  channelOrderId: text("channel_order_id"), // marketplace order id
+  commissionAmount: real("commission_amount").default(0).notNull(),
+  shippingCost: real("shipping_cost").default(0).notNull(),
   returned: boolean("returned").default(false).notNull(),
   returnedAt: timestamp("returned_at", { withTimezone: true }),
   returnNote: text("return_note"),
