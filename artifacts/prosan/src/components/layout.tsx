@@ -116,6 +116,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/finance", label: "Kasa / Finans", icon: Wallet, roles: ["admin", "staff", "viewer"] },
     { href: "/finance-dashboard", label: "Finans Paneli", icon: TrendingUp, roles: ["admin", "viewer"] },
     { href: "/profit", label: "Net Kâr Merkezi", icon: TrendingUp, roles: ["admin", "staff", "viewer"] },
+    { href: "/gercek-kar", label: "Gerçek Kâr", icon: TrendingUp, roles: ["admin", "viewer"] },
+    { href: "/gercek-kar/oneriler", label: "Akıllı Öneriler", icon: TrendingUp, roles: ["admin", "viewer"] },
     { href: "/muhasebeci", label: "Mali Müşavir", icon: Calculator, roles: ["admin", "staff", "viewer"] },
     { href: "/butce", label: "Bütçe & Tahmin", icon: PieChart, roles: ["admin", "staff", "viewer"] },
     { href: "/ice-aktarim", label: "Veri İçe Aktarımı", icon: Upload, roles: ["admin", "staff"] },

@@ -34,7 +34,7 @@ router.post("/entry", requireAuth, requireRole(["admin", "staff"]), async (req: 
     }
 
     const newStock = product.stock + qty;
-    const updateData: any = { stock: newStock, updatedAt: new Date() };
+    const updateData: any = { stock: newStock, updatedAt: new Date(), lastStockInAt: new Date() };
     if (purchasePrice !== undefined && purchasePrice !== null && purchasePrice !== "") {
       updateData.purchasePrice = parseFloat(purchasePrice);
     }

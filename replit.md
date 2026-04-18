@@ -50,6 +50,7 @@ The backend is powered by Express 5, with PostgreSQL as the database, managed by
 - **Sadakat & Puan Sistemi**: Configurable `loyalty_settings` and `loyalty_transactions` (earn, redeem, adjust, expire) integrated with sales and customer management.
 - **Çoklu Para Birimi**: `currency_rates` management (USD/EUR/GBP/CHF/JPY → TRY) with history and conversion capabilities.
 - **Mobil Derinleştirme**: Expanded Expo app with `(tabs)/customers.tsx` for customer search, balance display, and alerts.
+- **Gerçek Kâr Motoru (True Profit Engine, Sprint 72)**: Effective-cost model that ages stock — purchase price + accumulated holding cost (rent/staff/electric per shelf-m²) + capital cost (annual % / 365). Tables: `holding_cost_rules`, `expense_allocations`, `product_profit_snapshots` (idempotent upsert with unique idx on company+product+date), `inventory_turnover_metrics`. Daily 24h cron writes per-product snapshots; live endpoint computes on-demand. Allocation methods supported: revenue, qty, category, m2, manual. Pages: `/gercek-kar` (dashboard with top-profit/losing/stagnant lists), `/gercek-kar/ayarlar` (rules+expenses, admin only), `/gercek-kar/oneriler` (rule-based AI advisor). Feature codes: `profit.holding_cost`+`profit.true_dashboard` (pkg_business+), `profit.ai_advisor` (pkg_growth+).
 
 ## External Dependencies
 

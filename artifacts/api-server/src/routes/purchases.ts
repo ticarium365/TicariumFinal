@@ -155,7 +155,7 @@ router.post("/", requireAuth, requireRole(["admin", "staff"]), async (req: Reque
 
       // Stok artır
       await db.update(productsTable)
-        .set({ stock: product.stock + item.quantity, purchasePrice: item.unitCost, updatedAt: new Date() })
+        .set({ stock: product.stock + item.quantity, purchasePrice: item.unitCost, updatedAt: new Date(), lastStockInAt: new Date() })
         .where(and(eq(productsTable.id, item.productId), eq(productsTable.companyId, cid)));
 
       // Stok hareketi

@@ -39,6 +39,10 @@ const FEATURES = {
   ocr_receipts: "ocr.receipts",
   documents: "documents",
   profit_dashboard: "profit.dashboard",
+  // Sprint 72 — Gerçek Kârlılık Motoru
+  profit_holding_cost: "profit.holding_cost",     // Raf maliyeti + sermaye + devir + gider dağıtım + ürün kâr raporu
+  profit_true_dashboard: "profit.true_dashboard", // Gerçek Kâr dashboard'u
+  profit_ai_advisor: "profit.ai_advisor",         // Akıllı öneriler motoru
   // Büyüme
   marketplace_basic: "marketplace.basic",
   marketplace_pro: "marketplace.pro",
@@ -108,6 +112,7 @@ const PLAN_DEFS = [
       FEATURES.finance_expenses, FEATURES.finance_banking, FEATURES.hr_staff,
       FEATURES.assets_fixed, FEATURES.ocr_receipts, FEATURES.documents,
       FEATURES.profit_dashboard,
+      FEATURES.profit_holding_cost, FEATURES.profit_true_dashboard,
     ],
   },
   {
@@ -129,6 +134,8 @@ const PLAN_DEFS = [
       FEATURES.finance_expenses, FEATURES.finance_banking, FEATURES.hr_staff,
       FEATURES.hr_payroll, FEATURES.assets_fixed, FEATURES.ocr_receipts,
       FEATURES.documents, FEATURES.profit_dashboard,
+      FEATURES.profit_holding_cost, FEATURES.profit_true_dashboard,
+      FEATURES.profit_ai_advisor,
       FEATURES.marketplace_basic, FEATURES.marketplace_pro,
       FEATURES.campaigns, FEATURES.loyalty_points, FEATURES.currency_multi,
       FEATURES.reports_advanced,
@@ -153,6 +160,7 @@ const PLAN_DEFS = [
       FEATURES.finance_expenses, FEATURES.finance_banking, FEATURES.hr_staff,
       FEATURES.hr_payroll, FEATURES.assets_fixed, FEATURES.ocr_receipts,
       FEATURES.documents, FEATURES.profit_dashboard,
+      FEATURES.profit_holding_cost, FEATURES.profit_true_dashboard, FEATURES.profit_ai_advisor,
       FEATURES.marketplace_basic, FEATURES.marketplace_pro,
       FEATURES.campaigns, FEATURES.loyalty_points, FEATURES.currency_multi,
       FEATURES.reports_advanced,

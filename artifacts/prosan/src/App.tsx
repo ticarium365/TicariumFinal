@@ -73,6 +73,9 @@ import ChannelDetailPage from "@/pages/channels/channel-detail";
 import ChannelsBulkPage from "@/pages/channels/channels-bulk";
 import PricingPage from "@/pages/pricing";
 import AdminBillingPage from "@/pages/admin/billing";
+import GercekKarDashboard from "@/pages/gercek-kar/dashboard";
+import GercekKarAyarlar from "@/pages/gercek-kar/ayarlar";
+import GercekKarOneriler from "@/pages/gercek-kar/oneriler";
 import { UpgradeModal, installFeatureLockInterceptor } from "@/components/upgrade-modal";
 
 installFeatureLockInterceptor();
@@ -375,6 +378,16 @@ function AuthenticatedRouter() {
 
         <Route path="/pricing">
           {() => <ProtectedRoute component={PricingPage} />}
+        </Route>
+
+        <Route path="/gercek-kar">
+          {() => <ProtectedRoute component={GercekKarDashboard} />}
+        </Route>
+        <Route path="/gercek-kar/ayarlar">
+          {() => <ProtectedRoute component={GercekKarAyarlar} roles={["admin", "super_admin"]} />}
+        </Route>
+        <Route path="/gercek-kar/oneriler">
+          {() => <ProtectedRoute component={GercekKarOneriler} />}
         </Route>
 
         <Route path="/onboarding">

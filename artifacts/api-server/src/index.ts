@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { db, usersTable, productsTable } from "@workspace/db";
 import { seedSubscriptionPlans } from "./routes/subscriptions.js";
 import { startMarketplaceWorker } from "./services/marketplace/worker.js";
+import { startProfitCron } from "./services/profitEngine.js";
 import { sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import seedProductsRaw from "./seed-products.json";
@@ -150,4 +151,6 @@ app.listen(port, (err?: Error) => {
   runSeeds().catch((err) => logger.error({ err }, "Seed error"));
   // Start marketplace sync worker (in-process)
   try { startMarketplaceWorker(); } catch (e) { logger.error({ err: e }, "Marketplace worker failed to start"); }
+  // Sprint 72 — daily profit snapshots
+  try { startProfitCron(); } catch (e) { logger.error({ err: e }, "Profit cron failed to start"); }
 });

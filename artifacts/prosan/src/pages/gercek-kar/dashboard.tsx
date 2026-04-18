@@ -1,0 +1,204 @@
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TrendingUp, TrendingDown, AlertTriangle, Star, Clock, Wallet, RefreshCw, Lightbulb } from "lucide-react";
+import { Link } from "wouter";
+
+const fmt = (n: number) =>
+  new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 2 }).format(n || 0);
+const fmtN = (n: number) =>
+  new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(n || 0);
+
+interface Snap {
+  productId: number; name: string; code: string;
+  purchasePrice: number; salePrice: number; stockQty: number;
+  daysOnShelf: number; effectiveCost: number; trueProfit: number;
+  trueMarginPct: number; breakEvenDay: number | null;
+  turnoverDays: number | null; status: string; extraCost: number;
+}
+interface Dashboard {
+  empty: boolean;
+  totals: { stockValue: number; dailyHoldingTotal: number; dailyCapitalTotal: number; todayBleed: number };
+  topProfit: Snap[]; losing: Snap[]; stagnant: Snap[]; stars: Snap[]; capitalLocked: Snap[];
+  productCount: number;
+}
+
+const StatusBadge = ({ s }: { s: string }) => {
+  const map: Record<string, { label: string; v: any }> = {
+    star: { label: "Yıldız", v: "default" },
+    ok: { label: "Sağlıklı", v: "secondary" },
+    low_margin: { label: "Düşük Marj", v: "outline" },
+    losing: { label: "Zarar", v: "destructive" },
+    stagnant: { label: "Atıl", v: "outline" },
+  };
+  const m = map[s] ?? map.ok;
+  return <Badge variant={m.v as any}>{m.label}</Badge>;
+};
+
+const SnapTable = ({ rows, emptyText }: { rows: Snap[]; emptyText: string }) => {
+  if (!rows || rows.length === 0) {
+    return <p className="text-sm text-muted-foreground p-4">{emptyText}</p>;
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead className="border-b">
+          <tr className="text-left text-xs text-muted-foreground">
+            <th className="py-2 px-2">Ürün</th>
+            <th className="py-2 px-2 text-right">Alış</th>
+            <th className="py-2 px-2 text-right">Etkin Mal.</th>
+            <th className="py-2 px-2 text-right">Satış</th>
+            <th className="py-2 px-2 text-right">Gerçek Kâr</th>
+            <th className="py-2 px-2 text-right">Marj</th>
+            <th className="py-2 px-2 text-right">Rafta</th>
+            <th className="py-2 px-2 text-right">Devir</th>
+            <th className="py-2 px-2">Durum</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.productId} className="border-b hover:bg-muted/30" data-testid={`row-snap-${r.productId}`}>
+              <td className="py-2 px-2">
+                <div className="font-medium">{r.name}</div>
+                <div className="text-xs text-muted-foreground">{r.code}</div>
+              </td>
+              <td className="py-2 px-2 text-right">{fmt(r.purchasePrice)}</td>
+              <td className="py-2 px-2 text-right">
+                <div className={r.extraCost > 0 ? "font-medium" : ""}>{fmt(r.effectiveCost)}</div>
+                {r.extraCost > 0.001 && (
+                  <div className="text-xs text-orange-600">+{fmt(r.extraCost)} ({r.daysOnShelf}g)</div>
+                )}
+              </td>
+              <td className="py-2 px-2 text-right">{fmt(r.salePrice)}</td>
+              <td className={`py-2 px-2 text-right font-semibold ${r.trueProfit < 0 ? "text-red-600" : "text-green-600"}`}>
+                {fmt(r.trueProfit)}
+              </td>
+              <td className={`py-2 px-2 text-right ${r.trueMarginPct < 0 ? "text-red-600" : ""}`}>
+                %{fmtN(r.trueMarginPct)}
+              </td>
+              <td className="py-2 px-2 text-right">{r.daysOnShelf}g</td>
+              <td className="py-2 px-2 text-right">{r.turnoverDays ? `${fmtN(r.turnoverDays)}g` : "—"}</td>
+              <td className="py-2 px-2"><StatusBadge s={r.status} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+export default function GercekKarDashboard() {
+  const { data, isLoading, isError, refetch, error } = useQuery<Dashboard>({
+    queryKey: ["/api/profit-engine/dashboard"],
+    queryFn: async () => {
+      const r = await fetch("/api/profit-engine/dashboard", { credentials: "include" });
+      if (!r.ok) throw new Error("Veri alınamadı");
+      return r.json();
+    },
+  });
+
+  const recompute = async () => {
+    await fetch("/api/profit-engine/recompute", { method: "POST", credentials: "include" });
+    await refetch();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <div className="h-8 w-64 bg-muted animate-pulse rounded" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 bg-muted animate-pulse rounded" />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <AlertTriangle className="h-10 w-10 text-orange-500 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground mb-3">{(error as Error)?.message ?? "Hata"}</p>
+            <Button onClick={() => refetch()} size="sm" data-testid="button-retry"><RefreshCw className="h-4 w-4 mr-1" />Tekrar Dene</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (data?.empty) {
+    return (
+      <div className="p-6 max-w-2xl mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" />Gerçek Kâr Motoru</CardTitle>
+            <CardDescription>Henüz veri yok. Önce raf maliyeti kurallarını ayarlayın, ardından hesaplamayı başlatın.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex gap-2">
+            <Link href="/gercek-kar/ayarlar"><Button data-testid="button-settings">Ayarlara Git</Button></Link>
+            <Button variant="outline" onClick={recompute} data-testid="button-recompute"><RefreshCw className="h-4 w-4 mr-1" />Şimdi Hesapla</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const t = data!.totals;
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2"><TrendingUp className="h-6 w-6 text-primary" />Gerçek Kâr Paneli</h1>
+          <p className="text-sm text-muted-foreground">Görünen kâr değil, parmağınıza ulaşan kâr</p>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/gercek-kar/oneriler"><Button variant="outline" size="sm" data-testid="button-advisor"><Lightbulb className="h-4 w-4 mr-1" />Akıllı Öneriler</Button></Link>
+          <Link href="/gercek-kar/ayarlar"><Button variant="outline" size="sm" data-testid="button-settings">Ayarlar</Button></Link>
+          <Button size="sm" onClick={recompute} data-testid="button-recompute"><RefreshCw className="h-4 w-4 mr-1" />Yenile</Button>
+        </div>
+      </div>
+
+      {/* Metrikler */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card data-testid="card-stock-value">
+          <CardHeader className="pb-2"><CardDescription>Stok Değeri (Alış)</CardDescription></CardHeader>
+          <CardContent><div className="text-2xl font-bold">{fmt(t.stockValue)}</div></CardContent>
+        </Card>
+        <Card className="border-orange-200 dark:border-orange-900" data-testid="card-today-bleed">
+          <CardHeader className="pb-2"><CardDescription className="flex items-center gap-1"><TrendingDown className="h-3 w-3" />Bugün Kaybediyorsunuz</CardDescription></CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{fmt(t.todayBleed)}</div>
+            <div className="text-xs text-muted-foreground">Tüm stok için günlük raf+sermaye maliyeti</div>
+          </CardContent>
+        </Card>
+        <Card data-testid="card-daily-holding">
+          <CardHeader className="pb-2"><CardDescription>Günlük Raf Maliyeti</CardDescription></CardHeader>
+          <CardContent><div className="text-xl font-bold">{fmt(t.dailyHoldingTotal)}</div></CardContent>
+        </Card>
+        <Card data-testid="card-daily-capital">
+          <CardHeader className="pb-2"><CardDescription>Günlük Sermaye Maliyeti</CardDescription></CardHeader>
+          <CardContent><div className="text-xl font-bold">{fmt(t.dailyCapitalTotal)}</div></CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="losing">
+        <TabsList>
+          <TabsTrigger value="losing" data-testid="tab-losing"><AlertTriangle className="h-4 w-4 mr-1" />Zarar Yazan ({data!.losing.length})</TabsTrigger>
+          <TabsTrigger value="stagnant" data-testid="tab-stagnant"><Clock className="h-4 w-4 mr-1" />Atıl Stok ({data!.stagnant.length})</TabsTrigger>
+          <TabsTrigger value="stars" data-testid="tab-stars"><Star className="h-4 w-4 mr-1" />Yıldızlar ({data!.stars.length})</TabsTrigger>
+          <TabsTrigger value="top" data-testid="tab-top">En Kârlı (Top 10)</TabsTrigger>
+          <TabsTrigger value="locked" data-testid="tab-locked"><Wallet className="h-4 w-4 mr-1" />Sermaye Kilitleyen</TabsTrigger>
+        </TabsList>
+        <TabsContent value="losing"><Card><CardContent className="p-0"><SnapTable rows={data!.losing} emptyText="Şu an zarar yazan ürün yok 🎉" /></CardContent></Card></TabsContent>
+        <TabsContent value="stagnant"><Card><CardContent className="p-0"><SnapTable rows={data!.stagnant} emptyText="Atıl ürün yok" /></CardContent></Card></TabsContent>
+        <TabsContent value="stars"><Card><CardContent className="p-0"><SnapTable rows={data!.stars} emptyText="Henüz yıldız ürün yok" /></CardContent></Card></TabsContent>
+        <TabsContent value="top"><Card><CardContent className="p-0"><SnapTable rows={data!.topProfit} emptyText="Veri yok" /></CardContent></Card></TabsContent>
+        <TabsContent value="locked"><Card><CardContent className="p-0"><SnapTable rows={data!.capitalLocked} emptyText="Veri yok" /></CardContent></Card></TabsContent>
+      </Tabs>
+    </div>
+  );
+}

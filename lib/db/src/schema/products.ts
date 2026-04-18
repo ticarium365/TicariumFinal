@@ -19,6 +19,10 @@ export const productsTable = pgTable("products", {
   profitPercent: real("profit_percent").notNull().default(0),
   discountSalePct: real("discount_sale_pct").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
+  // Sprint 72: rafta geçen süreyi izlemek için son stok girişi
+  lastStockInAt: timestamp("last_stock_in_at", { withTimezone: true }),
+  // Sprint 72: özel m² (boş ise raf kuralındaki default kullanılır)
+  shelfM2: real("shelf_m2"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => ({

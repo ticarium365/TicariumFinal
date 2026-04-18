@@ -105,4 +105,8 @@ router.use("/production", requireAuth, requireFeature("production.bom"), product
 router.use("/loyalty", requireAuth, requireFeature("loyalty.points"), loyaltyRouter);
 router.use("/currency", requireAuth, requireFeature("currency.multi"), currencyRouter);
 
+// Sprint 72 — Gerçek Kârlılık Motoru (paket kapıları router içinde)
+import profitEngineRouter from "./profit-engine.js";
+router.use("/profit-engine", profitEngineRouter);
+
 export default router;
