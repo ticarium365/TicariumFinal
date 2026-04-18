@@ -1,6 +1,6 @@
 # Ticarium365 — Teknik Dokümantasyon
 
-**Sürüm:** 1.0.0 — Canlıya Hazır  
+**Sürüm:** 1.2.0 — Sprint 82 (UX/UI + Auth Overhaul)  
 **Son Güncelleme:** 18 Nisan 2026  
 **Mimari:** Multi-tenant SaaS, subdomain bazlı izolasyon
 
@@ -507,10 +507,63 @@ pnpm --filter @workspace/prosan run build
 
 ---
 
-## 21. Sürüm Geçmişi (Özet)
+## 21. Sprint 82 — UX/UI + Auth Overhaul (Nisan 2026)
+
+Sprint 82, kullanıcının "platform göze hoş gelmeli, login modern olmalı, şifremi unuttum gerçek olmalı" talebine yanıt veren büyük bir görsel/güvenlik elden geçirmesidir.
+
+### 21.1 Şifremi Unuttum Akışı (SMS Tabanlı)
+3 adımlı sihirbaz: telefon → 6 haneli OTP → yeni şifre.
+
+**Yeni tablo:** `password_reset_tokens`
+| Sütun | Tip | Açıklama |
+|-------|-----|----------|
+| `id` | serial | PK |
+| `user_id` | int FK users | Hangi kullanıcı |
+| `company_id` | int FK companies | Tenant izolasyonu |
+| `token_hash` | varchar(255) | bcrypt hash (raw OTP DB'de yok) |
+| `expires_at` | timestamptz | 10 dk geçerlilik |
+| `consumed_at` | timestamptz | Atomic tüketim — tek kullanım |
+| `attempts` | int | Brute-force sayacı |
+| `created_at` | timestamptz | Audit |
+
+**Endpoint'ler** (`artifacts/api-server/src/routes/auth.ts`):
+- `POST /api/auth/forgot-password/request` — Telefon alır, kullanıcıyı bulur, OTP üretir, NetGSM SMS sağlayıcısına yollar. **Enumeration koruması:** kullanıcı bulunamasa bile her zaman 200 döner.
+- `POST /api/auth/forgot-password/verify` — OTP doğrulama. Yanlış → `attempts++`. 5 başarısızlıkta token iptal.
+- `POST /api/auth/forgot-password/reset` — Tek-seferlik OTP ile yeni şifre belirleme. `consumed_at` atomik UPDATE ile set edilir.
+
+**Rate limit:** IP başına 5 talep / 15 dk + telefon başına 3 talep / saat.
+
+**Loglama:** Production'da OTP **asla** log'a yazılmaz; geliştirme modunda `[DEV]` etiketiyle pino debug seviyesinde basılır.
+
+### 21.2 Yeni Görsel Kimlik
+- **`BrandIcon`** bileşeni: Mavi gradyan T+365 chip SVG (`artifacts/prosan/src/components/brand-icon.tsx`). Header, login, public nav, manifest icon ve favicon hepsinde tek kaynak.
+- **Tema:** Login + Şifremi Unuttum + Public Nav beyaz/açık-mavi paletine alındı (önceki koyu/lacivert agresif kontrast yumuşatıldı).
+- **PublicNav rewrite:** Sticky, beyaz arka plan, mavi accent, sade tipografi.
+
+### 21.3 Auth Context Bug Fix
+`artifacts/prosan/src/components/auth-context.tsx` içindeki `publicPaths` listesine `/sifremi-unuttum`, `/forgot-password`, `/kvkk` eklendi. Önceden bu sayfalara doğrudan girildiğinde 401 dönüp login'e atılıyordu (sonsuz redirect ihtimali).
+
+### 21.4 Ekran Görüntüsü Teslimat Altyapısı
+Sunum/dokümantasyon için 130 ekran görüntüsü (65 masaüstü 1440×900 + 65 mobil 414×896) toplandı.
+
+- **Toplama scripti:** `scripts/capture-screenshots.mjs` — Replit'in Playwright Chromium binary'sini (`REPLIT_PLAYWRIGHT_CHROMIUM_EXECUTABLE`) `puppeteer-core` ile sürer. Tek seferlik login, ardından tüm rotaları gezer; idempotent (mevcut dosya varsa atlar — yeniden çalıştırılabilir).
+- **Paketleme:** Sistemde `zip`/`python3` olmadığı için saf-Node ZIP yazıcı kullanıldı (`/tmp/zipit.mjs`, `zlib.deflateRawSync` + manuel ZIP local/central directory header'ları).
+- **Çıktı:** `screenshots/all/{desktop,mobile}/*.jpeg` ve `screenshots/ticarium365-all-screenshots.zip` (~26 MB).
+
+### 21.5 Sprint 82 Bekleyen İşler (Backlog)
+- Logo/favicon güncellemesi tüm `manifest.json` + apple-touch-icon dosyalarına yayılacak
+- Beyaz/mavi tema dashboard ve diğer iç sayfalara genişletilecek
+- NetGSM canlı anahtarları geldiğinde gerçek SMS testi
+- QNB / Trendyol / TCMB connector implementasyonları (anahtar bekleniyor)
+- Domain & hosting konfigürasyonu
+
+---
+
+## 22. Sürüm Geçmişi (Özet)
 
 | Sürüm | Tarih | Önemli Değişiklikler |
 |-------|-------|----------------------|
+| 1.2.0 | 2026-04-18 | Sprint 82: SMS tabanlı şifre sıfırlama (3 endpoint + rate-limit + atomic token), beyaz/mavi auth UI, BrandIcon SVG, PublicNav rewrite, 130-ekran capture pipeline (puppeteer-core + saf-Node ZIP) |
 | 1.1.0 | 2026-04-18 | Detaylı health check (DB+Storage+SMTP), Frontend ErrorBoundary + client-error API, Audit log arşivleme script |
 | 1.0.0 | 2026-04-18 | Canlı Öncesi Sertleştirme: rate limit, helmet, audit kapsamı, super admin, backup script, PWA |
 | 0.9.x | 2026-04 | Sprint 73.6 (atomic upsert), 73.7 (concurrent), Sprint 70'ler |

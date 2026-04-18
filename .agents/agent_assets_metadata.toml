@@ -22,13 +22,13 @@ title = "SMSYSTEMS — Tam Dökümantasyon (Tanıtım, Kullanım, Paketleme, KOS
 id = "f81U5yBcoRvwF6zq5v4ME"
 uri = "file://TEKNIK_DOKUMAN.md"
 type = "text"
-title = "Ticarium365 — Teknik Dokümantasyon (Güncel)"
+title = "Ticarium365 - Teknik Dokümantasyon (Markdown kaynağı)"
 
 [[outputs]]
 id = "NgYwyy1L1CzW4w0g-gZFn"
 uri = "file://TEKNIK_DOKUMAN.docx"
 type = "word_document"
-title = "Ticarium365 — Teknik Dokümantasyon (Word)"
+title = "Ticarium365 - Teknik Dokümantasyon (Word, Sprint 82 güncel)"
 
 [[outputs]]
 id = "frWvPekfvtuhrU0bNM5Ws"
