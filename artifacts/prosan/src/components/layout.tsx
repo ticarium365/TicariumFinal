@@ -50,7 +50,6 @@ import {
   Store,
   Megaphone,
   ShoppingBasket,
-  Inbox,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./notification-center";
