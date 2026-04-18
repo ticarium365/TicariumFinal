@@ -94,3 +94,14 @@ The backend is powered by Express 5. PostgreSQL is the chosen database, managed 
 - Sprint 4 (Barkod/Etiket PDF) zaten `/barcodes` sayfasında 4 şablon (termal/fiyat/raf/QR) + A4 sütun preset'leri + JsBarcode/QR + Yazdır/PDF butonu olarak kapsamlı şekilde mevcut.
 - Sprint 5 (Promosyon Engine) zaten `campaigns` modülünde percent/fixed/coupon/scope-all-category-product + min amount/qty + max uses + tarih aralığı + `/campaigns/apply` (en iyi indirim seçimi) olarak mevcut.
 
+### Sprint 71 — Paketleme + Abonelik + Feature Flag (TAMAMLANDI)
+- 5 yeni paket seed: `pkg_inventory ₺999` / `pkg_trade ₺1999` / `pkg_business ₺3499` / `pkg_growth ₺5999` / `pkg_enterprise_v2 ₺9999` (yıllık ödemede 2 ay bedava).
+- 28 feature kodu tanımlandı (inventory.core, sales.pos, production.bom, loyalty.points, currency.multi, einvoice.pro, marketplace.pro, vb.).
+- `middlewares/features.ts`: `requireFeature(code)` middleware, 60s in-memory cache + `invalidateFeaturesCache(companyId)`. Trial → tüm featurelar açık. Süresi dolmuş → 403 FEATURE_LOCKED.
+- Modül router gating: banking, finance-dashboard, personnel (mount root + requireFeature, çünkü internal route'lar absolute), einvoice, marketplace, profit, accountant, reports-official, budgets, production, loyalty, currency.
+- Cache invalidation /subscribe + /set-plan + /cancel + /extend-trial + /mark-paid + auto-migration üzerinde wired.
+- Auto-migration: deprecated planlardaki active+grace_period abonelikler → `pkg_enterprise_v2` (existing customer'lar erişimini kaybetmez).
+- Admin billing API: `/admin/billing/tenants|metrics|set-plan|extend-trial|start-trial|mark-paid` — super_admin gated.
+- Frontend: `/pricing` public sayfa (5 paket, aylık/yıllık toggle, mevcut plan rozeti, loading/error/empty states), `/admin/billing` super_admin dashboard (MRR/ARR/aktif/trial/expired metrikleri + tenant tablosu + plan ata + trial uzat dialog'ları + plan dağılım tab'ı), global `UpgradeModal` (window.fetch interceptor 403 FEATURE_LOCKED yakalar, modal'da requiredFeature TR etiketi + Paketleri Görüntüle CTA gösterir). Sidebar entries (admin/billing super_admin only, /pricing herkes).
+- E2E doğrulandı: PROSAN inventory'ye düşürüldüğünde production/recipes 403, enterprise'a yükseltildiğinde 200; ungated route (products) her durumda 200.
+

@@ -7,15 +7,228 @@ import {
   companiesTable,
 } from "@workspace/db";
 import { and, eq, desc, sql, gte } from "drizzle-orm";
-import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { requireAuth, requireRole, requireSuperAdmin } from "../middlewares/auth.js";
 import { Errors } from "../lib/errors.js";
+import { getCompanyFeatureContext, invalidateFeaturesCache } from "../middlewares/features.js";
+import { inArray, gt, lt, isNull, or, count } from "drizzle-orm";
 
 const router = Router();
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PAKET TANIMLARI v2 (Sprint 71) — 5 ana paket + feature flag listesi
+// ─────────────────────────────────────────────────────────────────────────────
+
+const FEATURES = {
+  // Çekirdek
+  inventory_core: "inventory.core",         // ürün/kategori/stok/barkod
+  stock_counts: "stock.counts",
+  barcode_print: "barcode.print",
+  // Ticaret
+  sales_pos: "sales.pos",
+  sales_invoices: "sales.invoices",
+  customers_crm: "customers.crm",
+  suppliers: "suppliers",
+  einvoice_basic: "einvoice.basic",
+  einvoice_pro: "einvoice.pro",
+  // İşletme
+  finance_expenses: "finance.expenses",
+  finance_banking: "finance.banking",
+  hr_staff: "hr.staff",
+  hr_payroll: "hr.payroll",
+  assets_fixed: "assets.fixed",
+  ocr_receipts: "ocr.receipts",
+  documents: "documents",
+  profit_dashboard: "profit.dashboard",
+  // Büyüme
+  marketplace_basic: "marketplace.basic",
+  marketplace_pro: "marketplace.pro",
+  campaigns: "campaigns",
+  loyalty_points: "loyalty.points",
+  currency_multi: "currency.multi",
+  reports_advanced: "reports.advanced",
+  // Kurumsal
+  api_public: "api.public",
+  integrations_accounting: "integrations.accounting",
+  production_bom: "production.bom",
+  accountant_panel: "accountant.panel",
+  webhooks: "integrations.webhooks",
+} as const;
+
+const PLAN_DEFS = [
+  {
+    slug: "pkg_inventory",
+    name: "Envanter",
+    description: "Mağaza, depo, nalbur — sadece stok takibi",
+    priceMonthly: "999",
+    priceYearly: "9990",
+    maxUsers: 2,
+    maxBranches: 1,
+    maxProducts: 5000,
+    maxMonthlySales: -1,
+    storageMb: 500,
+    sortOrder: 1,
+    features: [
+      FEATURES.inventory_core, FEATURES.stock_counts, FEATURES.barcode_print,
+    ],
+  },
+  {
+    slug: "pkg_trade",
+    name: "Ticaret",
+    description: "En çok satılan paket — POS, satış, cari, e-arşiv",
+    priceMonthly: "1999",
+    priceYearly: "19990",
+    maxUsers: 5,
+    maxBranches: 2,
+    maxProducts: 20000,
+    maxMonthlySales: -1,
+    storageMb: 2000,
+    sortOrder: 2,
+    features: [
+      FEATURES.inventory_core, FEATURES.stock_counts, FEATURES.barcode_print,
+      FEATURES.sales_pos, FEATURES.sales_invoices, FEATURES.customers_crm,
+      FEATURES.suppliers, FEATURES.einvoice_basic,
+    ],
+  },
+  {
+    slug: "pkg_business",
+    name: "İşletme",
+    description: "Gider merkezi, banka, personel, OCR, demirbaş",
+    priceMonthly: "3499",
+    priceYearly: "34990",
+    maxUsers: 10,
+    maxBranches: 5,
+    maxProducts: 50000,
+    maxMonthlySales: -1,
+    storageMb: 10000,
+    sortOrder: 3,
+    features: [
+      FEATURES.inventory_core, FEATURES.stock_counts, FEATURES.barcode_print,
+      FEATURES.sales_pos, FEATURES.sales_invoices, FEATURES.customers_crm,
+      FEATURES.suppliers, FEATURES.einvoice_basic, FEATURES.einvoice_pro,
+      FEATURES.finance_expenses, FEATURES.finance_banking, FEATURES.hr_staff,
+      FEATURES.assets_fixed, FEATURES.ocr_receipts, FEATURES.documents,
+      FEATURES.profit_dashboard,
+    ],
+  },
+  {
+    slug: "pkg_growth",
+    name: "Büyüme",
+    description: "Pazaryeri, kampanya, sadakat, çoklu para, gelişmiş raporlar",
+    priceMonthly: "5999",
+    priceYearly: "59990",
+    maxUsers: 20,
+    maxBranches: 10,
+    maxProducts: -1,
+    maxMonthlySales: -1,
+    storageMb: 30000,
+    sortOrder: 4,
+    features: [
+      FEATURES.inventory_core, FEATURES.stock_counts, FEATURES.barcode_print,
+      FEATURES.sales_pos, FEATURES.sales_invoices, FEATURES.customers_crm,
+      FEATURES.suppliers, FEATURES.einvoice_basic, FEATURES.einvoice_pro,
+      FEATURES.finance_expenses, FEATURES.finance_banking, FEATURES.hr_staff,
+      FEATURES.hr_payroll, FEATURES.assets_fixed, FEATURES.ocr_receipts,
+      FEATURES.documents, FEATURES.profit_dashboard,
+      FEATURES.marketplace_basic, FEATURES.marketplace_pro,
+      FEATURES.campaigns, FEATURES.loyalty_points, FEATURES.currency_multi,
+      FEATURES.reports_advanced,
+    ],
+  },
+  {
+    slug: "pkg_enterprise_v2",
+    name: "Kurumsal",
+    description: "Sınırsız + API + üretim + mali müşavir + öncelikli destek",
+    priceMonthly: "9999",
+    priceYearly: "99990",
+    maxUsers: -1,
+    maxBranches: -1,
+    maxProducts: -1,
+    maxMonthlySales: -1,
+    storageMb: 100000,
+    sortOrder: 5,
+    features: [
+      FEATURES.inventory_core, FEATURES.stock_counts, FEATURES.barcode_print,
+      FEATURES.sales_pos, FEATURES.sales_invoices, FEATURES.customers_crm,
+      FEATURES.suppliers, FEATURES.einvoice_basic, FEATURES.einvoice_pro,
+      FEATURES.finance_expenses, FEATURES.finance_banking, FEATURES.hr_staff,
+      FEATURES.hr_payroll, FEATURES.assets_fixed, FEATURES.ocr_receipts,
+      FEATURES.documents, FEATURES.profit_dashboard,
+      FEATURES.marketplace_basic, FEATURES.marketplace_pro,
+      FEATURES.campaigns, FEATURES.loyalty_points, FEATURES.currency_multi,
+      FEATURES.reports_advanced,
+      FEATURES.api_public, FEATURES.integrations_accounting,
+      FEATURES.production_bom, FEATURES.accountant_panel, FEATURES.webhooks,
+    ],
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PLAN SEED — uygulama açılışında çalışır (index.ts'den çağırılır)
 // ─────────────────────────────────────────────────────────────────────────────
+export async function seedSubscriptionPlansV2() {
+  // Eski paketleri (free/starter/pro/enterprise) deaktif et — referans bütünlüğü için silmiyoruz
+  const newSlugs = PLAN_DEFS.map(p => p.slug);
+  for (const def of PLAN_DEFS) {
+    const [existing] = await db.select().from(subscriptionPlansTable)
+      .where(eq(subscriptionPlansTable.slug, def.slug)).limit(1);
+    const data = {
+      name: def.name,
+      description: def.description,
+      priceMonthly: def.priceMonthly,
+      priceYearly: def.priceYearly,
+      maxUsers: def.maxUsers,
+      maxProducts: def.maxProducts,
+      maxBranches: def.maxBranches,
+      maxMonthlySales: def.maxMonthlySales,
+      storageMb: def.storageMb,
+      features: JSON.stringify(def.features),
+      sortOrder: def.sortOrder,
+      isActive: true,
+    };
+    if (existing) {
+      await db.update(subscriptionPlansTable).set(data).where(eq(subscriptionPlansTable.id, existing.id));
+    } else {
+      await db.insert(subscriptionPlansTable).values({ slug: def.slug, ...data });
+    }
+  }
+  // Yeni listede olmayan eski planları gizle
+  const all = await db.select().from(subscriptionPlansTable);
+  const deprecatedIds: number[] = [];
+  for (const p of all) {
+    if (!newSlugs.includes(p.slug)) {
+      if (p.isActive) {
+        await db.update(subscriptionPlansTable).set({ isActive: false }).where(eq(subscriptionPlansTable.id, p.id));
+      }
+      deprecatedIds.push(p.id);
+    }
+  }
+
+  // Eski planlara bağlı aktif abonelikleri Kurumsal v2'ye migrate et (existing customer'lar erişimini kaybetmesin)
+  if (deprecatedIds.length > 0) {
+    const [enterprise] = await db.select().from(subscriptionPlansTable)
+      .where(eq(subscriptionPlansTable.slug, "pkg_enterprise_v2"));
+    if (enterprise) {
+      const migrated = await db.update(companySubscriptionsTable)
+        .set({ planId: enterprise.id, updatedAt: new Date(), notes: "Auto-migrated from deprecated plan" })
+        .where(and(
+          inArray(companySubscriptionsTable.planId, deprecatedIds),
+          inArray(companySubscriptionsTable.status, ["active", "grace_period"]),
+        ))
+        .returning({ companyId: companySubscriptionsTable.companyId });
+      for (const m of migrated) invalidateFeaturesCache(m.companyId);
+      if (migrated.length > 0) console.info(`Migrated ${migrated.length} subscriptions to Kurumsal v2`);
+    }
+  }
+  console.info("Subscription plans v2 seeded (5 packages)");
+}
+
+// Eski seed (artık çağrılmamalı, geriye dönük uyumluluk için kalıyor)
 export async function seedSubscriptionPlans() {
+  // Yeni v2 seed'i çalıştır
+  await seedSubscriptionPlansV2();
+  return;
+
+  // ÖLÜ KOD — eski örnek planlar
   const existing = await db.select({ id: subscriptionPlansTable.id }).from(subscriptionPlansTable).limit(1);
   if (existing.length > 0) return;
 
@@ -245,6 +458,7 @@ router.post("/subscribe", requireAuth, requireRole(["admin"]), async (req: Reque
       .set({ planType: "active", updatedAt: new Date() })
       .where(eq(companiesTable.id, cid));
 
+    invalidateFeaturesCache(cid);
     res.status(201).json({ subscription: newSub, plan, invoiceNo });
   } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
 });
@@ -380,6 +594,231 @@ router.put("/plans/:id", requireAuth, requireRole(["super_admin"]), async (req: 
     if (!updated) return void res.status(404).json(Errors.notFound("Plan"));
 
     res.json({ plan: updated });
+  } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPRINT 71 — FEATURE INFO (frontend modül kilit kontrolü için)
+// ─────────────────────────────────────────────────────────────────────────────
+router.get("/features", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const cid = req.companyId;
+    const ctx = await getCompanyFeatureContext(cid);
+    const allFeatures = Object.values(FEATURES);
+    res.json({
+      features: ctx.features,
+      planSlug: ctx.planSlug,
+      status: ctx.status,
+      trialEndsAt: ctx.trialEndsAt,
+      allFeatures,
+      isAllUnlocked: ctx.features.includes("*"),
+    });
+  } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPRINT 71 — SUPER ADMIN BILLING PANEL
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Tüm tenant'ları + paketlerini + trial durumlarını listele
+router.get("/admin/billing/tenants", requireSuperAdmin, async (_req, res) => {
+  try {
+    const rows = await db.select({
+      companyId: companiesTable.id,
+      companyName: companiesTable.name,
+      subdomain: companiesTable.subdomain,
+      planType: companiesTable.planType,
+      trialEndsAt: companiesTable.trialEndsAt,
+      isActive: companiesTable.isActive,
+      createdAt: companiesTable.createdAt,
+      subId: companySubscriptionsTable.id,
+      subStatus: companySubscriptionsTable.status,
+      subExpiresAt: companySubscriptionsTable.expiresAt,
+      planSlug: subscriptionPlansTable.slug,
+      planName: subscriptionPlansTable.name,
+      planPrice: subscriptionPlansTable.priceMonthly,
+    })
+      .from(companiesTable)
+      .leftJoin(companySubscriptionsTable, and(
+        eq(companySubscriptionsTable.companyId, companiesTable.id),
+        inArray(companySubscriptionsTable.status, ["active", "grace_period"]),
+      ))
+      .leftJoin(subscriptionPlansTable, eq(companySubscriptionsTable.planId, subscriptionPlansTable.id))
+      .orderBy(desc(companiesTable.createdAt));
+    res.json({ tenants: rows });
+  } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
+});
+
+// Tenant'a manuel plan ata (trial uzat, ücretsiz upgrade vb.)
+router.post("/admin/billing/set-plan", requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const { companyId, planSlug, billingCycle = "monthly", markPaid = false, note } = req.body as {
+      companyId?: number; planSlug?: string; billingCycle?: string; markPaid?: boolean; note?: string;
+    };
+    if (!companyId || !planSlug) {
+      return void res.status(400).json(Errors.badRequest("companyId ve planSlug gerekli"));
+    }
+    const [plan] = await db.select().from(subscriptionPlansTable).where(eq(subscriptionPlansTable.slug, planSlug));
+    if (!plan) return void res.status(404).json(Errors.notFound("Plan"));
+
+    // Mevcut aktif aboneliği iptal et
+    await db.update(companySubscriptionsTable)
+      .set({ status: "cancelled", cancelledAt: new Date(), updatedAt: new Date() })
+      .where(and(
+        eq(companySubscriptionsTable.companyId, companyId),
+        inArray(companySubscriptionsTable.status, ["active", "grace_period"]),
+      ));
+
+    const expiresAt = new Date();
+    if (billingCycle === "yearly") expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    else expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+    const [newSub] = await db.insert(companySubscriptionsTable).values({
+      companyId,
+      planId: plan.id,
+      billingCycle,
+      status: "active",
+      expiresAt,
+      managedBy: req.session.user!.id,
+      notes: note ?? `Super admin tarafından ayarlandı (${plan.name})`,
+    }).returning();
+
+    if (markPaid) {
+      const price = billingCycle === "yearly" ? plan.priceYearly : plan.priceMonthly;
+      await db.insert(subscriptionInvoicesTable).values({
+        subscriptionId: newSub.id,
+        companyId,
+        invoiceNo: `ADM-${companyId}-${Date.now()}`,
+        amount: price,
+        status: "paid",
+        paidAt: new Date(),
+        description: `Manuel ödeme — ${plan.name} (${billingCycle})`,
+        periodStart: new Date(),
+        periodEnd: expiresAt,
+      });
+    }
+
+    await db.update(companiesTable)
+      .set({ planType: "active", updatedAt: new Date() })
+      .where(eq(companiesTable.id, companyId));
+
+    invalidateFeaturesCache(companyId);
+    res.status(201).json({ subscription: newSub, plan });
+  } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
+});
+
+// Trial uzat
+router.post("/admin/billing/extend-trial", requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const { companyId, days = 30 } = req.body as { companyId?: number; days?: number };
+    if (!companyId) return void res.status(400).json(Errors.badRequest("companyId gerekli"));
+
+    const [company] = await db.select().from(companiesTable).where(eq(companiesTable.id, companyId));
+    if (!company) return void res.status(404).json(Errors.notFound("Şirket"));
+
+    const base = company.trialEndsAt && company.trialEndsAt > new Date() ? company.trialEndsAt : new Date();
+    const newEnd = new Date(base);
+    newEnd.setDate(newEnd.getDate() + Number(days));
+
+    await db.update(companiesTable).set({
+      planType: "trial",
+      trialEndsAt: newEnd,
+      updatedAt: new Date(),
+    }).where(eq(companiesTable.id, companyId));
+
+    invalidateFeaturesCache(companyId);
+    res.json({ ok: true, trialEndsAt: newEnd });
+  } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
+});
+
+// MRR (Monthly Recurring Revenue) + churn metrikleri
+router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
+  try {
+    const activeSubs = await db.select({
+      planSlug: subscriptionPlansTable.slug,
+      planName: subscriptionPlansTable.name,
+      billingCycle: companySubscriptionsTable.billingCycle,
+      priceMonthly: subscriptionPlansTable.priceMonthly,
+      priceYearly: subscriptionPlansTable.priceYearly,
+    })
+      .from(companySubscriptionsTable)
+      .innerJoin(subscriptionPlansTable, eq(companySubscriptionsTable.planId, subscriptionPlansTable.id))
+      .where(eq(companySubscriptionsTable.status, "active"));
+
+    let mrr = 0;
+    let arr = 0;
+    const planBreakdown: Record<string, { count: number; mrr: number; name: string }> = {};
+    for (const s of activeSubs) {
+      const monthlyEquivalent = s.billingCycle === "yearly"
+        ? Number(s.priceYearly) / 12
+        : Number(s.priceMonthly);
+      mrr += monthlyEquivalent;
+      arr += monthlyEquivalent * 12;
+      if (!planBreakdown[s.planSlug]) {
+        planBreakdown[s.planSlug] = { count: 0, mrr: 0, name: s.planName };
+      }
+      planBreakdown[s.planSlug].count++;
+      planBreakdown[s.planSlug].mrr += monthlyEquivalent;
+    }
+
+    const [trialCount] = await db.select({ c: count() }).from(companiesTable)
+      .where(and(
+        eq(companiesTable.planType, "trial"),
+        gt(companiesTable.trialEndsAt, new Date()),
+      ));
+    const [expiredCount] = await db.select({ c: count() }).from(companiesTable)
+      .where(or(
+        eq(companiesTable.planType, "suspended"),
+        and(
+          eq(companiesTable.planType, "trial"),
+          lt(companiesTable.trialEndsAt, new Date()),
+        ),
+      ));
+    const [totalTenants] = await db.select({ c: count() }).from(companiesTable);
+
+    const [cancelledCount] = await db.select({ c: count() }).from(companySubscriptionsTable)
+      .where(eq(companySubscriptionsTable.status, "cancelled"));
+
+    res.json({
+      mrr: Math.round(mrr),
+      arr: Math.round(arr),
+      activeTenantCount: activeSubs.length,
+      trialTenantCount: trialCount?.c ?? 0,
+      expiredTenantCount: expiredCount?.c ?? 0,
+      totalTenants: totalTenants?.c ?? 0,
+      churnedSubscriptions: cancelledCount?.c ?? 0,
+      planBreakdown,
+    });
+  } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
+});
+
+// Trial başlat (yeni şirket onboarding'inde de kullanılabilir)
+router.post("/admin/billing/start-trial", requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const { companyId, days = 30 } = req.body as { companyId?: number; days?: number };
+    if (!companyId) return void res.status(400).json(Errors.badRequest("companyId gerekli"));
+    const newEnd = new Date();
+    newEnd.setDate(newEnd.getDate() + Number(days));
+    await db.update(companiesTable).set({
+      planType: "trial", trialEndsAt: newEnd, updatedAt: new Date(),
+    }).where(eq(companiesTable.id, companyId));
+    invalidateFeaturesCache(companyId);
+    res.json({ ok: true, trialEndsAt: newEnd });
+  } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
+});
+
+// Manuel ödeme işaretle (banka havalesi vb)
+router.post("/admin/billing/mark-paid", requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const { invoiceId } = req.body as { invoiceId?: number };
+    if (!invoiceId) return void res.status(400).json(Errors.badRequest("invoiceId gerekli"));
+    const [updated] = await db.update(subscriptionInvoicesTable)
+      .set({ status: "paid", paidAt: new Date() })
+      .where(eq(subscriptionInvoicesTable.id, invoiceId))
+      .returning();
+    if (!updated) return void res.status(404).json(Errors.notFound("Fatura"));
+    invalidateFeaturesCache(updated.companyId);
+    res.json({ invoice: updated });
   } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
 });
 

@@ -1,0 +1,376 @@
+SMSYSTEMS ROADMAP — PLAN / PACKAGE / ROLE SYSTEM
+(Abonelik + Paketleme + Otomatik Yetki Yönetimi)
+
+==================================================
+SPRINT 71 — Ticari Paketleme Sistemi v1
+=======================================
+
+AMAÇ:
+
+Ürünü satışa hazır hale getirmek.
+Her müşteri ihtiyacına göre paket alsın.
+Paket yükselttikçe modüller otomatik açılsın.
+
+Ayrıca:
+
+* ilk 30 gün tüm modüller açık trial
+* trial bitince seçilen pakete düşsün
+* ödeme gelmezse grace period
+* admin panelden upgrade/downgrade
+* kullanıcı rolleri paket bazlı yönetilsin
+
+==================================================
+GENEL STRATEJİ
+==============
+
+İlk ay:
+
+Tüm yeni tenant'lara FULL ACCESS ver.
+
+30 gün sonra:
+
+Plan seçtir.
+
+Plan seçmezse:
+
+READ ONLY / DEMO MODE
+
+==================================================
+PAKET YAPISI
+============
+
+1. ENVANTER PAKETİ
+2. TİCARET PAKETİ
+3. İŞLETME PAKETİ
+4. BÜYÜME PAKETİ
+5. KURUMSAL PAKET
+
+==================================================
+PAKET 1 — ENVANTER
+==================
+
+Fiyat:
+₺999 / ay
+
+Hedef:
+
+* mağaza
+* depo
+* nalbur
+* mini market
+* sadece stok takibi isteyenler
+
+Özellikler:
+
+* ürün yönetimi
+* kategori / marka
+* barkod sistemi
+* stok giriş çıkış
+* stok hareketleri
+* min stok uyarısı
+* sayım modülü
+* barkod / etiket yazdırma
+* tek şube
+* 2 kullanıcı
+* temel rapor
+
+KAPALI MODÜLLER:
+
+* satış
+* fatura
+* cari
+* gider
+* finans
+* pazaryeri
+* personel
+* üretim
+
+==================================================
+PAKET 2 — TİCARET
+=================
+
+Fiyat:
+₺1.999 / ay
+
+En çok satılacak paket.
+
+Envanter +
+
+* satış ekranı
+* hızlı POS
+* müşteri yönetimi
+* cari hesap
+* teklif
+* tahsilat
+* alış modülü
+* tedarikçi modülü
+* e-arşiv basic
+* 5 kullanıcı
+* 2 şube
+
+Kapalı:
+
+* personel
+* maaş
+* gelişmiş finans
+* üretim
+* marketplace
+
+==================================================
+PAKET 3 — İŞLETME
+=================
+
+Fiyat:
+₺3.499 / ay
+
+Ticaret +
+
+* gider merkezi
+* banka import
+* net kar dashboard
+* personel kayıtları
+* maaş maliyet ekranı
+* demirbaş yönetimi
+* recurring giderler
+* belge merkezi
+* OCR fiş okuma
+* 10 kullanıcı
+* 5 şube
+
+Kapalı:
+
+* üretim
+* marketplace premium
+* API
+
+==================================================
+PAKET 4 — BÜYÜME
+================
+
+Fiyat:
+₺5.999 / ay
+
+İşletme +
+
+* Trendyol / Hepsi / N11
+* Shopify / WooCommerce
+* kampanya motoru
+* sadakat puan sistemi
+* CRM basic
+* müşteri segmentleri
+* çoklu para birimi
+* gelişmiş raporlar
+* 20 kullanıcı
+* 10 şube
+
+Kapalı:
+
+* açık API
+* özel entegrasyon
+* mali müşavir premium
+
+==================================================
+PAKET 5 — KURUMSAL
+==================
+
+Fiyat:
+₺9.999+ / ay
+
+Büyüme +
+
+* public API
+* webhook
+* özel entegrasyon
+* Logo / Mikro / Paraşüt bağlantıları
+* mali müşavir paneli
+* limitsiz kullanıcı
+* limitsiz şube
+* öncelikli destek
+* account manager
+* özel onboarding
+
+==================================================
+EK MODÜLLER (ADDON)
+===================
+
+Üretim / BOM → +₺1.500
+Ek kullanıcı paketi → +₺300 / 5 kullanıcı
+Ek şube paketi → +₺500 / 5 şube
+AI CFO → +₺1.500
+Kargo Merkezi → +₺750
+Supplier Network Premium → +₺2.000
+
+==================================================
+ROL / PERMISSION MODEL
+======================
+
+Yeni Yapılar:
+
+plans
+plan_features
+tenant_subscriptions
+feature_flags
+billing_events
+
+tenant_users
+roles
+
+==================================================
+TENANT PLAN ROLLERİ
+===================
+
+inventory_plan
+trade_plan
+business_plan
+growth_plan
+enterprise_plan
+trial_plan
+expired_plan
+
+==================================================
+OTOMATİK AKIŞ
+=============
+
+Yeni kullanıcı kayıt olur:
+
+1. tenant oluştur
+2. subscription = TRIAL
+3. 30 gün full access
+4. plan_expire_at yaz
+
+30 gün sonunda cron:
+
+if ödeme yoksa:
+
+subscription = expired_plan
+
+Yetkiler:
+
+* giriş var
+* veriler görünür
+* işlem yapılamaz
+* upgrade popup çıkar
+
+Ödeme yaparsa:
+
+subscription = seçilen plan
+
+Feature flags otomatik güncellenir.
+
+==================================================
+FEATURE FLAG ÖRNEKLERİ
+======================
+
+inventory.core
+sales.pos
+sales.invoices
+finance.expenses
+finance.banking
+hr.staff
+hr.payroll
+assets.fixed
+ocr.receipts
+marketplace.basic
+marketplace.pro
+api.public
+integrations.accounting
+production.bom
+loyalty.points
+
+==================================================
+MIDDLEWARE MANTIĞI
+==================
+
+Her route öncesi kontrol:
+
+requireFeature("finance.expenses")
+
+Yoksa:
+
+403 + upgrade modal
+
+==================================================
+ADMIN PANEL
+===========
+
+/admin/billing
+
+* tenant listesi
+* planı değiştir
+* trial uzat
+* manuel ödeme işaretle
+* fatura geçmişi
+* MRR ekranı
+* iptal edenler
+* churn raporu
+
+==================================================
+FRONTEND SATIŞ SAYFASI
+======================
+
+/pricing
+
+kartlar:
+
+ENVANTER
+TİCARET (Önerilen)
+İŞLETME
+BÜYÜME
+KURUMSAL
+
+CTA:
+
+30 Gün Ücretsiz Dene
+
+==================================================
+UPGRADE AKIŞI
+=============
+
+Kullanıcı kapalı modüle tıklar:
+
+“Bu modül Büyüme Paketinde mevcut.”
+
+[Paketi Yükselt]
+
+Tek tıkla ödeme ekranı.
+
+==================================================
+TESTLER
+=======
+
+1. trial tenant full access
+2. 31. gün kapanıyor mu
+3. upgrade sonrası modül açılıyor mu
+4. downgrade sonrası limitler korunuyor mu
+5. feature middleware çalışıyor mu
+6. kullanıcı limitleri çalışıyor mu
+7. şube limitleri çalışıyor mu
+
+==================================================
+DEFINITION OF DONE
+==================
+
+* ürün satılabilir hale gelir
+* paketler otomatik çalışır
+* modüller plana göre açılır
+* trial sistemi işler
+* upgrade tek tık olur
+* gelir modeli hazır olur
+
+==================================================
+EK TAVSİYE
+==========
+
+İlk 50 müşteri için kurucu fiyatı:
+
+Envanter → ₺699
+Ticaret → ₺1.490
+İşletme → ₺2.490
+
+==================================================
+NET HEDEF
+=========
+
+Ürün artık sadece yazılım değil.
+
+Abonelik motoruna dönüşür.

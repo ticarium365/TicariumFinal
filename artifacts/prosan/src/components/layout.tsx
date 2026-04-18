@@ -146,6 +146,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/admin/companies", label: "Firma Yönetimi", icon: Building2, roles: ["super_admin"] },
     { href: "/admin/payments", label: "Ödeme Bildirimleri", icon: CreditCard, roles: ["super_admin"] },
     { href: "/admin/platform-settings", label: "Platform Ayarları", icon: Wrench, roles: ["super_admin"] },
+    { href: "/admin/billing", label: "Abonelik Yönetimi", icon: CreditCard, roles: ["super_admin"] },
+    { href: "/pricing", label: "Paketler & Fiyatlar", icon: Tag, roles: ["admin", "staff", "viewer", "super_admin"] },
   ];
 
   const filteredNav = navItems.filter(item => user && item.roles.includes(user.role));

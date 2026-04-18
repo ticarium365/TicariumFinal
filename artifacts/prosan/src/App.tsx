@@ -71,6 +71,11 @@ import CatalogManagePage from "@/pages/b2b/catalog-manage";
 import ChannelsListPage from "@/pages/channels/channels-list";
 import ChannelDetailPage from "@/pages/channels/channel-detail";
 import ChannelsBulkPage from "@/pages/channels/channels-bulk";
+import PricingPage from "@/pages/pricing";
+import AdminBillingPage from "@/pages/admin/billing";
+import { UpgradeModal, installFeatureLockInterceptor } from "@/components/upgrade-modal";
+
+installFeatureLockInterceptor();
 
 const queryClient = new QueryClient();
 
@@ -364,6 +369,14 @@ function AuthenticatedRouter() {
           {() => <ProtectedRoute component={PlatformSettings} roles={["super_admin"]} />}
         </Route>
 
+        <Route path="/admin/billing">
+          {() => <ProtectedRoute component={AdminBillingPage} roles={["super_admin"]} />}
+        </Route>
+
+        <Route path="/pricing">
+          {() => <ProtectedRoute component={PricingPage} />}
+        </Route>
+
         <Route path="/onboarding">
           {() => <ProtectedRoute component={Onboarding} roles={["admin"]} skipOnboardingCheck noLayout />}
         </Route>
@@ -388,6 +401,7 @@ function App() {
             </Switch>
           </WouterRouter>
           <Toaster />
+          <UpgradeModal />
         </CompanyProvider>
       </TooltipProvider>
     </QueryClientProvider>
