@@ -1,0 +1,180 @@
+1. Ana Ürün Mimarisi Yeniden Düzenleme
+Modülleri 6 ana başlığa düşür
+
+Şu an çok fazla menü var. Kullanıcı yorulur.
+
+Yeni Menü Yapısı:
+1. Ana Panel
+Genel durum
+bugün satış
+kasa
+kritik stok
+bekleyen işler
+2. Satış
+satış ekranı
+POS
+müşteriler
+teklifler
+siparişler
+3. Ürün & Stok
+ürünler
+stok giriş
+stok sayım
+barkod
+etiket
+4. Finans
+banka
+giderler
+cari hesap
+karlılık
+tahsilatlar
+5. Online Satış
+pazaryeri
+e ticaret sitesi
+kampanya
+reklam bütçesi
+6. Yönetim
+personel
+ayarlar
+kullanıcılar
+abonelik
+destek
+2. Hızlı İşlem Sistemi
+
+Her sayfada üstte:
+
+Hızlı İşlem Butonu (+)
+
+Açılınca:
+
+ürün ekle
+satış yap
+müşteri ekle
+gider gir
+fatura kes
+stok gir
+
+Bu çok önemli.
+
+3. Bildirim Merkezi
+
+Akıllı uyarılar:
+
+stok bitiyor
+zararına satış var
+tahsilat gecikti
+pazaryerinde fiyat düşük kaldı
+bugün satış düştü
+yeni sipariş geldi
+4. Tek Arama Kutusu (Global Search)
+
+Üstte yazınca her şeyi bulsun:
+
+ürün
+müşteri
+sipariş
+fatura
+cari
+personel
+
+Google gibi.
+
+5. Karlılık Motoru Basitleştirme
+
+Şu verilerden hesap:
+
+satış fiyatı
+alış fiyatı
+komisyon
+kargo
+kira payı
+maaş payı
+reklam payı
+
+Göster:
+
+Bu üründen gerçekten kazanç:
+
++220 TL
+
+Fiyatı 3 kez hızlı satsaydın:
+
++480 TL
+
+Bu senin altın modülün.
+
+6. Onboarding Sistemi
+
+Yeni müşteri girince:
+
+5 adım kurulum sihirbazı
+
+1 firma bilgisi
+2 ürün yükle
+3 satış fiyatı belirle
+4 banka bağla
+5 satışa başla
+
+7. Raporları Azalt, Netleştir
+
+20 rapor değil:
+
+bugün durum
+bu ay durum
+en çok kazandıran ürün
+zarar eden ürün
+tahsilat listesi
+stok risk listesi
+8. Mobil Öncelikli Kritik Sayfalar
+
+Tam mobil app şart değil şimdi.
+
+Ama responsive olsun:
+
+dashboard
+satış
+stok
+müşteri
+bildirim
+9. Paketleme Sistemi
+
+Role göre otomatik menü açılsın.
+
+Lite
+
+Satış + ürün
+
+Pro
+
+Finans + cari + rapor
+
+Growth
+
+Pazaryeri + e ticaret
+
+Enterprise
+
+Hepsi
+
+10. Demo Satış Modu
+
+Fake demo şirketi:
+
+“Bugün 128.000 ciro yaptınız”
+
+Müşteri etkilenir.
+
+Sprint Çıktısı
+
+Bu sprint sonunda ürün:
+
+daha anlaşılır
+daha hızlı
+daha premium
+daha kolay satılır
+daha kolay öğrenilir
+daha çok bağımlılık yaratır
+Sana Dürüst Fikir
+
+Yeni özellik eklemeyi azalt.
+Şimdi ürünü cilalama dönemi.
