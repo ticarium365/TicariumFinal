@@ -51,6 +51,12 @@ The backend is powered by Express 5. PostgreSQL is the chosen database, managed 
 - Frontend `/ice-aktarim` 4 tab (Müşteriler/Tedarikçiler/Ürünler/Giderler), sihirbaz akışı: Örnek CSV indir → dosya seç → Önizle → kolon eşleşmesini onayla → Ön Kontrol (dryRun) → İçe Aktar. Hata özetleri satır numarasıyla gösterilir.
 - Sidebar'da "Veri İçe Aktarımı" (Upload ikonu, admin/staff). Geçiş köprüsü: Paraşüt/Bizim Hesap/Logo/Mikro/Excel'den taşıma.
 
+### Hızlı Satış (POS Terminal) — Sprint 74
+- `/pos` sayfası: barkod tarayıcı odaklı (autofocus, klavye girişi yakalar), ürün ızgarası, sağ kenarda canlı sepet.
+- Akış: Barkod tara veya ürün kartına tıkla → sepete eklenir → adet +/- ve fiyat düzenleme → müşteri seç (opsiyonel, varsayılan "Geçici") → ödeme (Nakit/Kart/Havale/Veresiye) → İndirim (₺) → "Satışı Tamamla" tek tuşla mevcut `/api/sales` endpoint'ine satır satır POST.
+- Stok kontrolü ön yüzde, indirim pro-rata olarak satırlara dağıtılır. Veresiye için müşteri zorunlu. Başarı dialog'u toplam tutarı gösterir, OK ile sepet temizlenir ve barkod input tekrar odaklanır.
+- Sidebar'da "Hızlı Satış (POS)" (ScanLine ikonu, admin/staff). Mobil/tablet/POS donanımına uygun responsive grid; lg+ ekranda sepet sticky.
+
 ## External Dependencies
 
 - **PostgreSQL**: Primary database.

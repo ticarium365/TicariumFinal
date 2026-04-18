@@ -52,6 +52,7 @@ import ProfitPage from "@/pages/profit/index";
 import MuhasebeciPage from "@/pages/muhasebeci/index";
 import BudgetsPage from "@/pages/butce/index";
 import ImportPage from "@/pages/ice-aktarim/index";
+import POSPage from "@/pages/sales/pos";
 import NotificationSettingsPage from "@/pages/settings/notifications";
 import PersonnelPage from "@/pages/personnel";
 import CampaignsPage from "@/pages/campaigns";
@@ -260,6 +261,9 @@ function AuthenticatedRouter() {
         </Route>
         <Route path="/ice-aktarim">
           {() => <ProtectedRoute component={ImportPage} roles={["admin", "staff", "super_admin"]} />}
+        </Route>
+        <Route path="/pos">
+          {() => <ProtectedRoute component={POSPage} roles={["admin", "staff", "super_admin"]} />}
         </Route>
         <Route path="/finance-dashboard">
           {() => <ProtectedRoute component={FinanceDashboardPage} roles={["admin", "staff", "viewer"]} />}
