@@ -52,7 +52,14 @@ The backend is powered by Express 5, with PostgreSQL as the database, managed by
 
 **API v1 mirror**: Tüm router'lar (healthz, kvkk, webhook, tenant routes) `/api` ve `/api/v1` altında çift mount — geriye dönük uyumluluk + versioning hazır.
 
-**RLS scripti** (`scripts/apply-rls.ts`): 40+ tenant tablosuna `tenant_isolation` policy. **Manuel çalıştırma** (henüz aktif değil — `rlsContextMiddleware` ile transaction-scope `SET LOCAL app.current_company_id` gerektirir, opt-in).
+**RLS scripti** (`scripts/apply-rls.ts`): 33 tenant tablosuna `tenant_isolation` policy uygulandı (Nisan 2026 ✓). `rlsContextMiddleware` (no-op) + `withTenantContext(companyId, fn)` + `withRlsBypass(fn)` helper'ları (`middlewares/rls-context.ts`). **Aktivasyon**: route handler'lar `db.transaction` içinde `SET LOCAL app.current_company_id` ile sarmalandığında devreye girer; şu an app-level WHERE companyId filter primary defense.
+
+**Frontend KVKK & Admin** (Prosan, Nisan 2026 ✓):
+- `components/cookie-consent-banner.tsx`: 3-tier (zorunlu/analitik/pazarlama) banner, localStorage v1 + `POST /api/kvkk/consent` her tip için. App.tsx root'ta mount.
+- `pages/kvkk.tsx` (`/kvkk`): KVKK aydınlatma metni v1.2026.04 — veri sorumlusu, işlenen veriler, hukuki sebep, aktarım, saklama, KVKK m.11 hakları, çerez politikası, güvenlik (TLS 1.2+, AES-256-GCM, RLS).
+- `pages/admin/runtime-flags.tsx` (`/admin/runtime-flags`, super_admin): Bayrak CRUD UI, key + companyId scope + rolloutPct + enabled toggle. `featureFlagsRuntimeRouter` `/api/admin` altında mount edildi.
+
+**Idempotency mount durumu** (Nisan 2026 ✓): `routes/sales.ts` (POST /, POST /:id/return), `routes/purchases.ts` (POST /), `routes/marketplace.ts` (POST /orders/:id/convert-to-sale) — kritik finansal yan etki yapan POST'lar `idempotencyMiddleware` ile sarmalandı.
 
 **Build dış-bağımlılıklar**: `@sentry/node, @sentry/core/utils/types, import-in-the-middle, require-in-the-middle` build.mjs `external` listesine eklendi (esbuild bundling otomatik atlasın diye).
 

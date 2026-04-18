@@ -94,6 +94,9 @@ import GercekKarDashboard from "@/pages/gercek-kar/dashboard";
 import GercekKarAyarlar from "@/pages/gercek-kar/ayarlar";
 import GercekKarOneriler from "@/pages/gercek-kar/oneriler";
 import { UpgradeModal, installFeatureLockInterceptor } from "@/components/upgrade-modal";
+import CookieConsentBanner from "@/components/cookie-consent-banner";
+import KvkkPage from "@/pages/kvkk";
+import RuntimeFlagsAdminPage from "@/pages/admin/runtime-flags";
 
 installFeatureLockInterceptor();
 
@@ -161,6 +164,7 @@ function AuthenticatedRouter() {
         <Route path="/amacimiz" component={AmacimizPage} />
         <Route path="/paketler" component={PaketlerPage} />
         <Route path="/iletisim" component={IletisimPage} />
+        <Route path="/kvkk" component={KvkkPage} />
 
         <Route path="/">
           {() => {
@@ -432,6 +436,10 @@ function AuthenticatedRouter() {
           {() => <ProtectedRoute component={AdminBillingPage} roles={["super_admin"]} />}
         </Route>
 
+        <Route path="/admin/runtime-flags">
+          {() => <ProtectedRoute component={RuntimeFlagsAdminPage} roles={["super_admin"]} />}
+        </Route>
+
         <Route path="/pricing">
           {() => <ProtectedRoute component={PricingPage} />}
         </Route>
@@ -472,6 +480,7 @@ function App() {
           </WouterRouter>
           <Toaster />
           <UpgradeModal />
+          <CookieConsentBanner />
         </CompanyProvider>
       </TooltipProvider>
     </QueryClientProvider>

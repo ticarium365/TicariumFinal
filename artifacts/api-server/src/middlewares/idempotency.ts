@@ -17,39 +17,66 @@ export async function idempotencyMiddleware(req: Request, res: Response, next: N
   if (!cid) return next();
 
   try {
-    const [existing] = await db
-      .select()
-      .from(idempotencyKeysTable)
-      .where(and(eq(idempotencyKeysTable.key, key), eq(idempotencyKeysTable.companyId, cid)))
-      .limit(1);
+    // ATOMIC RESERVATION: aynı anda gelen iki request'ten yalnız biri INSERT'i kazanır.
+    // Diğeri unique violation alır → mevcut kaydı okur, replay/conflict döner.
+    const now = new Date();
+    const reserved = await db
+      .insert(idempotencyKeysTable)
+      .values({
+        key,
+        companyId: cid,
+        method: req.method,
+        path: req.path,
+        statusCode: 0, // 0 = işlem devam ediyor
+        responseBody: {},
+        expiresAt: new Date(now.getTime() + TTL_MS),
+      })
+      .onConflictDoNothing({ target: [idempotencyKeysTable.key, idempotencyKeysTable.companyId] })
+      .returning();
 
-    if (existing) {
-      if (existing.expiresAt < new Date()) {
+    if (reserved.length === 0) {
+      // Anahtar zaten var — mevcut durumu oku
+      const [existing] = await db.select().from(idempotencyKeysTable)
+        .where(and(eq(idempotencyKeysTable.key, key), eq(idempotencyKeysTable.companyId, cid)))
+        .limit(1);
+
+      if (!existing) return next(); // race ile silindi, devam
+
+      // Süresi geçmişse temizle ve devam (yeni reservation için recursion yerine basit retry)
+      if (existing.expiresAt < now) {
         await db.delete(idempotencyKeysTable).where(and(
           eq(idempotencyKeysTable.key, key), eq(idempotencyKeysTable.companyId, cid)
         ));
-      } else {
-        if (existing.method !== req.method || existing.path !== req.path) {
-          return res.status(409).json({ error: "Conflict", message: "Idempotency-Key farklı bir istek için kullanılıyor." });
-        }
-        res.setHeader("Idempotent-Replayed", "true");
-        return res.status(existing.statusCode).json(existing.responseBody);
+        return idempotencyMiddleware(req, res, next);
       }
+
+      if (existing.method !== req.method || existing.path !== req.path) {
+        return res.status(409).json({ error: "Conflict", message: "Idempotency-Key farklı bir istek için kullanılıyor." });
+      }
+
+      if (existing.statusCode === 0) {
+        // Eşzamanlı işlem devam ediyor — duplicate yan etki çıkmasın
+        return res.status(409).json({ error: "Conflict", message: "Aynı Idempotency-Key ile işlem hâlâ devam ediyor. Birkaç saniye sonra tekrar deneyin." });
+      }
+
+      res.setHeader("Idempotent-Replayed", "true");
+      return res.status(existing.statusCode).json(existing.responseBody);
     }
 
+    // Reservation kazanıldı — handler çalıştır, sonra kaydı tamamla
     const origJson = res.json.bind(res);
     res.json = (body: any) => {
       const status = res.statusCode || 200;
       if (status < 500) {
-        db.insert(idempotencyKeysTable).values({
-          key,
-          companyId: cid,
-          method: req.method,
-          path: req.path,
-          statusCode: status,
-          responseBody: body ?? {},
-          expiresAt: new Date(Date.now() + TTL_MS),
-        }).catch((e) => logger.warn({ err: e }, "idempotency_save_failed"));
+        db.update(idempotencyKeysTable)
+          .set({ statusCode: status, responseBody: body ?? {} })
+          .where(and(eq(idempotencyKeysTable.key, key), eq(idempotencyKeysTable.companyId, cid)))
+          .catch((e) => logger.warn({ err: e }, "idempotency_save_failed"));
+      } else {
+        // 5xx — reservation'ı sil ki client retry edebilsin
+        db.delete(idempotencyKeysTable).where(and(
+          eq(idempotencyKeysTable.key, key), eq(idempotencyKeysTable.companyId, cid)
+        )).catch((e) => logger.warn({ err: e }, "idempotency_cleanup_failed"));
       }
       return origJson(body);
     };

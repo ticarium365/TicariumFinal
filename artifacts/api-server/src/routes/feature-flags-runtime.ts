@@ -4,7 +4,8 @@ import { listRuntimeFlags, upsertRuntimeFlag, deleteRuntimeFlag, isRuntimeFlagEn
 
 const router: IRouter = Router();
 
-router.get("/runtime-flags", requireAuth, requireRole(["admin", "super_admin"]), async (_req, res) => {
+router.get("/runtime-flags", requireAuth, requireRole(["super_admin"]), async (_req, res) => {
+  // Yalnız super_admin tüm flag listesini görebilir (cross-tenant veri)
   const flags = await listRuntimeFlags();
   res.json({ flags });
 });

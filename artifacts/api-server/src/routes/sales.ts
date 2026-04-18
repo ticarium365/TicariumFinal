@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { db, salesTable, productsTable, stockMovementsTable, customersTable, customerTransactionsTable } from "@workspace/db";
 import { eq, and, gte, lte, desc, count, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { idempotencyMiddleware } from "../middlewares/idempotency.js";
 import { Errors } from "../lib/errors.js";
 import { audit } from "../lib/audit.js";
 
@@ -117,7 +118,7 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-router.post("/", requireAuth, async (req: Request, res: Response) => {
+router.post("/", requireAuth, idempotencyMiddleware, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
     const { productId, quantity, unitPrice, paymentMethod, customerId } = req.body;
@@ -226,7 +227,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-router.post("/:id/return", requireAuth, requireRole(["admin", "staff"]), async (req: Request, res: Response) => {
+router.post("/:id/return", requireAuth, requireRole(["admin", "staff"]), idempotencyMiddleware, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
     const saleId = parseInt(req.params.id);

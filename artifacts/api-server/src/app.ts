@@ -13,6 +13,7 @@ import clientErrorsRouter from "./routes/client-errors.js";
 import contactRouter from "./routes/contact.js";
 import healthzRouter from "./routes/healthz.js";
 import kvkkRouter from "./routes/kvkk.js";
+import featureFlagsRuntimeRouter from "./routes/feature-flags-runtime.js";
 import webhookReceiversRouter from "./routes/webhook-receivers.js";
 import { logger } from "./lib/logger.js";
 import { tenantMiddleware } from "./middlewares/tenant.js";
@@ -194,6 +195,11 @@ app.use("/api", tenantMiddleware);
 app.use("/api/v1", tenantMiddleware);
 app.use("/api", router);
 app.use("/api/v1", router);
+
+// Admin runtime feature flags — tenant middleware'den sonra mount: requireAuth + requireRole
+// içeride session ve req.companyId'ye ihtiyaç duyar.
+app.use("/api/admin", featureFlagsRuntimeRouter);
+app.use("/api/v1/admin", featureFlagsRuntimeRouter);
 
 // ─── Global hata yakalayıcı (canlı öncesi) ───────────────────────────────────
 // Bilinmeyen hatalar burada yakalanır; stack trace prod'da loglanır, kullanıcıya gönderilmez.

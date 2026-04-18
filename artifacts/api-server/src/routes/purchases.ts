@@ -5,6 +5,7 @@ import {
 } from "@workspace/db";
 import { eq, and, desc, count, sql, gte, lte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { idempotencyMiddleware } from "../middlewares/idempotency.js";
 import { Errors } from "../lib/errors.js";
 import { audit } from "../lib/audit.js";
 
@@ -89,7 +90,7 @@ router.get("/:id", requireAuth, async (req: Request, res: Response) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // ALIŞ FATURASI OLUŞTURMA
 // ─────────────────────────────────────────────────────────────────────────────
-router.post("/", requireAuth, requireRole(["admin", "staff"]), async (req: Request, res: Response) => {
+router.post("/", requireAuth, requireRole(["admin", "staff"]), idempotencyMiddleware, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
     const { supplierId, invoiceNo, invoiceDate, items, taxAmount, discountAmount, note } = req.body;

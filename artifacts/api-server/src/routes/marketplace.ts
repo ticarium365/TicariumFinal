@@ -6,6 +6,7 @@ import {
 } from "@workspace/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { idempotencyMiddleware } from "../middlewares/idempotency.js";
 import { getProviderForAccount, MP_META, MP_REGISTRY, logSync } from "../services/marketplace/factory.js";
 import { applyPricingRule, applyStockRule } from "../services/marketplace/types.js";
 import { encryptSecrets } from "../lib/secret-crypto.js";
@@ -256,7 +257,7 @@ router.get("/orders/:id", async (req, res) => {
  * Item product matching: önce product_channel_mappings (channelSku/externalProductId),
  * fallback olarak products tablosunda barcode/productCode.
  */
-router.post("/orders/:id/convert-to-sale", requireWriter, async (req, res) => {
+router.post("/orders/:id/convert-to-sale", requireWriter, idempotencyMiddleware, async (req, res) => {
   const companyId = req.companyId!;
   const orderId = Number(req.params.id);
   const userId = req.session.user?.id;

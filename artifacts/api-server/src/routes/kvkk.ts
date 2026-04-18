@@ -9,30 +9,32 @@ const router: IRouter = Router();
 const KVKK_CONSENT_VERSION = "v1.2026.04";
 
 router.post("/consent", async (req: Request, res: Response) => {
-  const { consentType, email, userId, accepted } = req.body || {};
+  const { consentType, email, accepted } = req.body || {};
   if (!consentType || typeof accepted !== "boolean") {
     return res.status(400).json({ error: "consentType ve accepted zorunlu" });
   }
+  // Güvenlik: userId asla body'den alınmaz — yalnız oturumdan
+  const sessionUserId = (req as any).session?.user?.id ?? (req as any).user?.id ?? null;
   const cid = (req as any).companyId ?? null;
   await db.insert(kvkkConsentsTable).values({
     consentType,
     version: KVKK_CONSENT_VERSION,
     email: email ?? null,
-    userId: userId ?? null,
+    userId: sessionUserId,
     companyId: cid,
     ipAddress: (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || null,
     userAgent: req.headers["user-agent"] || null,
     withdrawnAt: accepted ? null : new Date(),
   });
-  if (userId && consentType === "kvkk_acceptance" && accepted) {
+  if (sessionUserId && consentType === "kvkk_acceptance" && accepted) {
     await db.update(usersTable)
       .set({ kvkkConsentAt: new Date(), kvkkConsentVersion: KVKK_CONSENT_VERSION })
-      .where(eq(usersTable.id, userId));
+      .where(eq(usersTable.id, sessionUserId));
   }
-  if (userId && consentType === "marketing" && accepted) {
+  if (sessionUserId && consentType === "marketing" && accepted) {
     await db.update(usersTable)
       .set({ marketingConsentAt: new Date() })
-      .where(eq(usersTable.id, userId));
+      .where(eq(usersTable.id, sessionUserId));
   }
   res.status(201).json({ ok: true, version: KVKK_CONSENT_VERSION });
 });
