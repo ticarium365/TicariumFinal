@@ -155,7 +155,7 @@ export default function SubscriptionPage() {
                     {activePlan && planIcon(activePlan.slug)}
                     <div>
                       <p className="font-bold text-lg">{activePlan?.name ?? "Deneme"}</p>
-                      <p className="text-sm text-muted-foreground">{activePlan?.description ?? "14 gün ücretsiz deneme"}</p>
+                      <p className="text-sm text-muted-foreground">{activePlan?.description ?? "21 gün ücretsiz deneme"}</p>
                     </div>
                   </div>
                   <div className="text-right">

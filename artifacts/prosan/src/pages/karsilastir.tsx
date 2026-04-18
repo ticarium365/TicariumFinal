@@ -9,22 +9,22 @@ import {
 
 type Cell = true | false | "partial";
 
-const features: { name: string; ticarium365: Cell; bizim: Cell; parasut: Cell; logo: Cell; mikro: Cell; nebim: Cell; note?: string }[] = [
-  { name: "Bulut tabanlı (kurulum yok)", ticarium365: true, bizim: true, parasut: true, logo: true, mikro: "partial", nebim: "partial" },
-  { name: "Mobil uygulama (iOS + Android)", ticarium365: true, bizim: false, parasut: true, logo: "partial", mikro: "partial", nebim: "partial" },
-  { name: "Barkod okutma + hızlı satış (POS)", ticarium365: true, bizim: false, parasut: false, logo: "partial", mikro: true, nebim: true },
-  { name: "Çok şubeli stok / fiyat yönetimi", ticarium365: true, bizim: false, parasut: "partial", logo: true, mikro: true, nebim: true },
-  { name: "e-Fatura / e-Arşiv (sağlayıcı seçilebilir)", ticarium365: true, bizim: false, parasut: true, logo: true, mikro: true, nebim: true },
-  { name: "Pazaryeri entegrasyonu (Trendyol, HB, N11, vd.)", ticarium365: true, bizim: false, parasut: "partial", logo: false, mikro: false, nebim: "partial", note: "11 sağlayıcı, eklenti yok" },
-  { name: "Fiş / Fatura OCR (yapay zeka ile otomatik veri)", ticarium365: true, bizim: false, parasut: "partial", logo: false, mikro: false, nebim: false },
-  { name: "Net Kâr Merkezi (gerçek zamanlı kâr)", ticarium365: true, bizim: false, parasut: "partial", logo: false, mikro: "partial", nebim: false },
-  { name: "Demirbaş & amortisman takibi", ticarium365: true, bizim: false, parasut: true, logo: true, mikro: true, nebim: true },
-  { name: "Personel maaş & SGK gider takibi", ticarium365: true, bizim: false, parasut: true, logo: true, mikro: true, nebim: true },
-  { name: "B2B Ağ / Teklif (RFQ)", ticarium365: true, bizim: false, parasut: false, logo: false, mikro: false, nebim: false },
-  { name: "Açık API + webhook", ticarium365: true, bizim: false, parasut: true, logo: "partial", mikro: false, nebim: false },
-  { name: "Çoklu firma (subdomain)", ticarium365: true, bizim: false, parasut: "partial", logo: "partial", mikro: false, nebim: false },
-  { name: "Türkçe arayüz + Türkçe destek", ticarium365: true, bizim: true, parasut: true, logo: true, mikro: true, nebim: true },
-  { name: "Şeffaf fiyat (gizli kalem yok)", ticarium365: true, bizim: true, parasut: true, logo: false, mikro: false, nebim: false },
+// Jenerik rakip kategorileri — belirli marka adı yok.
+const features: { name: string; ticarium365: Cell; onMuhasebe: Cell; klasikErp: Cell; mobilPos: Cell; note?: string }[] = [
+  { name: "Bulut tabanlı (kurulum yok)", ticarium365: true, onMuhasebe: true, klasikErp: "partial", mobilPos: true },
+  { name: "Mobil uygulama (iOS + Android)", ticarium365: true, onMuhasebe: "partial", klasikErp: "partial", mobilPos: true },
+  { name: "Barkod okutma + hızlı satış (POS)", ticarium365: true, onMuhasebe: false, klasikErp: true, mobilPos: true },
+  { name: "Çok şubeli stok / fiyat yönetimi", ticarium365: true, onMuhasebe: "partial", klasikErp: true, mobilPos: "partial" },
+  { name: "e-Fatura / e-Arşiv (sağlayıcı seçilebilir)", ticarium365: true, onMuhasebe: true, klasikErp: true, mobilPos: "partial" },
+  { name: "Pazaryeri entegrasyonu (Trendyol, HB, N11, vd.)", ticarium365: true, onMuhasebe: "partial", klasikErp: false, mobilPos: "partial", note: "11 sağlayıcı, eklenti yok" },
+  { name: "Fiş / Fatura OCR (yapay zeka ile otomatik veri)", ticarium365: true, onMuhasebe: "partial", klasikErp: false, mobilPos: false },
+  { name: "Net Kâr Merkezi (gerçek zamanlı kâr)", ticarium365: true, onMuhasebe: "partial", klasikErp: "partial", mobilPos: false },
+  { name: "Demirbaş & amortisman takibi", ticarium365: true, onMuhasebe: true, klasikErp: true, mobilPos: false },
+  { name: "Personel maaş & SGK gider takibi", ticarium365: true, onMuhasebe: true, klasikErp: true, mobilPos: false },
+  { name: "B2B Ağ / Teklif (RFQ)", ticarium365: true, onMuhasebe: false, klasikErp: false, mobilPos: false },
+  { name: "Açık API + webhook", ticarium365: true, onMuhasebe: true, klasikErp: "partial", mobilPos: false },
+  { name: "Çoklu firma (subdomain)", ticarium365: true, onMuhasebe: "partial", klasikErp: false, mobilPos: false },
+  { name: "Türkçe arayüz + Türkçe destek", ticarium365: true, onMuhasebe: true, klasikErp: true, mobilPos: true },
 ];
 
 function CellIcon({ v }: { v: Cell }) {
@@ -33,59 +33,16 @@ function CellIcon({ v }: { v: Cell }) {
   return <Minus className="h-5 w-5 text-amber-500 mx-auto" data-testid="cell-partial" />;
 }
 
-const competitors = [
-  {
-    key: "bizim",
-    name: "Bizim Hesap",
-    pkg: "Tek paket (ücretsiz / sınırlı)",
-    price: "₺0 – ₺199/ay",
-    strengths: ["Ücretsiz başlangıç", "Çok basit arayüz", "Banka entegrasyonu"],
-    weaknesses: ["Stok / barkod yetersiz", "Pazaryeri yok", "Çok şubeli senaryo desteklenmiyor", "Mobil uygulama yok", "Raporlar yüzeysel"],
-  },
-  {
-    key: "parasut",
-    name: "Paraşüt",
-    pkg: "Başlangıç / Şirket / Şirket Plus",
-    price: "₺499 – ₺2.499/ay",
-    strengths: ["Güçlü ön muhasebe", "Mali müşavir ekosistemi", "Açık API", "e-Fatura olgun"],
-    weaknesses: ["Pazaryeri sync sınırlı / 3. parti", "Barkod & POS akışı zayıf", "Çok şubeli gerçek zamanlı stok kısıtlı", "Fiş OCR sınırlı"],
-  },
-  {
-    key: "logo",
-    name: "Logo İşbaşı",
-    pkg: "Mini / Standart / Plus",
-    price: "₺599 – ₺2.999/ay + bayi",
-    strengths: ["Logo ekosistemi", "Muhasebeci tanıdık", "Güçlü resmi raporlar"],
-    weaknesses: ["Eski arayüz", "Modüler ek ücretler", "Mobil deneyim zayıf", "Pazaryeri yerleşik değil", "Bayi üzerinden satış / kurulum"],
-  },
-  {
-    key: "mikro",
-    name: "Mikro Jump",
-    pkg: "Başlangıç / Plus / Premium",
-    price: "₺799 – ₺3.500/ay + danışmanlık",
-    strengths: ["Perakende / toptan deneyimi", "Stok hareketleri detaylı", "Türkiye'de yaygın"],
-    weaknesses: ["Modern web UX'i değil", "Kurulum / danışman zorunlu hissi", "Pazaryeri eklentileri 3. parti", "Fiyat şeffaf değil"],
-  },
-  {
-    key: "nebim",
-    name: "Nebim küçük çözümler",
-    pkg: "Nebim V3 SMB paketleri",
-    price: "₺2.000+ /ay (proje bazlı)",
-    strengths: ["Moda / perakende dikeyinde güçlü", "Mağaza POS olgun", "Kurumsal referanslar"],
-    weaknesses: ["Genel KOBİ için ağır / pahalı", "Hızlı kuruluma uygun değil", "Self-servis SaaS değil", "Pazaryeri / B2B modülleri ayrı maliyet"],
-  },
-] as const;
-
 const differentiators = [
-  { icon: Boxes, title: "Tek platform, tek fatura", desc: "Stok, barkod, satış, e-fatura, pazaryeri, B2B, finans, kâr — hepsi bir yerde. Eklenti yok, sürpriz yok." },
-  { icon: Store, title: "11 pazaryeri yerleşik", desc: "Trendyol, Hepsiburada, N11, Amazon, Çiçeksepeti, PTT AVM, Shopify, WooCommerce, İdeaSoft, Ticimax — tek yerden senkron." },
-  { icon: Receipt, title: "Fiş OCR (yapay zeka)", desc: "Fişin fotoğrafını çek — tutar, KDV, satıcı, fatura no otomatik girilsin. Defter dolduran rakip tek." },
-  { icon: BarChart3, title: "Net Kâr Merkezi", desc: "Ciro – COGS – gider – maaş – amortisman = net kâr. Anlık. Şubeye göre. Aya göre." },
-  { icon: Smartphone, title: "Mobil-doğal", desc: "iOS + Android uygulamamız her abonelikte dahil. Çırak da depocu da telefondan satar / sayar." },
-  { icon: ScanLine, title: "Barkod / POS akışı KOBİ için", desc: "Bir tarama → satışa dönüştür, stok düşsün, e-fatura kesilsin. 30 saniye. Bizim Hesap / Paraşüt'te yok." },
-  { icon: Cloud, title: "Sağlayıcı bağımsız e-Fatura", desc: "Paraşüt, QNB, Foriba, Logo, Mikro — istediğin sağlayıcıyı bağla. Kilit altında değilsin." },
+  { icon: Boxes, title: "Tek platform, tek fatura", desc: "Stok, barkod, satış, e-fatura, pazaryeri, B2B, finans, kâr — hepsi bir yerde. Eklenti yok, sürpriz kalem yok." },
+  { icon: Store, title: "11 pazaryeri yerleşik", desc: "Trendyol, Hepsiburada, N11, Amazon, Çiçeksepeti, PTT AVM, Shopify, WooCommerce, İdeaSoft, Ticimax — tek panelden senkron." },
+  { icon: Receipt, title: "Fiş OCR (yapay zeka)", desc: "Fişin fotoğrafını çek — tutar, KDV, satıcı, fatura no otomatik girilsin. Defter dolduran sürtünmeyi sıfırlar." },
+  { icon: BarChart3, title: "Net Kâr Merkezi", desc: "Ciro − COGS − gider − maaş − amortisman = net kâr. Anlık. Şubeye göre. Aya göre. Ürüne göre." },
+  { icon: Smartphone, title: "Mobil-doğal", desc: "iOS + Android uygulamamız her abonelikte dahil. Çırak da depocu da telefondan satar, sayar, kontrol eder." },
+  { icon: ScanLine, title: "KOBİ için barkod / POS akışı", desc: "Bir tarama → satışa dönüştür, stok düşsün, e-fatura kesilsin. 30 saniye, tek ekran." },
+  { icon: Cloud, title: "Sağlayıcı bağımsız e-Fatura", desc: "Bir entegratöre kilitli değilsin. İstediğin sağlayıcıyı bağla, istediğinde değiştir." },
   { icon: Zap, title: "Sıfır kurulum, dakikalarda canlı", desc: "Subdomain'ini al, ekibini davet et, satışa başla. Bayi / danışmanlık dayatması yok." },
-  { icon: ShieldCheck, title: "Çok kiracılı izolasyon", desc: "Her firmanın verisi ayrı kiracıda. Bankacılık seviyesi izolasyon, GDPR / KVKK uyumlu mimari." },
+  { icon: ShieldCheck, title: "Çok kiracılı izolasyon", desc: "Her firmanın verisi ayrı kiracıda. Bankacılık seviyesi izolasyon, KVKK / GDPR uyumlu mimari." },
 ];
 
 export default function KarsilastirPage() {
@@ -95,16 +52,16 @@ export default function KarsilastirPage() {
       <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center text-primary-foreground font-bold">S</div>
-            <span className="font-bold text-lg">Ticarium365</span>
-            <Badge variant="secondary" className="ml-2 hidden sm:inline-flex">Karşılaştırma</Badge>
+            <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center text-primary-foreground font-bold" style={{ fontFamily: "var(--font-display)" }}>T</div>
+            <span className="font-bold text-lg" style={{ fontFamily: "var(--font-display)" }}>Ticarium365</span>
+            <Badge variant="secondary" className="ml-2 hidden sm:inline-flex">Neden farklıyız?</Badge>
           </div>
           <div className="flex items-center gap-2">
             <Link href="/login">
               <Button variant="ghost" size="sm" data-testid="btn-login">Giriş Yap</Button>
             </Link>
             <Link href="/login">
-              <Button size="sm" data-testid="btn-cta-trial">14 gün ücretsiz</Button>
+              <Button size="sm" data-testid="btn-cta-trial">21 gün ücretsiz</Button>
             </Link>
           </div>
         </div>
@@ -116,18 +73,17 @@ export default function KarsilastirPage() {
           <Sparkles className="h-3 w-3 mr-1" />
           KOBİ ön muhasebesinin ötesinde
         </Badge>
-        <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6 max-w-4xl mx-auto">
-          Bizim Hesap, Paraşüt, Logo İşbaşı,<br />
-          Mikro Jump, Nebim'den <span className="text-primary">neden farklıyız?</span>
+        <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6 max-w-4xl mx-auto" style={{ fontFamily: "var(--font-display)" }}>
+          Diğer alternatiflerden <span className="text-primary">neden farklıyız?</span>
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-          Çoğu rakip ya sadece <strong>ön muhasebe</strong>, ya sadece <strong>perakende</strong>.
-          Ticarium365; satış, stok, e-fatura, pazaryeri ve net kâr — hepsini tek yerden, tek fiyata sunar.
+          Çoğu yazılım ya sadece <strong>ön muhasebe</strong>, ya sadece <strong>perakende</strong>, ya sadece <strong>mobil POS</strong>.
+          Ticarium365 satış, stok, e-fatura, pazaryeri ve net kârı tek panelde, eklentisiz birleştirir.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Link href="/login">
             <Button size="lg" className="gap-2" data-testid="btn-hero-trial">
-              Hemen başla — 14 gün ücretsiz
+              Hemen başla — 21 gün ücretsiz
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
@@ -139,7 +95,10 @@ export default function KarsilastirPage() {
 
       {/* DIFFERENTIATORS */}
       <section className="container mx-auto px-4 py-12">
-        <h2 className="text-3xl font-bold text-center mb-12">9 sebepte Ticarium365 farkı</h2>
+        <h2 className="text-3xl font-bold text-center mb-3" style={{ fontFamily: "var(--font-display)" }}>9 sebepte Ticarium365 farkı</h2>
+        <p className="text-center text-muted-foreground mb-10 max-w-2xl mx-auto">
+          Aşağıdaki 9 kabiliyet, KOBİ'lerin yazılım yığınına ödediği gizli faturayı ortadan kaldırır.
+        </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {differentiators.map((d, i) => (
             <Card key={i} className="border-2 hover:border-primary/50 transition-colors" data-testid={`diff-${i}`}>
@@ -159,11 +118,13 @@ export default function KarsilastirPage() {
         </div>
       </section>
 
-      {/* COMPARISON TABLE */}
+      {/* COMPARISON TABLE — generic categories, no brand names, no prices */}
       <section id="tablo" className="container mx-auto px-4 py-16">
         <div className="text-center mb-10">
-          <h2 className="text-3xl font-bold mb-3">Birebir özellik karşılaştırması</h2>
-          <p className="text-muted-foreground">Yeşil tik tam destek, sarı çizgi sınırlı / eklenti, kırmızı çarpı yok demektir.</p>
+          <h2 className="text-3xl font-bold mb-3" style={{ fontFamily: "var(--font-display)" }}>Yetenek karşılaştırması</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Piyasadaki yazılım kategorilerini bağımsız değerlendirdik. Yeşil tik tam destek, sarı çizgi sınırlı/eklenti, kırmızı çarpı yok demek.
+          </p>
         </div>
         <div className="overflow-x-auto rounded-xl border-2 bg-card">
           <table className="w-full text-sm">
@@ -171,11 +132,9 @@ export default function KarsilastirPage() {
               <tr>
                 <th className="text-left p-4 font-semibold min-w-[280px]">Özellik</th>
                 <th className="p-4 font-bold text-primary bg-primary/5">Ticarium365</th>
-                <th className="p-4 font-medium">Bizim Hesap</th>
-                <th className="p-4 font-medium">Paraşüt</th>
-                <th className="p-4 font-medium">Logo İşbaşı</th>
-                <th className="p-4 font-medium">Mikro Jump</th>
-                <th className="p-4 font-medium">Nebim SMB</th>
+                <th className="p-4 font-medium">Bulut Ön Muhasebe</th>
+                <th className="p-4 font-medium">Klasik ERP / Ticari</th>
+                <th className="p-4 font-medium">Mobil POS Çözümleri</th>
               </tr>
             </thead>
             <tbody>
@@ -186,101 +145,27 @@ export default function KarsilastirPage() {
                     {f.note && <div className="text-xs text-muted-foreground mt-0.5">{f.note}</div>}
                   </td>
                   <td className="p-4 text-center bg-primary/5"><CellIcon v={f.ticarium365} /></td>
-                  <td className="p-4 text-center"><CellIcon v={f.bizim} /></td>
-                  <td className="p-4 text-center"><CellIcon v={f.parasut} /></td>
-                  <td className="p-4 text-center"><CellIcon v={f.logo} /></td>
-                  <td className="p-4 text-center"><CellIcon v={f.mikro} /></td>
-                  <td className="p-4 text-center"><CellIcon v={f.nebim} /></td>
+                  <td className="p-4 text-center"><CellIcon v={f.onMuhasebe} /></td>
+                  <td className="p-4 text-center"><CellIcon v={f.klasikErp} /></td>
+                  <td className="p-4 text-center"><CellIcon v={f.mobilPos} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </section>
-
-      {/* COMPETITOR DEEP-DIVE */}
-      <section className="container mx-auto px-4 py-16">
-        <h2 className="text-3xl font-bold text-center mb-3">Rakipler — güçlü ve eksik yönler</h2>
-        <p className="text-center text-muted-foreground mb-10 max-w-2xl mx-auto">
-          Hangi alternatife baktıysan, Ticarium365'in onu nerede tamamladığını görüyorsun.
+        <p className="text-xs text-center text-muted-foreground mt-4 max-w-3xl mx-auto">
+          Karşılaştırma; piyasada yaygın yazılım kategorilerinin tipik özellik setine dayanır. Spesifik bir ürünü temsil etmez; ürünler arasında farklılık gösterebilir.
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {competitors.map((c) => (
-            <Card key={c.key} className="flex flex-col" data-testid={`competitor-${c.key}`}>
-              <CardHeader>
-                <CardTitle>{c.name}</CardTitle>
-                <div className="text-sm text-muted-foreground mt-1">{c.pkg}</div>
-                <div className="font-bold text-lg mt-2 text-primary">{c.price}</div>
-              </CardHeader>
-              <CardContent className="flex-1 space-y-4">
-                <div>
-                  <div className="text-xs font-bold uppercase text-emerald-600 mb-2">Güçlü yönleri</div>
-                  <ul className="text-sm space-y-1.5">
-                    {c.strengths.map((s, i) => (
-                      <li key={i} className="flex gap-2">
-                        <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span>{s}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <div className="text-xs font-bold uppercase text-red-500 mb-2">Eksikleri</div>
-                  <ul className="text-sm space-y-1.5">
-                    {c.weaknesses.map((s, i) => (
-                      <li key={i} className="flex gap-2">
-                        <X className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-                        <span className="text-muted-foreground">{s}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          {/* Ticarium365 card */}
-          <Card className="flex flex-col border-2 border-primary bg-primary/5 lg:col-span-1" data-testid="competitor-ticarium365">
-            <CardHeader>
-              <Badge className="w-fit mb-2">Bizim cevabımız</Badge>
-              <CardTitle className="text-primary">Ticarium365</CardTitle>
-              <div className="text-sm text-muted-foreground mt-1">Tek paket, tüm modüller dahil</div>
-              <div className="font-bold text-lg mt-2 text-primary">14 gün ücretsiz, sonra ₺499/ay'dan</div>
-            </CardHeader>
-            <CardContent className="flex-1 space-y-4">
-              <div>
-                <div className="text-xs font-bold uppercase text-emerald-600 mb-2">Hepsi dahil</div>
-                <ul className="text-sm space-y-1.5">
-                  {[
-                    "Stok + barkod + POS",
-                    "e-Fatura (5 sağlayıcıdan seç)",
-                    "11 pazaryeri sync",
-                    "Net Kâr + Fiş OCR",
-                    "Mobil uygulama dahil",
-                    "Çok şubeli, çok firmalı",
-                  ].map((s, i) => (
-                    <li key={i} className="flex gap-2">
-                      <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                      <span className="font-medium">{s}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <Link href="/login">
-                <Button className="w-full mt-4" data-testid="btn-card-cta">14 gün ücretsiz başla</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
       </section>
 
-      {/* POSITIONING STATEMENT */}
+      {/* POSITIONING STATEMENT — no brand names */}
       <section className="container mx-auto px-4 py-16">
         <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-primary/20">
           <CardContent className="p-8 md:p-12 text-center">
-            <h2 className="text-2xl md:text-4xl font-bold mb-4">Bizim konumlandırma cümlemiz</h2>
+            <h2 className="text-2xl md:text-4xl font-bold mb-4" style={{ fontFamily: "var(--font-display)" }}>Bizim konumlandırma cümlemiz</h2>
             <p className="text-lg md:text-2xl text-muted-foreground italic max-w-3xl mx-auto leading-relaxed">
-              "Paraşüt'ün <strong>ön muhasebesi</strong>, Mikro'nun <strong>perakende derinliği</strong>,
-              Logo'nun <strong>resmi raporları</strong>, Nebim'in <strong>POS olgunluğu</strong> —
+              "Ön muhasebenin <strong>düzeni</strong>, perakendenin <strong>derinliği</strong>,
+              klasik ERP'nin <strong>resmi raporları</strong>, mobil POS'un <strong>hızı</strong> —
               hepsi <span className="text-primary font-bold not-italic">tek bulutta, mobil dahil, eklentisiz</span>."
             </p>
             <p className="mt-6 text-sm text-muted-foreground">
@@ -292,9 +177,9 @@ export default function KarsilastirPage() {
 
       {/* FINAL CTA */}
       <section className="container mx-auto px-4 py-20 text-center">
-        <h2 className="text-3xl md:text-5xl font-bold mb-6">Karar vermeden önce dene.</h2>
+        <h2 className="text-3xl md:text-5xl font-bold mb-6" style={{ fontFamily: "var(--font-display)" }}>Karar vermeden önce dene.</h2>
         <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
-          Kredi kartı istemiyoruz. 14 gün boyunca tüm modüller açık.
+          Kredi kartı istemiyoruz. 21 gün boyunca tüm modüller açık.
           Beğenmezsen hesap kapatılır, veriler 30 gün saklanır.
         </p>
         <Link href="/login">

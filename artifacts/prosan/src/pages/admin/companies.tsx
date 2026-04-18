@@ -45,7 +45,7 @@ const emptyForm: NewCompanyForm = {
   adminPassword: "",
   adminFullName: "",
   primaryColor: "#2563eb",
-  trialDays: "14",
+  trialDays: "21",
 };
 
 function PlanBadge({ company }: { company: Company }) {
@@ -75,7 +75,7 @@ export default function CompaniesAdmin() {
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [trialDialog, setTrialDialog] = useState<Company | null>(null);
-  const [trialDays, setTrialDays] = useState("14");
+  const [trialDays, setTrialDays] = useState("21");
   const [planType, setPlanType] = useState<string>("trial");
   const [form, setForm] = useState<NewCompanyForm>(emptyForm);
   const [creating, setCreating] = useState(false);
@@ -214,7 +214,7 @@ export default function CompaniesAdmin() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="trialDays">Trial Süresi (gün)</Label>
-                <Input id="trialDays" type="number" min="1" max="365" value={form.trialDays} onChange={f("trialDays")} placeholder="14" />
+                <Input id="trialDays" type="number" min="1" max="365" value={form.trialDays} onChange={f("trialDays")} placeholder="21" />
               </div>
               <div className="border-t pt-4">
                 <p className="text-sm font-medium mb-3">Admin Kullanıcı</p>
