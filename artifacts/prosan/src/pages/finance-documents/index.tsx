@@ -420,7 +420,7 @@ export default function FinanceDocumentsPage() {
         <div>
           <div className="flex items-center gap-2">
             <Inbox className="h-7 w-7 text-blue-600" />
-            <h1 className="text-2xl font-bold">Belge Merkezi</h1>
+            <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Belge Merkezi</h1>
           </div>
           <p className="text-sm text-muted-foreground">
             Fatura, dekont, gider fişi ve sözleşmeler — hepsi tek yerde

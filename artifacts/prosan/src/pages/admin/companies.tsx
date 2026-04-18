@@ -185,7 +185,7 @@ export default function CompaniesAdmin() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Firma Yönetimi</h1>
+          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Firma Yönetimi</h1>
           <p className="text-muted-foreground text-sm mt-1">Tüm kiracı firmaları yönetin</p>
         </div>
 

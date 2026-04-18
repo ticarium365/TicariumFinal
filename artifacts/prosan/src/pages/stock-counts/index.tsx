@@ -76,7 +76,7 @@ export default function StockCountsPage() {
     <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Stok Sayım Merkezi</h1>
+          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Stok Sayım Merkezi</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Depo sayımı yapın, sistem ile karşılaştırın, farkları düzeltin</p>
         </div>
         {!openSession && (

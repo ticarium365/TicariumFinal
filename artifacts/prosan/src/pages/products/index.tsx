@@ -291,7 +291,7 @@ export default function ProductsList() {
       {/* Başlık */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Ürün Yönetimi</h1>
+          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Ürün Yönetimi</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{total} ürün kayıtlı</p>
         </div>
         <div className="flex items-center gap-2">

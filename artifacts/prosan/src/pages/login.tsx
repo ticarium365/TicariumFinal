@@ -63,8 +63,16 @@ export default function Login() {
 
         <div className="relative z-10">
           <Logo size="lg" />
-          <h1 className="font-bold text-4xl text-white tracking-tight mt-6" style={{ fontFamily: "var(--font-display)" }}>
-            Ticarium<span style={{ color: EMERALD }}>365</span>
+          <h1 className="font-bold text-4xl tracking-tight mt-6" style={{ fontFamily: "var(--font-display)" }}>
+            <span style={{
+              background: `linear-gradient(135deg, #ffffff 0%, ${EMERALD} 100%)`,
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              color: "transparent",
+            }}>
+              Ticarium365
+            </span>
           </h1>
           <p className="mt-2 text-lg" style={{ color: "rgba(255,255,255,0.78)" }}>
             365 gün işinin yanında.

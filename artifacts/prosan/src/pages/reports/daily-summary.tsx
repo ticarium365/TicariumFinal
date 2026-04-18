@@ -87,7 +87,7 @@ export default function DailySummaryPage() {
       {/* Başlık + tarih navigasyonu */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Günlük Kapanış</h1>
+          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Günlük Kapanış</h1>
           <p className="text-muted-foreground text-sm capitalize">{displayDate}</p>
         </div>
         <div className="flex items-center gap-2 print:hidden">

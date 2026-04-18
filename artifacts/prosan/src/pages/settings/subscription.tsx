@@ -125,7 +125,7 @@ export default function SubscriptionPage() {
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">Abonelik & Plan</h1>
+          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Abonelik & Plan</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Plan yönetimi ve fatura geçmişi</p>
         </div>
         <Button variant="outline" size="sm" className="gap-1.5 h-8" onClick={() => qc.invalidateQueries({ queryKey: ["subscription-current"] })}>

@@ -105,7 +105,7 @@ export default function DocumentsPage() {
       {/* Başlık */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Evrak Yönetimi</h1>
+          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Evrak Yönetimi</h1>
           <p className="text-sm text-gray-500 mt-0.5">Dosyalarınızı ve belgelerinizi merkezi olarak yönetin</p>
         </div>
         <div className="flex gap-2">

@@ -147,7 +147,7 @@ export default function MagazaListesi() {
             <span>/</span>
             <span>Hazır Mağaza</span>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900">Hazır Mağazalarım</h1>
+          <h1 className="text-3xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Hazır Mağazalarım</h1>
           <p className="text-slate-600 mt-1 max-w-2xl">
             Üç farklı tipte mağaza kurabilirsiniz: <b>kendi web sitenize</b> Ticarium365 widget'ı eklemek,
             <b> firmaadi.ticarium365.shop</b> üzerinde hazır mağaza, ya da gelişmiş ürünlerinizi

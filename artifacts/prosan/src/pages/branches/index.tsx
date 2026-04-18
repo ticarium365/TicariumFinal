@@ -178,7 +178,7 @@ export default function BranchesPage() {
       {/* Başlık */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">Çok Şubeli Yönetim</h1>
+          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Çok Şubeli Yönetim</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Şubeler, stok transferleri ve atamalar</p>
         </div>
         <div className="flex gap-2">

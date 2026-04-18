@@ -151,7 +151,7 @@ export default function NotificationSettingsPage() {
       {/* Başlık */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Bildirim Ayarları</h1>
+          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Bildirim Ayarları</h1>
           <p className="text-sm text-gray-500 mt-0.5">Bildirim kurallarını ve tercihlerinizi yönetin</p>
         </div>
         {tab === "rules" && (

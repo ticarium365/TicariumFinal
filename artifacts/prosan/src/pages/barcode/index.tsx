@@ -77,7 +77,7 @@ export default function BarcodeScanner() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Barkod Tarama</h1>
+        <h1 className="text-3xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Barkod Tarama</h1>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

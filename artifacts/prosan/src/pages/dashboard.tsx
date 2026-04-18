@@ -52,12 +52,12 @@ function StatCard({
   trend?: number;
 }) {
   return (
-    <Card className="relative overflow-hidden">
+    <Card className="relative overflow-hidden t365-card-hover">
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div className="space-y-1 flex-1 min-w-0">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</p>
-            <p className={`text-2xl font-bold tracking-tight truncate ${color}`}>{value}</p>
+            <p className={`text-2xl font-bold tracking-tight truncate t365-numeric ${color}`}>{value}</p>
             {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
             {trend !== undefined && (
               <div className={`flex items-center gap-1 text-xs font-medium ${trend >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
@@ -143,8 +143,10 @@ export default function Dashboard() {
     <div className="space-y-5">
       {/* Başlık */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Ana Panel</h1>
+        <div className="t365-heading-accent">
+          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text" style={{ fontFamily: "var(--font-display)" }}>
+            Ana Panel
+          </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {new Date().toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
           </p>

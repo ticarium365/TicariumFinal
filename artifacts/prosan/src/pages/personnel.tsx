@@ -242,7 +242,7 @@ export default function PersonnelPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Personel Yönetimi</h1>
+          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Personel Yönetimi</h1>
           <p className="text-sm text-gray-500 mt-1">Çalışanlar, departmanlar ve izin takibi</p>
         </div>
         {isAdmin && (

@@ -469,7 +469,7 @@ export default function Reports() {
       {/* Başlık */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Raporlar</h1>
+          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Raporlar</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Gelişmiş satış, kâr ve envanter analizleri</p>
         </div>
       </div>

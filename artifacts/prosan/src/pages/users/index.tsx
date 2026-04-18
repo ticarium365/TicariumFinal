@@ -73,7 +73,7 @@ export default function UsersList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Kullanıcı Yönetimi</h1>
+          <h1 className="text-3xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Kullanıcı Yönetimi</h1>
           <p className="text-muted-foreground mt-1">Sistem erişimlerini ve rolleri yönetin.</p>
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>

@@ -241,7 +241,7 @@ export default function IntegrationsPage() {
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">Entegrasyon Merkezi</h1>
+          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Entegrasyon Merkezi</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Webhook, API ve harici entegrasyon yönetimi</p>
         </div>
         <div className="flex gap-2">

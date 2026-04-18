@@ -146,7 +146,7 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <h1 className="text-3xl font-bold tracking-tight">Ayarlar</h1>
+      <h1 className="text-3xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Ayarlar</h1>
 
       <div className="grid gap-6 md:grid-cols-3">
         {/* Firma Bilgileri */}
