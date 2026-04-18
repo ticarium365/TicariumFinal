@@ -284,7 +284,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stat Kartları: Bugünün Cirosu + Kritik Stok + Son 30 Gün Cirosu */}
+      {/* Stat Kartları: Bugünün Cirosu + Son 30 Gün Cirosu + Kritik Stok */}
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
         <Card className="border-primary/30">
           <CardContent className="px-5 py-4">
@@ -296,18 +296,6 @@ export default function Dashboard() {
               {statsLoading ? "—" : fmt(todayRevenue)}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">{todaySales} satış</p>
-          </CardContent>
-        </Card>
-        <Card className={criticalCount > 0 ? "border-rose-500/40" : "border-emerald-500/30"}>
-          <CardContent className="px-5 py-4">
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <AlertTriangle className={`h-3.5 w-3.5 ${criticalCount > 0 ? "text-rose-500" : "text-emerald-500"}`} />
-              Kritik Stok
-            </p>
-            <p className={`text-2xl font-bold tracking-tight t365-numeric mt-1 ${criticalCount > 0 ? "text-rose-500" : "text-emerald-500"}`}>
-              {statsLoading ? "—" : criticalCount}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">{stats?.totalProducts ?? 0} ürün kayıtlı</p>
           </CardContent>
         </Card>
         <Card className="border-blue-500/30">
@@ -322,6 +310,25 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground mt-0.5">{sales30} satış</p>
           </CardContent>
         </Card>
+        <Link href="/products?lowStock=true">
+          <Card className={`cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5 ${criticalCount > 0 ? "border-rose-500/40 hover:border-rose-500/70" : "border-emerald-500/30 hover:border-emerald-500/60"}`}>
+            <CardContent className="px-5 py-4">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <AlertTriangle className={`h-3.5 w-3.5 ${criticalCount > 0 ? "text-rose-500" : "text-emerald-500"}`} />
+                  Kritik Stok
+                </p>
+                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <p className={`text-2xl font-bold tracking-tight t365-numeric mt-1 ${criticalCount > 0 ? "text-rose-500" : "text-emerald-500"}`}>
+                {statsLoading ? "—" : criticalCount}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {stats?.totalProducts ?? 0} ürün kayıtlı · listeyi aç
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Hızlı Satış Butonu */}
