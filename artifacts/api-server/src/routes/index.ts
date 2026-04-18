@@ -93,6 +93,8 @@ router.use("/profit", requireAuth, requireFeature("profit.dashboard"), profitRou
 import accountantRouter from "./accountant.js";
 import reportsOfficialRouter from "./reports-official.js";
 import budgetsRouter from "./budgets.js";
+import adBudgetsRouter from "./ad-budgets.js";
+import aggregatorRouter from "./aggregator.js";
 import importsRouter from "./imports.js";
 import productionRouter from "./production.js";
 import loyaltyRouter from "./loyalty.js";
@@ -100,6 +102,8 @@ import currencyRouter from "./currency.js";
 router.use("/accountant", requireAuth, requireFeature("accountant.panel"), accountantRouter);
 router.use("/reports-official", requireAuth, requireFeature("accountant.panel"), reportsOfficialRouter);
 router.use("/budgets", requireAuth, requireFeature("profit.dashboard"), budgetsRouter);
+router.use("/ad-budgets", requireAuth, requireFeature("profit.dashboard"), adBudgetsRouter);
+router.use(aggregatorRouter);
 router.use("/import", importsRouter);
 router.use("/production", requireAuth, requireFeature("production.bom"), productionRouter);
 router.use("/loyalty", requireAuth, requireFeature("loyalty.points"), loyaltyRouter);

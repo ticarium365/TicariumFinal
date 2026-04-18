@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { companiesTable } from "./companies";
 import { productsTable } from "./products";
 
@@ -105,8 +106,11 @@ export const aggregatorListingsTable = pgTable(
   },
   (t) => [
     index("aggregator_match_idx").on(t.matchKey, t.salePrice),
-    index("aggregator_source_idx").on(t.sourceCompanyId, t.sourceProductId),
+    uniqueIndex("aggregator_source_uniq").on(t.sourceCompanyId, t.sourceProductId),
     index("aggregator_status_idx").on(t.status, t.chosen),
+    uniqueIndex("aggregator_chosen_per_key_uniq")
+      .on(t.matchKey)
+      .where(sql`chosen = true`),
   ]
 );
 

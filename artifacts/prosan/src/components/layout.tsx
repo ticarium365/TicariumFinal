@@ -48,6 +48,9 @@ import {
   DollarSign,
   Sparkles,
   Store,
+  Megaphone,
+  ShoppingBasket,
+  Inbox,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./notification-center";
@@ -123,6 +126,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/gercek-kar/oneriler", label: "Akıllı Öneriler", icon: TrendingUp, roles: ["admin", "viewer"] },
     { href: "/muhasebeci", label: "Mali Müşavir", icon: Calculator, roles: ["admin", "staff", "viewer"] },
     { href: "/butce", label: "Bütçe & Tahmin", icon: PieChart, roles: ["admin", "staff", "viewer"] },
+    { href: "/reklam-butce", label: "Reklam Bütçesi", icon: Megaphone, roles: ["admin", "staff", "viewer"] },
+    { href: "/aggregator", label: "Ticarium Pazar", icon: ShoppingBasket, roles: ["admin"] },
     { href: "/ice-aktarim", label: "Veri İçe Aktarımı", icon: Upload, roles: ["admin", "staff"] },
     { href: "/pos", label: "Hızlı Satış (POS)", icon: ScanLine, roles: ["admin", "staff"] },
     { href: "/uretim", label: "Üretim & Reçete", icon: Factory, roles: ["admin", "staff", "viewer"] },
@@ -154,6 +159,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/settings/integrations", label: "Entegrasyonlar", icon: Webhook, roles: ["admin"] },
     { href: "/settings", label: "Ayarlar", icon: Settings, roles: ["admin"] },
     { href: "/admin/companies", label: "Firma Yönetimi", icon: Building2, roles: ["super_admin"] },
+    { href: "/super-admin/talepler", label: "İletişim Talepleri", icon: Inbox, roles: ["super_admin"] },
     { href: "/admin/payments", label: "Ödeme Bildirimleri", icon: CreditCard, roles: ["super_admin"] },
     { href: "/admin/platform-settings", label: "Platform Ayarları", icon: Wrench, roles: ["super_admin"] },
     { href: "/admin/billing", label: "Abonelik Yönetimi", icon: CreditCard, roles: ["super_admin"] },

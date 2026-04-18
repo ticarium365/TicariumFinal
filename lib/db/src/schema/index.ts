@@ -33,6 +33,7 @@ export * from "./marketplace";
 export * from "./profit";
 export * from "./accountant";
 export * from "./budgets";
+export * from "./ad_budgets";
 export * from "./production";
 export * from "./loyalty";
 export * from "./currency";
