@@ -174,6 +174,40 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    /* Sayfa arkaplanına çok hafif marka deseni — fark edilmeden zenginleştirir */
+    background-image:
+      radial-gradient(circle at 0% 0%, hsl(var(--brand-emerald) / 0.04) 0%, transparent 35%),
+      radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.04) 0%, transparent 35%);
+    background-attachment: fixed;
+  }
+
+  /* Marka renkli metin seçimi */
+  ::selection {
+    background-color: hsl(var(--brand-emerald) / 0.25);
+    color: hsl(var(--foreground));
+  }
+
+  /* İnce, marka renkli scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--brand-emerald) / 0.4) transparent;
+  }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--brand-emerald) / 0.35);
+    border-radius: 8px;
+  }
+  *::-webkit-scrollbar-thumb:hover { background: hsl(var(--brand-emerald) / 0.6); }
+
+  /* Yumuşak smooth scroll */
+  html { scroll-behavior: smooth; }
+
+  /* Focus ring — markaya uygun emerald parıltı */
+  :focus-visible {
+    outline: 2px solid hsl(var(--brand-emerald) / 0.6);
+    outline-offset: 2px;
+    border-radius: 6px;
   }
 
   /* Sayı inputlarından ok/spinner kaldır */
@@ -184,5 +218,88 @@
   }
   input[type="number"] {
     -moz-appearance: textfield;
+  }
+}
+
+@layer utilities {
+  /* Marka gradyanlı metin (başlıklarda) */
+  .t365-gradient-text {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--brand-emerald)) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Sayfa başlığı için sol kenar yeşil aksan çubuğu */
+  .t365-heading-accent {
+    position: relative;
+    padding-left: 0.875rem;
+  }
+  .t365-heading-accent::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 75%;
+    border-radius: 2px;
+    background: linear-gradient(180deg, hsl(var(--primary)) 0%, hsl(var(--brand-emerald)) 100%);
+  }
+
+  /* Kart hover — yukarı doğru ince yükselme + yeşil gölge */
+  .t365-card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .t365-card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -8px hsl(var(--brand-emerald) / 0.25);
+    border-color: hsl(var(--brand-emerald) / 0.4);
+  }
+
+  /* Shimmer skeleton (yükleme) */
+  @keyframes t365-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .t365-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--brand-emerald) / 0.15) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: t365-shimmer 1.6s infinite linear;
+  }
+
+  /* Marka aksanlı ince yatay ayraç */
+  .t365-divider {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsl(var(--border)) 20%,
+      hsl(var(--brand-emerald) / 0.4) 50%,
+      hsl(var(--border)) 80%,
+      transparent 100%
+    );
+  }
+
+  /* Hafif nabız animasyonu — "Yeni" rozetlerinde */
+  @keyframes t365-pulse-glow {
+    0%, 100% { box-shadow: 0 0 0 0 hsl(var(--brand-emerald) / 0.55); }
+    50%      { box-shadow: 0 0 0 6px hsl(var(--brand-emerald) / 0); }
+  }
+  .t365-pulse {
+    animation: t365-pulse-glow 2s infinite;
+  }
+
+  /* KPI sayıları için tabular nums + display font */
+  .t365-numeric {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    font-family: var(--app-font-display);
+    letter-spacing: -0.02em;
   }
 }
