@@ -36,7 +36,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && error) {
-      setLocation("/login");
+      // Public routes — auth gerekmez, /login'e yönlendirme
+      const publicPaths = ["/login", "/karsilastir", "/neden-smsystems"];
+      const here = window.location.pathname.replace(/\/$/, "") || "/";
+      if (!publicPaths.some((p) => here === p || here.startsWith(p + "/"))) {
+        setLocation("/login");
+      }
     }
   }, [isLoading, error, setLocation]);
 

@@ -10,6 +10,7 @@ import NotFound from "@/pages/not-found";
 
 // Pages
 import Login from "@/pages/login";
+import KarsilastirPage from "@/pages/karsilastir";
 import Catalog from "@/pages/catalog/index";
 import Dashboard from "@/pages/dashboard";
 import ProductsList from "@/pages/products/index";
@@ -121,6 +122,8 @@ function AuthenticatedRouter() {
     <AuthProvider>
       <Switch>
         <Route path="/login" component={Login} />
+        <Route path="/karsilastir" component={KarsilastirPage} />
+        <Route path="/neden-smsystems" component={KarsilastirPage} />
 
         <Route path="/">
           {() => {
