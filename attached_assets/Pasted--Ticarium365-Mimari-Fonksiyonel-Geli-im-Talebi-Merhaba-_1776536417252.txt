@@ -1,0 +1,156 @@
+
+📋 Ticarium365 — Mimari & Fonksiyonel Gelişim Talebi
+Merhaba, Ticarium365 projemizi (Sprint B sonrası, 41/41 test yeşil) dış bir mimari değerlendirmeden geçirdik. Aşağıdaki başlıkları mevcut roadmap'e (C, D.1-D.6, E, F) ek olarak değerlendirmenizi ve uygulanabilir olanları sıralamamızı istiyorum. Her başlık için (a) mevcut durumu doğrula, (b) eksikse efor tahmini ver, (c) önerdiğin teknik yaklaşımı yaz.
+
+🔴 BÖLÜM 1 — Canlı Öncesi Kritik (Yasal/Veri Riski)
+1.1 KVKK Uyum Paketi
+Şu an dokümantasyonda KVKK referansı yok. Türkiye'de SaaS satıyoruz, KOBİ verilerini işliyoruz → biz veri işleyen, müşteri veri sorumlusu rolünde.
+
+Lütfen doğrula ve eksikse planla:
+
+ VERBIS kayıt durumumuz (şirket olarak)
+ Aydınlatma metni sayfası (/kvkk-aydinlatma) + signup'ta açık rıza checkbox
+ Veri İşleme Sözleşmesi (DPA) şablonu — her tenant ile imzalanacak
+ Veri silme/dışa aktarma API'si (KVKK madde 11): POST /api/account/data-export, DELETE /api/account/data-erasure (30 gün soft-delete sonra hard-delete)
+ Çerez politikası + cookie consent banner (sadece zorunlu çerezler default açık)
+ Veri yurtdışı transferi — Replit/GCP US/EU. Açık rıza şart, yoksa KVKK Md.9 ihlali
+1.2 Backup & Disaster Recovery
+Doküman: "Replit App Storage gelecek dosya yüklemeleri için". Production DB backup stratejisi belirsiz.
+
+Sorular:
+
+Şu an pg_dump cron'u var mı? Hangi sıklıkta? Nereye?
+Offsite backup var mı (Replit dışı — örn. AWS S3, Cloudflare R2, Backblaze B2)?
+PITR (Point-in-Time Recovery) Replit Postgres'te aktif mi? RPO/RTO hedefimiz nedir?
+DR Runbook — "Production DB tamamen kaybolursa 30 dk içinde nasıl restore ederiz?" yazılı mı?
+Backup'lar encrypted at rest mi? (KVKK için zorunlu)
+1.3 Tenant İzolasyon — RLS (Roadmap D.1)
+Bence bu C'den (Hepsiburada/N11) ÖNCE gelmeli. Tek bir unutulan WHERE company_id = veri ihlali = KVKK cezası + tüm müşteri kaybı.
+
+Önerim:
+
+PostgreSQL RLS + her request başına SET LOCAL app.current_company_id = $1
+Drizzle middleware'de session variable enjekte et
+Test: company_id filtresi olmayan kasıtlı bir query atılsa RLS bloklamalı
+🟡 BÖLÜM 2 — Mimari Boşluklar
+2.1 Webhook Receiver Altyapısı
+Şu an marketplace worker 5sn polling yapıyor. Trendyol, Hepsiburada, Paraşüt webhook gönderir → polling gereksiz yük + gecikme.
+
+İstek:
+
+POST /api/webhooks/:provider endpoint
+HMAC signature doğrulama (her provider için secret config'de)
+Replay protection: webhook_events tablosu + (provider, event_id) UNIQUE
+pg-boss (D.2) ile async işleme
+2.2 Outbox Pattern (Genel)
+E-fatura outbox var ama domain event outbox yok. DB commit + external API çağrısı arasında network fail = tutarsızlık.
+
+Öneri:
+
+domain_events tablosu (id, aggregate_type, aggregate_id, event_type, payload, status, created_at)
+pg-boss consumer her event'i alıp ilgili handler'a yollar
+Pazaryeri stok push, e-fatura gönderim, bildirim — hepsi bu pattern'le
+2.3 Idempotency-Key Header Standardı
+Sale conversion idempotent ama mobil POS satışı offline → online sync'te Idempotency-Key header desteği yok = duplicate satış riski.
+
+İstek: Tüm mutating endpoint'lerde Idempotency-Key header desteği. idempotency_keys tablosu (key, company_id, response_hash, expires_at — 24h TTL).
+
+2.4 Feature Flag Runtime Toggle
+profit.holding_cost, profit.true_dashboard flag'leri pakete bağlı görünüyor. Runtime toggle, A/B test, kill switch var mı?
+
+İstek: feature_flags tablosu (key, company_id NULLABLE, enabled, rollout_pct). NULL = global default. Admin UI'dan toggle.
+
+2.5 Multi-Currency Detayları
+"Çoklu para birimi" var deniyor ama:
+
+Exchange rate kaynağı? (TCMB EVDS API öneririm — ücretsiz, resmi)
+Historical rate snapshot satış anında saklanıyor mu? (Muhasebe için zorunlu)
+Kâr motoru farklı currency ürünü nasıl handle ediyor?
+2.6 Search Altyapısı
+1276 ürün şimdi ILIKE %query% ile sorun değil ama 50K ürünlü tenant'ta ölür.
+
+Öneri: pg_trgm extension + GIN index. İleride Meilisearch/Typesense.
+
+2.7 Real-time (Roadmap D.6)
+WebSocket/SSE planda. Kritik kullanım case'leri:
+
+POS'ta multi-cashier stok senkronizasyonu
+Yeni marketplace siparişi anlık bildirim
+Multi-device session invalidation (şifre değişince)
+🟢 BÖLÜM 3 — Fonksiyonel Eksikler
+3.1 Mali Müşavir Modülü (Pazar Diferansiyatörü!)
+"Mali müşavir paneli var" deniyor ama detay yok. Bu Türkiye pazarında BÜYÜK fark yaratır.
+
+İstek:
+
+e-Defter export (XBRL-GL formatı) — Türkiye'de zorunlu
+BA/BS formu otomatik üretim (aylık)
+KDV beyannamesi ön hazırlık çıktısı
+Mali müşavir rolü: birden fazla mükellefin (tenant'ın) verisine read-only erişim — cross-tenant özel rol
+3.2 POS Donanım Entegrasyonu
+ESC/POS termal yazıcı desteği (fiş bastırma)
+Para çekmecesi açma sinyali
+Barkod terazi (manav/kasap segmenti)
+Yeni Nesil ÖKC (GİB sertifikalı) — 2026'da zorunluluk genişliyor, hazırlıklı olalım
+3.3 B2B RFQ Akışı
+"B2B RFQ var" → ama:
+
+Tedarikçi karşılaştırma matrisi?
+Onay akışı (limit üstü admin onayı)?
+Sözleşme/anlaşma fiyatı (contract pricing)?
+3.4 Üretim & BOM
+"Üretim var" → ama:
+
+Multi-level BOM (yarı mamul → mamul)?
+İş emri maliyetlendirme?
+Fire/scrap takibi?
+3.5 Bildirim Kanalları
+Türk müşteri WhatsApp seviyor.
+
+WhatsApp Business API entegrasyonu (Meta direct veya Twilio)
+SMS provider (İletimerkezi, NetGSM)
+Push notification (Expo Push mobil için)
+notification_rules tablosu (event_type, channel, template_id)
+3.6 Self-Service Onboarding + Ödeme
+Şu an süper admin manuel tenant açıyor (/super-admin/yeni-firma). Müşteri kendisi kayıt olabilmeli:
+
+Landing → "Ücretsiz dene" → email/şifre → subdomain seç → 14 gün trial
+Trial sonu: Iyzico veya PayTR ile abonelik (Türkiye için Stripe değil, BDDK uyumu)
+Otomatik tenant provision + welcome email
+🔵 BÖLÜM 4 — Kalite & Operasyon
+4.1 Test Genişletme (Roadmap F: 41 → 80+)
+Spesifik eksikler:
+
+E2E testler — Playwright ile POS satışı→fatura→stok zinciri
+Load test — k6 ile 100 concurrent tenant, hangi endpoint çöker?
+Chaos test — Postgres down, Trendyol API timeout, network jitter
+4.2 Observability (Roadmap D.3'ten daha geniş)
+Sentry tek başına yetmez:
+
+OpenTelemetry distributed tracing (request → DB → external API zinciri)
+Tenant başına SLA dashboard (Grafana) — hangi tenant en yavaş?
+Business metrics: DAU, satış/saat, churn, MRR
+4.3 Developer Portal
+OpenAPI spec var ama public Swagger UI/Redoc yayınlı mı? Müşteri kendi entegrasyonunu yazabilmeli (özellikle Kurumsal paket için).
+
+🎯 BENİM ÖNERDİĞİM SIRALAMA
+Mevcut roadmap'inizi şöyle revize etmenizi öneriyorum:
+
+Sıra	İş	Sebep
+1	KVKK paketi (1.1) + Backup/DR runbook (1.2)	Yasal risk, ceza, müşteri güveni
+2	RLS (D.1)	Veri ihlali = şirket biter
+3	C — Hepsiburada + N11	Müşteri vaadi
+4	Webhook receiver (2.1)	Polling sürdürülebilir değil
+5	Iyzico/PayTR + self-service onboarding (3.6)	Gelir akışı, sales funnel
+6	pg-boss + outbox (D.2 + 2.2)	Reliability
+7	Mali müşavir modülü (3.1)	Pazar diferansiyatörü
+8	Sentry + observability (D.3 + 4.2)	Production blind flying
+❓ Senden İstediğim Cevaplar
+Bu başlıkların hangileri zaten yapılmış ama dokümantasyona yansımamış? Doğrula.
+KVKK + Backup/DR durumumuz tam olarak nedir? Production'a çıkmadan önce bilmem şart.
+RLS'i C'den (Hepsiburada/N11) önce yapalım mı? Riskleri sen değerlendir.
+Webhook receiver ve outbox pattern'i pg-boss (D.2) sprint'iyle birleştirebilir miyiz? Tek seferde altyapı kuralım.
+Mali müşavir modülü için efor tahminin nedir? (e-Defter XBRL-GL en zorlayıcı kısım.)
+Iyzico vs PayTR — hangisini öneriyorsun? (entegrasyon kolaylığı, komisyon, BDDK)
+Replit Postgres'te PITR mevcut mu, yoksa managed Postgres'e (Neon/Supabase) geçiş gerekir mi?
+Cevaplarını bekliyorum, sonra birlikte sprint planını netleştirelim.

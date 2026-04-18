@@ -41,3 +41,9 @@ id = "Np2-tYng0y4DxThfgiVSh"
 uri = "file://docs/TECHNICAL-DOCUMENTATION.md"
 type = "text"
 title = "Ticarium365 — Teknik Dökümantasyon (Nisan 2026)"
+
+[[outputs]]
+id = "qbHkAlZoiac1s0jWGgPa_"
+uri = "file://docs/STRATEGIC-ANALYSIS-2026-04.md"
+type = "text"
+title = "Ticarium365 — Stratejik Analiz (Nisan 2026)"
