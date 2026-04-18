@@ -238,47 +238,101 @@ export default function Dashboard() {
   const todayRevenue = stats?.todayGrossRevenue ?? 0;
   const todaySales = stats?.todaySalesCount ?? 0;
   const criticalCount = stats?.criticalStockCount ?? 0;
+  const revenue30 = (daily30 ?? []).reduce((s, d) => s + d.revenue, 0);
+  const sales30 = (daily30 ?? []).reduce((s, d) => s + d.count, 0);
 
   return (
     <div className="space-y-5">
       {/* Başlık */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="t365-heading-accent">
-          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text" style={{ fontFamily: "var(--font-display)" }}>
-            Ana Panel
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {new Date().toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-          </p>
-        </div>
+      <div className="t365-heading-accent">
+        <h1 className="text-2xl font-bold tracking-tight t365-gradient-text" style={{ fontFamily: "var(--font-display)" }}>
+          Ana Panel
+        </h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {new Date().toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+        </p>
+      </div>
 
-        {/* Üst sağ özet: bugünün cirosu + kritik stok */}
-        <div className="flex items-stretch gap-3">
-          <Card className="flex-1 min-w-[200px] border-primary/30">
-            <CardContent className="px-4 py-3">
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <CircleDollarSign className="h-3 w-3 text-primary" />
-                Bugünün Cirosu
-              </p>
-              <p className="text-xl font-bold tracking-tight t365-numeric text-primary mt-0.5">
-                {statsLoading ? "—" : fmt(todayRevenue)}
-              </p>
-              <p className="text-[10px] text-muted-foreground">{todaySales} satış</p>
-            </CardContent>
-          </Card>
-          <Card className={`flex-1 min-w-[180px] ${criticalCount > 0 ? "border-rose-500/40" : "border-emerald-500/30"}`}>
-            <CardContent className="px-4 py-3">
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <AlertTriangle className={`h-3 w-3 ${criticalCount > 0 ? "text-rose-500" : "text-emerald-500"}`} />
-                Kritik Stok
-              </p>
-              <p className={`text-xl font-bold tracking-tight t365-numeric mt-0.5 ${criticalCount > 0 ? "text-rose-500" : "text-emerald-500"}`}>
-                {statsLoading ? "—" : criticalCount}
-              </p>
-              <p className="text-[10px] text-muted-foreground">{stats?.totalProducts ?? 0} ürün kayıtlı</p>
-            </CardContent>
-          </Card>
-        </div>
+      {/* TCMB Kur Widget — EN ÜSTTE, OKUNAKLI */}
+      <Card className="border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Banknote className="h-5 w-5 text-emerald-500" />
+              Merkez Bankası Kurları
+            </span>
+            {tcmb?.rates && Object.values(tcmb.rates)[0]?.source === "temsili" && (
+              <Badge variant="outline" className="text-[10px] h-5 text-amber-500 border-amber-500/30">
+                Temsili (API bekleniyor)
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {(["USD", "EUR", "GBP", "JPY"] as const).map((cur) => {
+              const r = tcmb?.rates?.[cur];
+              const flag = cur === "USD" ? "🇺🇸" : cur === "EUR" ? "🇪🇺" : cur === "GBP" ? "🇬🇧" : "🇯🇵";
+              return (
+                <div key={cur} className="rounded-xl border border-border bg-card/60 p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold flex items-center gap-1.5">
+                      <span className="text-base">{flag}</span>
+                      <span>{cur}/TRY</span>
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold t365-numeric tracking-tight text-emerald-600 dark:text-emerald-400">
+                    {r ? fmtKur(r.sell) : "—"} <span className="text-base text-muted-foreground font-medium">₺</span>
+                  </p>
+                  <div className="flex items-center justify-between mt-1.5 text-[11px] text-muted-foreground">
+                    <span>Alış: <span className="font-mono font-medium">{r ? fmtKur(r.buy) : "—"}</span></span>
+                    <span>Satış: <span className="font-mono font-medium">{r ? fmtKur(r.sell) : "—"}</span></span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stat Kartları: Bugünün Cirosu + Kritik Stok + Son 30 Gün Cirosu */}
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+        <Card className="border-primary/30">
+          <CardContent className="px-5 py-4">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <CircleDollarSign className="h-3.5 w-3.5 text-primary" />
+              Bugünün Cirosu
+            </p>
+            <p className="text-2xl font-bold tracking-tight t365-numeric text-primary mt-1">
+              {statsLoading ? "—" : fmt(todayRevenue)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">{todaySales} satış</p>
+          </CardContent>
+        </Card>
+        <Card className={criticalCount > 0 ? "border-rose-500/40" : "border-emerald-500/30"}>
+          <CardContent className="px-5 py-4">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <AlertTriangle className={`h-3.5 w-3.5 ${criticalCount > 0 ? "text-rose-500" : "text-emerald-500"}`} />
+              Kritik Stok
+            </p>
+            <p className={`text-2xl font-bold tracking-tight t365-numeric mt-1 ${criticalCount > 0 ? "text-rose-500" : "text-emerald-500"}`}>
+              {statsLoading ? "—" : criticalCount}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">{stats?.totalProducts ?? 0} ürün kayıtlı</p>
+          </CardContent>
+        </Card>
+        <Card className="border-blue-500/30">
+          <CardContent className="px-5 py-4">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <BarChart2 className="h-3.5 w-3.5 text-blue-500" />
+              Son 30 Gün Cirosu
+            </p>
+            <p className="text-2xl font-bold tracking-tight t365-numeric text-blue-500 mt-1">
+              {fmt(revenue30)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">{sales30} satış</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Hızlı Satış Butonu */}
@@ -296,44 +350,6 @@ export default function Dashboard() {
           </div>
         </div>
       </Link>
-
-      {/* TCMB Kur Widget */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <Banknote className="h-4 w-4 text-emerald-500" />
-              Merkez Bankası Kurları
-            </span>
-            {tcmb?.rates && Object.values(tcmb.rates)[0]?.source === "temsili" && (
-              <Badge variant="outline" className="text-[10px] h-5 text-amber-500 border-amber-500/30">
-                Temsili (API bekleniyor)
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {(["USD", "EUR", "GBP", "JPY"] as const).map((cur) => {
-              const r = tcmb?.rates?.[cur];
-              const flag = cur === "USD" ? "🇺🇸" : cur === "EUR" ? "🇪🇺" : cur === "GBP" ? "🇬🇧" : "🇯🇵";
-              return (
-                <div key={cur} className="rounded-lg border border-border bg-muted/20 p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-muted-foreground">{flag} {cur}/TRY</span>
-                  </div>
-                  <p className="text-lg font-bold t365-numeric tracking-tight">
-                    {r ? fmtKur(r.sell) : "—"} ₺
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Alış: {r ? fmtKur(r.buy) : "—"}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* 30 Günlük Ciro & Kâr Grafiği */}
       <Card>
