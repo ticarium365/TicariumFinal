@@ -17,3 +17,9 @@ id = "-Qbq2vHGQutrQ7hRNYt15"
 uri = "file://docs/SMSYSTEMS-Tam-Dokumantasyon.md"
 type = "text"
 title = "SMSYSTEMS — Tam Dökümantasyon (Tanıtım, Kullanım, Paketleme, KOSGEB)"
+
+[[outputs]]
+id = "f81U5yBcoRvwF6zq5v4ME"
+uri = "file://TEKNIK_DOKUMAN.md"
+type = "text"
+title = "Ticarium365 Teknik Dokümantasyonu"
