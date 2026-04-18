@@ -7,6 +7,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { getProviderForAccount, MP_META, MP_REGISTRY, logSync } from "../services/marketplace/factory.js";
 import { applyPricingRule, applyStockRule } from "../services/marketplace/types.js";
+import { encryptSecrets } from "../lib/secret-crypto.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -41,7 +42,7 @@ router.post("/accounts", requireWriter, async (req, res) => {
   if (!MP_REGISTRY[provider]) return res.status(400).json({ error: "Bilinmeyen provider" });
   const [row] = await db.insert(channelAccountsTable).values({
     companyId, provider, name, sandbox: sandbox !== false,
-    credentials: credentials || {}, settings: settings || {},
+    credentials: encryptSecrets(credentials || {}, true), settings: settings || {},
   }).returning();
   res.status(201).json(sanitizeAccount(row));
 });
@@ -57,7 +58,7 @@ router.put("/accounts/:id", requireWriter, async (req, res) => {
     if (typeof v === "string" && v === "********") continue;
     merged[k] = v;
   }
-  const patch: any = { updatedAt: new Date(), credentials: merged };
+  const patch: any = { updatedAt: new Date(), credentials: encryptSecrets(merged) };
   for (const k of ["name", "sandbox", "isActive", "settings"]) {
     if (req.body?.[k] !== undefined) patch[k] = req.body[k];
   }

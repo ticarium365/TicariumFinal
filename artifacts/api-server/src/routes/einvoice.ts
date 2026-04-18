@@ -2,12 +2,13 @@ import { Router, type Request, type Response } from "express";
 import { db, einvoiceSettingsTable, einvoiceOutboxTable, einvoiceInboxTable, einvoiceEventsTable } from "@workspace/db";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { encryptSecrets, isSensitiveKey } from "../lib/secret-crypto.js";
 
-// Helper: hassas alanları maskele
+// Helper: hassas alanları maskele (response için, asla decrypt edilmiş plaintext dönme)
 function maskConfig(config: Record<string, any> | null | undefined) {
   const safe: Record<string, any> = {};
   for (const [k, v] of Object.entries(config || {})) {
-    if (typeof v === "string" && /password|secret|token|apikey/i.test(k)) {
+    if (typeof v === "string" && (isSensitiveKey(k) || (v.startsWith("enc:v1:")))) {
       safe[k] = v ? "********" : "";
     } else {
       safe[k] = v;
@@ -56,7 +57,7 @@ router.put("/settings", requireWriter, async (req: Request, res: Response) => {
     }
   }
   const patch: any = {
-    config: merged,
+    config: encryptSecrets(merged),
     updatedAt: new Date(),
   };
   if (provider !== undefined) patch.provider = provider;
@@ -121,8 +122,76 @@ router.post("/outbox", requireWriter, async (req: Request, res: Response) => {
   if (!receiver?.name || !Array.isArray(lines) || lines.length === 0) {
     return res.status(400).json({ error: "receiver.name ve en az bir satır gerekli" });
   }
+  // Idempotency: header veya body ile gönderildiyse — aynı anahtarla çift POST aynı kaydı döner
+  const idempotencyKey = (req.header("Idempotency-Key") || req.body?.idempotencyKey || null);
+  const idemKeyStr = idempotencyKey ? String(idempotencyKey) : null;
+
+  // Toplamları önceden hesapla (rezerve insert'te kullanılır)
+  const totals = (lines as any[]).reduce((s: any, l: any) => {
+    const lineSub = (l.quantity || 0) * (l.unitPrice || 0);
+    const lineDisc = l.discountAmount || 0;
+    const lineNet = lineSub - lineDisc;
+    const lineVat = lineNet * ((l.vatRate || 0) / 100);
+    s.total += lineNet + lineVat;
+    s.tax += lineVat;
+    return s;
+  }, { total: 0, tax: 0 });
+
+  // RESERVE-FIRST PATTERN: idempotency key varsa, provider'ı çağırmadan ÖNCE DB'ye rezerve satır insert ediyoruz.
+  // Aynı anda gelen ikinci istek partial unique index nedeniyle 23505 alır → mevcut satırı döner. Sadece kazanan provider çağırır.
+  let settings: any;
+  let providerInst: any;
   try {
-    const { provider, settings } = await getProviderForCompany(companyId);
+    const r = await getProviderForCompany(companyId);
+    settings = r.settings;
+    providerInst = r.provider;
+  } catch (e: any) {
+    return res.status(500).json({ error: "provider_unavailable", detail: e?.message });
+  }
+
+  let reservedRow: any = null;
+  if (idemKeyStr) {
+    try {
+      const [row] = await db.insert(einvoiceOutboxTable).values({
+        companyId,
+        saleId: saleId || null,
+        documentNumber: documentNumber || null,
+        receiverVkn: receiver.vkn || null,
+        receiverName: receiver.name,
+        receiverAlias: receiver.alias || null,
+        receiverEmail: receiver.email || null,
+        invoiceType: invoiceType || "SATIS",
+        profile: profile || settings.defaultProfile || "TICARIFATURA",
+        scenario: scenario || "EFATURA",
+        invoiceDate: new Date(invoiceDate || Date.now()),
+        totalAmount: Math.round(totals.total * 100) / 100,
+        taxAmount: Math.round(totals.tax * 100) / 100,
+        currency: currency || "TRY",
+        provider: settings.provider,
+        externalId: null,
+        externalNo: null,
+        status: "reserving",
+        payload: { sender, receiver, lines, invoiceType, profile, scenario, invoiceDate, currency, notes, documentNumber },
+        lastResponse: null,
+        attemptCount: 0,
+        createdBy: userId,
+        idempotencyKey: idemKeyStr,
+      }).returning();
+      reservedRow = row;
+    } catch (e: any) {
+      // 23505 = unique_violation (Postgres). Mevcut satırı dön.
+      if (e?.code === "23505" || /duplicate key|unique constraint/i.test(e?.message || "")) {
+        const [existing] = await db.select().from(einvoiceOutboxTable).where(and(
+          eq(einvoiceOutboxTable.companyId, companyId),
+          eq(einvoiceOutboxTable.idempotencyKey, idemKeyStr),
+        )).limit(1);
+        if (existing) return res.status(200).json(existing);
+      }
+      return res.status(500).json({ error: "reserve_failed" });
+    }
+  }
+
+  try {
     const payload: EInvoiceCreatePayload = {
       invoiceType: invoiceType || "SATIS",
       profile: profile || settings.defaultProfile || "TICARIFATURA",
@@ -135,46 +204,60 @@ router.post("/outbox", requireWriter, async (req: Request, res: Response) => {
       receiver,
       lines,
     };
-    const result = await provider.createInvoice(payload);
-    const totals = lines.reduce((s: any, l: any) => {
-      const lineSub = (l.quantity || 0) * (l.unitPrice || 0);
-      const lineDisc = l.discountAmount || 0;
-      const lineNet = lineSub - lineDisc;
-      const lineVat = lineNet * ((l.vatRate || 0) / 100);
-      s.total += lineNet + lineVat;
-      s.tax += lineVat;
-      return s;
-    }, { total: 0, tax: 0 });
+    const result = await providerInst.createInvoice(payload);
 
-    const [row] = await db.insert(einvoiceOutboxTable).values({
-      companyId,
-      saleId: saleId || null,
-      documentNumber: documentNumber || null,
-      receiverVkn: receiver.vkn || null,
-      receiverName: receiver.name,
-      receiverAlias: receiver.alias || null,
-      receiverEmail: receiver.email || null,
-      invoiceType: payload.invoiceType,
-      profile: payload.profile,
-      scenario: payload.scenario,
-      invoiceDate: payload.invoiceDate,
-      totalAmount: Math.round(totals.total * 100) / 100,
-      taxAmount: Math.round(totals.tax * 100) / 100,
-      currency: payload.currency || "TRY",
-      provider: settings.provider,
-      externalId: result.externalId,
-      externalNo: result.externalNo || null,
-      status: result.status || "draft",
-      payload,
-      lastResponse: result.raw || null,
-      attemptCount: 0,
-      createdBy: userId,
-    }).returning();
+    let row: any;
+    if (reservedRow) {
+      const [updated] = await db.update(einvoiceOutboxTable).set({
+        externalId: result.externalId,
+        externalNo: result.externalNo || null,
+        status: result.status || "draft",
+        lastResponse: result.raw || null,
+        updatedAt: new Date(),
+      }).where(eq(einvoiceOutboxTable.id, reservedRow.id)).returning();
+      row = updated;
+    } else {
+      const [inserted] = await db.insert(einvoiceOutboxTable).values({
+        companyId,
+        saleId: saleId || null,
+        documentNumber: documentNumber || null,
+        receiverVkn: receiver.vkn || null,
+        receiverName: receiver.name,
+        receiverAlias: receiver.alias || null,
+        receiverEmail: receiver.email || null,
+        invoiceType: payload.invoiceType,
+        profile: payload.profile,
+        scenario: payload.scenario,
+        invoiceDate: payload.invoiceDate,
+        totalAmount: Math.round(totals.total * 100) / 100,
+        taxAmount: Math.round(totals.tax * 100) / 100,
+        currency: payload.currency || "TRY",
+        provider: settings.provider,
+        externalId: result.externalId,
+        externalNo: result.externalNo || null,
+        status: result.status || "draft",
+        payload,
+        lastResponse: result.raw || null,
+        attemptCount: 0,
+        createdBy: userId,
+        idempotencyKey: null,
+      }).returning();
+      row = inserted;
+    }
 
     await logEvent({ companyId, provider: settings.provider, event: "invoice_created",
       outboxId: row.id, message: `Outbox #${row.id} oluşturuldu (ETTN ${result.externalId})` });
     res.status(201).json(row);
   } catch (e: any) {
+    // Provider hatası: rezerve edildiyse satırı failed işaretle ve idempotencyKey'i null'la (retry'da yeniden rezerve edilebilsin)
+    if (reservedRow) {
+      await db.update(einvoiceOutboxTable).set({
+        status: "failed",
+        idempotencyKey: null,
+        lastResponse: { error: String(e?.message || e) },
+        updatedAt: new Date(),
+      }).where(eq(einvoiceOutboxTable.id, reservedRow.id));
+    }
     res.status(500).json({ error: "create_failed", detail: e?.message });
   }
 });
@@ -230,22 +313,40 @@ router.post("/outbox/:id/cancel", requireWriter, async (req: Request, res: Respo
   const companyId = req.companyId!;
   const id = Number(req.params.id);
   const reason = req.body?.reason;
-  const [row] = await db.select().from(einvoiceOutboxTable)
-    .where(and(eq(einvoiceOutboxTable.id, id), eq(einvoiceOutboxTable.companyId, companyId))).limit(1);
-  if (!row?.externalId) return res.status(404).json({ error: "not_found" });
+  // Atomik kilit: yalnızca iptal edilebilir durumlardan birinde ise "cancelling"e al
+  const [locked] = await db.update(einvoiceOutboxTable).set({
+    status: "cancelling", updatedAt: new Date(),
+  }).where(and(
+    eq(einvoiceOutboxTable.id, id),
+    eq(einvoiceOutboxTable.companyId, companyId),
+    sql`${einvoiceOutboxTable.status} IN ('draft','queued','failed','sent','accepted')`,
+  )).returning();
+  if (!locked) {
+    const [exists] = await db.select().from(einvoiceOutboxTable)
+      .where(and(eq(einvoiceOutboxTable.id, id), eq(einvoiceOutboxTable.companyId, companyId))).limit(1);
+    if (!exists) return res.status(404).json({ error: "not_found" });
+    return res.status(409).json({ error: "not_cancellable", status: exists.status });
+  }
+  if (!locked.externalId) {
+    await db.update(einvoiceOutboxTable).set({ status: "failed", statusMessage: "ETTN yok", updatedAt: new Date() }).where(eq(einvoiceOutboxTable.id, id));
+    return res.status(400).json({ error: "external_id_missing" });
+  }
   try {
     const { provider } = await getProviderForCompany(companyId);
-    const result = await provider.cancelInvoice(row.externalId, reason);
+    const result = await provider.cancelInvoice(locked.externalId, reason);
     const [updated] = await db.update(einvoiceOutboxTable).set({
       status: result.status === "cancelled" ? "cancelled" : "failed",
       statusMessage: result.message || null,
       lastResponse: result.raw || result,
       updatedAt: new Date(),
     }).where(eq(einvoiceOutboxTable.id, id)).returning();
-    await logEvent({ companyId, provider: row.provider, event: "invoice_cancelled",
+    await logEvent({ companyId, provider: locked.provider, event: "invoice_cancelled",
       outboxId: id, message: result.message });
     res.json(updated);
   } catch (e: any) {
+    await db.update(einvoiceOutboxTable).set({
+      status: "failed", statusMessage: e?.message || String(e), updatedAt: new Date(),
+    }).where(eq(einvoiceOutboxTable.id, id));
     res.status(500).json({ error: "cancel_failed", detail: e?.message });
   }
 });

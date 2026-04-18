@@ -2,6 +2,7 @@ import { db, channelAccountsTable, syncLogsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { MarketplaceProvider, MarketplaceAccountConfig } from "./types.js";
 import { MockMarketplaceProvider } from "./mock-provider.js";
+import { decryptSecrets } from "../../lib/secret-crypto.js";
 import {
   TrendyolProvider, HepsiburadaProvider, N11Provider, AmazonTrProvider,
   CiceksepetiProvider, PttAvmProvider, ShopifyProvider, WooCommerceProvider,
@@ -46,9 +47,10 @@ export async function getProviderForAccount(companyId: number, accountId: number
   )).limit(1);
   if (!account) throw new Error("account_not_found");
   const Klass = MP_REGISTRY[account.provider] || MockMarketplaceProvider;
+  // Provider'a credentials geçerken decrypt et — DB'de hep şifreli durur
   const cfg: MarketplaceAccountConfig = {
     provider: account.provider, sandbox: account.sandbox,
-    credentials: account.credentials || {}, settings: account.settings || {},
+    credentials: decryptSecrets(account.credentials || {}), settings: account.settings || {},
   };
   return { provider: new Klass(cfg), account };
 }

@@ -1,6 +1,7 @@
 import { db, einvoiceSettingsTable, einvoiceEventsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { EInvoiceProvider, EInvoiceProviderConfig } from "./types.js";
+import { decryptSecrets } from "../../lib/secret-crypto.js";
 import { MockEInvoiceProvider } from "./mock-provider.js";
 import {
   ParasutEInvoiceProvider, QnbEFinansProvider, ForibaProvider,
@@ -39,10 +40,11 @@ export async function getProviderForCompany(companyId: number): Promise<{
     settings = created;
   }
   const Klass = PROVIDER_REGISTRY[settings.provider] || MockEInvoiceProvider;
+  // Provider'a config geçerken hassas alanları decrypt et — DB'de hep şifreli durur
   const cfg: EInvoiceProviderConfig = {
     provider: settings.provider,
     sandbox: settings.sandbox,
-    config: settings.config || {},
+    config: decryptSecrets(settings.config || {}),
   };
   return { provider: new Klass(cfg), settings };
 }

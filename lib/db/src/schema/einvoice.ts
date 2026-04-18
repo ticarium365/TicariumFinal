@@ -1,6 +1,7 @@
 import {
   pgTable, serial, integer, text, timestamp, jsonb, boolean, index, uniqueIndex, real,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { companiesTable } from "./companies";
 import { usersTable } from "./users";
 
@@ -71,12 +72,15 @@ export const einvoiceOutboxTable = pgTable("einvoice_outbox", {
   // PDF / XML cache
   pdfUrl: text("pdf_url"),
   xmlUrl: text("xml_url"),
+  // Idempotency — istemci aynı anahtarla 2 kez POST ederse aynı kayıt döner
+  idempotencyKey: text("idempotency_key"),
   createdBy: integer("created_by").references(() => usersTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
   index("einvoice_outbox_company_status_idx").on(t.companyId, t.status),
   index("einvoice_outbox_external_idx").on(t.companyId, t.externalId),
+  uniqueIndex("einvoice_outbox_idem_idx").on(t.companyId, t.idempotencyKey).where(sql`${t.idempotencyKey} IS NOT NULL`),
 ]);
 
 // Inbox: karşıdan gelen e-faturalar (otomatik çekilir)
