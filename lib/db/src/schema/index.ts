@@ -19,6 +19,7 @@ export * from "./ext_integrations";
 export * from "./subscriptions";
 export * from "./documents";
 export * from "./finance_documents";
+export * from "./banking";
 export * from "./notification_rules";
 export * from "./personnel";
 export * from "./campaigns";

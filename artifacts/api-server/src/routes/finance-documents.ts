@@ -13,9 +13,22 @@ import {
   type FinanceDocType,
   type FinanceDocStatus,
 } from "@workspace/db";
+import {
+  expensesTable,
+  expenseCategoriesTable,
+  purchasesTable,
+} from "@workspace/db";
 import { and, eq, desc, sql, gte, lte, ilike, or, count } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { ObjectStorageService } from "../lib/objectStorage.js";
+import OpenAI from "openai";
+// pdf-parse: tree-shake için lazy import (CJS, runtime)
+async function pdfParseLazy(buffer: Buffer): Promise<{ text: string }> {
+  // @ts-ignore
+  const mod: any = await import("pdf-parse");
+  const fn = mod?.default ?? mod;
+  return fn(buffer);
+}
 
 const router: IRouter = Router();
 router.use(requireAuth);
@@ -802,6 +815,253 @@ router.put("/mailbox/config", async (req: Request, res: Response) => {
   } catch (e) {
     console.error("[finance-documents/mailbox PUT]", e);
     res.status(500).json({ error: "mailbox update failed" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SPRINT 57 — OCR (GPT-5.2 Vision + pdf-parse fallback)
+// ═══════════════════════════════════════════════════════════════════════════
+const openai = new OpenAI({
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+});
+
+const OCR_SYSTEM_PROMPT = `Sen bir Türk fatura / dekont / gider belgesi analiz uzmanısın.
+Verilen belgeden YALNIZCA aşağıdaki JSON şemasını döndür (markdown yok, açıklama yok):
+{
+  "docType": "gelen_fatura"|"giden_fatura"|"e_arsiv"|"e_fatura"|"dekont"|"gider_fisi"|"irsaliye"|"sozlesme"|"diger",
+  "documentNumber": string|null,
+  "documentDate": string|null,         // ISO YYYY-MM-DD
+  "dueDate": string|null,              // ISO YYYY-MM-DD
+  "partyName": string|null,            // karşı taraf (tedarikçi/müşteri) ünvanı
+  "partyTaxNumber": string|null,       // VKN/TCKN
+  "subtotal": number|null,             // KDV hariç tutar
+  "vatAmount": number|null,
+  "totalAmount": number|null,
+  "currency": "TRY"|"USD"|"EUR"|"GBP",
+  "lineItems": [{"name":string,"qty":number|null,"unitPrice":number|null,"total":number|null}]
+}
+Türkçe sayı formatı (1.234,56) → 1234.56 dönüştür. Bilinmeyen alan null bırak.`;
+
+async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const c of stream) chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c));
+  return Buffer.concat(chunks);
+}
+
+router.post("/:id/ocr", async (req: Request, res: Response) => {
+  try {
+    const companyId = req.companyId!;
+    const id = Number(req.params.id);
+    const [doc] = await db
+      .select()
+      .from(financeDocumentsTable)
+      .where(and(eq(financeDocumentsTable.id, id), eq(financeDocumentsTable.companyId, companyId)))
+      .limit(1);
+    if (!doc) return res.status(404).json({ error: "Document not found" });
+
+    // Dosyayı indir
+    const file = await objectStorage.getObjectEntityFile(doc.objectPath);
+    const fileBuffer = await streamToBuffer(file.createReadStream());
+    const mime = (doc.mimeType || "").toLowerCase();
+
+    let messages: any[];
+    let extractedText = "";
+
+    if (mime.startsWith("image/")) {
+      const dataUrl = `data:${mime};base64,${fileBuffer.toString("base64")}`;
+      messages = [
+        { role: "system", content: OCR_SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Bu belgeden istenen JSON'u çıkar." },
+            { type: "image_url", image_url: { url: dataUrl } },
+          ],
+        },
+      ];
+    } else if (mime.includes("pdf")) {
+      try {
+        const parsed = await pdfParseLazy(fileBuffer);
+        extractedText = (parsed?.text || "").slice(0, 16000);
+      } catch {
+        extractedText = "";
+      }
+      if (!extractedText.trim()) {
+        return res.status(422).json({
+          error: "PDF metin çıkarılamadı (taranmış PDF olabilir). Şimdilik resim formatına çevirip yükleyin.",
+        });
+      }
+      messages = [
+        { role: "system", content: OCR_SYSTEM_PROMPT },
+        { role: "user", content: `Aşağıdaki PDF metninden JSON'u çıkar:\n\n${extractedText}` },
+      ];
+    } else {
+      return res.status(415).json({ error: `Desteklenmeyen mime: ${mime}` });
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5.2",
+      max_completion_tokens: 4096,
+      messages,
+      response_format: { type: "json_object" },
+    });
+
+    const raw = completion.choices[0]?.message?.content || "{}";
+    let parsed: any = {};
+    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+
+    // Veritabanına yansıt (mevcut alanları override etme — sadece boşları doldur)
+    const patch: Record<string, unknown> = {
+      hasOcr: true,
+      ocrText: extractedText || raw,
+      metadata: { ...(doc.metadata as object || {}), ocr: parsed },
+      updatedAt: new Date(),
+    };
+    if (parsed.docType && (FINANCE_DOC_TYPES as readonly string[]).includes(parsed.docType) && doc.docType === "diger") {
+      patch.docType = parsed.docType;
+    }
+    if (!doc.documentNumber && parsed.documentNumber) patch.documentNumber = String(parsed.documentNumber);
+    if (!doc.documentDate && parsed.documentDate) {
+      const d = new Date(parsed.documentDate);
+      if (!isNaN(d.getTime())) patch.documentDate = d;
+    }
+    if (!doc.dueDate && parsed.dueDate) {
+      const d = new Date(parsed.dueDate);
+      if (!isNaN(d.getTime())) patch.dueDate = d;
+    }
+    if (!doc.partyName && parsed.partyName) patch.partyName = String(parsed.partyName);
+    if (!doc.partyTaxNumber && parsed.partyTaxNumber) patch.partyTaxNumber = String(parsed.partyTaxNumber);
+    if (!doc.subtotal && parsed.subtotal != null) patch.subtotal = String(parsed.subtotal);
+    if (!doc.vatAmount && parsed.vatAmount != null) patch.vatAmount = String(parsed.vatAmount);
+    if (!doc.totalAmount && parsed.totalAmount != null) patch.totalAmount = String(parsed.totalAmount);
+    if (parsed.currency && ["TRY","USD","EUR","GBP"].includes(parsed.currency)) patch.currency = parsed.currency;
+
+    const [updated] = await db
+      .update(financeDocumentsTable)
+      .set(patch)
+      .where(and(eq(financeDocumentsTable.id, id), eq(financeDocumentsTable.companyId, companyId)))
+      .returning();
+
+    res.json({ ok: true, ocr: parsed, document: updated });
+  } catch (e: any) {
+    console.error("[finance-documents/ocr]", e);
+    res.status(500).json({ error: "OCR failed", detail: e?.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SPRINT 58 — OTOMATİK DÖNÜŞÜM (belge → alış faturası / gider)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Belgeyi alış faturası kaydına çevir (sadece doc_type=gelen_fatura/e_fatura/e_arsiv için)
+router.post("/:id/convert-to-purchase", async (req: Request, res: Response) => {
+  try {
+    const companyId = req.companyId!;
+    const id = Number(req.params.id);
+    const [doc] = await db
+      .select()
+      .from(financeDocumentsTable)
+      .where(and(eq(financeDocumentsTable.id, id), eq(financeDocumentsTable.companyId, companyId)))
+      .limit(1);
+    if (!doc) return res.status(404).json({ error: "Document not found" });
+    if (doc.convertedToType) {
+      return res.status(409).json({ error: `Bu belge zaten ${doc.convertedToType} #${doc.convertedToId} olarak dönüştürülmüş.` });
+    }
+    if (!doc.supplierId) {
+      return res.status(400).json({ error: "Önce tedarikçi (supplier) seçilmeli." });
+    }
+    if (!doc.totalAmount) {
+      return res.status(400).json({ error: "Toplam tutar boş." });
+    }
+
+    const total = Number(doc.totalAmount);
+    const tax = Number(doc.vatAmount || 0);
+    const subtotal = Number(doc.subtotal || total - tax);
+
+    const [purchase] = await db.insert(purchasesTable).values({
+      companyId,
+      supplierId: doc.supplierId,
+      invoiceNo: doc.documentNumber || `BLG-${doc.id}`,
+      invoiceDate: doc.documentDate || new Date(),
+      subtotalAmount: subtotal,
+      taxAmount: tax,
+      discountAmount: 0,
+      totalAmount: total,
+      paymentStatus: "unpaid",
+      note: `Belge Merkezi'nden otomatik oluşturuldu (#${doc.id})`,
+      createdBy: req.session.user?.id ?? null,
+    }).returning();
+
+    await db.update(financeDocumentsTable)
+      .set({
+        convertedToType: "purchase",
+        convertedToId: purchase.id,
+        status: "islendi",
+        processedBy: req.session.user?.id ?? null,
+        processedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(financeDocumentsTable.id, id), eq(financeDocumentsTable.companyId, companyId)));
+
+    res.json({ ok: true, purchase });
+  } catch (e: any) {
+    console.error("[finance-documents/convert-to-purchase]", e);
+    res.status(500).json({ error: "Conversion failed", detail: e?.message });
+  }
+});
+
+// Belgeyi gider kaydına çevir
+router.post("/:id/convert-to-expense", async (req: Request, res: Response) => {
+  try {
+    const companyId = req.companyId!;
+    const id = Number(req.params.id);
+    const { categoryId } = req.body ?? {};
+    const [doc] = await db
+      .select()
+      .from(financeDocumentsTable)
+      .where(and(eq(financeDocumentsTable.id, id), eq(financeDocumentsTable.companyId, companyId)))
+      .limit(1);
+    if (!doc) return res.status(404).json({ error: "Document not found" });
+    if (doc.convertedToType) {
+      return res.status(409).json({ error: `Bu belge zaten ${doc.convertedToType} #${doc.convertedToId} olarak dönüştürülmüş.` });
+    }
+    if (!doc.totalAmount) return res.status(400).json({ error: "Toplam tutar boş." });
+
+    if (categoryId != null) {
+      const [cat] = await db.select({ id: expenseCategoriesTable.id })
+        .from(expenseCategoriesTable)
+        .where(and(eq(expenseCategoriesTable.id, Number(categoryId)), eq(expenseCategoriesTable.companyId, companyId)))
+        .limit(1);
+      if (!cat) return res.status(400).json({ error: "Geçersiz categoryId." });
+    }
+
+    const [expense] = await db.insert(expensesTable).values({
+      companyId,
+      categoryId: categoryId ? Number(categoryId) : null,
+      amount: Number(doc.totalAmount),
+      description: doc.title || doc.partyName || doc.originalName || `Belge #${doc.id}`,
+      expenseDate: doc.documentDate || new Date(),
+      paymentMethod: "cash",
+      notes: `Belge Merkezi'nden otomatik (#${doc.id}) — ${doc.documentNumber || ""}`,
+      createdBy: req.session.user?.id ?? null,
+    }).returning();
+
+    await db.update(financeDocumentsTable)
+      .set({
+        convertedToType: "expense",
+        convertedToId: expense.id,
+        status: "islendi",
+        processedBy: req.session.user?.id ?? null,
+        processedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(financeDocumentsTable.id, id), eq(financeDocumentsTable.companyId, companyId)));
+
+    res.json({ ok: true, expense });
+  } catch (e: any) {
+    console.error("[finance-documents/convert-to-expense]", e);
+    res.status(500).json({ error: "Conversion failed", detail: e?.message });
   }
 });
 

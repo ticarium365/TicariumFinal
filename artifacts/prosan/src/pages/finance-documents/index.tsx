@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Inbox, Upload, Search, FolderPlus, Folder, FolderOpen, Filter,
   FileText, Receipt, FileSpreadsheet, FileSignature, FileCheck2,
-  CircleDollarSign, Truck, Loader2, Trash2, Download, Eye, Star,
+  CircleDollarSign, Truck, Loader2, Trash2, Download, Eye, Star, Sparkles, ArrowRightLeft,
   RefreshCw, X, Tag,
 } from "lucide-react";
 
@@ -145,6 +145,8 @@ export default function FinanceDocumentsPage() {
   // Detay
   const [detail, setDetail] = useState<Doc | null>(null);
   const [detailBusy, setDetailBusy] = useState(false);
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [convertBusy, setConvertBusy] = useState(false);
 
   // Klasör dialog
   const [folderDialog, setFolderDialog] = useState(false);
@@ -329,6 +331,59 @@ export default function FinanceDocumentsPage() {
 
   const downloadDoc = (id: number) => {
     window.open(`${API}/${id}/download`, "_blank");
+  };
+
+  // ─────── Sprint 57 — OCR ───────
+  const ocrDoc = async (id: number) => {
+    setOcrBusy(true);
+    try {
+      const res = await fetch(`${API}/${id}/ocr`, { method: "POST", credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: "OCR başarısız", description: data?.error || data?.detail, variant: "destructive" });
+        return;
+      }
+      if (data.document) setDetail(data.document);
+      fetchAll();
+      toast({ title: "OCR tamamlandı", description: "Belge bilgileri AI ile dolduruldu." });
+    } catch (e: any) {
+      toast({ title: "OCR hatası", description: String(e?.message || e), variant: "destructive" });
+    } finally {
+      setOcrBusy(false);
+    }
+  };
+
+  // ─────── Sprint 58 — Otomatik dönüşüm ───────
+  const convertDoc = async (id: number, target: "purchase" | "expense") => {
+    setConvertBusy(true);
+    try {
+      const url = `${API}/${id}/convert-to-${target}`;
+      const res = await fetch(url, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: "Dönüşüm başarısız", description: data?.error || data?.detail, variant: "destructive" });
+        return;
+      }
+      toast({
+        title: target === "purchase" ? "Alış faturasına çevrildi" : "Gidere çevrildi",
+        description: target === "purchase"
+          ? `Alış faturası #${data.purchase?.id} oluşturuldu.`
+          : `Gider #${data.expense?.id} oluşturuldu.`,
+      });
+      // Detayı yenile
+      const updated = await fetch(`${API}/${id}`, { credentials: "include" }).then(r => r.json());
+      setDetail(updated);
+      fetchAll();
+    } catch (e: any) {
+      toast({ title: "Hata", description: String(e?.message || e), variant: "destructive" });
+    } finally {
+      setConvertBusy(false);
+    }
   };
 
   const toggleFavorite = (doc: Doc) => {
@@ -728,20 +783,53 @@ export default function FinanceDocumentsPage() {
                 </div>
               </div>
 
-              <DialogFooter className="flex-row justify-between sm:justify-between gap-2">
-                <Button variant="destructive" size="sm" onClick={() => deleteDoc(detail.id)}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Sil
-                </Button>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => downloadDoc(detail.id)}>
-                    <Download className="h-4 w-4 mr-2" />
-                    İndir / Görüntüle
+              {detail.convertedToType && (
+                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-md px-3 py-2 flex items-center gap-2">
+                  <FileCheck2 className="h-4 w-4" />
+                  Bu belge <strong>{detail.convertedToType === "purchase" ? "Alış Faturası" : "Gider"}</strong> #{detail.convertedToId} olarak işlendi.
+                </div>
+              )}
+
+              <DialogFooter className="flex-col gap-2 sm:flex-col">
+                <div className="flex flex-wrap gap-2 w-full">
+                  <Button
+                    variant="secondary" size="sm"
+                    onClick={() => ocrDoc(detail.id)}
+                    disabled={ocrBusy}
+                  >
+                    {ocrBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                    {detail.hasOcr ? "OCR'ı Tekrarla" : "AI OCR Çek"}
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setDetail(null)}>
-                    {detailBusy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Kapat
+                  {!detail.convertedToType && (
+                    <>
+                      {(detail.docType === "gelen_fatura" || detail.docType === "e_fatura" || detail.docType === "e_arsiv") && (
+                        <Button variant="default" size="sm" onClick={() => convertDoc(detail.id, "purchase")} disabled={convertBusy}>
+                          {convertBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArrowRightLeft className="h-4 w-4 mr-2" />}
+                          Alış Faturasına Çevir
+                        </Button>
+                      )}
+                      <Button variant="outline" size="sm" onClick={() => convertDoc(detail.id, "expense")} disabled={convertBusy}>
+                        {convertBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CircleDollarSign className="h-4 w-4 mr-2" />}
+                        Gidere Çevir
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <div className="flex justify-between gap-2 w-full pt-2 border-t">
+                  <Button variant="destructive" size="sm" onClick={() => deleteDoc(detail.id)}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Sil
                   </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => downloadDoc(detail.id)}>
+                      <Download className="h-4 w-4 mr-2" />
+                      İndir
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setDetail(null)}>
+                      {detailBusy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Kapat
+                    </Button>
+                  </div>
                 </div>
               </DialogFooter>
             </>

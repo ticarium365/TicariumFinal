@@ -43,6 +43,8 @@ import IntegrationsPage from "@/pages/settings/integrations";
 import SubscriptionPage from "@/pages/settings/subscription";
 import DocumentsPage from "@/pages/documents/index";
 import FinanceDocumentsPage from "@/pages/finance-documents/index";
+import BankingPage from "@/pages/banking/index";
+import FinanceDashboardPage from "@/pages/finance-dashboard/index";
 import NotificationSettingsPage from "@/pages/settings/notifications";
 import PersonnelPage from "@/pages/personnel";
 import CampaignsPage from "@/pages/campaigns";
@@ -226,6 +228,14 @@ function AuthenticatedRouter() {
 
         <Route path="/finance-documents">
           {() => <ProtectedRoute component={FinanceDocumentsPage} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+
+        <Route path="/banking">
+          {() => <ProtectedRoute component={BankingPage} roles={["admin", "staff"]} />}
+        </Route>
+
+        <Route path="/finance-dashboard">
+          {() => <ProtectedRoute component={FinanceDashboardPage} roles={["admin", "staff", "viewer"]} />}
         </Route>
 
         <Route path="/settings/notifications">
