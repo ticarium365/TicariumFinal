@@ -108,6 +108,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/stock-counts", label: "Stok Sayım", icon: ClipboardList, roles: ["admin", "staff"] },
     { href: "/finance", label: "Kasa / Finans", icon: Wallet, roles: ["admin", "staff", "viewer"] },
     { href: "/finance-dashboard", label: "Finans Paneli", icon: TrendingUp, roles: ["admin", "viewer"] },
+    { href: "/profit", label: "Net Kâr Merkezi", icon: TrendingUp, roles: ["admin", "staff", "viewer"] },
+    { href: "/marketplace", label: "Pazaryeri", icon: Radio, roles: ["admin", "staff"] },
     { href: "/banking", label: "Bankacılık", icon: Banknote, roles: ["admin", "staff"] },
     { href: "/branches", label: "Şubeler", icon: GitBranch, roles: ["admin", "staff", "viewer"] },
     { href: "/documents", label: "Evrak Yönetimi", icon: FileText, roles: ["admin", "staff", "viewer"] },

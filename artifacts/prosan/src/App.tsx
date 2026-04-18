@@ -46,6 +46,8 @@ import FinanceDocumentsPage from "@/pages/finance-documents/index";
 import BankingPage from "@/pages/banking/index";
 import FinanceDashboardPage from "@/pages/finance-dashboard/index";
 import EInvoicePage from "@/pages/einvoice/index";
+import MarketplacePage from "@/pages/marketplace/index";
+import ProfitPage from "@/pages/profit/index";
 import NotificationSettingsPage from "@/pages/settings/notifications";
 import PersonnelPage from "@/pages/personnel";
 import CampaignsPage from "@/pages/campaigns";
@@ -237,6 +239,12 @@ function AuthenticatedRouter() {
 
         <Route path="/einvoice">
           {() => <ProtectedRoute component={EInvoicePage} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+        <Route path="/marketplace">
+          {() => <ProtectedRoute component={MarketplacePage} roles={["admin", "staff"]} />}
+        </Route>
+        <Route path="/profit">
+          {() => <ProtectedRoute component={ProfitPage} roles={["admin", "staff", "viewer"]} />}
         </Route>
         <Route path="/finance-dashboard">
           {() => <ProtectedRoute component={FinanceDashboardPage} roles={["admin", "staff", "viewer"]} />}

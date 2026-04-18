@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { db, usersTable, productsTable } from "@workspace/db";
 import { seedSubscriptionPlans } from "./routes/subscriptions.js";
+import { startMarketplaceWorker } from "./services/marketplace/worker.js";
 import { sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import seedProductsRaw from "./seed-products.json";
@@ -147,4 +148,6 @@ app.listen(port, (err?: Error) => {
   logger.info({ port }, "Server listening");
   // Run seeds after server is up so health check passes immediately
   runSeeds().catch((err) => logger.error({ err }, "Seed error"));
+  // Start marketplace sync worker (in-process)
+  try { startMarketplaceWorker(); } catch (e) { logger.error({ err: e }, "Marketplace worker failed to start"); }
 });

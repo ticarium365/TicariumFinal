@@ -40,6 +40,8 @@ import b2bOrdersRouter from "./b2b-orders.js";
 import b2bCatalogRouter from "./b2b-catalog.js";
 import channelsRouter from "./channels.js";
 import einvoiceRouter from "./einvoice.js";
+import marketplaceRouter from "./marketplace.js";
+import profitRouter from "./profit.js";
 
 const router: IRouter = Router();
 
@@ -84,5 +86,7 @@ router.use("/b2b/orders", b2bOrdersRouter);
 router.use("/b2b/catalog", b2bCatalogRouter);
 router.use("/channels", channelsRouter);
 router.use("/einvoice", einvoiceRouter);
+router.use("/marketplace", marketplaceRouter);
+router.use("/profit", profitRouter);
 
 export default router;
