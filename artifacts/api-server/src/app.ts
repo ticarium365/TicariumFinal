@@ -13,8 +13,21 @@ import clientErrorsRouter from "./routes/client-errors.js";
 import contactRouter from "./routes/contact.js";
 import { logger } from "./lib/logger.js";
 import { tenantMiddleware } from "./middlewares/tenant.js";
+import crypto from "node:crypto";
 
 const app: Express = express();
+
+// ─── Request ID korelasyonu ──────────────────────────────────────────────────
+// Gelen X-Request-Id varsa onu kullan; yoksa üret. Yanıta da yansıt.
+app.use((req, res, next) => {
+  const incoming = req.header("x-request-id");
+  const id = (incoming && /^[A-Za-z0-9._-]{6,128}$/.test(incoming))
+    ? incoming
+    : crypto.randomUUID();
+  (req as any).id = id;
+  res.setHeader("X-Request-Id", id);
+  next();
+});
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 // ─── Güvenlik başlıkları (Sprint 26 + canlı öncesi sıkılaştırma) ─────────────

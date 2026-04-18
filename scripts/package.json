@@ -7,7 +7,7 @@
     "hello": "tsx ./src/hello.ts",
     "seed": "tsx ./src/seed.ts",
     "import-products": "tsx ./src/import-products.ts",
-    "backup": "tsx ./src/db-backup.ts",
+    "db:backup": "tsx ./src/db-backup.ts",
     "audit:archive": "tsx ./src/audit-archive.ts",
     "md2docx": "tsx ./src/md-to-docx.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"

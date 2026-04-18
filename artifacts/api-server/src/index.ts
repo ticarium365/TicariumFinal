@@ -153,4 +153,6 @@ app.listen(port, (err?: Error) => {
   try { startMarketplaceWorker(); } catch (e) { logger.error({ err: e }, "Marketplace worker failed to start"); }
   // Sprint 72 — daily profit snapshots
   try { startProfitCron(); } catch (e) { logger.error({ err: e }, "Profit cron failed to start"); }
+  // Dahili scheduler (db-backup, audit-archive) — opt-in via ENABLE_SCHEDULER=true
+  import("./lib/scheduler.js").then(m => m.startScheduler()).catch(e => logger.error({ err: e }, "Scheduler failed to start"));
 });

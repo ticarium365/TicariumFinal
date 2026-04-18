@@ -4105,6 +4105,24 @@ describe("Sprint 27 — DevOps & İzleme", () => {
     assert.equal(r.status, 403);
   });
 
+  test("X-Request-Id otomatik üretilir ve yanıta yansıtılır", async () => {
+    const r = await fetch("http://localhost:8080/api/healthz");
+    const id = r.headers.get("x-request-id");
+    assert.ok(id && id.length >= 10, "request id üretilmiş olmalı");
+  });
+
+  test("X-Request-Id geçerli istemci değeri pass-through edilir", async () => {
+    const r = await fetch("http://localhost:8080/api/healthz", { headers: { "X-Request-Id": "trace-xyz-789" } });
+    assert.equal(r.headers.get("x-request-id"), "trace-xyz-789");
+  });
+
+  test("X-Request-Id geçersiz değer reddedilip yenisi üretilir", async () => {
+    const r = await fetch("http://localhost:8080/api/healthz", { headers: { "X-Request-Id": "<bad chars>" } });
+    const id = r.headers.get("x-request-id");
+    assert.notEqual(id, "<bad chars>");
+    assert.ok(id && id.length >= 10);
+  });
+
   test("/api/client-errors endpoint'i hata raporu kabul eder", async () => {
     const r = await fetch("http://localhost:8080/api/client-errors", {
       method: "POST",
