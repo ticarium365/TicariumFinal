@@ -53,6 +53,8 @@ import FinanceDashboardPage from "@/pages/finance-dashboard/index";
 import EInvoicePage from "@/pages/einvoice/index";
 import MarketplacePage from "@/pages/marketplace/index";
 import ETicariumMerkeziPage from "@/pages/eticarium-merkezi/index";
+import MagazaListesi from "@/pages/magaza/index";
+import MagazaDetay from "@/pages/magaza/detail";
 import ProfitPage from "@/pages/profit/index";
 import MuhasebeciPage from "@/pages/muhasebeci/index";
 import BudgetsPage from "@/pages/butce/index";
@@ -267,6 +269,12 @@ function AuthenticatedRouter() {
 
         <Route path="/einvoice">
           {() => <ProtectedRoute component={EInvoicePage} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+        <Route path="/magaza">
+          {() => <ProtectedRoute component={MagazaListesi} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+        <Route path="/magaza/:id">
+          {() => <ProtectedRoute component={MagazaDetay} roles={["admin", "staff", "viewer"]} />}
         </Route>
         <Route path="/eticarium-merkezi">
           {() => <ProtectedRoute component={ETicariumMerkeziPage} roles={["admin", "staff", "viewer"]} />}

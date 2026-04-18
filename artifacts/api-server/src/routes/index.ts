@@ -109,4 +109,7 @@ router.use("/currency", requireAuth, requireFeature("currency.multi"), currencyR
 import profitEngineRouter from "./profit-engine.js";
 router.use("/profit-engine", profitEngineRouter);
 
+import storefrontsRouter from "./storefronts.js";
+router.use("/storefronts", storefrontsRouter);
+
 export default router;

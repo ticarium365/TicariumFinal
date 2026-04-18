@@ -80,10 +80,11 @@ const moduleCards: Array<{
   },
   {
     key: "storefront",
-    title: "Ticarium365 Hazır Mağaza",
-    desc: "firmaadi.ticarium365.shop ile dakikalar içinde online mağaza. (Yakında)",
+    title: "Hazır Mağaza & Müşteri Sitesi",
+    desc: "firmaadi.ticarium365.shop hazır mağaza, kendi sitenize embed widget ya da merkezi Ticarium Pazar.",
     icon: Store,
-    status: "soon",
+    status: "live",
+    href: "/magaza",
   },
   {
     key: "ads",
@@ -259,10 +260,21 @@ export default function ETicariumMerkeziPage() {
         </TabsContent>
 
         <TabsContent value="storefront" className="mt-6">
-          <ComingSoon
-            title="Ticarium365 Hazır Mağaza"
-            desc="firmaadi.ticarium365.shop alt alanı veya kendi domaininle çalışan hazır mağaza yakında."
-          />
+          <Card>
+            <CardContent className="py-8 text-center space-y-3">
+              <Store className="h-10 w-10 mx-auto" style={{ color: EMERALD }} />
+              <h3 className="font-semibold text-lg">Hazır Mağaza & Müşteri Sitesi</h3>
+              <p className="text-sm text-muted-foreground max-w-lg mx-auto">
+                Üç farklı tipte mağaza: <b>firmaadi.ticarium365.shop</b> hazır mağaza,
+                müşterinizin kendi web sitesine <b>embed widget</b> veya merkezi
+                <b> Ticarium Pazar</b> (yakında) e-ticaret sitemize çıkış. Ödeme modeli
+                anlaşmaya göre — ya biz tahsil ederiz ya da işletmenin POS'una yönlendiririz.
+              </p>
+              <Button onClick={() => setLocation("/magaza")} style={{ background: EMERALD }}>
+                Mağazalarımı Yönet <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="ads" className="mt-6">
