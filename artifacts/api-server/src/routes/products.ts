@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { db, productsTable, productViewsTable, salesTable } from "@workspace/db";
 import { eq, ilike, and, lte, or, desc, asc, count, gte, sql } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth.js";
+import { audit } from "../lib/audit.js";
 import multer from "multer";
 import * as XLSX from "xlsx";
 
@@ -538,6 +539,8 @@ router.put("/:id", requireAuth, async (req: Request, res: Response) => {
       res.status(404).json({ error: "Not Found", message: "Ürün bulunamadı" });
       return;
     }
+    await audit({ req, action: "PRODUCT_UPDATE", entity: "product", entityId: product.id,
+      details: { productCode: product.productCode, name: product.name, changes: Object.keys(updateData) } });
     res.json(await formatProduct(product));
   } catch (err: any) {
     if (err?.code === "23505") {
@@ -562,6 +565,7 @@ router.delete("/:id", requireAuth, async (req: Request, res: Response) => {
       res.status(404).json({ error: { code: "NOT_FOUND", message: "Ürün bulunamadı veya zaten silinmiş", details: null } });
       return;
     }
+    await audit({ req, action: "PRODUCT_DELETE", entity: "product", entityId: deactivated.id });
     res.json({ message: "Ürün silindi" });
   } catch (err) {
     req.log?.error({ err }, "Delete product error");

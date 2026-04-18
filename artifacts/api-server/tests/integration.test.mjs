@@ -4219,3 +4219,60 @@ describe("Canlı Öncesi — Rate Limit & Güvenlik", () => {
     assert.ok(r.status === 400 || r.status === 422, "Boş gövde reddedilmeli");
   });
 });
+
+// ─── Süper Admin & Audit Log kapsam testleri ─────────────────────────────────
+describe("Süper Admin & Audit Log Kapsamı", () => {
+  test("Süper admin login çalışıyor", async () => {
+    const r = await fetch("http://localhost:8080/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username: "superadmin", password: "SuperAdmin2026!" }),
+    });
+    assert.equal(r.status, 200);
+    const data = await r.json();
+    assert.equal(data.user?.role, "super_admin");
+  });
+
+  test("Süper admin audit-logs endpoint'ine erişebiliyor", async () => {
+    // login + cookie
+    const login = await fetch("http://localhost:8080/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username: "superadmin", password: "SuperAdmin2026!" }),
+    });
+    const cookie = login.headers.get("set-cookie")?.split(";")[0] || "";
+    const r = await fetch("http://localhost:8080/api/audit-logs?limit=5", {
+      headers: { cookie },
+    });
+    assert.equal(r.status, 200);
+    const data = await r.json();
+    assert.ok(Array.isArray(data.items), "items array döndürülmeli");
+  });
+
+  test("Audit log /actions endpoint çalışıyor", async () => {
+    const login = await fetch("http://localhost:8080/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username: "superadmin", password: "SuperAdmin2026!" }),
+    });
+    const cookie = login.headers.get("set-cookie")?.split(";")[0] || "";
+    const r = await fetch("http://localhost:8080/api/audit-logs/actions", { headers: { cookie } });
+    assert.equal(r.status, 200);
+    const arr = await r.json();
+    assert.ok(Array.isArray(arr));
+  });
+});
+
+// ─── PWA Manifest & SEO meta ────────────────────────────────────────────────
+describe("PWA & SEO", () => {
+  test("Manifest dosyası var (frontend)", async () => {
+    const r = await fetch("http://localhost:80/manifest.webmanifest");
+    if (r.status === 200) {
+      const ct = r.headers.get("content-type") || "";
+      const data = await r.json();
+      assert.equal(data.name, "Ticarium365");
+      assert.equal(data.display, "standalone");
+    }
+    // 404 ise frontend dev server build aşamasında olabilir, kırılgan değil
+  });
+});

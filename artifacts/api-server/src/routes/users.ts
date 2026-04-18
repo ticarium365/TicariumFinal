@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth.js";
+import { audit } from "../lib/audit.js";
 
 const router = Router();
 
@@ -93,6 +94,8 @@ router.put("/:id", requireAuth, requireAdmin, async (req: Request, res: Response
       res.status(404).json({ error: "Not Found", message: "Kullanıcı bulunamadı" });
       return;
     }
+    await audit({ req, action: "USER_UPDATE", entity: "user", entityId: user.id,
+      details: { username: user.username, role: user.role, changes: Object.keys(updateData), passwordChanged: !!password } });
     res.json(user);
   } catch (err) {
     req.log?.error({ err }, "Update user error");
@@ -115,6 +118,7 @@ router.delete("/:id", requireAuth, requireAdmin, async (req: Request, res: Respo
       res.status(404).json({ error: "Not Found", message: "Kullanıcı bulunamadı" });
       return;
     }
+    await audit({ req, action: "USER_DELETE", entity: "user", entityId: deleted.id });
     res.json({ message: "Kullanıcı silindi" });
   } catch (err) {
     req.log?.error({ err }, "Delete user error");

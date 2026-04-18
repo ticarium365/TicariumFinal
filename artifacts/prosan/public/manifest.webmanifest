@@ -1,0 +1,20 @@
+{
+  "name": "Ticarium365",
+  "short_name": "T365",
+  "description": "Ticarium365 — Türkiye'nin esnafı için stok, satış, fatura ve cari takibi tek platformda.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#10b981",
+  "lang": "tr-TR",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
