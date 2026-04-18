@@ -1,0 +1,58 @@
+Ticarium365 için fonksiyonel ve mimari önerilerim:
+Mimari Öneriler
+1. Event-Driven Mimariye Geçiş
+Şu an: Senkron API çağrıları (satış → stok düşür → kâr hesapla → audit log)
+Öneri: Redis Pub/Sub veya BullMQ ile asenkron iş akışları
+Örnek: SALE_COMPLETED event'i → stok servisi dinler ve düşürür, kâr motoru dinler ve hesaplar, audit servisi loglar
+Fayda: Bir servis yavaşsa satış işlemi bloklanmaz
+2. Read Replica Ayrımı
+Şu an: Tek PostgreSQL instance, tüm okuma/yazma buraya
+Öneri: Ana DB (yazma) + Read Replica (raporlar/dashboard)
+Fayda: /dashboard ve /raporlar yoğun sorguları ana DB'yi kilitlemez
+3. Microservice Boundary'leri Belirle (Şimdilik Modular Monolith)
+Şu an: 61 route dosyası, tek deploy
+Öneri: Domain bazlı modül ayrımı — sales/, inventory/, marketplace/, finance/ her biri kendi service katmanı, kendi DB şeması
+Fayda: Gelecekte marketplace servisini ayrı container'a çıkarmak kolaylaşır
+4. API Gateway / BFF (Backend for Frontend)
+Şu an: Web ve mobil aynı /api/* endpoint'lerini kullanıyor
+Öneri: Mobil için özel BFF — gereksiz alanları çıkarır, ekran bazlı API'ler (örn: GET /mobile/dashboard tek çağrıda tüm gerekli veri)
+Fayda: Mobil az data kullanır, hızlı açılır
+5. Multi-Region Düşüncesi (Veri Konumu)
+Şu an: Replit (Google Cloud) — tek bölge
+Öneri: Veri residency — KVKK gereği Türkiye'de kalması lazım, ama ileride farklı ülkelere açılırsa tenant başına region seçimi
+Fayda: Yasal uyumluluk + performans
+Fonksiyonel Öneriler
+6. Gerçek Zamanlı Bildirim Sistemi
+Şu an: Yok (mail varsa gönderir, yoksa sessiz)
+Öneri: WebSocket + Socket.io — satış anında kasa ekranında "Yeni sipariş" popup'ı, stok kritik seviyede "Uyarı" banner'ı
+Fayda: Reaktif iş akışları, kullanıcı sürekli refresh atmaz
+7. Akıllı Stok Tahmini
+Şu an: Mevcut stok görülür, geçmiş yok
+Öneri: Basit trend analizi — "Bu ürün son 30 günde günde ortalama 5 satıldı, mevcut stok 20 → 4 gün sonra bitecek"
+Fayda: Otomatik tedarikçi sipariş önerisi
+8. Çoklu Depo / Şube Stok Transferi
+Şu an: branches tablosu var ama stok transferi yok
+Öneri: Transfer emri akışı — A şubesinden B şubesine "X üründen 10 adet" talebi → B onaylar/reddeder → stok hareketi oluşur
+Fayda: Zincir mağaza yapısı için kritik
+9. Müşteri Segmentasyon ve Otomatik Kampanya
+Şu an: loyalty_* tabloları var ama pasif
+Öneri: RFM analizi (Recency, Frequency, Monetary) otomatik hesapla → "Churn riski yüksek" müşterilere otomatik indirim kuponu
+Fayda: Satış artışı, müşteri bağlılığı
+10. E-Fatura Otomasyon Kuralları
+Şu an: Manuel e-fatura kesme
+Öneri: Kural motoru — "1000 TL üzeri satışlarda otomatik e-fatura", "X müşteri tipine her zaman e-arşiv", "Her Cuma günü birikmiş faturaları toplu gönder"
+Fayda: Operasyonel yük azalır, hata riski düşer
+11. Pazaryeri Fiyat Senkronizasyonu
+Şu an: Ürün eşleme var, fiyat kuralları var ama otomatik senkronizasyon yok
+Öneri: Zamanlayıcı + fiyat değişiklik algılama — Ana sistemde fiyat değişince otomatik Trendyol/Hepsiburada'ya push, karşılaştırma yap fark varsa uyarı
+Fayda: Fiyat uyumsuzluğu kaybını önler
+12. Mobil POS (Satış Noktası) Modu
+Şu an: Mobil genel yönetim
+Öneri: Dedicated POS ekranı — Barkod kamera ile okutma, hızlı ödeme tuşları (nakit/kart), fiş yazıcı entegrasyonu (Bluetooth thermal printer)
+Fayda: Fuar, pazar, kapıda satış senaryoları
+Teknik Borç / Hızlı Kazanımlar
+Table
+#	Öneri	Efor	Etki
+13	Health check endpoint'lerini genişlet — DB bağlantısı, Object Storage, SMTP her biri ayrı status dönsün	2 saat	Monitoring
+14	API response caching — /api/products listesi 5 dakika cache, tenant başına Redis key	4 saat	Performans
+15	Feature flag sistemi — lib/db/src/schema/companies.ts'e features JSONB alanı, yeni modülleri tenant bazında aç/kapat	3 saat	Güvenli deployment
