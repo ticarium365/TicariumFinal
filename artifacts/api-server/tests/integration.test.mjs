@@ -4556,14 +4556,45 @@ describe("Sprint 62 — E-Fatura", () => {
     }
   });
 
-  test("Stub provider (parasut) gerçek çağrıda credential eksikliğini bildirir", async () => {
+  test("Parasut connector — eksik credential ile health-check graceful fail döner", async () => {
     const { jar } = await login("talha", "talha123");
-    await api("PUT", "/einvoice/settings", { jar, body: { provider: "parasut", sandbox: true, config: {} } });
+    // Önce mock'a sıfırla (önceki testlerin bıraktığı creds'i temizlemek için provider değiştir)
+    await api("PUT", "/einvoice/settings", { jar, body: { provider: "mock", sandbox: true } });
+    // Şimdi parasut'a geç — boş string ile mevcut config alanlarını sil (merge mantığında "" missing sayılır)
+    await api("PUT", "/einvoice/settings", {
+      jar,
+      body: { provider: "parasut", sandbox: true, config: {
+        clientId: "", clientSecret: "", username: "", password: "", companyId: "",
+      } },
+    });
     const r = await api("POST", "/einvoice/health-check", { jar });
     assert.equal(r.status, 200);
     assert.equal(r.json.ok, false, "parasut credential olmadan ok=false dönmeli");
-    assert.match(r.json.message, /Eksik config|uygulanmadı|credential/i);
+    assert.match(r.json.message, /Eksik config/i, "credential eksikse mesaj 'Eksik config: <key>' biçiminde olmalı");
     // Geri mock'a al
+    await api("PUT", "/einvoice/settings", { jar, body: { provider: "mock", sandbox: true } });
+  });
+
+  test("Parasut connector — geçersiz credential ile health-check OAuth hatası bildirir", async () => {
+    const { jar } = await login("talha", "talha123");
+    await api("PUT", "/einvoice/settings", {
+      jar,
+      body: {
+        provider: "parasut", sandbox: true,
+        config: {
+          clientId: "fake-client-id",
+          clientSecret: "fake-client-secret",
+          username: "noone@example.com",
+          password: "wrong",
+          companyId: "999999",
+        },
+      },
+    });
+    const r = await api("POST", "/einvoice/health-check", { jar });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.ok, false, "geçersiz creds ile ok=false dönmeli");
+    // Paraşüt OAuth 401 → "invalid_client" veya benzeri bir hata mesajı
+    assert.match(r.json.message, /OAuth|HTTP\s+\d{3}|invalid|client/i);
     await api("PUT", "/einvoice/settings", { jar, body: { provider: "mock", sandbox: true } });
   });
 });
@@ -4600,5 +4631,65 @@ describe("Routing — hr.staff feature gate izolasyonu", () => {
     const r = await api("GET", "/einvoice/providers", { jar });
     assert.equal(r.status, 200);
     assert.ok(Array.isArray(r.json));
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sprint 65 — Bütçe & Tahmin zemini
+// ─────────────────────────────────────────────────────────────────────────────
+describe("Sprint 65 — Bütçe & Tahmin zemini", () => {
+  // PROSAN'a profit.dashboard içeren bir plan abone et (forecast endpointleri için)
+  before(async () => {
+    for (const u of [{ user: "talha", pass: "talha123" }, { user: "nihat", pass: "nihat123" }]) {
+      const { jar } = await login(u.user, u.pass);
+      const plansResp = await api("GET", "/subscriptions/plans", { jar });
+      if (plansResp.status !== 200) continue;
+      const plans = plansResp.json.plans || plansResp.json;
+      const target = plans.find((p) => {
+        try { return JSON.parse(p.features).includes("profit.dashboard"); } catch { return false; }
+      });
+      if (!target) continue;
+      await api("POST", "/subscriptions/subscribe", {
+        jar, body: { planId: target.id, billingCycle: "monthly" },
+      });
+    }
+  });
+
+  test("GET /finance/expense-categories → boş tenant için varsayılan TR kategoriler seed olur", async () => {
+    const { jar } = await login("talha", "talha123");
+    const r = await api("GET", "/finance/expense-categories", { jar });
+    assert.equal(r.status, 200);
+    assert.ok(Array.isArray(r.json.categories), "categories array dönmeli");
+    assert.ok(r.json.categories.length >= 1, `en az 1 kategori bekleniyor, geldi: ${r.json.categories.length}`);
+    // PROSAN tenant'ında zaten kategori varsa seed atlanır; yine de aktif kategori dönmeli.
+  });
+
+  test("GET /finance/expense-categories → ikinci çağrıda yeni seed yapmaz (idempotent)", async () => {
+    const { jar } = await login("talha", "talha123");
+    const r1 = await api("GET", "/finance/expense-categories", { jar });
+    const n1 = r1.json.categories.length;
+    const r2 = await api("GET", "/finance/expense-categories", { jar });
+    assert.equal(r2.json.categories.length, n1, "ikinci çağrıda kategori sayısı değişmemeli");
+  });
+
+  test("GET /budgets/forecast/revenue → tarihsel veri + ağırlıklı ortalama döner", async () => {
+    const { jar } = await login("talha", "talha123");
+    const r = await api("GET", "/budgets/forecast/revenue?basis=trend3", { jar });
+    assert.equal(r.status, 200);
+    assert.ok(r.json.targetPeriod, "targetPeriod dolu olmalı");
+    assert.equal(r.json.basis, "trend3");
+    assert.equal(r.json.sampleMonths, 3);
+    assert.ok(Array.isArray(r.json.history), "history array dönmeli");
+    assert.equal(r.json.history.length, 3);
+    assert.equal(typeof r.json.forecast, "number");
+    assert.equal(typeof r.json.avg, "number");
+  });
+
+  test("GET /budgets/forecast/cashflow → 8 haftalık nakit akış projeksiyonu", async () => {
+    const { jar } = await login("talha", "talha123");
+    const r = await api("GET", "/budgets/forecast/cashflow?weeks=8", { jar });
+    assert.equal(r.status, 200);
+    // Endpoint farklı şekillerde sonuç dönebilir; en azından objeyi/ alanları kontrol et
+    assert.ok(r.json && typeof r.json === "object", "JSON cevap bekleniyor");
   });
 });

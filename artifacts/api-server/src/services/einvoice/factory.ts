@@ -3,8 +3,9 @@ import { eq } from "drizzle-orm";
 import { EInvoiceProvider, EInvoiceProviderConfig } from "./types.js";
 import { decryptSecrets } from "../../lib/secret-crypto.js";
 import { MockEInvoiceProvider } from "./mock-provider.js";
+import { ParasutEInvoiceProvider } from "./parasut-provider.js";
 import {
-  ParasutEInvoiceProvider, QnbEFinansProvider, ForibaProvider,
+  QnbEFinansProvider, ForibaProvider,
   LogoEFlowProvider, MikroProvider,
 } from "./stub-providers.js";
 

@@ -25,9 +25,50 @@ async function ensureDefaultRegister(companyId: number, userId: number) {
 // ─────────────────────────────────────────────────────────────────────────────
 // GİDER KATEGORİLERİ
 // ─────────────────────────────────────────────────────────────────────────────
+// Sprint 65 hazırlık — yeni tenantlar için varsayılan TR gider kategorileri
+const DEFAULT_EXPENSE_CATEGORIES: { name: string; icon: string; color: string }[] = [
+  { name: "Kira", icon: "home", color: "#6366f1" },
+  { name: "Maaş & Personel", icon: "users", color: "#06b6d4" },
+  { name: "Elektrik", icon: "zap", color: "#eab308" },
+  { name: "Su", icon: "droplet", color: "#3b82f6" },
+  { name: "Doğalgaz", icon: "flame", color: "#f97316" },
+  { name: "İnternet & Telefon", icon: "wifi", color: "#8b5cf6" },
+  { name: "Kırtasiye & Ofis", icon: "clipboard", color: "#a3a3a3" },
+  { name: "Yakıt & Ulaşım", icon: "truck", color: "#ef4444" },
+  { name: "Bakım & Onarım", icon: "wrench", color: "#84cc16" },
+  { name: "Vergi & Resmi", icon: "landmark", color: "#dc2626" },
+  { name: "Sigorta", icon: "shield", color: "#0ea5e9" },
+  { name: "Reklam & Pazarlama", icon: "megaphone", color: "#ec4899" },
+  { name: "Banka Komisyonu", icon: "credit-card", color: "#64748b" },
+  { name: "Diğer", icon: "more-horizontal", color: "#94a3b8" },
+];
+
+// Race-safe lazy seed: PG transaction-level advisory lock seriyalize eder,
+// böylece eşzamanlı GET'lerde duplicate insert riski yok.
+// Lock anahtarı: stabil bir namespace (sabit int) + companyId.
+const SEED_LOCK_NAMESPACE = 65042; // Sprint 65 default-categories seed
+async function ensureDefaultCategories(companyId: number): Promise<void> {
+  // Hızlı yol: kategori varsa lock alma
+  const [pre] = await db.select({ c: sql<number>`COUNT(*)::int` })
+    .from(expenseCategoriesTable).where(eq(expenseCategoriesTable.companyId, companyId));
+  if (Number(pre?.c || 0) > 0) return;
+
+  // Yarış koşulunu serileştir: transaction içinde advisory lock + recheck + insert
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${SEED_LOCK_NAMESPACE}, ${companyId})`);
+    const [post] = await tx.select({ c: sql<number>`COUNT(*)::int` })
+      .from(expenseCategoriesTable).where(eq(expenseCategoriesTable.companyId, companyId));
+    if (Number(post?.c || 0) > 0) return; // başka transaction seed'ledi
+    await tx.insert(expenseCategoriesTable).values(
+      DEFAULT_EXPENSE_CATEGORIES.map((c) => ({ companyId, name: c.name, icon: c.icon, color: c.color })),
+    );
+  });
+}
+
 router.get("/expense-categories", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
+    await ensureDefaultCategories(cid);
     const cats = await db.select().from(expenseCategoriesTable)
       .where(and(eq(expenseCategoriesTable.companyId, cid), eq(expenseCategoriesTable.isActive, true)))
       .orderBy(asc(expenseCategoriesTable.name));
