@@ -1,361 +1,525 @@
 # Ticarium365 — Teknik Dokümantasyon
-**Tarih:** 18 Nisan 2026
-**Sürüm:** v1.0 (canlı yayın öncesi)
+
+**Sürüm:** 1.0.0 — Canlıya Hazır  
+**Son Güncelleme:** 18 Nisan 2026  
+**Mimari:** Multi-tenant SaaS, subdomain bazlı izolasyon
 
 ---
 
-## 1. Sistem Mimarisi
+## 1. Proje Genel Bakış
 
-### 1.1 Teknoloji Yığını
-| Katman | Teknoloji |
-|---|---|
-| Backend API | Node.js 20 + Express + TypeScript (ESM) |
-| ORM / DB | Drizzle ORM + PostgreSQL 16 (Replit-managed) |
-| Web Frontend | React 18 + Vite + TailwindCSS + shadcn/ui + Wouter |
-| Mobil | Expo React Native (SMSYSTEMS Mobil) |
-| Auth | Express-session + scrypt parolalar + role-based (RBAC) |
-| Multi-tenant | Subdomain bazlı (`firmaadi.ticarium365.com`) + `companyId` tenant izolasyonu |
-| Şifreleme | AES-256-GCM (SESSION_SECRET → scrypt 32-byte key, `enc:v1:` prefix) |
-| Object Storage | Replit App Storage |
-| Job/Idempotency | PostgreSQL advisory locks (`pg_advisory_xact_lock`) + reserve-first pattern |
+**Ticarium365**, Türkiye'nin esnafı ve KOBİ'leri için tasarlanmış bulut tabanlı çoklu kiracı (multi-tenant) bir SaaS platformudur. Her şirket kendi alt-alan adından (`prosan.ticarium365.com`, `nihatturizm.ticarium365.com` gibi) erişir; veriler tenant bazında tamamen izoledir.
 
-### 1.2 Monorepo Yapısı
+### 1.1 Aktif Tenant'lar
+| ID | Şirket Adı | Subdomain | Sektör |
+|----|-----------|-----------|--------|
+| 1 | PROSAN ENDÜSTRİ | `prosan` | Endüstriyel ürün satışı |
+| 2 | NİHAT TURİZM | `nihatturizm` | Turizm hizmetleri |
+
+### 1.2 Hedef Kitle ve Değer Önerisi
+- **Tek platform, tam kontrol:** Stok, satış, fatura ve cari takibi tek yerde
+- **Gerçek kâr analizi:** Komisyon, kargo, stok maliyetleri dahil
+- **Bulut tabanlı, güvenli:** Banka standartlarında veri koruması, otomatik yedekleme
+- **Pazaryeri entegrasyonu:** Trendyol, Hepsiburada, N11, Amazon TR, Çiçeksepeti, vb.
+- **E-Fatura/E-Arşiv:** Parasüt, QNB Finans, Logo, Mikro entegrasyonları
+- **Mobil uygulama:** SMSYSTEMS Mobil (Expo/React Native)
+
+---
+
+## 2. Teknoloji Yığını
+
+### 2.1 Backend (`artifacts/api-server`)
+- **Runtime:** Node.js 20+
+- **Framework:** Express.js 5
+- **Dil:** TypeScript (strict)
+- **ORM:** Drizzle ORM (PostgreSQL)
+- **Auth:** Express-session (cookie tabanlı), bcryptjs şifre hashleme
+- **Güvenlik:** helmet (HSTS, CSP, Referrer-Policy), express-rate-limit, CORS, trust proxy
+- **E-mail:** nodemailer (SMTP, graceful degradation)
+- **Logging:** pino (structured JSON)
+- **Object Storage:** @replit/object-storage (yedekleme)
+
+### 2.2 Frontend (`artifacts/prosan`)
+- **Framework:** React 19 + Vite 7
+- **Routing:** wouter (lightweight)
+- **State:** TanStack Query 5
+- **Styling:** Tailwind CSS 4, shadcn/ui bileşenleri
+- **Animasyon:** Framer Motion 12
+- **PWA:** Manifest, theme-color, Apple Touch Icon
+
+### 2.3 Mobil (`artifacts/smsystems-mobile`)
+- **Framework:** Expo + React Native (yeni mimari)
+- **Routing:** expo-router
+- **Stil:** Native komponent + custom theme
+
+### 2.4 Veritabanı
+- **DBMS:** PostgreSQL 16
+- **Şema:** 44 tablo (Drizzle ORM)
+- **Migration:** Drizzle Kit (`db:push`)
+
+### 2.5 Monorepo
+- **Yönetim:** pnpm workspace
+- **Paylaşılan:** `lib/db`, `lib/api-spec`, `lib/api-zod`, `lib/api-client-react`, `scripts`
+
+---
+
+## 3. Mimari ve Çoklu Kiracı (Multi-Tenant) Modeli
+
+### 3.1 Tenant Çözümleme
 ```
-artifacts/
-  api-server/        → Express backend (PORT 8080)
-  prosan/            → React web app (PROSAN tenant + super admin UI)
-  smsystems-mobile/  → Expo mobil
-  mockup-sandbox/    → Tasarım önizleme
-lib/
-  db/                → Drizzle schema + migrations (43 tablo)
-  feature-flags/     → Plan bazlı özellik kontrolü
-  notifications/     → Bildirim altyapısı
-  shared-utils/      → Ortak helper'lar
+İstek → tenantMiddleware → req.subdomain → companyId çözer → req.companyId set eder
+```
+- Subdomain `prosan` → `companies.subdomain = 'prosan'` → `companyId = 1`
+- Tüm DB sorgularında `WHERE company_id = req.companyId` zorunlu (Drizzle helper'larda enforce)
+
+### 3.2 Rol Hiyerarşisi
+```
+super_admin   → Tüm tenant'ları yönetir, /super-admin/* sayfalarına erişir
+admin         → Kendi şirketinin tüm yönetimi
+staff         → Satış, stok, müşteri (yönetim hariç)
+viewer        → Sadece okuma
+```
+Roller `lib/db/src/schema/users.ts` içinde `userRoleEnum` olarak tanımlı.
+
+### 3.3 Public Endpoint'ler (Tenant Gerektirmez)
+- `/api/public/v1/pazar` — Aggregator (Ticarium Pazar)
+- `/api/public/v1/storefronts/:slug/...` — B2C mağaza vitrini
+- `/api/contact` — İletişim formu
+- `/api/healthz` ve `/api/healthz/deep` — Sağlık kontrolü
+
+---
+
+## 4. Klasör Yapısı
+
+```
+workspace/
+├── artifacts/
+│   ├── api-server/          # Express API (port 8080)
+│   │   ├── src/
+│   │   │   ├── app.ts       # Express konfigürasyonu, middleware zinciri
+│   │   │   ├── index.ts     # Bootstrap (admin/seed)
+│   │   │   ├── middlewares/ # auth, tenant, features, api-key-auth
+│   │   │   ├── routes/      # 61 route dosyası
+│   │   │   ├── lib/         # audit, email, errors, logger, objectStorage, secret-crypto
+│   │   │   └── services/    # marketplace/, einvoice/, channels/, profitEngine
+│   │   └── tests/integration.test.mjs   # ~4250 satır integration test
+│   ├── prosan/              # React + Vite web (PROSAN/NİHAT panel)
+│   │   ├── public/          # favicon, manifest.webmanifest, OG image
+│   │   └── src/
+│   │       ├── pages/       # 60+ sayfa (admin, super-admin, dashboard, satış vs.)
+│   │       ├── components/  # layout, ui (shadcn), forms
+│   │       └── hooks/       # useAuth, useToast vb.
+│   ├── api-server/          # (yukarıda)
+│   ├── mockup-sandbox/      # Tasarım prototipleri (canvas)
+│   └── smsystems-mobile/    # Expo mobil
+├── lib/
+│   ├── db/src/schema/       # 44 Drizzle tablo şeması
+│   ├── api-spec/            # OpenAPI spec
+│   ├── api-zod/             # Zod validation şemaları
+│   └── api-client-react/    # TanStack Query hooks
+├── scripts/
+│   └── src/
+│       ├── seed.ts          # Demo veri seed
+│       ├── import-products.ts
+│       └── db-backup.ts     # YENİ: pg_dump → Object Storage
+├── replit.md                # Proje hafıza dosyası
+└── TEKNIK_DOKUMAN.md        # (bu dosya)
 ```
 
 ---
 
-## 2. Tamamlanan Modüller (Production-Ready)
+## 5. Veri Modeli — Önemli Tablolar
 
-### 2.1 Çekirdek (Core)
-| Modül | Endpoint Prefix | Özellik Bayrağı | Durum |
-|---|---|---|---|
-| Auth + Session | `/api/auth` | — | ✅ |
-| Kullanıcı/Rol | `/api/users` | — | ✅ |
-| Şirket/Multi-tenant | `/api/companies` | — | ✅ |
-| Şube | `/api/branches` | — | ✅ |
-| Personel | `/api/personnel` | `hr.staff` | ✅ |
-| Dashboard | `/api/dashboard` | — | ✅ |
-| Bildirimler | `/api/notifications` + rules | — | ✅ |
-| Object Storage | `/api/storage` | — | ✅ |
-| Dokümanlar | `/api/documents` | — | ✅ |
-
-### 2.2 Stok & Ürün
-| Modül | Endpoint | Durum |
-|---|---|---|
-| Ürün CRUD | `/api/products` | ✅ |
-| Barkod | `/api/products` (barcode unique per company) | ✅ |
-| Stok hareketleri | `/api/stock` | ✅ |
-| Stok sayımı | `/api/stock-counts` | ✅ |
-| Tedarikçi | `/api/suppliers` | ✅ |
-| Alış | `/api/purchases` | ✅ |
-| Üretim & Reçete (BOM) | `/api/production` | `production.bom` ✅ |
-| Veri içe aktarımı (CSV/Excel) | `/api/import` | ✅ |
-
-### 2.3 Satış & Müşteri
-| Modül | Endpoint | Durum |
-|---|---|---|
-| Satış | `/api/sales` | ✅ |
-| POS hızlı satış | `/api/sales` + `/pos` page | ✅ |
-| Müşteri | `/api/customers` | ✅ |
-| Müşteri grupları | `/api/customer-groups` | ✅ |
-| Sadakat puanı | `/api/loyalty` | `loyalty.points` ✅ |
-| Kampanyalar | `/api/campaigns` | ✅ |
-| Çoklu döviz | `/api/currency` | `currency.multi` ✅ |
-
-### 2.4 Finans & Muhasebe
-| Modül | Endpoint | Durum |
-|---|---|---|
-| Finans hareketleri | `/api/finance` | ✅ |
-| Banka entegrasyonu | `/api/banking` | `finance.banking` ✅ |
-| Bordro / Mali müşavir | `/api/accountant` | `accountant.panel` ✅ |
-| Resmi raporlar (BA-BS, KDV) | `/api/reports-official` | `accountant.panel` ✅ |
-| Kâr motoru | `/api/profit-engine` | ✅ |
-| Kanal kârlılık kıyas | `/api/profit-engine/by-channel` | ✅ |
-| Bütçe & Tahmin | `/api/budgets` | `profit.dashboard` ✅ |
-| **Reklam Bütçesi (Sprint 73.6)** | `/api/ad-budgets` | `profit.dashboard` ✅ |
-| Finans dashboard | `/api/finance-dashboard` | `profit.dashboard` ✅ |
-
-### 2.5 e-Ticarium Merkezi (Sprint 73.x)
-| Modül | Endpoint | Durum |
-|---|---|---|
-| Hub UI | `/eticarium-merkezi` | ✅ |
-| Fiyat motoru | `/api/pricing-rules` | ✅ |
-| Kargo motoru | `/api/shipping` | ✅ |
-| Hazır mağaza (3 tip) | `/api/storefronts` | ✅ |
-| Mağaza public render | `/api/public/v1/storefronts/:slug` | ✅ |
-| **Ticarium Pazar (Sprint 73.7)** | `/api/aggregator` + `/api/public/v1/pazar` | ✅ |
-| Kanal yönetimi | `/api/channels` | ✅ |
-| B2B sipariş | `/api/b2b/orders`, `/api/b2b/catalog` | ✅ |
-| Sipariş yönetim | `/api/orders-manage` | ✅ |
-| Sipariş analitik | `/api/order-analytics` | ✅ |
-
-### 2.6 E-Fatura (Sprint 62 — Hardened)
-| Sağlayıcı | Durum |
-|---|---|
-| `mock` (sandbox) | ✅ Tam çalışır (in-memory ETTN) |
-| `parasut` | ⚠️ Stub (config kabul eder, HTTP entegrasyonu API key bekliyor) |
-| `qnb_efinans` | ⚠️ Stub |
-| `foriba` | ⚠️ Stub |
-| `logo_eflow` | ⚠️ Stub |
-| `mikro` | ⚠️ Stub |
-
-**Hardening:**
-- AES-256-GCM at-rest şifreleme (recursive — nested credential alanları da)
-- Reserve-first idempotency: 5 paralel POST → DB'de 1 satır, tek ETTN
-- Cancel/Send state machine guard (atomic koşullu UPDATE)
-- 23505 unique violation → 200 with existing row
-
-### 2.7 Pazaryeri (Sprint 51-55 — Stub)
-| Sağlayıcı | Durum |
-|---|---|
-| Trendyol | ⚠️ Stub (encryption + config kabul eder) |
-| Hepsiburada | ⚠️ Stub |
-| n11 | ⚠️ Stub |
-| Çiçeksepeti | ⚠️ Stub |
-| Pazarama | ⚠️ Stub |
-
-### 2.8 Süper Admin
-| Modül | Endpoint | Durum |
-|---|---|---|
-| Firma yönetimi | `/api/companies` (super_admin) | ✅ |
-| Ödeme bildirimleri | `/api/payment` | ✅ |
-| Platform ayarları | `/api/settings/platform` | ✅ |
-| Abonelik yönetimi | `/api/subscriptions` | ✅ |
-| **İletişim talepleri** | `/api/contact/admin` | ✅ |
-
-### 2.9 Public API (auth'suz)
-| Endpoint | Açıklama |
-|---|---|
-| `POST /api/contact` | Landing "Sizi arayalım" formu |
-| `GET /api/public/v1/storefronts/:slug` | Müşteri mağazası |
-| `POST /api/public/v1/storefronts/:slug/orders` | Müşteri sipariş |
-| `GET /api/public/v1/pazar` | Cross-tenant pazar (Ticarium Pazar) |
-| `/api/public/v1/*` (API key ile) | 3rd party entegrasyon |
-
----
-
-## 3. Eksik / Bekleyen İşler
-
-### 3.1 Kritik Eksikler (Canlıya çıkmadan ÖNCE yapılmalı)
-
-#### 3.1.1 Domain & Hosting
-- [ ] **Domain satın alma**: `ticarium365.com` (önerilen)
-- [ ] **Subdomain wildcard DNS**: `*.ticarium365.com` → app sunucusu (multi-tenant için zorunlu)
-- [ ] **SSL sertifikası**: Let's Encrypt wildcard (Replit Deployments otomatik halleder)
-- [ ] **Replit Deployment yayını** (Reserved VM önerilir — session/state için)
-
-#### 3.1.2 Production Secrets
-| Secret | Durum | Açıklama |
-|---|---|---|
-| `SESSION_SECRET` | ✅ Set | AES-256-GCM key türetiminde kullanılıyor |
-| `DATABASE_URL` | ✅ Set | Production DB |
-| `DEFAULT_OBJECT_STORAGE_BUCKET_ID` | ✅ Set | App Storage |
-| `PUBLIC_OBJECT_SEARCH_PATHS` | ✅ Set | — |
-| `PRIVATE_OBJECT_DIR` | ✅ Set | — |
-| **E-Fatura sağlayıcı API key'leri** | ❌ Eksik | Parasut/QNB/Foriba/Logo/Mikro müşteri talebine göre |
-| **Pazaryeri API key'leri** | ❌ Eksik | Trendyol/Hepsiburada/n11/Çiçeksepeti/Pazarama müşteri talebine göre |
-| **SMS sağlayıcı (NetGSM/Iletimerkezi)** | ❌ Eksik | OTP/bildirim için (opsiyonel) |
-| **E-mail SMTP** | ❌ Eksik | Bildirim e-postaları için (Replit Mail veya SendGrid) |
-| **Stripe / İyzico** | ❌ Eksik | SaaS aboneliği tahsilatı için |
-
-### 3.2 Yarım Kalan / Stub Modüller
-
-#### 3.2.1 E-Fatura Sağlayıcıları
-**Konum:** `artifacts/api-server/src/services/einvoice/stub-providers.ts`
-**Durum:** Tüm 5 sağlayıcı (Parasut, QNB eFinans, Foriba, Logo eFlow, Mikro) için interface tanımlı, config şifreleniyor, ancak `createInvoice/sendInvoice/cancelInvoice` çağrıları "henüz uygulanmadı" hatası fırlatıyor.
-
-**Yapılacak (her sağlayıcı için ~1-2 gün):**
-- [ ] HTTP istek/cevap mapping (sağlayıcının REST/SOAP API'sine UBL XML üret)
-- [ ] OAuth2 token refresh (Parasut için)
-- [ ] WSDL → SOAP client (QNB eFinans/Foriba için)
-- [ ] Health check gerçek endpoint çağrısı
-- [ ] Sandbox test hesabı ile e2e test
-
-**Bypass:** `mock` sağlayıcısı tam çalışır. Müşteri henüz fatura kesmiyorsa (B2C odaklı), `mock` ile başlanabilir. İlk B2B müşterisi geldiğinde gerçek sağlayıcıyı bağla.
-
-#### 3.2.2 Pazaryeri Adapterleri
-**Konum:** `artifacts/api-server/src/services/marketplace/stub-providers.ts`
-**Durum:** Trendyol/Hepsiburada/n11/Çiçeksepeti/Pazarama için interface + encryption hazır, `pushProduct/pushStock/pushPrice/fetchOrders` "henüz uygulanmadı".
-
-**Yapılacak (her sağlayıcı için ~2-3 gün):**
-- [ ] REST API client (Trendyol Seller API, Hepsiburada Marketplace API, n11 SOAP)
-- [ ] Ürün push → barkod/stok/fiyat sync
-- [ ] Sipariş poll cron (15 dk aralık)
-- [ ] Komisyon hesabı (kanal kârlılık ile entegre)
-- [ ] İade & iptal callback'leri
-
-**Bypass:** Müşteri pazaryeri kullanmıyorsa zaten gerek yok. İlk talep geldiğinde o sağlayıcı önce yapılır.
-
-### 3.3 İyileştirme Önerileri (Architect tarafından önerildi)
-
-| Konu | Öncelik | Açıklama |
-|---|---|---|
-| Aggregator concurrent regression test | Orta | activate/pause/update/delete + scan paralel senaryoları için integration test |
-| `recomputeChosen` SQL parametreli `ANY($1::text[])` | Düşük | Şu an `sql.raw` ile string interpolation (escape'li, güvenli ama daha temiz olabilir) |
-| Recompute lock metrik logging | Düşük | Production'da lock bekleme süresi/conflict oranı gözlemi |
-| Rate limiting (public endpoints) | **Yüksek** | `/api/public/v1/pazar`, `/api/contact`, `/api/public/v1/storefronts/:slug/orders` için per-IP rate limit |
-| CSP / Security headers (helmet) | **Yüksek** | XSS/clickjacking koruması |
-| Backup stratejisi | **Yüksek** | DB günlük otomatik snapshot (Replit DB built-in PITR var) |
-| Sentry / hata izleme | Orta | Production hata izleme |
-| OpenAPI / Swagger doc | Düşük | API entegrasyonu yapacak 3rd party'ler için |
-
-### 3.4 Henüz Tasarlanmamış Modüller (Backlog)
-
-| Modül | Not |
-|---|---|
-| Mobil uygulama (SMSYSTEMS) eksik özellikler | Web'deki tüm modüllere mobil paritesi |
-| Çoklu dil (i18n) | Şu an sadece TR; EN/AR ileride |
-| WhatsApp Business API entegrasyonu | Sipariş bildirimi, ödeme linki |
-| Yapay zeka ürün açıklama yazıcı | OpenAI/Anthropic ile auto-fill |
-| OCR fatura okuyucu | Kâğıt fatura → otomatik gider girişi |
-| Müşteri segmentasyonu (RFM) | Otomatik segment + push kampanya |
-| A/B test motoru (storefront için) | — |
-
----
-
-## 4. API Referansı (Özet)
-
-**Base URL (dev):** `http://localhost:8080/api`
-**Base URL (prod):** `https://api.ticarium365.com` (deploy sonrası)
-
-### 4.1 Auth
-```
-POST /auth/login         {username, password} → session cookie
-POST /auth/logout
-GET  /auth/me            → kullanıcı + companyId + role
-POST /auth/register      (super_admin only)
-```
-
-### 4.2 Reklam Bütçesi (Sprint 73.6)
-```
-GET    /ad-budgets/presets                         → 10 platform preset
-GET    /ad-budgets/channels                        → şirketin kanalları
-POST   /ad-budgets/channels    {code, name, platform}
-PUT    /ad-budgets/channels/:id
-DELETE /ad-budgets/channels/:id
-GET    /ad-budgets/spends?period=YYYY-MM
-POST   /ad-budgets/spends      {channelId, period, budgetAmount, spendAmount, ...}
-                               → ON CONFLICT atomic upsert
-DELETE /ad-budgets/spends/:id
-GET    /ad-budgets/summary?period=YYYY-MM          → ROAS/CPA/CPC/profit/budgetUsedPct
-GET    /ad-budgets/trend?months=6                  → 6-aylık seri
-```
-
-### 4.3 Ticarium Pazar (Sprint 73.7)
-```
-POST   /aggregator/scan        {marginPct, minStock}  → ürünleri pazara aktarır
-GET    /aggregator/listings?status=candidate|active|paused
-PUT    /aggregator/listings/:id    {marginPct}        → recompute chosen
-POST   /aggregator/listings/:id/activate              → recompute chosen
-POST   /aggregator/listings/:id/pause                 → recompute chosen
-DELETE /aggregator/listings/:id                       → recompute chosen
-GET    /aggregator/stats        → {candidate, active, paused, chosen}
-
-# PUBLIC (auth'suz, cross-tenant)
-GET    /public/v1/pazar?q=<arama>&limit=60
-       → {count, items: [{id, name, brand, barcode, stock, price, seller, ...}]}
-```
-
-### 4.4 İletişim
-```
-POST   /contact                {fullName, phone, email, companyName?}  → public
-GET    /contact/admin          (super_admin)                            → tüm talepler
-PATCH  /contact/admin/:id      {status: new|contacted|archived, notes?}
-```
-
-(Diğer 50+ endpoint için: `artifacts/api-server/src/routes/` dizini)
-
----
-
-## 5. Veritabanı Şeması (43 tablo)
-
-### 5.1 Yeni Eklenen (Bu sürüm)
+### 5.1 Çekirdek Tenant Tabloları
 | Tablo | Açıklama |
-|---|---|
-| `ad_channels` | Reklam kanalları (companyId+code unique) |
-| `ad_spends` | Aylık reklam harcama (channelId+period unique, ON CONFLICT atomic) |
-| `aggregator_listings` | Pazar listeleri — partial unique `WHERE chosen=true`, source unique `(companyId,productId)` |
-| `contact_requests` | Landing iletişim talepleri |
+|-------|----------|
+| `companies` | Tenant kayıtları (id, name, subdomain, primaryColor, logoUrl, isActive) |
+| `users` | Kullanıcılar (companyId, username, passwordHash, role) — `(username, companyId)` unique |
+| `audit_logs` | Tüm önemli aksiyonlar (companyId, userId, action, entity, entityId, details, ipAddress) |
 
-### 5.2 Önemli Invariantlar
-- `aggregator_chosen_per_key_uniq UNIQUE (match_key) WHERE chosen=true` → her ürün için tek seçilen tedarikçi (DB seviyesinde garantili)
-- `aggregator_source_uniq UNIQUE (sourceCompanyId, sourceProductId)` → duplicate listing yok
-- `einvoice_outbox` partial unique `(companyId, idempotencyKey) WHERE NOT NULL` → çift fatura imkânsız
-- `products_barcode_company_idx UNIQUE (barcode, companyId)` → şirket içinde tek barkod
-- `storefronts.slug UNIQUE` → URL çakışması yok
+### 5.2 İşletme Tabloları
+- `products` (companyId, productCode, barcode, name, brand, category, stock, salePrice, purchasePrice, profitPercent)
+- `customers` (companyId, code, type [individual/corporate], name, currentBalance, creditLimit)
+- `suppliers`, `purchases`
+- `sales` (productId, quantity, totalPrice, profit, customerId, channelKey)
+- `stock_movements`, `stock_counts`
+- `branches`, `personnel`
 
----
+### 5.3 Pazaryeri & Kanal
+- `channel_accounts` (provider, credentials [şifrelenmiş], settings)
+- `product_channel_mappings`
+- `pricing_rules`, `stock_rules`
+- `sync_jobs`, `sync_logs`
 
-## 6. Güvenlik Modeli
+### 5.4 E-Fatura
+- `einvoice_settings` (provider, sandbox, config [şifrelenmiş])
+- `einvoice_outbox`, `einvoice_inbox`, `einvoice_events`
 
-### 6.1 Tenant İzolasyonu
-- `tenantMiddleware` her authenticated request'te `req.companyId` set eder
-- TÜM business endpoint'leri `WHERE companyId = req.companyId` filtresi uygular
-- Public endpoint'ler (`/api/public/v1/*`) tenantMiddleware'den ÖNCE mount edilir → bilerek bypass
-
-### 6.2 RBAC Rolleri
-| Rol | Yetki |
-|---|---|
-| `super_admin` | Tüm tenant'lara erişim, platform yönetimi |
-| `admin` | Kendi tenant'ında tam yetki |
-| `staff` | Operasyonel (satış/stok), finans yok |
-| `viewer` | Salt okunur |
-
-### 6.3 Şifreleme
-- Parolalar: scrypt (N=16384, r=8, p=1)
-- E-Fatura/Pazaryeri credentials: AES-256-GCM (recursive nested)
-- Session: HTTP-only cookie + Secure (production) + SameSite=Lax
-
-### 6.4 Idempotency
-- E-Fatura: reserve-first DB pattern + `Idempotency-Key` header
-- Reklam bütçesi: ON CONFLICT atomic upsert
-- Aggregator chosen: `pg_advisory_xact_lock(7390737)` + transaction
+### 5.5 Diğer
+- `subscriptions` (plan abonelikleri), `notifications`, `notification_rules`
+- `b2b_*` tabloları (B2B katalog/sipariş)
+- `loyalty_*`, `campaigns`, `ad_budgets`
+- `finance_documents`, `bank_payments`, `banking`
+- `production` (üretim modülü)
+- `storefronts` (B2C mağaza vitrini)
 
 ---
 
-## 7. Yayına Çıkış (Deployment) Adımları
+## 6. API Endpoints — Genel Bakış
 
-1. **Domain satın al** (`ticarium365.com`) ve wildcard DNS'i Replit Deployment IP'sine yönlendir
-2. **Replit'te Publish** butonuna bas → Reserved VM (önerilen) seç
-3. Production secrets'ı doğrula (yukarıdaki tablo)
-4. **Custom domain** ekle (Deployment ayarlarından `*.ticarium365.com`)
-5. İlk admin kullanıcısı oluştur (DB'de manuel veya `/auth/register` ile)
-6. Test tenant'ı oluştur (PROSAN), sample data import et
-7. SSL doğrula → `https://prosan.ticarium365.com` açılmalı
-8. **Performans testi**: 100+ paralel scan, 1000+ ürün catalog, public pazar load test
-9. **Backup**: Replit DB otomatik PITR + haftalık manuel snapshot
-10. **Monitoring**: Sentry/LogRocket entegrasyonu (opsiyonel, sonra)
+61 route dosyası, ~250+ endpoint. Önemli gruplar:
 
----
-
-## 8. Bilinen Sınırlamalar
-
-1. **Sub-second precision** finansal alanlarda yok (JS `Number` kullanılıyor); ileride `Decimal.js` migrasyonu gerekebilir
-2. **Aggregator scan** O(N) tarama (1221 ürün ~2 sn) — 10000+ ürün için chunked + background queue gerekir
-3. **Public pazar** rate limit yok — DDoS koruması için Cloudflare/nginx önerilir
-4. **WebSocket / real-time bildirim** yok (polling kullanılıyor)
-5. **Dosya yükleme limiti** 50MB (App Storage default)
+| Prefix | İşlev |
+|--------|-------|
+| `/api/auth/*` | Login, logout, session, şifre değişimi |
+| `/api/products` | CRUD, toplu Excel import, barkod oluşturma |
+| `/api/sales` | Satış oluşturma, iade, müşteri linkleme |
+| `/api/customers`, `/api/suppliers` | Cari yönetimi, ödemeler |
+| `/api/stock` | Stok hareketleri, sayım, düzeltme |
+| `/api/marketplace` | Pazaryeri hesapları, sync, ürün eşleme |
+| `/api/einvoice` | E-fatura ayarları, gönderim, gelen kutusu |
+| `/api/finance` | Mali tablolar, kasa, banka |
+| `/api/profit` | Kâr motoru, kanal kârlılık karşılaştırma |
+| `/api/companies` | Şirket CRUD (super_admin) |
+| `/api/audit-logs` | Audit log viewer (super_admin) |
+| `/api/subscriptions` | Plan abonelikleri |
+| `/api/storefronts` | B2C mağaza yönetimi |
+| `/api/public/*` | Auth gerektirmeyen public uçlar |
 
 ---
 
-## 9. İletişim & Sorumlular
+## 7. Güvenlik
 
-- **Geliştirme:** Replit Agent (autonomous)
-- **Ürün sahibi:** Talha (PROSAN ENDÜSTRİ)
-- **Test credential (dev):** `talha` / `talha123` (admin, PROSAN tenant)
-- **Süper admin:** Ayrı kullanıcı (DB'de seed edilmeli prod öncesi)
+### 7.1 Aktif Önlemler
+- **helmet** — HSTS preload + maxAge 1 yıl, CSP, X-Frame-Options, Referrer-Policy `strict-origin-when-cross-origin`
+- **trust proxy 1** — Replit edge proxy arkasında doğru IP tespiti
+- **CORS** — Whitelist edilmiş origin'ler
+- **express-session** — `httpOnly`, `secure` (prod), `sameSite=lax`, 30 günlük cookie
+- **bcryptjs** — Şifre hash (cost 10)
+- **secret-crypto** — Pazaryeri/E-fatura kimlik bilgileri AES-256-GCM ile şifreli (`enc:v1:` prefix)
+- **Mask response** — Kimlik alanları (`password`, `secret`, `token`, `apikey`) response'larda `********`
+
+### 7.2 Rate Limiting
+| Endpoint | Limit | Pencere |
+|----------|-------|---------|
+| `/api/auth/login` | 5 deneme | 15 dk |
+| `/api/contact` | 3 mesaj | 60 dk |
+| `/api/public/v1/pazar` | 60 istek | 1 dk |
+| `/api/public/v1/storefronts` POST | 10 sipariş | 10 dk |
+| `/api/public/*` (genel) | 120 istek | 1 dk |
+
+### 7.3 Audit Log Kapsamı
+Otomatik kaydedilen aksiyonlar:
+- **Auth:** `LOGIN`, `LOGIN_FAILED`, `LOGOUT`
+- **Kullanıcı:** `USER_CREATE`, `USER_UPDATE`, `USER_DELETE`
+- **Ürün:** `PRODUCT_CREATE`, `PRODUCT_UPDATE`, `PRODUCT_DELETE`
+- **Satış:** `SALE_CREATE`, `SALE_RETURN`, `SALE_LINKED_CUSTOMER`
+- **Stok:** `STOCK_ADJUSTMENT`
+- **Cari:** `CUSTOMER_*`, `SUPPLIER_*` (ödeme, düzeltme, geri yükleme)
+- **Şirket:** `COMPANY_UPDATE`, `COMPANY_PLAN_CHANGE`, `PLATFORM_SETTINGS_UPDATE`
+
+Görüntüleme: **Süper admin** → `/super-admin/audit-logs`  
+Filtre: action, kullanıcı adı, şirket, tarih aralığı  
+İstatistik: günlük dağılım grafiği
+
+### 7.4 Hata Yönetimi
+- **Global error handler** — Stack trace loglanır, prod'da generic 5xx döner
+- **unhandledRejection / uncaughtException** — Loglanır, process devam eder
+- **audit() / sendMail()** — Hata fırlatmaz, ana akışı bloke etmez
 
 ---
 
-**Son not:** Bu doküman 18 Nisan 2026 itibariyle geçerlidir. Her sprint sonrası `replit.md` ve bu dosya güncellenmelidir.
+## 8. Yedekleme ve Felaket Kurtarma
+
+### 8.1 Otomatik DB Yedek
+**Komut:**
+```bash
+pnpm --filter @workspace/scripts run backup
+```
+
+**Akış:**
+1. `pg_dump` → tam DB dump (clean + if-exists ile restore-edilebilir)
+2. `gzip -9` → sıkıştırma
+3. **Replit Object Storage** → `/private/backups/YYYY-MM-DD/db-HH-mm.sql.gz`
+4. **Otomatik temizlik** → 30 günden eski yedekler silinir
+
+**Performans (mevcut):**
+- DB boyutu: ~20 MB
+- Yedek boyutu: 1.24 MB (gzip)
+- Süre: ~3.2 saniye
+
+**Cron önerisi:** Replit Scheduled Deployment ile her gece 03:00 (TSI) çalıştırılabilir.
+
+### 8.2 Replit Checkpoint Sistemi
+Her kod değişikliği otomatik checkpoint olarak kaydedilir; geri dönüş mümkün.
+
+---
+
+## 9. Pazaryeri ve E-Fatura Entegrasyonları
+
+### 9.1 Mimari
+- **Provider Registry pattern** — `MP_REGISTRY[provider]` ve `PROVIDER_REGISTRY[provider]` üzerinden seçim
+- **Credential şifreleme** — `secret-crypto` ile AES-256-GCM, response'larda otomatik mask
+- **Health check** — Her provider için `/health-check` endpoint (kimlik var mı, API erişilebilir mi)
+
+### 9.2 Mevcut Durum
+**Pazaryeri (10 sağlayıcı stub):**
+- Trendyol, Hepsiburada, N11, Amazon TR, Çiçeksepeti, PTT AVM
+- Shopify, WooCommerce, İdeaSoft, Ticimax
+
+**E-Fatura (4 sağlayıcı stub):**
+- Parasüt, QNB Finans, Logo, Mikro
+
+**Not:** Tüm provider'lar şu an *stub* — kimlik bilgisi şeması ve UI hazır, gerçek HTTP çağrıları sandbox kimlikleri eklenince devreye girecek. Interface aynı kaldığı için entegrasyon sonrası UI/iş mantığı değişmez.
+
+---
+
+## 10. Test Altyapısı
+
+### 10.1 Integration Tests
+**Dosya:** `artifacts/api-server/tests/integration.test.mjs` (~4250 satır)  
+**Çalıştırma:** `cd artifacts/api-server && node --test tests/integration.test.mjs`
+
+**Kapsamlı test grupları:**
+- Sprint 1-27: Temel fonksiyonlar (CRUD, tenant izolasyon, satış akışı)
+- Sprint 73.6: Reklam bütçesi atomic upsert
+- Sprint 73.7: Ticarium Pazar concurrent regression
+- Canlı Öncesi: Rate limit, güvenlik header'ları
+- Süper Admin & Audit Log: Login, endpoint erişimi, action listesi
+- PWA & SEO: Manifest doğrulama
+
+### 10.2 Önemli Not
+Mevcut test paketinin bir kısmı (Sprint 5, 6, 8, 9, 10, 11, 13, 15) önceden yazılmış ve test DB durumuna bağlı — yeni eklenen test grupları %100 yeşil.
+
+---
+
+## 11. Frontend Sayfa Haritası
+
+### 11.1 Genel Erişim (Login Gerekli)
+- `/dashboard` — Ana özet
+- `/products`, `/products/new`, `/products/:id`
+- `/sales`, `/sales/new`
+- `/customers`, `/customers/:id`
+- `/suppliers`, `/purchases`
+- `/stock`, `/stock-counts`
+- `/finance`, `/finance-dashboard`, `/finance-documents`
+- `/profit-engine`, `/karlilik-kanal`
+- `/branches`, `/personnel`
+- `/einvoice`, `/einvoice-providers`
+- `/marketplace`, `/marketplace/:id`
+- `/storefronts`, `/storefronts/:id`
+- `/b2b`, `/b2b/orders`, `/b2b/catalog`
+- `/campaigns`, `/loyalty`, `/notifications`
+- `/banking`, `/doviz`
+- `/raporlar` (resmi raporlar)
+- `/ayarlar` (kullanıcı/şirket ayarları)
+
+### 11.2 Süper Admin (Sadece super_admin)
+- `/super-admin/firmalar` — Tüm tenant listesi
+- `/super-admin/yeni-firma` — 3 adımlı yeni tenant sihirbazı
+- `/super-admin/audit-logs` — Audit log viewer (filtre + istatistik)
+- `/super-admin/talepler` — İletişim/demo talepleri
+
+### 11.3 Public (Anasayfa)
+- `/` — Pazarlama sayfası (Ticarium365 tanıtımı)
+- `/hakkimizda`, `/amacimiz`, `/paketler`, `/iletisim`
+- `/karsilastir`, `/login`
+
+---
+
+## 12. PWA (Progressive Web App)
+
+`artifacts/prosan/public/manifest.webmanifest` ile:
+- **Yüklenebilir:** Telefonda "Ana ekrana ekle" → ikon görünür
+- **Standalone:** Tarayıcı arayüzü olmadan tam ekran açılır
+- **Theme color:** `#10b981` (yeşil)
+- **Background:** `#0f172a` (koyu navy splash)
+- **Lang:** `tr-TR`
+
+`index.html` meta etiketleri:
+- Open Graph + Twitter Card (sosyal paylaşımda zengin önizleme)
+- Apple Touch Icon, apple-mobile-web-app-capable
+
+---
+
+## 13. Ortam Değişkenleri (Secrets)
+
+| Değişken | Açıklama | Zorunlu |
+|----------|----------|---------|
+| `DATABASE_URL` | PostgreSQL bağlantısı | ✅ |
+| `SESSION_SECRET` | Session imzası | ✅ |
+| `DEFAULT_OBJECT_STORAGE_BUCKET_ID` | Replit Object Storage | ✅ (yedek için) |
+| `PRIVATE_OBJECT_DIR` | Private upload dizini | ✅ |
+| `PUBLIC_OBJECT_SEARCH_PATHS` | Public asset arama yolu | ✅ |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | E-mail | ❌ (yoksa graceful degrade) |
+| `NODE_ENV` | `production` / `development` | ✅ |
+| `PORT` | API server portu (varsayılan 8080) | ❌ |
+
+**Not:** SMTP konfigüre değilse mail gönderim çağrıları sessizce atlanır, uygulama çökmez.
+
+---
+
+## 14. Kullanıcı Hesapları (Mevcut)
+
+| Kullanıcı | Rol | Şirket | Amaç |
+|-----------|-----|--------|------|
+| `superadmin` | super_admin | (tüm) | Platform yönetimi |
+| `talha` | admin | PROSAN | Geliştirici/test |
+| `nihat` | admin | PROSAN | Yönetici |
+| `cenan` | admin | PROSAN | Yönetici |
+| `goruntule` | viewer | PROSAN | Sadece okuma |
+| `personel` | staff | PROSAN | Personel |
+| `nihat_admin` | admin | NİHAT TURİZM | Tenant admin |
+
+---
+
+## 15. Demo Veri Durumu
+
+| Tenant | Ürün | Müşteri | Satış |
+|--------|------|---------|-------|
+| PROSAN ENDÜSTRİ | 1276 | 153 | 160 |
+| NİHAT TURİZM | 10 | 5 | 5 (son 15 gün) |
+
+NİHAT'a turizm ürünleri eklendi (Kapadokya tur paketi, transfer, vize, uçak bileti, yaz kampı, otel konaklama vb.).
+
+---
+
+## 16. Workflow ve Geliştirme
+
+### 16.1 Aktif Workflow'lar
+| Workflow | Komut | Port |
+|----------|-------|------|
+| `artifacts/api-server: API Server` | `pnpm --filter @workspace/api-server run dev` | 8080 |
+| `artifacts/prosan: web` | `pnpm --filter @workspace/prosan run dev` | 80 (proxy) |
+| `artifacts/smsystems-mobile: expo` | `pnpm --filter @workspace/smsystems-mobile run dev` | (Expo) |
+| `artifacts/mockup-sandbox: Component Preview Server` | `pnpm --filter @workspace/mockup-sandbox run dev` | (preview) |
+
+### 16.2 Sık Kullanılan Komutlar
+```bash
+# Geliştirme
+pnpm install                                  # Bağımlılıkları yükle
+pnpm --filter @workspace/api-server run dev   # API
+pnpm --filter @workspace/prosan run dev       # Web
+
+# Veritabanı
+pnpm --filter @workspace/db run db:push       # Şema senkronu
+pnpm --filter @workspace/scripts run seed     # Demo veri
+
+# Yedekleme
+pnpm --filter @workspace/scripts run backup   # DB yedek → Object Storage
+
+# Test
+cd artifacts/api-server && node --test tests/integration.test.mjs
+
+# Build (deployment için)
+pnpm --filter @workspace/api-server run build
+pnpm --filter @workspace/prosan run build
+```
+
+---
+
+## 17. Yayınlama (Publishing) ve Canlıya Çıkış
+
+### 17.1 Replit Deployment
+- Web Service tipinde deploy edilir
+- Build: workspace build script'leri
+- Run: API server + frontend statik servisi
+- HTTPS otomatik (Let's Encrypt)
+- Custom domain bağlama: DNS A/CNAME kaydı
+
+### 17.2 Canlı Öncesi Kontrol Listesi (Tamamlananlar ✅)
+- [x] Rate limit (login, contact, public)
+- [x] helmet güvenlik header'ları (HSTS, CSP, Referrer-Policy)
+- [x] Trust proxy (gerçek IP)
+- [x] Global error handler + unhandledRejection
+- [x] Health check endpoint (`/api/healthz`, `/api/healthz/deep`)
+- [x] Audit log viewer (super_admin)
+- [x] Tenant onboarding sihirbazı
+- [x] E-mail altyapısı (graceful degradation)
+- [x] DB yedek script (Object Storage)
+- [x] Süper admin kullanıcı
+- [x] PWA manifest + meta tag'ler
+- [x] Demo veri (her iki tenant için)
+- [x] Regression test paketi
+
+### 17.3 Müşteri-Talep Bekleyenler
+- [ ] Pazaryeri gerçek HTTP entegrasyonu (sandbox kimlik bilgisi gerek)
+- [ ] E-fatura gerçek HTTP entegrasyonu (sandbox kimlik bilgisi gerek)
+- [ ] Domain alımı + DNS yönlendirmesi
+- [ ] SMTP servisi seçimi (Gmail / SendGrid / Mailgun / kendi SMTP)
+- [ ] Online ödeme (Iyzico/PayTR) — abonelik ücretleri için
+
+---
+
+## 18. Sözleşmesel ve Yasal
+
+- **Veri konumu:** Replit (Google Cloud altyapısı)
+- **KVKK:** Veri işleme aydınlatma metni eklenmeli (frontend'e politika sayfası eklenebilir)
+- **Yedekleme:** 30 günlük rolling backup + Replit checkpoint sistemi
+- **SSL:** Production'da otomatik (Let's Encrypt)
+
+---
+
+## 19. Tipik Akışlar (User Journey)
+
+### 19.1 Yeni Tenant Açma (Süper Admin)
+1. `superadmin` ile giriş
+2. `/super-admin/yeni-firma` → 3 adım sihirbaz
+   - Firma bilgileri (ad, subdomain, renk, logo)
+   - Admin kullanıcı (ad, e-posta, şifre)
+   - Onay
+3. Otomatik: `companies` + `users` (admin role) kayıtları oluşur, audit log yazılır
+
+### 19.2 Satış Yapma
+1. `/sales/new` → ürün barkod okut / ara
+2. Müşteri seç (opsiyonel)
+3. Adet, fiyat, indirim
+4. Ödeme yöntemi seç (nakit, kart, transfer, açık hesap)
+5. Kaydet → stok düşer, kâr hesaplanır, audit log
+6. Fiş yazıcıya gönder (POS) veya e-fatura kes
+
+### 19.3 Pazaryeri Bağlama
+1. `/marketplace` → "Yeni mağaza"
+2. Sağlayıcı seç (ör. Trendyol)
+3. Sandbox / Production seç
+4. Kimlik bilgileri (sellerId, apiKey, apiSecret) — şifreli kaydedilir
+5. Health check
+6. Ürün eşleme + sync
+
+---
+
+## 20. İletişim ve Geliştirici Notları
+
+### 20.1 Kod Stili
+- TypeScript strict mode
+- Türkçe yorum + Türkçe UI metinleri
+- Mesajlar Türkçe (`Errors.unauthorized("Kullanıcı adı veya şifre hatalı")`)
+- Audit log'larda ve console log'larda anahtar değerler yapılı (pino structured logging)
+
+### 20.2 Klavye Kısayolları
+- POS satış sayfasında F-tuşları (geliştirme aşamasında)
+
+### 20.3 Önemli Konvansiyonlar
+- Tüm DB sorguları `companyId` filtreli
+- Soft delete (`isActive=false`) tercih edilir
+- Şifreli alanlar `enc:v1:` prefix'i ile saklanır
+- Response'larda `********` mask'i hassas alanlar için
+
+---
+
+## 21. Sürüm Geçmişi (Özet)
+
+| Sürüm | Tarih | Önemli Değişiklikler |
+|-------|-------|----------------------|
+| 1.0.0 | 2026-04-18 | Canlı Öncesi Sertleştirme: rate limit, helmet, audit kapsamı, super admin, backup script, PWA |
+| 0.9.x | 2026-04 | Sprint 73.6 (atomic upsert), 73.7 (concurrent), Sprint 70'ler |
+| 0.8.x | 2026-03 | Pazaryeri stub'ları, e-fatura altyapısı |
+| 0.7.x | 2026-02 | B2B modülü, storefront vitrin |
+| 0.6.x | 2026-01 | Kâr motoru, kanal kârlılık karşılaştırma |
+| 0.5.x | 2025-12 | Multi-tenant geçiş, NİHAT TURİZM eklendi |
+
+---
+
+**Sonu**
+
+Bu doküman, herhangi bir yeni geliştirici/operatörün projeyi hızla anlayabilmesi için yazılmıştır. Güncel kalmak için her büyük değişiklikte güncellenmesi önerilir.
