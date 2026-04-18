@@ -98,6 +98,11 @@ export function installFeatureLockInterceptor() {
             upgradeUrl: payload.upgradeUrl ?? "/pricing",
             message: payload.message,
           }}));
+          // Geri sahte boş 200 yanıtı dön — sayfa render'ı çökmesin, modal devralır
+          return new Response(JSON.stringify(null), {
+            status: 200,
+            headers: { "Content-Type": "application/json", "X-Feature-Locked": "1" },
+          });
         }
       } catch { /* not JSON */ }
     }
