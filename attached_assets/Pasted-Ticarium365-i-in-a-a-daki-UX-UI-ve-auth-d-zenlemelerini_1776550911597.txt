@@ -1,0 +1,269 @@
+Ticarium365 için aşağıdaki UX/UI ve auth düzenlemelerini yapalım. Bu iş artık sadece teknik değil, ürün hissi. O yüzden hem görsel dili hem giriş deneyimini toparlayalım.
+
+==================================================
+SPRINT 82 — Brand Refresh + Login UX + Theme Cleanup
+====================================================
+
+AMAÇ:
+Daha iç açıcı, güven veren, modern ama cırtlak olmayan bir arayüz.
+Logo ve giriş deneyimi profesyonelleşsin.
+Kullanıcı ilk ekranda “kurumsal ve temiz” his alsın.
+
+==================================================
+
+1. BRAND / LOGO DÜZENİ
+   ==================================================
+
+Marka:
+Ticarium365
+
+Logo yönü:
+
+* mevcut T3 logosu korunacak
+* logo mark içinde “365” vurgusu güçlendirilsin
+* wordmark ile birlikte dengeli kullanılsın
+* siyah + yeşil ana karakter korunabilir ama arayüzü boğmasın
+
+İstenen his:
+
+* modern
+* güven veren
+* canlı ama abartısız
+* ticari ama sıcak
+
+İş:
+
+* mevcut logo varyasyonlarını çıkar
+* dark / light uyumlu versiyon hazırla
+* favicon / app icon / login header icon üret
+* navbar ve giriş ekranında tutarlı kullanım
+
+==================================================
+2. YENİ TEMA DİLİ
+=================
+
+Mevcut sorun:
+
+* tema boğuk / sert his veriyor
+* bazı tonlar fazla keskin
+* genel his “ürün”den çok “panel” gibi
+
+Yeni yön:
+
+* beyaz / kırık beyaz zemin
+* yumuşak mavi tonlar
+* destekleyici koyu yeşil / koyu charcoal
+* gereksiz siyah yoğunluğu azaltılsın
+* cırtlak mavi / cırtlak yeşil olmasın
+
+Önerilen tema mantığı:
+
+* primary: yumuşak mavi
+* success / growth / kâr: koyu yeşil
+* danger: daha yumuşak kırmızı
+* background: sıcak beyaz / çok hafif gri
+* card border: hafif gri-mavi
+* sidebar: açık veya soft koyu varyant denenebilir
+
+İstenen his:
+
+* ferah
+* premium
+* modern SaaS
+* uzun süre bakınca yormayan
+
+==================================================
+3. TASARIM SİSTEMİ GÜNCELLEMESİ
+===============================
+
+Aşağıdakiler gözden geçirilsin:
+
+* button renkleri
+* hover durumları
+* input border ve focus ring
+* card shadow
+* badge renkleri
+* tablo header arka planları
+* sidebar aktif menü göstergesi
+* grafik renk paleti
+* success / warning / error toast tonları
+
+Kural:
+
+* yüksek kontrast ama yormayan
+* her yerde aynı renk mantığı
+* “kurumsal ama sıcak” görünüm
+
+==================================================
+4. LOGIN EKRANI UX İYİLEŞTİRMESİ
+================================
+
+Giriş ekranı tekrar tasarlansın.
+
+İstenenler:
+
+* daha temiz layout
+* daha güçlü logo alanı
+* kısa değer önerisi metni
+* sade form
+* sağ/sol split layout olabilir
+* mobilde tek kolon
+
+Mutlaka eklenecek:
+
+* “Şifremi Unuttum”
+* telefon numarası ile şifre sıfırlama akışı
+* gerekirse SMS kod ile geçici şifre / reset code
+* kullanıcı adı + şifre yanında telefon bazlı kurtarma opsiyonu
+
+Metin dili:
+
+* sade
+* güven veren
+* resmi ama soğuk değil
+
+==================================================
+5. ŞİFREMİ UNUTTUM / TELEFONLA ŞİFRE SIFIRLAMA
+==============================================
+
+Yeni akış:
+
+Adım 1:
+
+* kullanıcı telefon numarasını girer
+
+Adım 2:
+
+* sistem SMS doğrulama kodu yollar
+  veya
+* geçici şifre reset linki / kodu üretir
+
+Adım 3:
+
+* yeni şifre belirlenir
+
+Gerekli backend değişiklikleri:
+
+* users tablosunda phone alanı zorunlu/opsiyonel düzenlensin
+* phone doğrulama mantığı eklensin
+* password reset tokens tablosu veya sms_verifications tablosu eklensin
+* rate limit olsun
+* brute force koruması olsun
+* audit log yazılsın
+
+Gerekli endpointler:
+
+* POST /api/auth/forgot-password
+* POST /api/auth/verify-reset-code
+* POST /api/auth/reset-password
+
+Opsiyonel:
+
+* SMS provider yoksa önce mock + admin test mod
+* sonra Netgsm / ilgili SMS sağlayıcı ile gerçek gönderim
+
+==================================================
+6. "VERİ İHLALİ" MESAJI TEMİZLENSİN
+===================================
+
+Sorun:
+Şifre girince kullanıcıyı korkutan veya yanlış çağrışım yapan “veri ihlali” mesajı çıkıyor.
+
+İstenilen:
+
+* bu hata kesin incelensin
+* metin yanlışsa düzeltilsin
+* gerçekten HIBP veya benzeri breach check yapılıyorsa kullanıcı diline uygun çevrilsin
+* girişte korkutucu, gereksiz alarm veren metin kalmasın
+
+Yeni yaklaşım:
+
+* gerçek güvenlik riski yoksa bu metin hiç görünmesin
+* gerekiyorsa arka planda loglansın
+* kullanıcıya sade mesaj verilsin:
+
+  * “Şifre doğrulanamadı”
+  * “Giriş bilgileri kontrol edilemedi”
+  * “Lütfen tekrar deneyin”
+
+Ama “veri ihlali” gibi direkt panik üreten metin login ekranında gösterilmesin.
+
+Ayrıca kontrol et:
+
+* bu mesaj frontend hardcoded mı
+* auth endpoint’ten mi geliyor
+* third-party password breach uyarısı mı
+* session / csrf / cookie probleminden mi yanlış yorumlanıyor
+
+==================================================
+7. PANEL GENEL GÖRSEL TOPARLAMA
+===============================
+
+Aşağıdaki alanlar yeni temaya göre revize edilsin:
+
+* dashboard
+* sidebar
+* login
+* pricing
+* public pages
+* forms
+* modals
+* tables
+* charts
+* toast notifications
+
+Özel istek:
+
+* beyaz + yumuşak mavi ağırlıklı
+* yeşil vurgu sadece doğru yerlerde
+* genel görüntü daha ferah olsun
+
+==================================================
+8. DARK MODE / LIGHT MODE STRATEJİSİ
+====================================
+
+İlk aşama:
+
+* light mode ana deneyim olsun
+* dark mode varsa ikinci planda kalsın
+* ikisinde de logo düzgün görünsün
+
+Kural:
+
+* light mode satış için daha güven verici hazırlanmalı
+
+==================================================
+9. TEST / KABUL KRİTERLERİ
+==========================
+
+Test edilecekler:
+
+1. login ekranı yeni tema ile açılıyor mu
+2. mobile responsive düzgün mü
+3. şifremi unuttum akışı çalışıyor mu
+4. telefon doğrulama / reset akışı güvenli mi
+5. veri ihlali mesajı artık görünmüyor mu
+6. renk kontrastları erişilebilir mi
+7. tüm ana sayfalarda yeni tema tutarlı mı
+
+==================================================
+10. DEFINITION OF DONE
+======================
+
+* Ticarium365 daha iç açıcı ve premium görünüyor
+* T3 + 365 logo dili oturmuş
+* giriş ekranı profesyonel görünüyor
+* şifremi unuttum akışı aktif
+* telefonla şifre sıfırlama altyapısı hazır
+* “veri ihlali” mesajı temizlenmiş
+* yeni tema dashboard ve public sayfalara uygulanmış
+
+==================================================
+11. EK NOT
+==========
+
+Bu sprintte amaç sadece görsel makyaj değil.
+İlk izlenimi ve güven hissini yükseltmek.
+
+Ticarium365 artık “güçlü ama sert” değil,
+“güçlü, temiz, modern ve güvenilir” görünmeli.

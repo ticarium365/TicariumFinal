@@ -17,6 +17,13 @@ The project uses a monorepo structure managed by `pnpm workspaces`.
 ### UI/UX Decisions
 The frontend is built with React and Vite, styled with Tailwind CSS and `shadcn/ui` for a modern, responsive user experience. It features dynamic branding, a persistent sidebar and header, a `TrialBanner` for trial accounts, and a multi-step user onboarding wizard (`WelcomeTour`). The UI supports integrated POS terminals, data import wizards, loyalty program management, multi-currency handling, and comprehensive reporting dashboards. A public storefront (`/s/:slug`) allows anonymous visitors to browse products and place orders, adapting to tenant-specific themes and offering various payment integration options.
 
+### Sprint 82 — UX/UI + Auth Overhaul (in progress)
+- **Login redesign**: split-panel layout (sol marka tanıtımı + sağ form), `autocomplete="username/current-password"` Chrome HIBP "veri ihlali" uyarısını susturur, "Şifremi unuttum" linki, şifre göster/gizle butonu.
+- **Şifremi Unuttum** (3 adımlı sihirbaz `/sifremi-unuttum`): telefon → SMS 6 haneli kod → yeni şifre. Phone enumeration koruması (her zaman aynı yanıt), 5 deneme limiti, 10 dk kod TTL, 15 dk reset token TTL, atomik token tüketimi (race-safe).
+- **Backend**: `POST /forgot-password|verify-reset-code|reset-password` (auth.ts) + ortak `passwordResetRateLimit` (15dk/10), hem `/api/auth/*` hem `/api/v1/auth/*` üzerinde.
+- **DB**: `users.phone` + `password_reset_tokens` (companyId tenant izolasyonu, codeHash, resetTokenHash, attempts, consumed).
+- **Tema**: light/dark token ayrımı, soft-blue açık tema.
+
 ### Technical Implementations
 The backend is powered by Express 5, using PostgreSQL as the database with Drizzle ORM and Zod for schema validation. API clients and Zod schemas are generated from an OpenAPI specification using Orval. Authentication is session-based and scoped per company. Barcode scanning is handled by `@zxing/browser`, and QR codes are generated with `qrcode.react`. The monorepo includes `prosan` (frontend), `api-server` (backend), `lib/db` (database schema), and libraries for API specification, client, and Zod schemas. Features are controlled by a subscription-based feature flag system.
 

@@ -120,6 +120,27 @@ const loginRateLimit = rateLimit({
 
 app.use("/api/auth/login", loginRateLimit);
 
+// Şifre sıfırlama: 15 dakikada IP başına 10 talep — SMS spam koruması
+const passwordResetRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "Too Many Requests",
+    message: "Çok fazla şifre sıfırlama talebi. 15 dakika sonra tekrar deneyin.",
+  },
+  skip: () => process.env.NODE_ENV !== "production",
+});
+app.use("/api/auth/forgot-password", passwordResetRateLimit);
+app.use("/api/auth/verify-reset-code", passwordResetRateLimit);
+app.use("/api/auth/reset-password", passwordResetRateLimit);
+// Aynı limitler v1 prefix'i için de geçerli — bypass'ı engelle
+app.use("/api/v1/auth/login", loginRateLimit);
+app.use("/api/v1/auth/forgot-password", passwordResetRateLimit);
+app.use("/api/v1/auth/verify-reset-code", passwordResetRateLimit);
+app.use("/api/v1/auth/reset-password", passwordResetRateLimit);
+
 // Anonim "Sizi arayalım" formu için spam koruması: 10 dakikada IP başına 5 talep
 const contactRateLimit = rateLimit({
   windowMs: 10 * 60 * 1000,

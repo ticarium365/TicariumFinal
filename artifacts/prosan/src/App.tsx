@@ -10,6 +10,7 @@ import NotFound from "@/pages/not-found";
 
 // Pages
 import Login from "@/pages/login";
+import ForgotPassword from "@/pages/forgot-password";
 import KarsilastirPage from "@/pages/karsilastir";
 import HakkimizdaPage from "@/pages/hakkimizda";
 import AmacimizPage from "@/pages/amacimiz";
@@ -159,6 +160,8 @@ function AuthenticatedRouter() {
     <AuthProvider>
       <Switch>
         <Route path="/login" component={Login} />
+        <Route path="/sifremi-unuttum" component={ForgotPassword} />
+        <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/karsilastir" component={KarsilastirPage} />
         <Route path="/neden-ticarium365" component={KarsilastirPage} />
         <Route path="/neden-smsystems" component={KarsilastirPage} />
