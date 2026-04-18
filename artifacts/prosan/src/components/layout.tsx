@@ -111,6 +111,11 @@ const TOP_ITEM: NavItem = {
   roles: ["admin", "staff", "viewer", "super_admin"],
 };
 
+const HERO_ITEM: NavItem = {
+  href: "/eticarium-merkezi", label: "e-Ticarium Merkezi", icon: Sparkles,
+  roles: ["admin", "staff", "viewer"],
+};
+
 const NAV_GROUPS: NavGroup[] = [
   {
     id: "satis", label: "Satış & Müşteri", icon: ShoppingCart,
@@ -158,7 +163,6 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: "ecommerce", label: "e-Ticaret & Pazaryeri", icon: Store,
     items: [
-      { href: "/eticarium-merkezi", label: "e-Ticarium Merkezi", icon: Sparkles, roles: ["admin", "staff", "viewer"] },
       { href: "/magaza", label: "Hazır Mağaza", icon: Store, roles: ["admin", "staff", "viewer"] },
       { href: "/marketplace", label: "Pazaryeri", icon: Radio, roles: ["admin", "staff"] },
       { href: "/channels", label: "Satış Kanalları", icon: Radio, roles: ["admin", "staff"] },
@@ -302,7 +306,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {user && TOP_ITEM.roles.includes(user.role) && (
         <Link href={TOP_ITEM.href}>
           <div
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer text-sm mb-2 ${
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer text-sm mb-1.5 ${
               isItemActive(TOP_ITEM.href)
                 ? "bg-white/10 text-white font-semibold"
                 : "font-medium hover:bg-white/8"
@@ -313,6 +317,46 @@ export function Layout({ children }: { children: React.ReactNode }) {
           >
             <TOP_ITEM.icon className="h-4 w-4 shrink-0" />
             <span>{TOP_ITEM.label}</span>
+          </div>
+        </Link>
+      )}
+
+      {/* HERO — e-Ticarium Merkezi (öne çıkarılmış) */}
+      {user && HERO_ITEM.roles.includes(user.role) && (
+        <Link href={HERO_ITEM.href}>
+          <div
+            className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer text-sm mb-3 overflow-hidden border ${
+              isItemActive(HERO_ITEM.href)
+                ? "border-white/30 shadow-lg shadow-emerald-500/20"
+                : "border-white/10 hover:border-white/25 hover:shadow-md hover:shadow-emerald-500/15"
+            }`}
+            style={{
+              background: isItemActive(HERO_ITEM.href)
+                ? "linear-gradient(135deg, hsl(152 76% 40%) 0%, hsl(190 90% 45%) 100%)"
+                : "linear-gradient(135deg, hsl(152 76% 32%) 0%, hsl(190 80% 38%) 100%)",
+              color: "white",
+            }}
+            onClick={() => setIsOpen(false)}
+            data-testid="nav-link-eticarium-merkezi"
+          >
+            {/* parıltı animasyonu */}
+            <span
+              aria-hidden
+              className="absolute inset-0 opacity-30 group-hover:opacity-60 transition-opacity"
+              style={{
+                background: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.4) 0%, transparent 50%)",
+              }}
+            />
+            <span className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-white/20 shrink-0">
+              <HERO_ITEM.icon className="h-4 w-4" />
+            </span>
+            <div className="relative flex-1 min-w-0">
+              <div className="font-bold leading-tight">{HERO_ITEM.label}</div>
+              <div className="text-[10px] opacity-90 leading-tight mt-0.5">Tek tıkla tüm kanallar</div>
+            </div>
+            <span className="relative text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/25">
+              Yeni
+            </span>
           </div>
         </Link>
       )}
