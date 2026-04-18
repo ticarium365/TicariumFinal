@@ -243,57 +243,46 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-5">
-      {/* Başlık */}
-      <div className="t365-heading-accent">
-        <h1 className="text-2xl font-bold tracking-tight t365-gradient-text" style={{ fontFamily: "var(--font-display)" }}>
-          Ana Panel
-        </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {new Date().toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-        </p>
-      </div>
+      {/* Başlık + Kompakt Kur Şeridi */}
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div className="t365-heading-accent">
+          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text" style={{ fontFamily: "var(--font-display)" }}>
+            Ana Panel
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {new Date().toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          </p>
+        </div>
 
-      {/* TCMB Kur Widget — EN ÜSTTE, OKUNAKLI */}
-      <Card className="border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <Banknote className="h-5 w-5 text-emerald-500" />
-              Merkez Bankası Kurları
-            </span>
-            {tcmb?.rates && Object.values(tcmb.rates)[0]?.source === "temsili" && (
-              <Badge variant="outline" className="text-[10px] h-5 text-amber-500 border-amber-500/30">
-                Temsili (API bekleniyor)
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Kompakt TCMB Kur Şeridi */}
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5">
+            <Banknote className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
             {(["USD", "EUR", "GBP", "JPY"] as const).map((cur) => {
               const r = tcmb?.rates?.[cur];
               const flag = cur === "USD" ? "🇺🇸" : cur === "EUR" ? "🇪🇺" : cur === "GBP" ? "🇬🇧" : "🇯🇵";
               return (
-                <div key={cur} className="rounded-xl border border-border bg-card/60 p-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold flex items-center gap-1.5">
-                      <span className="text-base">{flag}</span>
-                      <span>{cur}/TRY</span>
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold t365-numeric tracking-tight text-emerald-600 dark:text-emerald-400">
-                    {r ? fmtKur(r.sell) : "—"} <span className="text-base text-muted-foreground font-medium">₺</span>
-                  </p>
-                  <div className="flex items-center justify-between mt-1.5 text-[11px] text-muted-foreground">
-                    <span>Alış: <span className="font-mono font-medium">{r ? fmtKur(r.buy) : "—"}</span></span>
-                    <span>Satış: <span className="font-mono font-medium">{r ? fmtKur(r.sell) : "—"}</span></span>
-                  </div>
+                <div
+                  key={cur}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-card/70 border border-border/60"
+                  title={`${cur}/TRY  Alış: ${r ? fmtKur(r.buy) : "—"}  Satış: ${r ? fmtKur(r.sell) : "—"}`}
+                >
+                  <span className="text-xs">{flag}</span>
+                  <span className="text-[11px] font-semibold text-muted-foreground">{cur}</span>
+                  <span className="text-xs font-bold t365-numeric text-emerald-600 dark:text-emerald-400">
+                    {r ? fmtKur(r.sell) : "—"}
+                  </span>
                 </div>
               );
             })}
           </div>
-        </CardContent>
-      </Card>
+          <p className="text-[10px] text-muted-foreground italic">
+            {tcmb?.rates && Object.values(tcmb.rates)[0]?.source === "temsili"
+              ? "Temsili kurlar — TCMB API entegrasyonu sonrası 15 dakikada bir güncellenecek"
+              : "TCMB kurları 15 dakikada bir güncellenir"}
+          </p>
+        </div>
+      </div>
 
       {/* Stat Kartları: Bugünün Cirosu + Kritik Stok + Son 30 Gün Cirosu */}
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
