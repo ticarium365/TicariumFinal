@@ -4,7 +4,7 @@
 // uygular. Üst katman bunları tanımayı bilir; provider değişimi config ile olur.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type EInvoiceScenario = "EFATURA" | "EARSIV";
+export type EInvoiceScenario = "EFATURA" | "EARSIV" | "EIRSALIYE";
 export type EInvoiceProfile = "TEMELFATURA" | "TICARIFATURA" | "EARSIVFATURA";
 export type EInvoiceType = "SATIS" | "IADE" | "ISTISNA" | "OZELMATRAH";
 

@@ -69,3 +69,28 @@ The backend is powered by Express 5. PostgreSQL is the chosen database, managed 
 - **qrcode.react**: QR code generation.
 - **Tailwind CSS**: Styling framework.
 - **shadcn/ui**: UI component library.
+### Sprint A — E-İrsaliye + E-Arşiv Ayrımı
+- `einvoice` schema'da `invoiceType` IRSALIYE (e-irsaliye) ve `EInvoiceScenario` tipinde EIRSALIYE eklendi. UI dialog'da "Tip" ve "Senaryo" seçimleri genişletildi.
+
+### Sprint B — Üretim & Reçete (BOM)
+- `production_recipes` (mamul + outputQuantity), `recipe_components` (hammadde + miktar + birim), `production_orders` (planned/in_progress/completed/cancelled, planlanan/üretilen/fire).
+- `/api/production/recipes` CRUD, `/orders` create/list, `/orders/:id/complete` race-safe atomic transaction: `FOR UPDATE` ile sipariş kilidi + her bileşen için koşullu UPDATE (`stock >= needed`) ile aşırı çekim engellenmiş; mamul stoğu artırılır, `stock_movements`'a `production_consume`/`production_output` kaydı yazılır.
+- `/uretim` sayfası: 2 tab (Emirler/Reçeteler) + RecipeDialog (multi-component) + OrderDialog + CompleteDialog (üretilen + fire). Sidebar Factory ikonu.
+
+### Sprint C — Sadakat & Puan Sistemi
+- `loyalty_settings` (per-tenant: pointsPerHundredTL, tlPerPoint, minRedeemPoints, isActive), `loyalty_transactions` (earn/redeem/adjust/expire).
+- `/api/loyalty` settings GET/PUT, `/customers/:id/balance|/transactions`, `/customers/:id/adjust` (negative redeem balance check), `/earn-from-sale` (tenant ownership doğrulaması: customerId + saleId tenant'a ait mi), `/top-customers` (innerJoin + companyId guard).
+- `/sadakat` sayfası: Sıralama + Ayarlar + Manuel Puan İşlemi dialog. Sidebar Award ikonu.
+
+### Sprint D — Çoklu Para Birimi
+- `currency_rates` (tenant başına USD/EUR/GBP/CHF/JPY → TRY kuru, history-friendly).
+- `/api/currency/rates` GET (latest+history)/POST, `/convert` (TRY base ile any↔any çevirim).
+- `/doviz` sayfası: kur tablosu, ekleme formu, çevirici, geçmiş listesi. Sidebar DollarSign ikonu.
+
+### Sprint E — Mobil Derinleştirme
+- Expo app'e `(tabs)/customers.tsx` eklendi: arama, bakiye gösterimi (borç/alacak renk kodlu), toplam cari özet kartı, alert detay popup. Tab bar'da yeni "Müşteriler" sekmesi.
+
+### Mevcut Modüllerle Yeniden Kullanım
+- Sprint 4 (Barkod/Etiket PDF) zaten `/barcodes` sayfasında 4 şablon (termal/fiyat/raf/QR) + A4 sütun preset'leri + JsBarcode/QR + Yazdır/PDF butonu olarak kapsamlı şekilde mevcut.
+- Sprint 5 (Promosyon Engine) zaten `campaigns` modülünde percent/fixed/coupon/scope-all-category-product + min amount/qty + max uses + tarih aralığı + `/campaigns/apply` (en iyi indirim seçimi) olarak mevcut.
+

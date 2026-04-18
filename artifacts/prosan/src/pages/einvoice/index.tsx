@@ -497,6 +497,8 @@ function CreateInvoiceDialog({
                   <SelectItem value="SATIS">Satış</SelectItem>
                   <SelectItem value="IADE">İade</SelectItem>
                   <SelectItem value="ISTISNA">İstisna</SelectItem>
+                  <SelectItem value="TEVKIFAT">Tevkifat</SelectItem>
+                  <SelectItem value="IRSALIYE">e-İrsaliye</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -507,6 +509,7 @@ function CreateInvoiceDialog({
                 <SelectContent>
                   <SelectItem value="EFATURA">e-Fatura</SelectItem>
                   <SelectItem value="EARSIV">e-Arşiv</SelectItem>
+                  <SelectItem value="EIRSALIYE">e-İrsaliye</SelectItem>
                 </SelectContent>
               </Select>
             </div>

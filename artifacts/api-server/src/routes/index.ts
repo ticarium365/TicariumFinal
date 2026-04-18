@@ -92,9 +92,15 @@ import accountantRouter from "./accountant.js";
 import reportsOfficialRouter from "./reports-official.js";
 import budgetsRouter from "./budgets.js";
 import importsRouter from "./imports.js";
+import productionRouter from "./production.js";
+import loyaltyRouter from "./loyalty.js";
+import currencyRouter from "./currency.js";
 router.use("/accountant", accountantRouter);
 router.use("/reports-official", reportsOfficialRouter);
 router.use("/budgets", budgetsRouter);
 router.use("/import", importsRouter);
+router.use("/production", productionRouter);
+router.use("/loyalty", loyaltyRouter);
+router.use("/currency", currencyRouter);
 
 export default router;

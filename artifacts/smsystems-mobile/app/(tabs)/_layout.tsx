@@ -71,6 +71,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Feather name="shopping-bag" size={22} color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="customers"
+        options={{
+          title: "Müşteriler",
+          tabBarIcon: ({ color }) => <Feather name="users" size={22} color={color} />,
+        }}
+      />
     </Tabs>
   );
 }
