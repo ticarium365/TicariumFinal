@@ -8,6 +8,7 @@ import {
   timestamp,
   uniqueIndex,
   index,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { companiesTable } from "./companies";
 import { productsTable } from "./products";
@@ -73,6 +74,55 @@ export const productChannelListingsTable = pgTable(
 
 export type ProductChannelListing = typeof productChannelListingsTable.$inferSelect;
 export type InsertProductChannelListing = typeof productChannelListingsTable.$inferInsert;
+
+export const channelCredentialsTable = pgTable(
+  "channel_credentials",
+  {
+    id: serial("id").primaryKey(),
+    companyId: integer("company_id")
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: "cascade" }),
+    channelKey: text("channel_key").notNull(),
+    mode: text("mode").notNull().default("test"),
+    credentials: jsonb("credentials").notNull().default({}),
+    isActive: boolean("is_active").notNull().default(false),
+    lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
+    lastSyncStatus: text("last_sync_status"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("ccred_company_channel_idx").on(t.companyId, t.channelKey),
+  ]
+);
+
+export type ChannelCredential = typeof channelCredentialsTable.$inferSelect;
+
+export const channelSyncLogsTable = pgTable(
+  "channel_sync_logs",
+  {
+    id: serial("id").primaryKey(),
+    companyId: integer("company_id")
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: "cascade" }),
+    channelKey: text("channel_key").notNull(),
+    operation: text("operation").notNull(),
+    productId: integer("product_id"),
+    status: text("status").notNull(),
+    mode: text("mode").notNull().default("test"),
+    requestPayload: jsonb("request_payload"),
+    responsePayload: jsonb("response_payload"),
+    errorMessage: text("error_message"),
+    durationMs: integer("duration_ms"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("csync_company_channel_idx").on(t.companyId, t.channelKey, t.createdAt),
+    index("csync_company_status_idx").on(t.companyId, t.status, t.createdAt),
+  ]
+);
+
+export type ChannelSyncLog = typeof channelSyncLogsTable.$inferSelect;
 
 export function computeEffectivePrice(opts: {
   basePrice: number;

@@ -7,6 +7,13 @@ import {
   Settings2,
   Save,
   Filter,
+  Download,
+  KeyRound,
+  RefreshCw,
+  History,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,6 +104,113 @@ export default function ChannelDetailPage({ channelKey }: Props) {
   const [editing, setEditing] = useState<Row | null>(null);
   const [busy, setBusy] = useState(false);
   const [channelLabel, setChannelLabel] = useState(channelKey);
+  const [credentials, setCredentials] = useState<any>(null);
+  const [credDialogOpen, setCredDialogOpen] = useState(false);
+  const [logsDialogOpen, setLogsDialogOpen] = useState(false);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [credForm, setCredForm] = useState<{ mode: "test" | "live"; isActive: boolean; fields: Record<string, string> }>({
+    mode: "test",
+    isActive: false,
+    fields: {},
+  });
+
+  const adapterChannels = ["trendyol", "hepsiburada", "n11", "amazon_tr"];
+  const hasAdapter = adapterChannels.includes(channelKey);
+
+  const credentialFields: Record<string, { key: string; label: string; secret: boolean }[]> = {
+    trendyol: [
+      { key: "sellerId", label: "Mağaza ID", secret: false },
+      { key: "apiKey", label: "API Key", secret: true },
+      { key: "apiSecret", label: "API Secret", secret: true },
+    ],
+    hepsiburada: [
+      { key: "merchantId", label: "Merchant ID", secret: false },
+      { key: "username", label: "Kullanıcı Adı", secret: false },
+      { key: "password", label: "Parola", secret: true },
+    ],
+    n11: [
+      { key: "appKey", label: "App Key", secret: true },
+      { key: "appSecret", label: "App Secret", secret: true },
+    ],
+    amazon_tr: [
+      { key: "sellerId", label: "Seller ID", secret: false },
+      { key: "marketplaceId", label: "Marketplace ID (A33AVAJ2PDY3EV = TR)", secret: false },
+      { key: "refreshToken", label: "Refresh Token", secret: true },
+      { key: "lwaClientId", label: "LWA Client ID", secret: true },
+      { key: "lwaClientSecret", label: "LWA Client Secret", secret: true },
+    ],
+  };
+
+  async function loadCredentials() {
+    if (!hasAdapter) return;
+    const r = await fetch(`${apiBase}/channels/${channelKey}/credentials`, { credentials: "include" });
+    if (r.ok) {
+      const data = await r.json();
+      setCredentials(data);
+      const fields: Record<string, string> = {};
+      for (const f of credentialFields[channelKey] ?? []) {
+        fields[f.key] = data.credentials?.[f.key] ?? "";
+      }
+      setCredForm({ mode: data.mode ?? "test", isActive: !!data.isActive, fields });
+    }
+  }
+
+  async function saveCredentials() {
+    setBusy(true);
+    try {
+      const r = await fetch(`${apiBase}/channels/${channelKey}/credentials`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: credForm.mode, isActive: credForm.isActive, credentials: credForm.fields }),
+      });
+      if (!r.ok) throw new Error();
+      toast({ title: "Bağlantı bilgileri kaydedildi" });
+      setCredDialogOpen(false);
+      await loadCredentials();
+    } catch {
+      toast({ title: "Kaydedilemedi", variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function triggerSync() {
+    setSyncBusy(true);
+    try {
+      const r = await fetch(`${apiBase}/channels/${channelKey}/sync`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      toast({
+        title: `Senkronizasyon tamamlandı (${d.mode === "test" ? "TEST" : "CANLI"})`,
+        description: `${d.success}/${d.total} başarılı, ${d.error} hata · ${d.durationMs}ms`,
+      });
+      await loadCredentials();
+    } catch (e: any) {
+      toast({ title: "Senkronizasyon başarısız", description: e?.message, variant: "destructive" });
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
+  async function openLogs() {
+    setLogsDialogOpen(true);
+    const r = await fetch(`${apiBase}/channels/${channelKey}/logs?limit=100`, { credentials: "include" });
+    if (r.ok) setLogs(await r.json());
+  }
+
+  function downloadExcel() {
+    window.open(`${apiBase}/channels/${channelKey}/export.xlsx`, "_blank");
+  }
+
+  useEffect(() => {
+    loadCredentials();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelKey]);
 
   async function load() {
     setLoading(true);
@@ -228,14 +342,59 @@ export default function ChannelDetailPage({ channelKey }: Props) {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">{channelLabel}</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold">{channelLabel}</h1>
+            {credentials?.configured && credentials.mode === "test" && (
+              <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-50">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                TEST MODU
+              </Badge>
+            )}
+            {credentials?.configured && credentials.mode === "live" && credentials.isActive && (
+              <Badge className="bg-emerald-600 text-white">CANLI</Badge>
+            )}
+            {credentials?.lastSyncStatus === "success" && (
+              <Badge variant="outline" className="border-emerald-500 text-emerald-700">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                Son senkron OK
+              </Badge>
+            )}
+            {credentials?.lastSyncStatus === "error" && (
+              <Badge variant="outline" className="border-red-500 text-red-700">
+                <XCircle className="h-3 w-3 mr-1" />
+                Son senkron hata
+              </Badge>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground">
             Bu kanaldaki ürün listeleme, fiyat ve stok ayarları
           </p>
         </div>
-        <div className="text-sm text-muted-foreground">
-          <span className="font-bold text-foreground">{rows.filter((r) => r.isEnabled).length}</span>{" "}
-          / {rows.length} aktif
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground mr-2">
+            <span className="font-bold text-foreground">{rows.filter((r) => r.isEnabled).length}</span>{" "}
+            / {rows.length} aktif
+          </span>
+          <Button variant="outline" size="sm" onClick={downloadExcel}>
+            <Download className="h-4 w-4 mr-2" />
+            Excel İndir
+          </Button>
+          {hasAdapter && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setCredDialogOpen(true)}>
+                <KeyRound className="h-4 w-4 mr-2" />
+                Bağlantı
+              </Button>
+              <Button variant="outline" size="sm" onClick={openLogs}>
+                <History className="h-4 w-4 mr-2" />
+                Geçmiş
+              </Button>
+              <Button size="sm" onClick={triggerSync} disabled={syncBusy}>
+                {syncBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                Senkronize Et
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -540,6 +699,125 @@ export default function ChannelDetailPage({ channelKey }: Props) {
             <Button onClick={save} disabled={busy}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4 mr-2" /> Kaydet</>}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Credentials Dialog */}
+      <Dialog open={credDialogOpen} onOpenChange={setCredDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{channelLabel} — Bağlantı Ayarları</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+              <strong>Önemli:</strong> Mevcut gizli alanlar maskeli ("sk***et") gösterilir. Değiştirmek
+              istemiyorsanız o alana dokunmayın; sistem mevcut değeri korur. Tamamen yeni bir değer
+              yazarsanız üzerine yazılır.
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Mod</label>
+                <Select value={credForm.mode} onValueChange={(v: any) => setCredForm({ ...credForm, mode: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="test">TEST (gerçek API'a gönderilmez)</SelectItem>
+                    <SelectItem value="live">CANLI</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Aktif</label>
+                <div className="flex items-center h-9">
+                  <Switch
+                    checked={credForm.isActive}
+                    onCheckedChange={(v) => setCredForm({ ...credForm, isActive: v })}
+                  />
+                  <span className="ml-2 text-sm text-muted-foreground">
+                    {credForm.isActive ? "Senkron yapılır" : "Pasif"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {(credentialFields[channelKey] ?? []).map((f) => (
+              <div key={f.key} className="space-y-1">
+                <label className="text-xs font-medium">{f.label}</label>
+                <Input
+                  type={f.secret ? "text" : "text"}
+                  value={credForm.fields[f.key] ?? ""}
+                  onChange={(e) =>
+                    setCredForm({ ...credForm, fields: { ...credForm.fields, [f.key]: e.target.value } })
+                  }
+                  placeholder={f.secret ? "Gizli — değişmesin diye boş bırakın" : ""}
+                />
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCredDialogOpen(false)} disabled={busy}>
+              Vazgeç
+            </Button>
+            <Button onClick={saveCredentials} disabled={busy}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4 mr-2" /> Kaydet</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Logs Dialog */}
+      <Dialog open={logsDialogOpen} onOpenChange={setLogsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{channelLabel} — Senkronizasyon Geçmişi</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto">
+            {logs.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-12">Kayıt yok</p>
+            ) : (
+              <table className="w-full text-xs">
+                <thead className="bg-muted/50 sticky top-0">
+                  <tr>
+                    <th className="text-left px-2 py-2">Zaman</th>
+                    <th className="text-left px-2 py-2">İşlem</th>
+                    <th className="text-left px-2 py-2">Ürün</th>
+                    <th className="text-left px-2 py-2">Durum</th>
+                    <th className="text-left px-2 py-2">Mod</th>
+                    <th className="text-right px-2 py-2">ms</th>
+                    <th className="text-left px-2 py-2">Hata</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logs.map((l) => (
+                    <tr key={l.id} className="border-t hover:bg-muted/30">
+                      <td className="px-2 py-1.5 whitespace-nowrap text-muted-foreground">
+                        {new Date(l.createdAt).toLocaleString("tr-TR")}
+                      </td>
+                      <td className="px-2 py-1.5 font-mono">{l.operation}</td>
+                      <td className="px-2 py-1.5 tabular-nums">{l.productId ?? "—"}</td>
+                      <td className="px-2 py-1.5">
+                        {l.status === "success" ? (
+                          <Badge variant="outline" className="border-emerald-500 text-emerald-700 text-xs">OK</Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-red-500 text-red-700 text-xs">{l.status}</Badge>
+                        )}
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <Badge variant="outline" className="text-xs">{l.mode}</Badge>
+                      </td>
+                      <td className="px-2 py-1.5 text-right tabular-nums">{l.durationMs ?? "—"}</td>
+                      <td className="px-2 py-1.5 text-red-700 truncate max-w-xs" title={l.errorMessage ?? ""}>
+                        {l.errorMessage ?? ""}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLogsDialogOpen(false)}>Kapat</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
