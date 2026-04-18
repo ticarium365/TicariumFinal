@@ -67,9 +67,10 @@ const moduleCards: Array<{
   {
     key: "pricing",
     title: "Fiyat Motoru",
-    desc: "Kanal bazlı +%, sabit TL, yuvarlama ve min/max limit kuralları. (Yakında)",
+    desc: "Kanal bazlı +%, sabit TL, yuvarlama, min/max limit. Önce taslak, sonra toplu uygula.",
     icon: Tag,
-    status: "soon",
+    status: "live",
+    href: "/fiyat-motoru",
   },
   {
     key: "shipping",
@@ -246,10 +247,20 @@ export default function ETicariumMerkeziPage() {
         </TabsContent>
 
         <TabsContent value="pricing" className="mt-6">
-          <ComingSoon
-            title="Fiyat Motoru"
-            desc="Kanal bazlı +%, -%, sabit TL, yuvarlama ve min/maks limit kuralları. Toplu kategori/marka güncellemesi yakında."
-          />
+          <Card>
+            <CardContent className="py-8 text-center space-y-3">
+              <Tag className="h-10 w-10 mx-auto" style={{ color: EMERALD }} />
+              <h3 className="font-semibold text-lg">Fiyat Motoru</h3>
+              <p className="text-sm text-muted-foreground max-w-lg mx-auto">
+                Kanal bazlı kural setleri ile fiyatlarınızı tek tıkla yönetin. Markup %, sabit TL,
+                maliyet+%, indirim, yuvarlama (.99 / .95), min/max limit. Önce taslak çalıştırıp
+                etkiyi görebilirsiniz.
+              </p>
+              <Button onClick={() => setLocation("/fiyat-motoru")} style={{ background: EMERALD }}>
+                Kuralları Yönet <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="shipping" className="mt-6">

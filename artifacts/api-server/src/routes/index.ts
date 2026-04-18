@@ -112,4 +112,7 @@ router.use("/profit-engine", profitEngineRouter);
 import storefrontsRouter from "./storefronts.js";
 router.use("/storefronts", storefrontsRouter);
 
+import pricingRulesRouter from "./pricing-rules.js";
+router.use("/pricing-rules", pricingRulesRouter);
+
 export default router;

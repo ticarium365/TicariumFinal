@@ -38,3 +38,4 @@ export * from "./loyalty";
 export * from "./currency";
 export * from "./contact_requests";
 export * from "./storefronts";
+export * from "./pricing_rules";
