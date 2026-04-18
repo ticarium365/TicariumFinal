@@ -179,3 +179,9 @@ id = "tOftuPqsVDzffVdhkko_M"
 uri = "file://screenshots/sprint82/personnel.jpeg"
 type = "image"
 title = "20 — Personel"
+
+[[outputs]]
+id = "H3nB1gZdUxX8i164wUSUQ"
+uri = "file://screenshots/ticarium365-screenshots.zip"
+type = "unspecified"
+title = "Ticarium365 — 20 sayfa ekran görüntüsü (ZIP)"
