@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { WelcomeTour } from "./welcome-tour";
 import { useAuth } from "./auth-context";
 import { useCompany } from "./company-context";
@@ -51,6 +51,8 @@ import {
   Megaphone,
   ShoppingBasket,
   ShieldCheck,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./notification-center";
@@ -62,7 +64,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function TrialBanner() {
   const { user } = useAuth();
@@ -88,6 +90,157 @@ function TrialBanner() {
   );
 }
 
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roles: string[];
+};
+
+type NavGroup = {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  items: NavItem[];
+};
+
+// Tüm menü öğeleri mantıksal gruplara ayrıldı.
+// "Ana Panel" üstte sabit (grup dışı), diğer gruplar katlanabilir.
+const TOP_ITEM: NavItem = {
+  href: "/dashboard", label: "Ana Panel", icon: LayoutDashboard,
+  roles: ["admin", "staff", "viewer", "super_admin"],
+};
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    id: "satis", label: "Satış & Müşteri", icon: ShoppingCart,
+    items: [
+      { href: "/sales", label: "Satış Ekranı", icon: ShoppingCart, roles: ["admin", "staff"] },
+      { href: "/pos", label: "Hızlı Satış (POS)", icon: ScanLine, roles: ["admin", "staff"] },
+      { href: "/sales/history", label: "Satış Geçmişi", icon: History, roles: ["admin", "staff", "viewer"] },
+      { href: "/customers", label: "Müşteriler", icon: UserCircle, roles: ["admin", "staff", "viewer"] },
+      { href: "/sadakat", label: "Sadakat & Puan", icon: Award, roles: ["admin", "staff", "viewer"] },
+      { href: "/campaigns", label: "Kampanyalar", icon: Tag, roles: ["admin", "staff", "viewer"] },
+    ],
+  },
+  {
+    id: "stok", label: "Stok & Ürün", icon: Package,
+    items: [
+      { href: "/products", label: "Ürünler", icon: Package, roles: ["admin", "staff", "viewer"] },
+      { href: "/barcode", label: "Barkod Tarama", icon: ScanBarcode, roles: ["admin", "staff"] },
+      { href: "/barcodes", label: "Etiket Merkezi", icon: Barcode, roles: ["admin", "staff", "viewer"] },
+      { href: "/stock", label: "Stok Girişi", icon: PackagePlus, roles: ["admin", "staff"] },
+      { href: "/stock-counts", label: "Stok Sayım", icon: ClipboardList, roles: ["admin", "staff"] },
+      { href: "/ice-aktarim", label: "Veri İçe Aktarımı", icon: Upload, roles: ["admin", "staff"] },
+    ],
+  },
+  {
+    id: "alis", label: "Alış & Tedarikçi", icon: ShoppingBag,
+    items: [
+      { href: "/purchases", label: "Alış Faturaları", icon: ShoppingBag, roles: ["admin", "staff", "viewer"] },
+      { href: "/suppliers", label: "Tedarikçiler", icon: Truck, roles: ["admin", "staff", "viewer"] },
+    ],
+  },
+  {
+    id: "finans", label: "Finans", icon: Wallet,
+    items: [
+      { href: "/finance", label: "Kasa / Finans", icon: Wallet, roles: ["admin", "staff", "viewer"] },
+      { href: "/banking", label: "Bankacılık", icon: Banknote, roles: ["admin", "staff"] },
+      { href: "/finance-dashboard", label: "Finans Paneli", icon: TrendingUp, roles: ["admin", "viewer"] },
+      { href: "/profit", label: "Net Kâr Merkezi", icon: TrendingUp, roles: ["admin", "staff", "viewer"] },
+      { href: "/gercek-kar", label: "Gerçek Kâr", icon: TrendingUp, roles: ["admin", "viewer"] },
+      { href: "/gercek-kar/oneriler", label: "Akıllı Öneriler", icon: Sparkles, roles: ["admin", "viewer"] },
+      { href: "/butce", label: "Bütçe & Tahmin", icon: PieChart, roles: ["admin", "staff", "viewer"] },
+      { href: "/muhasebeci", label: "Mali Müşavir", icon: Calculator, roles: ["admin", "staff", "viewer"] },
+      { href: "/doviz", label: "Çoklu Para Birimi", icon: DollarSign, roles: ["admin", "staff", "viewer"] },
+    ],
+  },
+  {
+    id: "ecommerce", label: "e-Ticaret & Pazaryeri", icon: Store,
+    items: [
+      { href: "/eticarium-merkezi", label: "e-Ticarium Merkezi", icon: Sparkles, roles: ["admin", "staff", "viewer"] },
+      { href: "/magaza", label: "Hazır Mağaza", icon: Store, roles: ["admin", "staff", "viewer"] },
+      { href: "/marketplace", label: "Pazaryeri", icon: Radio, roles: ["admin", "staff"] },
+      { href: "/channels", label: "Satış Kanalları", icon: Radio, roles: ["admin", "staff"] },
+      { href: "/fiyat-motoru", label: "Fiyat Motoru", icon: Tag, roles: ["admin", "staff", "viewer"] },
+      { href: "/karlilik-kanal", label: "Kanal Karlılığı", icon: Trophy, roles: ["admin", "staff", "viewer"] },
+      { href: "/kargo", label: "Kargo Yönetimi", icon: Truck, roles: ["admin", "staff", "viewer"] },
+      { href: "/reklam-butce", label: "Reklam Bütçesi", icon: Megaphone, roles: ["admin", "staff", "viewer"] },
+    ],
+  },
+  {
+    id: "b2b", label: "B2B & Ağ", icon: Network,
+    items: [
+      { href: "/network", label: "B2B Ağı", icon: Network, roles: ["admin", "staff", "viewer"] },
+      { href: "/b2b/quotes", label: "Teklifler", icon: FileText, roles: ["admin", "staff"] },
+      { href: "/b2b/orders", label: "Siparişler", icon: Package, roles: ["admin", "staff"] },
+      { href: "/b2b/catalog", label: "B2B Katalog", icon: PackageOpen, roles: ["admin", "staff"] },
+      { href: "/aggregator", label: "Ticarium Pazar", icon: ShoppingBasket, roles: ["admin"] },
+    ],
+  },
+  {
+    id: "belgeler", label: "Belgeler & e-Fatura", icon: FileText,
+    items: [
+      { href: "/einvoice", label: "e-Fatura", icon: FileText, roles: ["admin", "staff", "viewer"] },
+      { href: "/documents", label: "Evrak Yönetimi", icon: FileText, roles: ["admin", "staff", "viewer"] },
+      { href: "/finance-documents", label: "Belge Merkezi", icon: Inbox, roles: ["admin", "staff", "viewer"] },
+    ],
+  },
+  {
+    id: "uretim", label: "Üretim & Operasyon", icon: Factory,
+    items: [
+      { href: "/uretim", label: "Üretim & Reçete", icon: Factory, roles: ["admin", "staff", "viewer"] },
+      { href: "/personnel", label: "Personel", icon: Users, roles: ["admin", "staff", "viewer"] },
+      { href: "/branches", label: "Şubeler", icon: GitBranch, roles: ["admin", "staff", "viewer"] },
+    ],
+  },
+  {
+    id: "raporlar", label: "Raporlar", icon: BarChart3,
+    items: [
+      { href: "/reports", label: "Raporlar", icon: BarChart3, roles: ["admin", "viewer"] },
+      { href: "/reports/daily-summary", label: "Günlük Kapanış", icon: CalendarCheck, roles: ["admin", "viewer"] },
+    ],
+  },
+  {
+    id: "ayarlar", label: "Ayarlar", icon: Settings,
+    items: [
+      { href: "/users", label: "Kullanıcılar", icon: Users, roles: ["admin"] },
+      { href: "/settings/subscription", label: "Abonelik", icon: CreditCard, roles: ["admin"] },
+      { href: "/settings/notifications", label: "Bildirim Ayarları", icon: Bell, roles: ["admin"] },
+      { href: "/settings/integrations", label: "Entegrasyonlar", icon: Webhook, roles: ["admin"] },
+      { href: "/settings", label: "Genel Ayarlar", icon: Settings, roles: ["admin"] },
+      { href: "/pricing", label: "Paketler & Fiyatlar", icon: Tag, roles: ["admin", "staff", "viewer", "super_admin"] },
+    ],
+  },
+  {
+    id: "superadmin", label: "Süper Admin", icon: ShieldCheck,
+    items: [
+      { href: "/admin/companies", label: "Firma Yönetimi", icon: Building2, roles: ["super_admin"] },
+      { href: "/super-admin/yeni-firma", label: "Yeni Firma Ekle", icon: Building2, roles: ["super_admin"] },
+      { href: "/super-admin/talepler", label: "İletişim Talepleri", icon: Inbox, roles: ["super_admin"] },
+      { href: "/super-admin/audit-logs", label: "Denetim Kayıtları", icon: ShieldCheck, roles: ["super_admin"] },
+      { href: "/admin/payments", label: "Ödeme Bildirimleri", icon: CreditCard, roles: ["super_admin"] },
+      { href: "/admin/billing", label: "Abonelik Yönetimi", icon: CreditCard, roles: ["super_admin"] },
+      { href: "/admin/runtime-flags", label: "Runtime Flags", icon: ShieldCheck, roles: ["super_admin"] },
+      { href: "/admin/platform-settings", label: "Platform Ayarları", icon: Wrench, roles: ["super_admin"] },
+    ],
+  },
+];
+
+const STORAGE_KEY = "ticarium365_nav_open_groups_v1";
+
+function loadOpenGroups(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* */ }
+  return {};
+}
+
+function saveOpenGroups(state: Record<string, boolean>) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* */ }
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { company } = useCompany();
@@ -95,8 +248,42 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const logout = useLogout();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => loadOpenGroups());
 
   const companyName = company?.name ?? "Ticarium365";
+
+  // Rol filtresi uygulanmış gruplar
+  const visibleGroups = useMemo(() => {
+    if (!user) return [];
+    return NAV_GROUPS
+      .map((g) => ({ ...g, items: g.items.filter((i) => i.roles.includes(user.role)) }))
+      .filter((g) => g.items.length > 0);
+  }, [user]);
+
+  // Aktif yol hangi gruptaysa o grup otomatik açılır
+  const activeGroupId = useMemo(() => {
+    for (const g of visibleGroups) {
+      if (g.items.some((i) => location === i.href || location.startsWith(i.href + "/"))) {
+        return g.id;
+      }
+    }
+    return null;
+  }, [visibleGroups, location]);
+
+  useEffect(() => {
+    if (activeGroupId && !openGroups[activeGroupId]) {
+      const next = { ...openGroups, [activeGroupId]: true };
+      setOpenGroups(next);
+      saveOpenGroups(next);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeGroupId]);
+
+  const toggleGroup = (id: string) => {
+    const next = { ...openGroups, [id]: !openGroups[id] };
+    setOpenGroups(next);
+    saveOpenGroups(next);
+  };
 
   const handleLogout = async () => {
     try {
@@ -107,108 +294,79 @@ export function Layout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const navItems = [
-    { href: "/dashboard", label: "Ana Panel", icon: LayoutDashboard, roles: ["admin", "staff", "viewer", "super_admin"] },
-    { href: "/products", label: "Ürünler", icon: Package, roles: ["admin", "staff", "viewer"] },
-    { href: "/barcode", label: "Barkod Tarama", icon: ScanBarcode, roles: ["admin", "staff"] },
-    { href: "/sales", label: "Satış Ekranı", icon: ShoppingCart, roles: ["admin", "staff"] },
-    { href: "/sales/history", label: "Satış Geçmişi", icon: History, roles: ["admin", "staff", "viewer"] },
-    { href: "/stock", label: "Stok Girişi", icon: PackagePlus, roles: ["admin", "staff"] },
-    { href: "/customers", label: "Müşteriler", icon: UserCircle, roles: ["admin", "staff", "viewer"] },
-    { href: "/suppliers", label: "Tedarikçiler", icon: Truck, roles: ["admin", "staff", "viewer"] },
-    { href: "/purchases", label: "Alış Faturaları", icon: ShoppingBag, roles: ["admin", "staff", "viewer"] },
-    { href: "/barcodes", label: "Etiket Merkezi", icon: Barcode, roles: ["admin", "staff", "viewer"] },
-    { href: "/stock-counts", label: "Stok Sayım", icon: ClipboardList, roles: ["admin", "staff"] },
-    { href: "/finance", label: "Kasa / Finans", icon: Wallet, roles: ["admin", "staff", "viewer"] },
-    { href: "/finance-dashboard", label: "Finans Paneli", icon: TrendingUp, roles: ["admin", "viewer"] },
-    { href: "/profit", label: "Net Kâr Merkezi", icon: TrendingUp, roles: ["admin", "staff", "viewer"] },
-    { href: "/gercek-kar", label: "Gerçek Kâr", icon: TrendingUp, roles: ["admin", "viewer"] },
-    { href: "/gercek-kar/oneriler", label: "Akıllı Öneriler", icon: TrendingUp, roles: ["admin", "viewer"] },
-    { href: "/muhasebeci", label: "Mali Müşavir", icon: Calculator, roles: ["admin", "staff", "viewer"] },
-    { href: "/butce", label: "Bütçe & Tahmin", icon: PieChart, roles: ["admin", "staff", "viewer"] },
-    { href: "/reklam-butce", label: "Reklam Bütçesi", icon: Megaphone, roles: ["admin", "staff", "viewer"] },
-    { href: "/aggregator", label: "Ticarium Pazar", icon: ShoppingBasket, roles: ["admin"] },
-    { href: "/ice-aktarim", label: "Veri İçe Aktarımı", icon: Upload, roles: ["admin", "staff"] },
-    { href: "/pos", label: "Hızlı Satış (POS)", icon: ScanLine, roles: ["admin", "staff"] },
-    { href: "/uretim", label: "Üretim & Reçete", icon: Factory, roles: ["admin", "staff", "viewer"] },
-    { href: "/sadakat", label: "Sadakat & Puan", icon: Award, roles: ["admin", "staff", "viewer"] },
-    { href: "/doviz", label: "Çoklu Para Birimi", icon: DollarSign, roles: ["admin", "staff", "viewer"] },
-    { href: "/eticarium-merkezi", label: "e-Ticarium Merkezi", icon: Sparkles, roles: ["admin", "staff", "viewer"] },
-    { href: "/magaza", label: "Hazır Mağaza", icon: Store, roles: ["admin", "staff", "viewer"] },
-    { href: "/fiyat-motoru", label: "Fiyat Motoru", icon: Tag, roles: ["admin", "staff", "viewer"] },
-    { href: "/kargo", label: "Kargo Yönetimi", icon: Truck, roles: ["admin", "staff", "viewer"] },
-    { href: "/karlilik-kanal", label: "Kanal Karlılığı", icon: Trophy, roles: ["admin", "staff", "viewer"] },
-    { href: "/marketplace", label: "Pazaryeri", icon: Radio, roles: ["admin", "staff"] },
-    { href: "/banking", label: "Bankacılık", icon: Banknote, roles: ["admin", "staff"] },
-    { href: "/branches", label: "Şubeler", icon: GitBranch, roles: ["admin", "staff", "viewer"] },
-    { href: "/documents", label: "Evrak Yönetimi", icon: FileText, roles: ["admin", "staff", "viewer"] },
-    { href: "/finance-documents", label: "Belge Merkezi", icon: Inbox, roles: ["admin", "staff", "viewer"] },
-    { href: "/einvoice", label: "e-Fatura", icon: FileText, roles: ["admin", "staff", "viewer"] },
-    { href: "/personnel", label: "Personel", icon: Users, roles: ["admin", "staff", "viewer"] },
-    { href: "/campaigns", label: "Kampanyalar", icon: Tag, roles: ["admin", "staff", "viewer"] },
-    { href: "/network", label: "B2B Ağı", icon: Network, roles: ["admin", "staff", "viewer"] },
-    { href: "/b2b/quotes", label: "Teklifler", icon: FileText, roles: ["admin", "staff"] },
-    { href: "/b2b/orders", label: "Siparişler", icon: Package, roles: ["admin", "staff"] },
-    { href: "/b2b/catalog", label: "B2B Katalog", icon: PackageOpen, roles: ["admin", "staff"] },
-    { href: "/channels", label: "Satış Kanalları", icon: Radio, roles: ["admin", "staff"] },
-    { href: "/reports", label: "Raporlar", icon: BarChart3, roles: ["admin", "viewer"] },
-    { href: "/reports/daily-summary", label: "Günlük Kapanış", icon: CalendarCheck, roles: ["admin", "viewer"] },
-    { href: "/users", label: "Kullanıcılar", icon: Users, roles: ["admin"] },
-    { href: "/settings/subscription", label: "Abonelik", icon: CreditCard, roles: ["admin"] },
-    { href: "/settings/notifications", label: "Bildirim Ayarları", icon: Bell, roles: ["admin"] },
-    { href: "/settings/integrations", label: "Entegrasyonlar", icon: Webhook, roles: ["admin"] },
-    { href: "/settings", label: "Ayarlar", icon: Settings, roles: ["admin"] },
-    { href: "/admin/companies", label: "Firma Yönetimi", icon: Building2, roles: ["super_admin"] },
-    { href: "/super-admin/talepler", label: "İletişim Talepleri", icon: Inbox, roles: ["super_admin"] },
-    { href: "/super-admin/yeni-firma", label: "Yeni Firma Ekle", icon: Building2, roles: ["super_admin"] },
-    { href: "/super-admin/audit-logs", label: "Denetim Kayıtları", icon: ShieldCheck, roles: ["super_admin"] },
-    { href: "/admin/payments", label: "Ödeme Bildirimleri", icon: CreditCard, roles: ["super_admin"] },
-    { href: "/admin/platform-settings", label: "Platform Ayarları", icon: Wrench, roles: ["super_admin"] },
-    { href: "/admin/billing", label: "Abonelik Yönetimi", icon: CreditCard, roles: ["super_admin"] },
-    { href: "/pricing", label: "Paketler & Fiyatlar", icon: Tag, roles: ["admin", "staff", "viewer", "super_admin"] },
-  ];
+  const isItemActive = (href: string) => location === href || location.startsWith(href + "/");
 
-  const filteredNav = navItems.filter(item => user && item.roles.includes(user.role));
+  const NavLinks = () => (
+    <nav className="flex flex-col gap-0.5">
+      {/* Ana Panel — sabit üst */}
+      {user && TOP_ITEM.roles.includes(user.role) && (
+        <Link href={TOP_ITEM.href}>
+          <div
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer text-sm mb-2 ${
+              isItemActive(TOP_ITEM.href)
+                ? "bg-white/10 text-white font-semibold"
+                : "font-medium hover:bg-white/8"
+            }`}
+            style={{ color: isItemActive(TOP_ITEM.href) ? "white" : "hsl(215 25% 75%)" }}
+            onClick={() => setIsOpen(false)}
+            data-testid="nav-link-dashboard"
+          >
+            <TOP_ITEM.icon className="h-4 w-4 shrink-0" />
+            <span>{TOP_ITEM.label}</span>
+          </div>
+        </Link>
+      )}
 
-  const NavLinks = ({ dark = false }: { dark?: boolean }) => (
-    <div className="flex flex-col gap-0.5">
-      {filteredNav.map((item) => {
-        const isActive = location === item.href || location.startsWith(item.href + "/");
-        if (dark) {
-          return (
-            <Link key={item.href} href={item.href}>
-              <div
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer text-sm ${
-                  isActive
-                    ? "bg-white/10 text-white font-semibold"
-                    : "font-medium hover:bg-white/8 hover:text-white"
-                }`}
-                style={{ color: isActive ? "white" : "hsl(215 25% 65%)" }}
-                onClick={() => setIsOpen(false)}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                <span>{item.label}</span>
-              </div>
-            </Link>
-          );
-        }
+      {visibleGroups.map((group) => {
+        const isOpenGroup = !!openGroups[group.id];
+        const groupHasActive = group.id === activeGroupId;
         return (
-          <Link key={item.href} href={item.href}>
-            <div
-              className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer ${
-                isActive
-                  ? "bg-primary/10 text-primary font-medium"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          <div key={group.id} className="mb-0.5">
+            <button
+              type="button"
+              onClick={() => toggleGroup(group.id)}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer text-xs uppercase tracking-wider ${
+                groupHasActive ? "text-white" : "hover:bg-white/5"
               }`}
-              onClick={() => setIsOpen(false)}
+              style={{ color: groupHasActive ? "white" : "hsl(215 20% 60%)" }}
+              data-testid={`nav-group-${group.id}`}
+              aria-expanded={isOpenGroup}
             >
-              <item.icon className="h-5 w-5" />
-              <span>{item.label}</span>
-            </div>
-          </Link>
+              <group.icon className="h-3.5 w-3.5 shrink-0" />
+              <span className="flex-1 text-left font-bold">{group.label}</span>
+              <span className="text-[10px] font-semibold opacity-60">{group.items.length}</span>
+              {isOpenGroup
+                ? <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                : <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" />}
+            </button>
+            {isOpenGroup && (
+              <div className="ml-2 mt-0.5 mb-1 border-l pl-2" style={{ borderColor: "hsl(222 40% 22%)" }}>
+                {group.items.map((item) => {
+                  const active = isItemActive(item.href);
+                  return (
+                    <Link key={item.href} href={item.href}>
+                      <div
+                        className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-all cursor-pointer text-sm ${
+                          active
+                            ? "bg-white/10 text-white font-semibold"
+                            : "hover:bg-white/5"
+                        }`}
+                        style={{ color: active ? "white" : "hsl(215 25% 70%)" }}
+                        onClick={() => setIsOpen(false)}
+                        data-testid={`nav-link-${item.href.replace(/\//g, "-").replace(/^-/, "")}`}
+                      >
+                        <item.icon className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         );
       })}
-    </div>
+    </nav>
   );
 
   if (!user) return null;
@@ -220,12 +378,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-2">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="-ml-2 text-white hover:bg-white/10">
+              <Button variant="ghost" size="icon" className="-ml-2 text-white hover:bg-white/10" data-testid="button-mobile-menu">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
 
-            <SheetContent side="left" className="w-64 p-0" style={{ background: "hsl(222 47% 15%)" }}>
+            <SheetContent side="left" className="w-72 p-0" style={{ background: "hsl(222 47% 15%)" }}>
               <SheetHeader className="p-4 border-b text-left" style={{ borderColor: "hsl(222 40% 22%)" }}>
                 <SheetTitle className="text-xl font-bold tracking-tight text-white" style={{ fontFamily: "var(--font-display)" }}>{companyName}</SheetTitle>
                 <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest flex items-center gap-1" style={{ color: "hsl(215 25% 55%)" }}>
@@ -235,7 +393,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </SheetHeader>
               <div className="p-3 flex-1 overflow-y-auto">
                 <TrialBanner />
-                <NavLinks dark />
+                <NavLinks />
               </div>
               <div className="p-4 mt-auto" style={{ borderTop: "1px solid hsl(222 40% 22%)" }}>
                 <div className="flex items-center gap-3 mb-3">
@@ -247,7 +405,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     <p className="text-xs capitalize" style={{ color: "hsl(215 25% 55%)" }}>{user.role}</p>
                   </div>
                 </div>
-                <Button variant="outline" className="w-full justify-start border-white/10 text-slate-300 hover:text-white hover:bg-white/10 bg-transparent" onClick={handleLogout}>
+                <Button variant="outline" className="w-full justify-start border-white/10 text-slate-300 hover:text-white hover:bg-white/10 bg-transparent" onClick={handleLogout} data-testid="button-mobile-logout">
                   <LogOut className="mr-2 h-4 w-4" />
                   Çıkış Yap
                 </Button>
@@ -261,7 +419,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-60 flex-col h-screen sticky top-0" style={{ background: "hsl(222 47% 15%)" }}>
+      <aside className="hidden md:flex w-64 flex-col h-screen sticky top-0" style={{ background: "hsl(222 47% 15%)" }}>
         <div className="px-5 py-5 border-b" style={{ borderColor: "hsl(222 40% 22%)" }}>
           <h1 className="text-xl font-bold tracking-tight text-white" style={{ fontFamily: "var(--font-display)" }}>{companyName}</h1>
           <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest flex items-center gap-1" style={{ color: "hsl(215 25% 60%)" }}>
@@ -272,7 +430,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         <div className="flex-1 overflow-y-auto p-3">
           <TrialBanner />
-          <NavLinks dark />
+          <NavLinks />
         </div>
 
         <div className="p-3 mt-auto" style={{ borderTop: "1px solid hsl(222 40% 22%)" }}>
@@ -285,7 +443,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <p className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(215 25% 55%)" }}>{user.role}</p>
             </div>
             {user.role !== "super_admin" && <NotificationCenter />}
-            <Button variant="ghost" size="icon" onClick={handleLogout} title="Çıkış Yap" className="h-8 w-8 shrink-0 text-slate-400 hover:text-white hover:bg-white/10">
+            <Button variant="ghost" size="icon" onClick={handleLogout} title="Çıkış Yap" className="h-8 w-8 shrink-0 text-slate-400 hover:text-white hover:bg-white/10" data-testid="button-desktop-logout">
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
