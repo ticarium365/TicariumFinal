@@ -41,11 +41,21 @@ export default function ProductionPage() {
 
   const { data: recipes = [] } = useQuery<Recipe[]>({
     queryKey: ["/api/production/recipes"],
-    queryFn: async () => (await fetch("/api/production/recipes", { credentials: "include" })).json(),
+    queryFn: async () => {
+      const r = await fetch("/api/production/recipes", { credentials: "include" });
+      if (!r.ok) return [];
+      const d = await r.json();
+      return Array.isArray(d) ? d : [];
+    },
   });
   const { data: orders = [] } = useQuery<Order[]>({
     queryKey: ["/api/production/orders"],
-    queryFn: async () => (await fetch("/api/production/orders", { credentials: "include" })).json(),
+    queryFn: async () => {
+      const r = await fetch("/api/production/orders", { credentials: "include" });
+      if (!r.ok) return [];
+      const d = await r.json();
+      return Array.isArray(d) ? d : [];
+    },
   });
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ["/api/products"],
