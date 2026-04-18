@@ -56,6 +56,7 @@ import ETicariumMerkeziPage from "@/pages/eticarium-merkezi/index";
 import MagazaListesi from "@/pages/magaza/index";
 import MagazaDetay from "@/pages/magaza/detail";
 import FiyatMotoru from "@/pages/fiyat-motoru/index";
+import KargoYonetimi from "@/pages/kargo/index";
 import ProfitPage from "@/pages/profit/index";
 import MuhasebeciPage from "@/pages/muhasebeci/index";
 import BudgetsPage from "@/pages/butce/index";
@@ -279,6 +280,9 @@ function AuthenticatedRouter() {
         </Route>
         <Route path="/fiyat-motoru">
           {() => <ProtectedRoute component={FiyatMotoru} roles={["admin", "staff", "viewer"]} />}
+        </Route>
+        <Route path="/kargo">
+          {() => <ProtectedRoute component={KargoYonetimi} roles={["admin", "staff", "viewer"]} />}
         </Route>
         <Route path="/eticarium-merkezi">
           {() => <ProtectedRoute component={ETicariumMerkeziPage} roles={["admin", "staff", "viewer"]} />}

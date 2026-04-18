@@ -75,9 +75,10 @@ const moduleCards: Array<{
   {
     key: "shipping",
     title: "Kargo Yönetimi",
-    desc: "Desi/şehir bazlı kargo, X TL üstü ücretsiz, ürün bazlı override. (Yakında)",
+    desc: "Bölge + desi bazlı kargo, ücretsiz kargo eşiği, ürün bazlı override.",
     icon: Truck,
-    status: "soon",
+    status: "live",
+    href: "/kargo",
   },
   {
     key: "storefront",
@@ -264,10 +265,19 @@ export default function ETicariumMerkeziPage() {
         </TabsContent>
 
         <TabsContent value="shipping" className="mt-6">
-          <ComingSoon
-            title="Kargo Yönetim Merkezi"
-            desc="Kanal bazlı ücretsiz kargo eşiği, desi/şehir bazlı kargo, ürün bazlı override yakında."
-          />
+          <Card>
+            <CardContent className="py-8 text-center space-y-3">
+              <Truck className="h-10 w-10 mx-auto" style={{ color: EMERALD }} />
+              <h3 className="font-semibold text-lg">Kargo Yönetim Merkezi</h3>
+              <p className="text-sm text-muted-foreground max-w-lg mx-auto">
+                81 ili bölgelere ayırın, desi aralığı + bölge başına kargo bedeli belirleyin.
+                Sepet ≥ X TL üstü ücretsiz kargo, ürün bazlı override desteklenir. Test sekmesinde anlık fiyat sorgulayın.
+              </p>
+              <Button onClick={() => setLocation("/kargo")} style={{ background: EMERALD }}>
+                Kargo Kurallarını Yönet <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="storefront" className="mt-6">

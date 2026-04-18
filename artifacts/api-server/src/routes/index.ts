@@ -115,4 +115,7 @@ router.use("/storefronts", storefrontsRouter);
 import pricingRulesRouter from "./pricing-rules.js";
 router.use("/pricing-rules", pricingRulesRouter);
 
+import shippingRouter from "./shipping.js";
+router.use("/shipping", shippingRouter);
+
 export default router;
