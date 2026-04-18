@@ -45,6 +45,7 @@ import {
   Factory,
   Award,
   DollarSign,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./notification-center";
@@ -125,6 +126,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/uretim", label: "Üretim & Reçete", icon: Factory, roles: ["admin", "staff", "viewer"] },
     { href: "/sadakat", label: "Sadakat & Puan", icon: Award, roles: ["admin", "staff", "viewer"] },
     { href: "/doviz", label: "Çoklu Para Birimi", icon: DollarSign, roles: ["admin", "staff", "viewer"] },
+    { href: "/eticarium-merkezi", label: "e-Ticarium Merkezi", icon: Sparkles, roles: ["admin", "staff", "viewer"] },
     { href: "/marketplace", label: "Pazaryeri", icon: Radio, roles: ["admin", "staff"] },
     { href: "/banking", label: "Bankacılık", icon: Banknote, roles: ["admin", "staff"] },
     { href: "/branches", label: "Şubeler", icon: GitBranch, roles: ["admin", "staff", "viewer"] },

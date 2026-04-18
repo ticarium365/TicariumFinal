@@ -1,0 +1,535 @@
+TICARIUM365 ROADMAP — SALES GROWTH CENTER
+
+==================================================
+SPRINT 73 — Satış Merkezi / Çok Kanallı Ticaret Paneli
+======================================================
+
+AMAÇ:
+
+Ticarium365 içindeki ürünleri tek panelden:
+
+* pazaryerlerine göndermek
+* Ticarium365 mağazasına aktarmak
+* firmaya özel mağazaya aktarmak
+* fiyat kurallarıyla yönetmek
+* kargo kurallarıyla yönetmek
+* reklam bütçesi ile büyütmek
+
+Yani kullanıcı ayrı ayrı panel gezmesin.
+Tek menüden tüm dış satış kanallarını yönetsin.
+
+==================================================
+ANA MENÜ YAPISI
+===============
+
+Yeni ana menü:
+
+/satis-merkezi
+
+Alt sekmeler:
+
+1. Kanallar
+2. Ürün Yayınlama
+3. Fiyat Kuralları
+4. Kargo Kuralları
+5. Kampanyalar
+6. Reklam Bütçesi
+7. Siparişler
+8. Karlılık / Performans
+
+==================================================
+MODÜL 1 — KANALLAR
+==================
+
+AMAÇ:
+Firma hangi satış kanallarına çıkacağını tek ekrandan yönetsin.
+
+Desteklenecek kanallar:
+
+* Trendyol
+* Hepsiburada
+* N11
+* Shopify
+* WooCommerce
+* Ticarium365 Hazır Mağaza
+* Firmaya Özel Site
+* varsa mevcut site entegrasyonu
+
+Özellikler:
+
+* kanal ekle
+* kanal pasif/aktif yap
+* bağlantı testi
+* son senkron zamanı
+* hata logu
+* kanal bazlı durum ekranı
+
+Yeni tablolar:
+
+sales_channels
+channel_accounts
+channel_sync_logs
+
+==================================================
+MODÜL 2 — ÜRÜN YAYINLAMA MERKEZİ
+================================
+
+AMAÇ:
+Her ürün her yerde olmasın. Firma seçerek yayınlasın.
+
+Ürün bazlı seçimler:
+
+[ ] Trendyol’a gönder
+[ ] Hepsiburada’ya gönder
+[ ] N11’e gönder
+[ ] Ticarium365 mağazasına gönder
+[ ] Firma özel sitesine gönder
+
+Özellikler:
+
+* ürün bazlı yayın aç/kapat
+* kategori bazlı toplu yayın
+* marka bazlı toplu yayın
+* seçili ürünleri tek tıkla kanala gönder
+* yayından kaldır
+* ürün bazlı kanal durumu gör
+
+Toplu işlemler:
+
+* seçili ürünleri yayınla
+* seçili ürünleri pasife al
+* stok sıfır olanları yayından çek
+* seçili kategoriyi tüm kanallara aç
+
+Yeni tablolar:
+
+product_channel_listings
+product_channel_status
+
+==================================================
+MODÜL 3 — FİYAT MOTORU
+======================
+
+AMAÇ:
+Ana ERP fiyatı dursun ama kanal fiyatı satıcı kararına göre aksın.
+
+Temel mantık:
+
+ERP satış fiyatı = baz fiyat
+
+Kanal kuralları:
+
+* baz fiyatı aynen kullan
+* +%
+* -%
+* * sabit TL
+* * sabit TL
+* yuvarlama kuralı
+* minimum fiyat limiti
+* maksimum fiyat limiti
+* özel kampanya fiyatı
+* tarihli fiyat
+
+Örnek:
+
+Baz satış fiyatı = 100 TL
+
+Trendyol:
++%10 → 110 TL
+
+Firma sitesi:
+-%5 → 95 TL
+
+Hepsiburada:
++15 TL → 115 TL
+
+Özellikler:
+
+* ürün bazlı fiyat kuralı
+* kategori bazlı fiyat kuralı
+* marka bazlı fiyat kuralı
+* kanal bazlı genel fiyat kuralı
+* toplu fiyat güncelleme
+* önizleme ekranı
+
+Toplu işlemler:
+
+* tüm Trendyol fiyatlarını +%7 artır
+* X kategori ürünleri -%5 indir
+* Y marka için sabit +20 TL uygula
+
+Yeni tablolar:
+
+channel_pricing_rules
+channel_price_overrides
+price_change_logs
+
+==================================================
+MODÜL 4 — KARGO YÖNETİM MERKEZİ
+===============================
+
+AMAÇ:
+Kargo kuralları da fiyat kadar merkezi yönetilsin.
+
+Kanal bazlı kargo seçenekleri:
+
+* ücretsiz kargo
+* ücretli kargo
+* X TL üstü ücretsiz
+* desi bazlı kargo
+* şehir bazlı kargo
+* sabit kargo
+* ürün bazlı özel kargo
+* hızlı teslim etiketi
+* mağazadan teslim al opsiyonel
+
+Örnek:
+
+* Site: 1000 TL üstü ücretsiz
+* Trendyol: ücretli
+* HB: ücretsiz
+* özel site: sabit 79 TL
+
+Kargo menüsü:
+
+/satis-merkezi/kargo
+
+Özellikler:
+
+* kanal bazlı kargo kuralı
+* kategori bazlı kargo
+* ürün bazlı kargo override
+* toplu ücretsiz kargo kampanyası
+* fiyatlandırma ile birlikte çalışsın
+* kargo maliyetini karlılıkta hesaba katsın
+
+Yeni tablolar:
+
+channel_shipping_rules
+product_shipping_overrides
+
+==================================================
+MODÜL 5 — TICARIUM365 HAZIR MAĞAZA
+==================================
+
+AMAÇ:
+Firma isterse sıfırdan mağaza kurmadan ürünlerini hemen yayına alabilsin.
+
+Yapı:
+
+firmaadi.ticarium365.shop
+veya
+özel domain bağlama
+
+Özellikler:
+
+* hazır tema
+* logo / renk
+* ürünler otomatik aksın
+* kategori sayfaları
+* arama
+* ürün detay
+* whatsapp sipariş
+* online ödeme altyapısı hazırlığı
+* SEO başlıkları
+* stok senkronizasyonu
+
+Kurallar:
+
+* firma onayı olmadan mağaza açılmasın
+* hangi ürünlerin bu mağazada olacağı seçilebilir olsun
+* fiyat kuralı ayrı olsun
+* kargo kuralı ayrı olsun
+
+==================================================
+MODÜL 6 — FİRMA ÖZEL SİTE YÖNETİMİ
+==================================
+
+AMAÇ:
+Firmanın mevcut sitesi varsa oraya da veri aksın.
+Yoksa ona özel bir vitrin/site açılabilsin.
+
+Özellikler:
+
+* mevcut site entegrasyonu
+* XML/JSON feed
+* özel domain
+* yalnızca seçili ürünleri yayınla
+* firma bazlı fiyat
+* firma bazlı kargo
+* firma bazlı kampanya
+* sıfır reklam ile yayında tut
+* istenirse reklam bütçesi bağla
+
+Yeni tablolar:
+
+storefronts
+storefront_products
+storefront_domains
+storefront_settings
+
+==================================================
+MODÜL 7 — REKLAM BÜTÇESİ MERKEZİ
+================================
+
+AMAÇ:
+Firma “bu ay 5.000 TL bütçe ayırdım” dediğinde bunu yönetmek.
+
+Bütçe tipleri:
+
+* Meta Ads
+* Google Ads
+* Trendyol sponsorlu ürün
+* Instagram boost
+* genel site trafiği
+
+Özellikler:
+
+* aylık bütçe tanımı
+* kanal bazlı bütçe dağılımı
+* ürün bazlı reklam planı
+* reklam hedefi seçimi
+* harcanan bütçe
+* sipariş başı maliyet
+* ROAS
+* dönüşüm ekranı
+
+İlk sürüm:
+manuel bütçe takip + performans ekranı
+
+Sonraki sürüm:
+gerçek reklam entegrasyonları
+
+Yeni tablolar:
+
+ad_budgets
+ad_campaigns
+ad_performance_snapshots
+
+==================================================
+MODÜL 8 — SİPARİŞ MERKEZİ
+=========================
+
+AMAÇ:
+Tüm satış kanallarından gelen siparişler tek yerde toplansın.
+
+Kaynaklar:
+
+* Trendyol
+* Hepsiburada
+* N11
+* Ticarium365 mağaza
+* özel site
+* manuel sipariş
+
+Durumlar:
+
+* yeni
+* hazırlanıyor
+* kargoya verildi
+* teslim edildi
+* iptal
+* iade
+
+Özellikler:
+
+* kanal bazlı filtre
+* durum güncelle
+* kargo kodu işleme
+* müşteri bilgisi gör
+* sipariş kaynağı gör
+* siparişte karlılık gör
+
+Yeni tablolar:
+
+channel_orders
+channel_order_items
+order_fulfillment_logs
+
+==================================================
+MODÜL 9 — KARLILIK / PERFORMANS EKRANI
+======================================
+
+AMAÇ:
+Sadece satış değil, hangi kanal para kazandırıyor onu göstermek.
+
+Gösterilecekler:
+
+* kanal bazlı ciro
+* kanal bazlı sipariş adedi
+* reklam sonrası net kâr
+* kargo sonrası net kâr
+* komisyon sonrası net kâr
+* en kârlı kanal
+* en düşük marjlı kanal
+* en çok satan ürün
+* en iyi dönüşüm alan ürün
+
+Özellikler:
+
+* ürün bazlı kanal karşılaştırması
+* “site mi daha kârlı, Trendyol mu?” cevabı
+* “ücretsiz kargo verince ne oldu?” analizi
+* “+%10 fiyat uygulayınca satış düştü mü?” analizi
+
+==================================================
+MODÜL 10 — AKILLI SATIŞ ÖNERİLERİ
+=================================
+
+AMAÇ:
+Sistem sadece yönetmesin, öneri de versin.
+
+Öneriler:
+
+* bu ürün siteye daha uygun
+* bu ürün pazaryerinde daha iyi satar
+* bu kanalda fiyat fazla yüksek
+* bu kanalda ücretsiz kargo dönüşümü artırabilir
+* bu ürün için reklam açılabilir
+* bu ürün mağazada kalsın, pazaryerine çıkmasın
+* stok az, yayını kıs
+
+==================================================
+ROL VE YETKİLER
+===============
+
+Yeni feature flag’ler:
+
+commerce.channels
+commerce.listings
+commerce.pricing
+commerce.shipping
+commerce.storefront
+commerce.ads
+commerce.orders
+commerce.analytics
+
+Roller:
+
+admin:
+
+* tüm satış merkezi yetkileri
+
+staff:
+
+* ürün yayınlama
+* sipariş görüntüleme
+* sipariş hazırlama
+* fiyat değişikliği opsiyonel yetkiyle
+
+viewer:
+
+* sadece rapor ve sipariş görüntüleme
+
+==================================================
+BACKEND MİMARİ
+==============
+
+Yeni route grupları:
+
+/sales-center/channels
+/sales-center/listings
+/sales-center/pricing
+/sales-center/shipping
+/sales-center/storefronts
+/sales-center/ads
+/sales-center/orders
+/sales-center/analytics
+
+Temel servisler:
+
+* channel service
+* listing service
+* pricing rule engine
+* shipping rule engine
+* storefront service
+* order sync service
+* sales analytics service
+
+==================================================
+FRONTEND MİMARİ
+===============
+
+Yeni sayfa:
+
+/sales-center
+
+Sekmeli yapı:
+
+* Genel Bakış
+* Kanallar
+* Ürünler
+* Fiyat
+* Kargo
+* Mağaza
+* Reklam
+* Siparişler
+* Analiz
+
+Ana dashboard kartları:
+
+* aktif kanal sayısı
+* yayındaki ürün sayısı
+* bugün gelen sipariş
+* reklam bütçesi
+* en kârlı kanal
+* sorunlu senkron sayısı
+
+==================================================
+TESTLER
+=======
+
+1. ürün kanal yayını açma
+2. ürün kanal yayını kapama
+3. fiyat +% kuralı doğru çalışıyor mu
+4. fiyat -% kuralı doğru çalışıyor mu
+5. sabit TL ekleme/çıkarma doğru mu
+6. minimum fiyat limiti doğru mu
+7. kargo kuralı kanal bazında doğru uygulanıyor mu
+8. ücretsiz kargo eşiği doğru mu
+9. storefront only selected products çalışıyor mu
+10. siparişler kanal bazlı ayrışıyor mu
+11. tenant isolation tam mı
+12. role bazlı erişim doğru mu
+
+==================================================
+DEFINITION OF DONE
+==================
+
+* kullanıcı tek panelden dış satış kanallarını yönetebiliyor
+* ürünleri seçerek pazaryerine ve mağazaya açabiliyor
+* fiyatları baz satış fiyatına göre +% / -% ile yönetebiliyor
+* kargo kurallarını merkezi menüden tanımlayabiliyor
+* firma özel mağaza veya Ticarium365 mağaza açabiliyor
+* reklam bütçesini girip performansı takip edebiliyor
+* siparişleri tek ekranda görebiliyor
+* kanal bazlı kârlılığı izleyebiliyor
+
+==================================================
+TİCARİ HEDEF
+============
+
+Bu sprintten sonra Ticarium365 yalnızca işletme yönetim sistemi olmaz.
+
+Aynı zamanda:
+
+* satış büyütme paneli
+* çok kanallı ticaret merkezi
+* fiyat ve kargo karar motoru
+
+haline gelir.
+
+==================================================
+UYGULAMA SIRASI
+===============
+
+1. sales-center ana mimari
+2. channels + listings tabloları
+3. pricing rule engine
+4. shipping rule engine
+5. storefront mantığı
+6. orders merkezi
+7. analytics
+8. reklam bütçesi
+9. testler
+10. docs güncellemesi
