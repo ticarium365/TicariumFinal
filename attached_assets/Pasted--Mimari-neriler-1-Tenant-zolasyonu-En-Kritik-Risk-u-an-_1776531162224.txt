@@ -1,0 +1,89 @@
+🏗️ Mimari Öneriler
+1. Tenant İzolasyonu — En Kritik Risk
+Şu an companyId filtresi Drizzle helper'larda enforce ediliyor ama bu uygulama katmanında. Tek bir unutulan WHERE veri sızıntısına yol açar.
+
+Öneri: PostgreSQL Row-Level Security (RLS) + SET app.current_company_id session variable. Helper unutulsa bile DB engelleri.
+Bonus: pgaudit extension ile DB seviyesinde audit.
+2. Multi-Tenant Ölçekleme Stratejisi
+Şu an "shared schema, shared DB". 100+ tenant'ta sorun olur.
+
+Hibrit model: Küçük tenant'lar shared DB'de, enterprise tenant'lar schema-per-tenant veya DB-per-tenant.
+Connection pooling: PgBouncer + tenant-aware routing.
+3. Monolith → Modüler Monolith
+61 route + 44 tablo = monolith sınırına yaklaşıyor. Mikroservise gerek yok ama:
+
+Bounded context'ler: sales, inventory, marketplace, einvoice, finance — her biri kendi modülünde, aralarında event bus (in-process EventEmitter veya pg_notify).
+Sebep: Pazaryeri sync'i fatura kesimi akışını bloklamasın.
+4. Job Queue Eksik
+Pazaryeri sync, e-fatura gönderim, mail, backup — hepsi senkron veya cron.
+
+Öneri: BullMQ (Redis) veya pg-boss (PostgreSQL native). Retry, dead-letter queue, observability.
+pg-boss'u öneririm — zaten Postgres var, ek altyapı yok.
+5. Caching Katmanı Yok
+Her dashboard isteği DB'yi vuruyor.
+
+Redis (cache + queue + rate limit store). Şu an rate limit memory'de — multi-instance deploy'da çalışmaz.
+Ürün listesi, kâr raporu gibi ağır query'ler için 60-300sn cache.
+6. API Versiyonlama
+/api/products → mobil ve web aynı endpoint'i kullanıyor. Breaking change yapamazsın.
+
+/api/v1/* standardına geç. Public API'ler (Pazar) zaten v1, içeriye de uygula.
+7. Secret Rotation
+AES-256-GCM şifreleme var ama key rotation yok. enc:v1: prefix iyi düşünülmüş — enc:v2: için migration job hazırla.
+
+⚙️ Fonksiyonel Öneriler
+8. Onboarding Friction
+3 adımlı sihirbaz iyi ama esnaf için fazla teknik.
+
+"Demo veri ile başla" butonu (örnek 20 ürün, 5 müşteri, 10 satış).
+İlk 5 dakika checklist'i dashboard'da: ✅ Ürün ekle → ✅ Satış yap → ✅ E-fatura ayarla.
+9. Pazaryeri Stub'ları → Öncelik Sıralaması
+10 sağlayıcı stub var, hiçbiri canlı. Hepsini birden açma:
+
+Faz 1: Trendyol + Hepsiburada (pazarın %70'i).
+Faz 2: N11 + Amazon TR.
+Faz 3: Diğerleri.
+Her entegrasyon için sandbox → staging → 1 pilot müşteri → genel açılış akışı.
+10. Mobil Uygulama Dar Kapsamlı
+Esnaf telefondan satış girer, stok bakar. Web'in kopyası olmasın:
+
+POS modu (barkod okuyucu kamera entegrasyonu).
+Sesli ürün arama.
+Offline-first (IndexedDB sync) — internet kesik kasada satış durmasın.
+11. Kâr Motoru'nu Görselleştir
+"Komisyon, kargo, stok dahil gerçek kâr" en güçlü vaadin ama tablolarda kalmış.
+
+Sankey diagram: Gelir → Komisyon → Kargo → KDV → Net kâr akışı.
+Kanal karşılaştırma: "Bu ürünü Trendyol yerine kendi sitende satarsan +%18 kâr" gibi actionable insights.
+12. Bildirim Sistemi Pasif
+notifications tablosu var ama proaktif değil.
+
+Stok kritik seviye uyarısı (WhatsApp Business API).
+Anormal satış tespiti (ML değil, basit z-score: "Bu ürün son 7 günde %300 arttı").
+Pazaryeri fiyat değişimi (rakip izleme).
+13. B2B Modülü Underutilized
+b2b_* tabloları var ama görünür değil. Esnafın esnafa sattığı bir Türkiye gerçeği:
+
+Tedarikçi → Bayi otomatik sipariş portalı.
+Bayi-özel fiyat listesi (tier-based pricing).
+14. Audit Log → İş Zekası
+Şu an "kim ne yaptı" görüntüleyici. Daha fazlası mümkün:
+
+Anomali tespiti: "Personel X normalden 5x fazla iade işliyor" → fraud uyarısı.
+Productivity metrics: Satış/saat, ortalama işlem süresi.
+15. Test Stratejisi Boşlukları
+Integration test güçlü ama:
+
+E2E eksik: Playwright ile gerçek satış akışı.
+Load test eksik: k6 ile 100 concurrent tenant simülasyonu.
+Chaos test eksik: DB down, Redis down — graceful degradation çalışıyor mu?
+16. Observability
+pino structured logging var ama log → ?
+
+OpenTelemetry ile distributed tracing.
+Sentry ile error tracking + release tracking.
+Grafana + Prometheus ile tenant başına SLA dashboard.
+🎯 Eğer 3 Şey Seçeceksem
+PostgreSQL RLS (güvenlik açığını kapatır)
+pg-boss job queue (pazaryeri sync'i güvenilir hale getirir)
+Trendyol gerçek entegrasyon (en büyük müşteri vaad
