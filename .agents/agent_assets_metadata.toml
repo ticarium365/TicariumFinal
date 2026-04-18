@@ -29,3 +29,9 @@ id = "NgYwyy1L1CzW4w0g-gZFn"
 uri = "file://TEKNIK_DOKUMAN.docx"
 type = "word_document"
 title = "Ticarium365 — Teknik Dokümantasyon (Word)"
+
+[[outputs]]
+id = "frWvPekfvtuhrU0bNM5Ws"
+uri = "file://docs/ROADMAP-2026-04.md"
+type = "text"
+title = "Ticarium365 Yol Haritası — Nisan 2026"
