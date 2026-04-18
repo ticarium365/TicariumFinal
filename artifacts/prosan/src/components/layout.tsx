@@ -112,6 +112,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/branches", label: "Şubeler", icon: GitBranch, roles: ["admin", "staff", "viewer"] },
     { href: "/documents", label: "Evrak Yönetimi", icon: FileText, roles: ["admin", "staff", "viewer"] },
     { href: "/finance-documents", label: "Belge Merkezi", icon: Inbox, roles: ["admin", "staff", "viewer"] },
+    { href: "/einvoice", label: "e-Fatura", icon: FileText, roles: ["admin", "staff", "viewer"] },
     { href: "/personnel", label: "Personel", icon: Users, roles: ["admin", "staff", "viewer"] },
     { href: "/campaigns", label: "Kampanyalar", icon: Tag, roles: ["admin", "staff", "viewer"] },
     { href: "/network", label: "B2B Ağı", icon: Network, roles: ["admin", "staff", "viewer"] },

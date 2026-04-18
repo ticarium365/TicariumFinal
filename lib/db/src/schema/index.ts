@@ -28,3 +28,5 @@ export * from "./customer_groups";
 export * from "./network";
 export * from "./b2b";
 export * from "./channels";
+export * from "./einvoice";
+export * from "./marketplace";

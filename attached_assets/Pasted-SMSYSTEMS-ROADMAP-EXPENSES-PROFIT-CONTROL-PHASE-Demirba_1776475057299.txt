@@ -1,0 +1,300 @@
+SMSYSTEMS ROADMAP — EXPENSES & PROFIT CONTROL PHASE
+(Demirbaş + Tüm Giderler + Maaş + Net Karlılık)
+
+NOT:
+Bu sprint, mevcut stok/satış/cari sisteminin üstüne eklenir.
+Amaç: İşletmenin gerçek para durumunu göstermek.
+
+Çünkü sadece satış görmek yetmez.
+Asıl soru:
+
+* Ne kazandım?
+* Ne harcadım?
+* Nette cebimde ne kaldı?
+
+==================================================
+SPRINT 69 — Gider, Demirbaş ve Karlılık Merkezi
+===============================================
+
+AMAÇ:
+Tüm işletme giderlerini sisteme işleyip
+brüt ve net kârlılığı tek panelde göstermek.
+
+Bu sprint sonunda kullanıcı:
+
+* günlük gider girecek
+* faturaları bağlayacak
+* maaş gideri işleyecek
+* SGK/vergi takip edecek
+* demirbaş kaydı tutacak
+* amortisman hesaplayacak
+* brüt/net kâr görecek
+
+==================================================
+MODÜL 1 — GİDER MERKEZİ
+=======================
+
+Gider Kategorileri:
+
+Operasyonel:
+
+* çay
+* kahve
+* su
+* yemek
+* temizlik malzemesi
+* ofis gideri
+* kırtasiye
+* kargo
+* yakıt
+* araç gideri
+* elektrik
+* su faturası
+* internet
+* telefon
+* kira
+* aidat
+
+Personel:
+
+* maaş
+* SGK
+* prim
+* yemek kartı
+* avans
+* mesai
+
+Pazarlama:
+
+* Meta reklam
+* Google reklam
+* influencer
+* promosyon
+
+Finansal:
+
+* banka komisyonu
+* pos kesintisi
+* faiz
+* vergi
+
+Özellikler:
+
+* fiş/fatura ekle
+* tekrar eden gider tanımı
+* aylık otomatik gider
+* şube bazlı gider
+* kategori bazlı rapor
+
+==================================================
+MODÜL 2 — DEMİRBAŞ YÖNETİMİ
+===========================
+
+Demirbaşlar:
+
+* bilgisayar
+* yazıcı
+* klima
+* raf sistemi
+* araç
+* masa sandalye
+* kamera sistemi
+* jeneratör
+* forklift
+
+Alanlar:
+
+* satın alma tarihi
+* fiyat
+* seri no
+* konum/şube
+* garanti bitişi
+* kullanım durumu
+* fotoğraf
+* belge ekleri
+
+==================================================
+MODÜL 3 — AMORTİSMAN MOTORU
+===========================
+
+AMAÇ:
+Demirbaş giderlerini zamana yay.
+
+Özellikler:
+
+* 12 ay
+* 24 ay
+* 36 ay
+* özel süre
+
+Örnek:
+
+36.000 TL laptop
+36 ay
+
+Aylık gider = 1.000 TL
+
+Raporlarda görünür.
+
+==================================================
+MODÜL 4 — PERSONEL MALİYET MERKEZİ
+==================================
+
+Alanlar:
+
+* personel adı
+* departman
+* maaş
+* sgk maliyeti
+* yemek
+* servis
+* prim
+* avans
+* toplam işveren maliyeti
+
+Özellikler:
+
+* aylık maaş planı
+* ödeme durumu
+* eksik ödeme uyarısı
+
+==================================================
+MODÜL 5 — FATURA MERKEZİ
+========================
+
+Gider faturaları:
+
+* elektrik faturası
+* su faturası
+* internet
+* telefon
+* kira faturası
+* satın alma faturası
+
+OCR bağlanabilir.
+
+==================================================
+MODÜL 6 — BRÜT / NET KAR DASHBOARD
+==================================
+
+BASİT EKRAN:
+
+Bugün:
+
+Ciro: ₺45.000
+Ürün maliyeti: ₺28.000
+Brüt Kar: ₺17.000
+
+Giderler:
+
+* personel 4.000
+* kira 1.500
+* reklam 2.000
+* operasyon 1.000
+
+Net Kar:
+₺8.500
+
+==================================================
+
+Aylık Ekran:
+
+Toplam Satış
+Toplam Brüt Kar
+Toplam Gider
+Net Kar
+Kar Marjı %
+En Çok Gider Kalemi
+Karlı/Karsız Günler
+
+==================================================
+MODÜL 7 — AKILLI UYARILAR
+=========================
+
+* Reklam gideri yükseldi
+* Personel maliyeti ciroya göre arttı
+* Bu ay net kar düştü
+* Elektrik gideri geçen aya göre +%22
+* Kargo gideri fazla
+* Şube X zarar ediyor
+
+==================================================
+MODÜL 8 — RAPORLAR
+==================
+
+1. Günlük Karlılık
+2. Şube Bazlı Karlılık
+3. Personel Maliyet Oranı
+4. Reklam / Satış Oranı
+5. Gider Dağılımı Pasta Grafik
+6. Demirbaş Listesi
+7. Yaklaşan Garanti Bitişleri
+8. Aylık Nakit Yakım Raporu
+
+==================================================
+MODÜL 9 — TOPLU İŞLEMLER
+========================
+
+* çoklu gider import
+* excel ile maaş yükle
+* tekrar eden giderler toplu oluştur
+* kategori taşıma
+* eski faturaları arşivleme
+
+==================================================
+BACKEND YAPILAR
+===============
+
+expense_categories
+expenses
+fixed_assets
+asset_depreciation
+employee_costs
+recurring_expenses
+profit_snapshots
+
+==================================================
+DEFINITION OF DONE
+==================
+
+* tüm giderler giriliyor
+* maaş maliyeti izleniyor
+* demirbaş yönetiliyor
+* amortisman hesaplanıyor
+* brüt/net kar görülüyor
+* kullanıcı tek ekranda gerçek durumu görüyor
+
+==================================================
+İŞ DEĞERİ
+=========
+
+Çoğu esnaf ciroyu bilir.
+Ama net karı bilmez.
+
+Bu sprint sonrası kullanıcı seni bırakamaz.
+
+Çünkü sen artık satış değil,
+PARA yönetiyorsun.
+
+==================================================
+SONRAKİ BÜYÜK KONUŞMA
+=====================
+
+Bu temel kurulunca sonraki aşama:
+
+SATIŞI NASIL ARTIRIRIZ?
+
+* daha çok müşteri bulma
+* mevcut müşteriye daha çok satma
+* sepet büyütme
+* tekrar satış
+* reklam optimizasyonu
+* AI fiyatlama
+* çapraz satış
+* kampanya motoru
+* müşteri sadakati
+* otomatik pazarlama
+
+Hazırsan bir sonraki mesajda
+“Sistemi para basan satış makinesine nasıl çeviririz?”
+konuşuruz.

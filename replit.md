@@ -38,6 +38,7 @@ The backend is powered by Express 5. PostgreSQL is the chosen database, managed 
 - **B2B Network**: Enables companies to manage network profiles, receive reviews, and participate in a B2B directory.
 - **B2B RFQ & Ordering**: Supports a request-for-quote (RFQ) system, quote management, and a B2B order workflow with status tracking and notifications.
 - **B2B Catalog**: Allows companies to publish selected products as a B2B catalog, enabling potential buyers to request quotes.
+- **e-Fatura (Provider-Agnostic)**: Multi-tenant e-Fatura/e-Arşiv module with a pluggable `EInvoiceProvider` interface (createInvoice, sendInvoice, cancelInvoice, getIncomingInvoices, healthCheck). Ships with a sandbox `mock` provider plus stubs for Paraşüt, QNB eFinans, Foriba, Logo e-Flow, Mikro — credentials are stored per company in masked JSON config. Outbox (draft → sending → sent/accepted/cancelled/failed) uses atomic status locking to prevent double-send; inbox uses `ON CONFLICT DO NOTHING` upsert for idempotent polling. RBAC: viewers can read, only admin/staff/super_admin can mutate. Surfaces in `/einvoice` page with Outbox/Inbox/Settings/Events tabs.
 
 ## External Dependencies
 
