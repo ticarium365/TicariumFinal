@@ -16,7 +16,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Calendar, Save, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Calendar, Save, AlertTriangle, BarChart3, Bell, RefreshCw } from "lucide-react";
 
 const fmt = (n: number | null | undefined) =>
   new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(Number(n || 0));
@@ -52,6 +52,10 @@ export default function BudgetsPage() {
   const [forecastTarget, setForecastTarget] = useState(nextP(curPeriod()));
   const [cashflow, setCashflow] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
+  const [expenseForecast, setExpenseForecast] = useState<any>(null);
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [alertsLoading, setAlertsLoading] = useState(false);
+  const [expForecastLoading, setExpForecastLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>({ scope: "expense", categoryId: "", label: "", budgetAmount: "", note: "" });
 
@@ -75,8 +79,29 @@ export default function BudgetsPage() {
       setForecast(f); setCashflow(cf);
     } catch (e: any) { toast({ title: "Hata", description: String(e), variant: "destructive" }); }
   }
+  async function loadExpenseForecast() {
+    setExpForecastLoading(true);
+    try {
+      const f = await api(`/budgets/forecast/expenses?months=6`);
+      setExpenseForecast(f);
+    } catch (e: any) {
+      toast({ title: "Hata", description: String(e), variant: "destructive" });
+    } finally { setExpForecastLoading(false); }
+  }
+  async function loadAlerts() {
+    setAlertsLoading(true);
+    try {
+      const a = await api(`/budgets/alerts?period=${period}`);
+      setAlerts(Array.isArray(a) ? a : (a?.alerts || []));
+    } catch (e: any) {
+      toast({ title: "Hata", description: String(e), variant: "destructive" });
+    } finally { setAlertsLoading(false); }
+  }
+
   useEffect(() => { loadAll(); }, [period]);
   useEffect(() => { loadForecast(); }, [forecastBasis, forecastTarget]);
+  useEffect(() => { if (tab === "gider-tahmin") loadExpenseForecast(); }, [tab]);
+  useEffect(() => { if (tab === "uyari") loadAlerts(); }, [tab, period]);
 
   async function saveBudget() {
     try {
@@ -142,10 +167,19 @@ export default function BudgetsPage() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3 md:grid-cols-6">
           <TabsTrigger value="plan">Bütçe Planı</TabsTrigger>
           <TabsTrigger value="karsilastir">Plan vs Gerçekleşen</TabsTrigger>
+          <TabsTrigger value="uyari" data-testid="tab-uyari">
+            <Bell className="h-3 w-3 mr-1" />Uyarılar
+            {alerts.length > 0 && (
+              <Badge variant="destructive" className="ml-1 h-4 px-1 text-[10px]">{alerts.length}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="ciro">Ciro Tahmini</TabsTrigger>
+          <TabsTrigger value="gider-tahmin" data-testid="tab-gider-tahmin">
+            <BarChart3 className="h-3 w-3 mr-1" />Gider Tahmini
+          </TabsTrigger>
           <TabsTrigger value="nakit">Nakit Akışı</TabsTrigger>
         </TabsList>
 
@@ -274,6 +308,88 @@ export default function BudgetsPage() {
           </Card>
         </TabsContent>
 
+        {/* ─── UYARILAR ─── */}
+        <TabsContent value="uyari" className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Bell className="h-5 w-5" />Bütçe Sapma Uyarıları — {period}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Bütçenin %20 üstünde gider, hedefin altında ciro veya plansız harcama tespit edildiğinde uyarı oluşur.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={loadAlerts} disabled={alertsLoading} data-testid="btn-refresh-alerts">
+              {alertsLoading ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+              Yenile
+            </Button>
+          </div>
+
+          {alertsLoading ? (
+            <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Yükleniyor…</CardContent></Card>
+          ) : alerts.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center space-y-2">
+                <div className="text-emerald-600 text-4xl">✓</div>
+                <div className="font-medium">Bu dönem için aktif uyarı yok</div>
+                <div className="text-sm text-muted-foreground">Bütçeler hedef bandının içinde.</div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {alerts.map((a: any, idx: number) => {
+                const isCritical = a.severity === "critical";
+                const colorBg = isCritical ? "bg-red-500/10 border-red-500/40" : "bg-amber-500/10 border-amber-500/40";
+                const colorText = isCritical ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400";
+                const TYPE_LABEL: Record<string, string> = {
+                  expense_over_budget: "Bütçe Aşımı",
+                  revenue_under_budget: "Ciro Hedefin Altında",
+                  orphan_expense: "Plansız Harcama",
+                };
+                return (
+                  <Card key={idx} className={`border-2 ${colorBg}`} data-testid={`alert-${idx}`}>
+                    <CardContent className="pt-4">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className={`h-5 w-5 mt-0.5 flex-shrink-0 ${colorText}`} />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant={isCritical ? "destructive" : "secondary"}>{a.severity?.toUpperCase()}</Badge>
+                            <Badge variant="outline">{TYPE_LABEL[a.type] || a.type}</Badge>
+                            {a.label && <span className="font-semibold">{a.label}</span>}
+                          </div>
+                          <p className="text-sm mt-2">{a.message}</p>
+                          {(a.budget != null || a.actual != null) && (
+                            <div className="grid grid-cols-3 gap-3 mt-3 text-xs">
+                              {a.budget != null && (
+                                <div>
+                                  <div className="text-muted-foreground">Bütçe</div>
+                                  <div className="font-bold">{fmt(a.budget)}</div>
+                                </div>
+                              )}
+                              {a.actual != null && (
+                                <div>
+                                  <div className="text-muted-foreground">Gerçekleşen</div>
+                                  <div className="font-bold">{fmt(a.actual)}</div>
+                                </div>
+                              )}
+                              {a.variancePct != null && (
+                                <div>
+                                  <div className="text-muted-foreground">Sapma</div>
+                                  <div className={`font-bold ${colorText}`}>{pct(a.variancePct)}</div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
         {/* ─── CIRO TAHMINI ─── */}
         <TabsContent value="ciro" className="mt-6 space-y-4">
           <div className="flex items-center gap-3 flex-wrap">
@@ -322,6 +438,90 @@ export default function BudgetsPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* ─── GİDER TAHMİNİ (Kategori Bazlı) ─── */}
+        <TabsContent value="gider-tahmin" className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />Kategori Bazında Gider Tahmini
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Son 6 ayın gerçekleşen gider verisinden kategori bazında bir sonraki ay tahmini.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={loadExpenseForecast} disabled={expForecastLoading} data-testid="btn-refresh-exp-forecast">
+              <RefreshCw className={`h-4 w-4 mr-1 ${expForecastLoading ? "animate-spin" : ""}`} />Yenile
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card data-testid="exp-fcast-total">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Toplam Beklenen Gider</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{fmt(expenseForecast?.totalForecast)}</div>
+                <p className="text-xs text-muted-foreground mt-1">Sonraki ay projeksiyonu</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Aktif Kategori</CardTitle></CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{(expenseForecast?.categories || []).length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Tahmin üretilen kategori sayısı</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Örneklem</CardTitle></CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{expenseForecast?.sampleMonths ?? 6} ay</div>
+                <p className="text-xs text-muted-foreground mt-1">Geçmiş veri penceresi</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader><CardTitle className="text-base">Kategori Detayı</CardTitle></CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Kategori</TableHead>
+                    <TableHead className="text-right">Ortalama</TableHead>
+                    <TableHead className="text-right">Trend</TableHead>
+                    <TableHead className="text-right">Tahmin (Sonraki Ay)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(expenseForecast?.categories || []).map((c: any, idx: number) => {
+                    const trend = c.slope || 0;
+                    const trendDir = trend > 0 ? "up" : trend < 0 ? "down" : "flat";
+                    return (
+                      <TableRow key={c.categoryId || idx} data-testid={`exp-fcast-row-${idx}`}>
+                        <TableCell>
+                          <div className="font-medium">{c.icon || "•"} {c.label || c.name || "Kategorisiz"}</div>
+                        </TableCell>
+                        <TableCell className="text-right">{fmt(c.avg)}</TableCell>
+                        <TableCell className="text-right">
+                          {trendDir === "up" && <span className="text-red-600 flex items-center justify-end gap-1"><TrendingUp className="h-3 w-3" />{fmt(trend)}/ay</span>}
+                          {trendDir === "down" && <span className="text-emerald-600 flex items-center justify-end gap-1"><TrendingDown className="h-3 w-3" />{fmt(Math.abs(trend))}/ay</span>}
+                          {trendDir === "flat" && <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-right font-bold">{fmt(c.forecast)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {(!expenseForecast?.categories || expenseForecast.categories.length === 0) && (
+                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                      Henüz yeterli geçmiş gider verisi yok. Birkaç ay finansal hareket biriktikten sonra tahminler görünecek.
+                    </TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ─── NAKIT AKIŞI ─── */}

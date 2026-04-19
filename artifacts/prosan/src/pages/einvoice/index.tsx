@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, RefreshCw, Send, X, Plus, FileText, Inbox, Settings as SettingsIcon, Activity } from "lucide-react";
+import { Loader2, RefreshCw, Send, X, Plus, FileText, Inbox, Settings as SettingsIcon, Activity, FileCode, Copy, Download } from "lucide-react";
 
 const API = "/api/einvoice";
 
@@ -59,6 +59,40 @@ export default function EInvoicePage() {
   const [healthBusy, setHealthBusy] = useState(false);
   const [pollBusy, setPollBusy] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [xmlPreview, setXmlPreview] = useState<{ id: number; loading: boolean; xml: string | null; row: OutboxRow | null } | null>(null);
+
+  const openXmlPreview = async (row: OutboxRow) => {
+    setXmlPreview({ id: row.id, loading: true, xml: null, row });
+    try {
+      const res = await fetch(`${API}/outbox/${row.id}`, { credentials: "include" });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      const xml = data.rawXml || data.lastResponse?.xml || null;
+      setXmlPreview({ id: row.id, loading: false, xml, row });
+    } catch (e: any) {
+      toast({ title: "XML alınamadı", description: e.message, variant: "destructive" });
+      setXmlPreview(null);
+    }
+  };
+
+  const copyXml = async () => {
+    if (!xmlPreview?.xml) return;
+    try {
+      await navigator.clipboard.writeText(xmlPreview.xml);
+      toast({ title: "Panoya kopyalandı" });
+    } catch { toast({ title: "Kopyalanamadı", variant: "destructive" }); }
+  };
+
+  const downloadXml = () => {
+    if (!xmlPreview?.xml || !xmlPreview.row) return;
+    const blob = new Blob([xmlPreview.xml], { type: "application/xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `efatura-${xmlPreview.row.externalNo || xmlPreview.row.id}.xml`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -249,6 +283,9 @@ export default function EInvoicePage() {
                         {r.statusMessage && <div className="text-xs text-muted-foreground mt-1 max-w-[200px] truncate">{r.statusMessage}</div>}
                       </TableCell>
                       <TableCell className="text-right space-x-1">
+                        <Button size="sm" variant="ghost" title="UBL-TR XML önizle" onClick={() => openXmlPreview(r)} data-testid={`btn-xml-${r.id}`}>
+                          <FileCode className="h-3 w-3" />
+                        </Button>
                         {(r.status === "draft" || r.status === "failed") && (
                           <Button size="sm" variant="default" onClick={() => sendOutbox(r.id)}><Send className="h-3 w-3" /></Button>
                         )}
@@ -429,6 +466,45 @@ export default function EInvoicePage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* UBL-TR XML Önizleme */}
+      <Dialog open={!!xmlPreview} onOpenChange={(o) => !o && setXmlPreview(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileCode className="h-5 w-5" />
+              UBL-TR 1.2 XML Önizleme
+              {xmlPreview?.row && (
+                <Badge variant="outline" className="ml-2">
+                  {xmlPreview.row.externalNo || `#${xmlPreview.row.id}`}
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto rounded-md border bg-muted/30">
+            {xmlPreview?.loading ? (
+              <div className="p-8 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Yükleniyor…
+              </div>
+            ) : xmlPreview?.xml ? (
+              <pre className="text-xs p-4 whitespace-pre-wrap break-all font-mono" data-testid="xml-content">{xmlPreview.xml}</pre>
+            ) : (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                Bu fatura için kayıtlı XML yok. Stub provider taslakları yeniden oluşturulduğunda XML üretilir.
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            {xmlPreview?.xml && (
+              <>
+                <Button variant="outline" size="sm" onClick={copyXml}><Copy className="h-4 w-4 mr-1" />Kopyala</Button>
+                <Button variant="outline" size="sm" onClick={downloadXml}><Download className="h-4 w-4 mr-1" />.xml İndir</Button>
+              </>
+            )}
+            <Button variant="default" size="sm" onClick={() => setXmlPreview(null)}>Kapat</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

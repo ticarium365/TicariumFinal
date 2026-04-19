@@ -186,12 +186,18 @@ export async function forecastExpenseByCategory(
     });
     const forecast = weightSum > 0 ? weighted / weightSum : 0;
     const slope = linearSlope(history);
+    const sum = history.reduce((a, b) => a + b, 0);
+    const avg = history.length > 0 ? sum / history.length : 0;
+    const label = catId == null ? "(Kategorisiz)" : (catName.get(catId) || `#${catId}`);
 
     out.push({
       categoryId: catId,
-      categoryName: catId == null ? "(Kategorisiz)" : (catName.get(catId) || `#${catId}`),
+      categoryName: label,
+      label,
       history: periods.map((p, i) => ({ period: p, total: r2(history[i] || 0) })),
+      avg: r2(avg),
       forecast: r2(forecast),
+      slope: r2(slope),
       trendSlope: r2(slope),
       forecastWithTrend: r2(Math.max(0, forecast + slope)),
     });
