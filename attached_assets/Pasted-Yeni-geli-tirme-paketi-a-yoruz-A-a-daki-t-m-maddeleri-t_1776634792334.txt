@@ -1,0 +1,270 @@
+Yeni geliştirme paketi açıyoruz. Aşağıdaki tüm maddeleri tek faz halinde ele al ve sistem genelinde profesyonel şekilde uygula. UI/UX, üyelik akışı, paket yönetimi, sayfa tutarlılığı ve entegrasyon hazırlıkları birlikte değerlendirilsin.
+
+==================================================
+PHASE: MEMBERSHIP + PORTAL + UI CLEANUP + INTEGRATION READY
+===========================================================
+
+1. ÜYELİK / KAYIT AKIŞI YENİDEN TASARIMI
+
+Giriş ekranının sağ üst bölümüne:
+
+* Giriş Yap
+* Kayıt Ol
+
+alanı ekle.
+
+Kayıt Ol tıklanınca iki seçenek çıksın:
+
+A) İşletme Hesabı
+B) Satınalmacı Portalı
+
+---
+
+## İŞLETME KAYIT FORMU
+
+21 günlük full sürüm trial otomatik başlasın.
+
+İstenen alanlar:
+
+* Ad
+* Soyad
+* Telefon
+* E-posta
+* Şirket Adı
+* İl
+* İlçe
+
+Kayıt hızlı olsun. Gereksiz alan isteme.
+
+Kayıt sonrası:
+
+* telefon doğrulama veya
+* e-posta doğrulama
+
+altyapısı hazır olsun.
+
+Şimdilik seçenekli mimari kur:
+verification_method = sms / email
+
+---
+
+## SATINALMACI KAYIT FORMU
+
+Aynı hızlı kayıt mantığı.
+
+Alanlar:
+
+* Ad
+* Soyad
+* Telefon
+* E-posta
+* Firma Adı
+* İl
+* İlçe
+
+Rol:
+procurement_account
+
+Trial gerekmiyorsa ücretsiz planla başlat.
+
+==================================================
+2. GİRİŞ EKRANI ROL AYRIMI
+==========================
+
+Login ekranında iki giriş seçeneği görünmeli:
+
+* İşletme Girişi
+* Satınalmacı Girişi
+
+Default:
+İşletme Girişi seçili gelsin.
+
+UI:
+tab / segmented control şeklinde premium görünüm.
+
+==================================================
+3. LANDING PAGE METİN REVİZYONU
+===============================
+
+Giriş sayfasındaki mevcut yazılar ürünün yeni vizyonuna göre güncellensin.
+
+Artık sadece stok programı gibi görünmesin.
+
+Odak:
+
+* İşletme yönetimi
+* Satış artırma
+* E-ticaret yönetimi
+* B2B tedarik ağı
+* Karlılık takibi
+* Satınalma portalı
+* Tek panelden yönetim
+
+Kurumsal ve güçlü anlatım olsun.
+
+==================================================
+4. HAKKIMIZDA / NEDEN BİZ / AMACIMIZ BLOKLARI
+=============================================
+
+Mevcut agresif veya zorlama metinleri kaldır.
+
+Yerine:
+
+* güven veren
+* profesyonel
+* modern
+* imla kurallı
+* kurumsal
+* yatırımcıya gösterilebilir
+
+metinler yaz.
+
+Başlık önerileri:
+
+* Neden Ticarium365?
+* İşletmeler İçin Yeni Nesil Yönetim Platformu
+* Satıştan Karlılığa Tek Merkez
+* Türkiye’nin Canlı Ticaret Altyapısı
+
+==================================================
+5. TEMA TUTARLILIĞI GENEL KONTROL
+=================================
+
+Tüm sayfalarda başlıklar ve renkler kontrol edilsin.
+
+Sorun:
+bazı başlıklar siyah, bazıları farklı renk.
+
+Yapılacak:
+
+* tüm page title yapısı standardize et
+* dark/light mode uyumu
+* primary renk sistemi tek olsun
+* hover / card / heading yapıları ortaklaştırılsın
+
+Global UI audit yap.
+
+==================================================
+6. YETKİ / GÖRÜNMEMESİ GEREKEN SAYFALAR
+=======================================
+
+Örnek:
+Pazaryeri yönetimi vb alanlarda kullanıcıların görmemesi gereken şeyler görünüyorsa kaldır.
+
+Tüm sistem taransın:
+
+* role based menu visibility
+* package based menu visibility
+* hidden routes
+* unauthorized widgets
+
+mockacc-sprint verileri varsa kontrol et.
+
+Bulunamayan alanlarda bana rapor ver.
+
+==================================================
+7. OLMAYAN SAYFALAR / ROUTE FALLBACK
+====================================
+
+Henüz yapılmamış sayfalara girilirse:
+
+Hata vermesin.
+
+Yerine premium placeholder / mockup gelsin:
+
+* Bu modül hazırlanıyor
+* Çok yakında aktif olacak
+* Paketinizde aktif olduğunda kullanabilirsiniz
+
+404 veya crash olmasın.
+
+==================================================
+8. KİLİTLİ MODÜL DAVRANIŞI
+==========================
+
+Örnek:
+Mali müşavir ekranı kilitli ama içine girince unexpected error veriyor.
+
+Bu tamamen düzeltilsin.
+
+Yeni davranış:
+
+Yetki yoksa:
+
+* route açılmadan yakala
+* kilitli modül ekranı göster
+* paket yükselt CTA
+* özellikler listesi
+* demo ekran görüntüsü
+
+Error göstermesin.
+
+==================================================
+9. ENTEGRASYON MİMARİSİ HAZIRLIĞI
+=================================
+
+Aşağıdaki sistemler için connector-ready mimari kur.
+
+PHASE 1:
+
+* Paraşüt
+* Mikro
+* BizimHesap
+
+PHASE 2:
+
+* Logo
+* Nebim
+* Uyumsoft
+* Akınsoft
+
+Yapılacaklar:
+
+integration_providers
+company_integrations
+sync_logs
+webhook_events
+
+Standard interface:
+
+connect()
+disconnect()
+pullProducts()
+pullStock()
+pullCustomers()
+pushInvoices()
+healthCheck()
+
+UI:
+
+* Entegrasyon merkezi
+* Bağlan
+* Durum
+* Son senkronizasyon
+* Hata logu
+* Yeniden dene
+
+Şimdilik provider mockup + architecture hazır olsun.
+Gerçek API bağlama sonra yapılacak.
+
+==================================================
+GENEL KURAL
+===========
+
+* Kod bozulmadan ilerle
+* mevcut tasarım çizgisini koru
+* premium hissi artır
+* hızlı kayıt odaklı ilerle
+* gelir getirecek trial akışını güçlendir
+* procurement portal mantığını hissettir
+* canlıya çıkış öncesi temiz görünüm ver
+
+==================================================
+TESLİM İSTİYORUM
+================
+
+1. Tamamlanan maddeler
+2. Eksik kalanlar
+3. Riskli alanlar
+4. Sonraki sprint önerisi
+5. UI/UX iyileştirme notları
