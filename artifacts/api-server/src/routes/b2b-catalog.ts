@@ -59,6 +59,11 @@ router.get("/marketplace", async (req: Request, res: Response) => {
     const q = String(req.query.q ?? "").trim();
     const category = String(req.query.category ?? "").trim();
     const companyIdRaw = String(req.query.companyId ?? "").trim();
+    const city = String(req.query.city ?? "").trim();
+    const brand = String(req.query.brand ?? "").trim();
+    const minOrderQtyRaw = String(req.query.minOrderQty ?? "").trim();
+    const fastOnly = String(req.query.fastOnly ?? "") === "1" || String(req.query.fastOnly ?? "") === "true";
+    const certifiedOnly = String(req.query.certifiedOnly ?? "") === "1" || String(req.query.certifiedOnly ?? "") === "true";
     const sort = String(req.query.sort ?? "new");
     const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "30"), 10) || 30, 1), 100);
     const offset = Math.max(parseInt(String(req.query.offset ?? "0"), 10) || 0, 0);
@@ -77,12 +82,26 @@ router.get("/marketplace", async (req: Request, res: Response) => {
           ilike(b2bCatalogItemsTable.category, like),
           ilike(companiesTable.name, like),
           ilike(companiesTable.subdomain, like),
+          ilike(productsTable.brand, like),
         )
       );
     }
     if (category) conds.push(eq(b2bCatalogItemsTable.category, category));
     const cid = parseId(companyIdRaw);
     if (cid) conds.push(eq(b2bCatalogItemsTable.companyId, cid));
+    if (city) conds.push(ilike(companiesTable.city, city));
+    if (brand) conds.push(ilike(productsTable.brand, brand));
+    const minOq = Number(minOrderQtyRaw);
+    if (Number.isFinite(minOq) && minOq > 0) {
+      conds.push(sql`${b2bCatalogItemsTable.minOrderQty} <= ${minOq}`);
+    }
+    if (fastOnly) {
+      // "Hızlı teslimat" — leadDays NULL ise hariç, ≤ 3 gün
+      conds.push(sql`${b2bCatalogItemsTable.leadDays} IS NOT NULL AND ${b2bCatalogItemsTable.leadDays} <= 3`);
+    }
+    if (certifiedOnly) {
+      conds.push(eq(companiesTable.isVerified, true));
+    }
 
     const where = conds.length > 1 ? and(...conds) : conds[0];
 
@@ -112,6 +131,11 @@ router.get("/marketplace", async (req: Request, res: Response) => {
         createdAt: b2bCatalogItemsTable.createdAt,
         companyName: companiesTable.name,
         companySubdomain: companiesTable.subdomain,
+        // Sprint I — yeni vitrin alanları (şehir, sertifika, marka, gerçek stok)
+        companyCity: companiesTable.city,
+        companyVerified: companiesTable.isVerified,
+        productBrand: productsTable.brand,
+        productStock: productsTable.stock,
       })
       .from(b2bCatalogItemsTable)
       .innerJoin(companiesTable, eq(b2bCatalogItemsTable.companyId, companiesTable.id))
@@ -161,6 +185,51 @@ router.get("/marketplace/categories", async (_req: Request, res: Response) => {
  * GET /b2b/catalog/marketplace/companies
  * Vitrinde ürünü bulunan firmaların kısa listesi (filtre çipleri için).
  */
+/**
+ * GET /b2b/catalog/marketplace/cities
+ * Vitrinde aktif (onaylı + stoklu) ürünü olan firmaların farklı şehirleri.
+ */
+router.get("/marketplace/cities", async (_req: Request, res: Response) => {
+  try {
+    const stockOk = sql`(${b2bCatalogItemsTable.sourceProductId} IS NULL OR ${productsTable.stock} > 0)`;
+    const rows = await db
+      .selectDistinct({ city: companiesTable.city })
+      .from(b2bCatalogItemsTable)
+      .innerJoin(companiesTable, eq(b2bCatalogItemsTable.companyId, companiesTable.id))
+      .leftJoin(productsTable, eq(productsTable.id, b2bCatalogItemsTable.sourceProductId))
+      .where(and(eq(b2bCatalogItemsTable.isPublished, true), stockOk));
+    const cities = rows
+      .map((r) => r.city)
+      .filter((c): c is string => !!c && c.trim().length > 0)
+      .sort((a, b) => a.localeCompare(b, "tr"));
+    res.json(cities);
+  } catch (err) {
+    res.status(500).json({ error: "Şehir listesi alınamadı" });
+  }
+});
+
+/**
+ * GET /b2b/catalog/marketplace/brands
+ * Vitrinde aktif olan ürünlerin farklı markaları (products.brand).
+ */
+router.get("/marketplace/brands", async (_req: Request, res: Response) => {
+  try {
+    const stockOk = sql`(${b2bCatalogItemsTable.sourceProductId} IS NULL OR ${productsTable.stock} > 0)`;
+    const rows = await db
+      .selectDistinct({ brand: productsTable.brand })
+      .from(b2bCatalogItemsTable)
+      .leftJoin(productsTable, eq(productsTable.id, b2bCatalogItemsTable.sourceProductId))
+      .where(and(eq(b2bCatalogItemsTable.isPublished, true), stockOk));
+    const brands = rows
+      .map((r) => r.brand)
+      .filter((b): b is string => !!b && b.trim().length > 0)
+      .sort((a, b) => a.localeCompare(b, "tr"));
+    res.json(brands);
+  } catch (err) {
+    res.status(500).json({ error: "Marka listesi alınamadı" });
+  }
+});
+
 router.get("/marketplace/companies", async (_req: Request, res: Response) => {
   try {
     const rows = await db

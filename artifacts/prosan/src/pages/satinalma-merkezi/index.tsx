@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import {
   Search, Filter, Download, FileSpreadsheet, FileText, Printer,
   Star, Mail, ShoppingBasket, ArrowUpDown, X, GitCompare, Send,
-  Building2, Package, Tag, Loader2,
+  Building2, Package, Tag, Loader2, MapPin, ShieldCheck, Zap,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,11 @@ type CatalogItem = {
   leadDays: number | null;
   imageUrl: string | null;
   createdAt: string;
+  // Sprint I genişletmeler
+  companyCity: string | null;
+  companyVerified: boolean | null;
+  productBrand: string | null;
+  productStock: number | null;
 };
 
 type CompanyFilter = { id: number; name: string; subdomain: string };
@@ -71,9 +76,14 @@ export default function SatinalmaMerkeziPage() {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState<string>("__all__");
   const [companyId, setCompanyId] = useState<string>("__all__");
+  const [city, setCity] = useState<string>("__all__");
+  const [brand, setBrand] = useState<string>("__all__");
   const [sort, setSort] = useState<"new" | "price_asc" | "price_desc" | "name">("new");
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
+  const [maxMinOrder, setMaxMinOrder] = useState<string>("");
+  const [fastOnly, setFastOnly] = useState(false);
+  const [certifiedOnly, setCertifiedOnly] = useState(false);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
 
   // karşılaştırma seçimi (id seti)
@@ -89,11 +99,16 @@ export default function SatinalmaMerkeziPage() {
   if (q.trim()) params.set("q", q.trim());
   if (category && category !== "__all__") params.set("category", category);
   if (companyId && companyId !== "__all__") params.set("companyId", companyId);
+  if (city && city !== "__all__") params.set("city", city);
+  if (brand && brand !== "__all__") params.set("brand", brand);
+  if (maxMinOrder && Number(maxMinOrder) > 0) params.set("minOrderQty", maxMinOrder);
+  if (fastOnly) params.set("fastOnly", "1");
+  if (certifiedOnly) params.set("certifiedOnly", "1");
   params.set("sort", sort);
   params.set("limit", "100");
 
   const itemsQ = useQuery<{ items: CatalogItem[]; total: number }>({
-    queryKey: ["b2b-marketplace", q, category, companyId, sort],
+    queryKey: ["b2b-marketplace", q, category, companyId, city, brand, maxMinOrder, fastOnly, certifiedOnly, sort],
     queryFn: () => api(`/b2b/catalog/marketplace?${params.toString()}`),
   });
 
@@ -105,6 +120,16 @@ export default function SatinalmaMerkeziPage() {
   const cosQ = useQuery<CompanyFilter[]>({
     queryKey: ["b2b-marketplace-cos"],
     queryFn: () => api(`/b2b/catalog/marketplace/companies`),
+  });
+
+  const citiesQ = useQuery<string[]>({
+    queryKey: ["b2b-marketplace-cities"],
+    queryFn: () => api(`/b2b/catalog/marketplace/cities`),
+  });
+
+  const brandsQ = useQuery<string[]>({
+    queryKey: ["b2b-marketplace-brands"],
+    queryFn: () => api(`/b2b/catalog/marketplace/brands`),
   });
 
   const favQ = useQuery<{ favorites: Array<{ sellerCompanyId: number; sellerName: string }> }>({
@@ -175,16 +200,19 @@ export default function SatinalmaMerkeziPage() {
 
   // ── export işlemleri ───────────────────────────────────────────────────────
   function exportRows() {
+    // Sprint I Phase 1 şartname: 11 kolon (Ürün/Firma odaklı, Birim & Para fiyat ile birleşik)
     return items.map((i) => ({
       "Ürün Kodu": i.code ?? "",
       "Ürün Adı": i.name,
+      "Marka": i.productBrand ?? "",
       "Kategori": i.category ?? "",
-      "Birim": i.unit,
-      "Fiyat": i.listPrice ?? "",
-      "Para": i.currency,
-      "Min. Sip.": i.minOrderQty,
-      "Teslim (gün)": i.leadDays ?? "",
       "Tedarikçi": i.companyName,
+      "Şehir": i.companyCity ?? "",
+      "Sertifikalı": i.companyVerified ? "Evet" : "Hayır",
+      "Fiyat": i.listPrice != null ? `${i.listPrice} ${i.currency}` : "",
+      "Stok": i.productStock ?? "",
+      "Min. Sip.": `${i.minOrderQty} ${i.unit}`,
+      "Teslim (gün)": i.leadDays ?? "",
     }));
   }
 
@@ -225,8 +253,13 @@ export default function SatinalmaMerkeziPage() {
     setQ("");
     setCategory("__all__");
     setCompanyId("__all__");
+    setCity("__all__");
+    setBrand("__all__");
     setMinPrice("");
     setMaxPrice("");
+    setMaxMinOrder("");
+    setFastOnly(false);
+    setCertifiedOnly(false);
     setOnlyFavorites(false);
   }
 
@@ -272,10 +305,10 @@ export default function SatinalmaMerkeziPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-6 gap-3">
-            <div className="md:col-span-2 relative">
+            <div className="md:col-span-3 relative">
               <Search className="h-4 w-4 absolute left-2.5 top-3 text-muted-foreground" />
               <Input
-                placeholder="Ürün, kod, tedarikçi ara…"
+                placeholder="Ürün, kod, marka, tedarikçi ara…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 className="pl-8"
@@ -313,7 +346,33 @@ export default function SatinalmaMerkeziPage() {
               </SelectContent>
             </Select>
 
-            <div className="flex gap-2 items-center">
+            <Select value={city} onValueChange={setCity}>
+              <SelectTrigger data-testid="sel-city">
+                <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                <SelectValue placeholder="Şehir" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Tüm şehirler</SelectItem>
+                {(citiesQ.data ?? []).map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={brand} onValueChange={setBrand}>
+              <SelectTrigger data-testid="sel-brand">
+                <Tag className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                <SelectValue placeholder="Marka" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Tüm markalar</SelectItem>
+                {(brandsQ.data ?? []).map((b) => (
+                  <SelectItem key={b} value={b}>{b}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="flex gap-2 items-center md:col-span-2">
               <Input
                 placeholder="Min ₺"
                 type="number"
@@ -332,15 +391,42 @@ export default function SatinalmaMerkeziPage() {
               />
             </div>
 
-            <div className="md:col-span-6 flex items-center justify-between flex-wrap gap-2">
-              <label className="flex items-center gap-2 text-xs cursor-pointer">
-                <Checkbox
-                  checked={onlyFavorites}
-                  onCheckedChange={(v) => setOnlyFavorites(!!v)}
-                  data-testid="cb-only-fav"
-                />
-                <Star className="h-3.5 w-3.5 text-amber-500" /> Sadece favori tedarikçilerden göster
-              </label>
+            <Input
+              placeholder="Min sip. ≤"
+              type="number"
+              value={maxMinOrder}
+              onChange={(e) => setMaxMinOrder(e.target.value)}
+              className="text-xs"
+              data-testid="input-max-min-order"
+            />
+
+            <div className="md:col-span-6 flex items-center justify-between flex-wrap gap-3 pt-1 border-t">
+              <div className="flex items-center gap-4 flex-wrap">
+                <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                  <Checkbox
+                    checked={onlyFavorites}
+                    onCheckedChange={(v) => setOnlyFavorites(!!v)}
+                    data-testid="cb-only-fav"
+                  />
+                  <Star className="h-3.5 w-3.5 text-amber-500" /> Favori tedarikçi
+                </label>
+                <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                  <Checkbox
+                    checked={fastOnly}
+                    onCheckedChange={(v) => setFastOnly(!!v)}
+                    data-testid="cb-fast-only"
+                  />
+                  <Zap className="h-3.5 w-3.5 text-orange-500" /> Hızlı teslimat (≤3 gün)
+                </label>
+                <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                  <Checkbox
+                    checked={certifiedOnly}
+                    onCheckedChange={(v) => setCertifiedOnly(!!v)}
+                    data-testid="cb-certified-only"
+                  />
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> Sertifikalı firma
+                </label>
+              </div>
               <div className="flex gap-2">
                 {compareIds.size > 0 && (
                   <Button size="sm" variant="default" onClick={() => setCompareOpen(true)} data-testid="btn-open-compare">
@@ -385,19 +471,20 @@ export default function SatinalmaMerkeziPage() {
                   <TableRow>
                     <TableHead className="w-10 print:hidden"></TableHead>
                     <TableHead>Ürün</TableHead>
+                    <TableHead>Firma</TableHead>
                     <TableHead>Kategori</TableHead>
+                    <TableHead>Şehir</TableHead>
                     <TableHead className="text-right">Fiyat</TableHead>
-                    <TableHead>Birim</TableHead>
-                    <TableHead className="text-right">Min. Sip.</TableHead>
-                    <TableHead>Teslim</TableHead>
-                    <TableHead>Tedarikçi</TableHead>
-                    <TableHead className="text-right print:hidden">İşlemler</TableHead>
+                    <TableHead className="text-right">Stok</TableHead>
+                    <TableHead>Teslim Süresi</TableHead>
+                    <TableHead className="text-right print:hidden">İşlem</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {items.map((i) => {
                     const isFav = favIds.has(i.companyId);
                     const isCompared = compareIds.has(i.id);
+                    const isFast = i.leadDays != null && i.leadDays <= 3;
                     return (
                       <TableRow key={i.id} data-testid={`row-product-${i.id}`}>
                         <TableCell className="print:hidden">
@@ -407,26 +494,57 @@ export default function SatinalmaMerkeziPage() {
                             data-testid={`cb-compare-${i.id}`}
                           />
                         </TableCell>
-                        <TableCell>
-                          <div className="font-medium">{i.name}</div>
-                          {i.code && <div className="text-xs text-muted-foreground">{i.code}</div>}
-                        </TableCell>
-                        <TableCell>
-                          {i.category ? <Badge variant="outline" className="text-[10px]">{i.category}</Badge> : <span className="text-muted-foreground text-xs">—</span>}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {i.listPrice != null ? `${Number(i.listPrice).toLocaleString("tr-TR")} ${i.currency}` : <span className="text-muted-foreground text-xs">Görüşmeli</span>}
-                        </TableCell>
-                        <TableCell className="text-xs">{i.unit}</TableCell>
-                        <TableCell className="text-right text-xs">{i.minOrderQty}</TableCell>
-                        <TableCell className="text-xs">
-                          {i.leadDays != null ? `${i.leadDays} gün` : "—"}
+                        <TableCell className="max-w-[260px]">
+                          <div className="font-medium truncate">{i.name}</div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+                            {i.code && <span>#{i.code}</span>}
+                            {i.productBrand && (
+                              <span className="inline-flex items-center gap-0.5"><Tag className="h-3 w-3" />{i.productBrand}</span>
+                            )}
+                            <span className="text-[10px]">Min: {i.minOrderQty} {i.unit}</span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5">
                             <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
                             <span className="text-sm">{i.companyName}</span>
+                            {i.companyVerified && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                                </TooltipTrigger>
+                                <TooltipContent>Sertifikalı tedarikçi</TooltipContent>
+                              </Tooltip>
+                            )}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {i.category ? <Badge variant="outline" className="text-[10px]">{i.category}</Badge> : <span className="text-muted-foreground text-xs">—</span>}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {i.companyCity ? (
+                            <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3 text-muted-foreground" />{i.companyCity}</span>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-right font-mono whitespace-nowrap">
+                          {i.listPrice != null ? `${Number(i.listPrice).toLocaleString("tr-TR")} ${i.currency}` : <span className="text-muted-foreground text-xs font-sans">Görüşmeli</span>}
+                        </TableCell>
+                        <TableCell className="text-right text-xs">
+                          {i.productStock != null ? (
+                            <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                              {Number(i.productStock).toLocaleString("tr-TR")} {i.unit}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">Stokta</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {i.leadDays != null ? (
+                            <span className={`inline-flex items-center gap-1 ${isFast ? "text-orange-600 font-medium" : ""}`}>
+                              {isFast && <Zap className="h-3 w-3" />}
+                              {i.leadDays} gün
+                            </span>
+                          ) : "—"}
                         </TableCell>
                         <TableCell className="text-right print:hidden">
                           <div className="flex justify-end gap-1">
@@ -452,7 +570,19 @@ export default function SatinalmaMerkeziPage() {
                                   <Mail className="h-4 w-4" />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Tedarikçiyle iletişim</TooltipContent>
+                              <TooltipContent>İletişime geç</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon" variant="ghost" className="h-7 w-7"
+                                  onClick={() => window.open(`/magaza/${i.companySubdomain}`, "_blank")}
+                                  data-testid={`btn-profile-${i.id}`}
+                                >
+                                  <Building2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Firma profiline git</TooltipContent>
                             </Tooltip>
                             <Button
                               size="sm" variant="default" className="h-7"

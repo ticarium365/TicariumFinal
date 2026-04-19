@@ -38,6 +38,10 @@ export const companiesTable = pgTable("companies", {
   trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
   /** Sprint D: hesap tipi — buyer portal vs satıcı paneli yetkilendirmesi için. */
   accountType: accountTypeEnum("account_type").notNull().default("seller"),
+  /** Sprint I — Satınalma Merkezi vitrini için: şehir filtresi (Türkiye il adı) */
+  city: text("city"),
+  /** Sprint I — Satınalma Merkezi: "Sertifikalı tedarikçi" rozeti (super-admin onayı). */
+  isVerified: boolean("is_verified").notNull().default(false),
   // T017 Phase B-2: Onboarding wizard alanları
   sector: companySectorEnum("sector"),
   /** Onboarding wizard tamamlandığında doldurulur (kullanıcı "Bitti" derse veya skip etse de set edilir). */

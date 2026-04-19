@@ -1,0 +1,176 @@
+Yeni modül geliştireceğiz: Satınalma Hesabı / Procurement Portal
+
+Bu modül mevcut sistemin içine entegre olacak. Ayrı ürün gibi değil, mevcut yapının ikinci kullanıcı tipi olarak çalışacak.
+
+Kullanıcı Tipleri:
+
+İşletme Hesabı (mevcut sistem)
+Satınalma Hesabı (yeni)
+
+GENEL KURAL:
+
+Mevcut tema, renkler, layout, sidebar yapısı korunacak.
+Ayrı tasarım dili yapılmayacak.
+Aynı premium sistem hissi devam edecek.
+Yetki bazlı menü gösterimi olacak.
+
+SATINALMA HESABI MENÜSÜ:
+
+Satınalma Merkezi
+Menü Tercihleri
+Marka / Logo
+Firma Profili
+Kullanıcılar
+Çıkış
+
+Amaç:
+Kurumsal satınalmacıların hızlıca ürün bulabildiği, tedarikçi keşfettiği, teklif topladığı sade ama güçlü bir panel oluşturmak.
+
+ANA MODÜL: SATINALMA MERKEZİ
+
+Bu ekran E-Ticarium Merkezi + B2B vitrin mantığında olacak.
+
+Sadece şu ürünler listelenecek:
+
+İşletmenin görünür yaptığı ürünler
+Aktif stokta olan ürünler
+Yayında ve aynı zamanda stoğu olan ürünler stoksuz ürünler gözükmemeli yayına afişeye izin verildiyse olan ürünler
+yok
+
+LİSTE EKRANI:
+
+Tablo bazlı güçlü görünüm:
+
+| Ürün | Firma | Kategori | Şehir | Fiyat | Stok | Teslim Süresi | İşlem |
+
+Filtreler:
+
+Ürün adı
+Firma adı
+Kategori
+Şehir
+Marka
+Fiyat aralığı
+Stokta var / yok
+Hızlı teslimat
+Sertifikalı firma
+Min sipariş miktarı
+
+İşlemler:
+
+Teklif iste
+Firma profiline git
+Favorilere ekle
+Karşılaştırmaya ekle
+İletişime geç
+
+EXPORT:
+
+Excel
+CSV
+PDF
+Yazdır
+
+DETAY SAYFASI:
+
+Ürün detayında:
+
+Ürün görseli
+Açıklama
+Teknik bilgiler
+Firma bilgisi
+Teslim süresi
+Güncel stok
+Fiyat (firma isterse)
+Teklif al butonu
+Benzer ürünler
+
+FAVORİLER:
+Satınalmacı firmaları ve ürünleri favorilere ekleyebilsin.
+
+TEKLİF SİSTEMİ:
+
+Tek ürün teklif iste
+Çoklu ürün teklif iste
+Seçili firmalara gönder
+Teklif geçmişi görüntüle
+
+KARŞILAŞTIRMA:
+Birden fazla ürün/firma seçilip yan yana kıyaslanabilsin:
+
+fiyat
+stok
+teslim süresi
+firma puanı
+
+İŞLETME TARAFINDA GEREKEN YENİ ALANLAR:
+
+Ürün kartında seçenekler:
+
+Satınalma Merkezinde Göster
+Fiyatı Göster
+Stoğu Göster
+Teklif ile satış yap
+Öne çıkan ürün yap
+
+FİRMA PROFİLİ:
+Satınalma hesabı kendi şirket bilgilerini girebilsin:
+
+Firma adı
+Vergi bilgileri
+Yetkili kişi
+Sektör
+Satınalma kategorileri
+Logo
+
+KULLANICI YÖNETİMİ:
+Alt kullanıcı açabilsin:
+
+Satınalmacı
+Müdür
+Yönetici
+
+UX/UI İSTEKLERİ:
+
+Çok sade
+Kurumsal görünüm
+Hızlı kullanım
+Az tıklama
+Büyük tablo performansı
+Mobil uyumlu
+Export butonları görünür
+
+TEKNİK İSTEKLER:
+
+Role based access
+Satınalma hesabı ayrı permission set
+Menüler role göre gelsin
+Aynı database yapısında çalışsın
+Multi tenant uyumlu olsun
+
+ÖNCELİK SIRASI:
+
+PHASE 1
+
+Rol sistemi
+Menü ayrımı
+Ürün listeleme
+Filtreleme
+Export
+
+PHASE 2
+
+Teklif sistemi
+Favoriler
+Firma profilleri
+
+PHASE 3
+
+Karşılaştırma
+Gelişmiş satınalma raporları
+AI önerili tedarikçi sistemi
+
+Amaç:
+Türkiye’de işletmeler ile satınalmacıları aynı platformda buluşturan canlı B2B tedarik ağı kurmak.
+
+UI çok premium, hızlı ve güven veren şekilde geliştir.
