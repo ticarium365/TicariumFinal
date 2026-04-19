@@ -3,8 +3,14 @@ import bcrypt from "bcryptjs";
 import { db, companiesTable, usersTable, productsTable, salesTable } from "@workspace/db";
 import { eq, count, sql } from "drizzle-orm";
 import { requireAuth, requireSuperAdmin } from "../middlewares/auth.js";
+import { validateSubdomain, listReservedSubdomains } from "../lib/reserved-subdomains.js";
 
 const router = Router();
+
+// GET /api/companies/reserved-subdomains — onboarding UI'da rezerve listesini göster
+router.get("/reserved-subdomains", requireAuth, requireSuperAdmin, (_req, res) => {
+  res.json({ reserved: listReservedSubdomains() });
+});
 
 // GET /api/companies — Tüm şirketleri listele (super admin)
 router.get("/", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
@@ -42,15 +48,18 @@ router.post("/", requireAuth, requireSuperAdmin, async (req: Request, res: Respo
       return;
     }
 
-    if (!/^[a-z0-9-]+$/.test(subdomain)) {
-      res.status(400).json({ error: "Bad Request", message: "Subdomain yalnızca küçük harf, rakam ve tire içerebilir" });
+    // Subdomain doğrulama: format + uzunluk + rezerve liste (admin/api/www/...)
+    const sub = validateSubdomain(subdomain);
+    if (!sub.ok) {
+      res.status(400).json({ error: "Bad Request", code: sub.code, message: sub.message });
       return;
     }
+    const cleanSubdomain = sub.value;
 
     // Şirket oluştur — explicit returning whitelist (response leak koruması)
     const [company] = await db.insert(companiesTable).values({
       name,
-      subdomain,
+      subdomain: cleanSubdomain,
       primaryColor: primaryColor || "#2563eb",
       logoUrl: logoUrl || null,
       isActive: true,

@@ -37,19 +37,54 @@ app.use((req, res, next) => {
 });
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
-// ─── Güvenlik başlıkları (Sprint 26 + canlı öncesi sıkılaştırma) ─────────────
+// ─── Güvenlik başlıkları (canlı öncesi sıkılaştırma — Cloudflare + Sentry + Resend uyumlu) ─
+// CSP prod'da aktif; dev'de Vite HMR ve Replit iframe'i kırmamak için kapalı.
+const CSP_DIRECTIVES = {
+  defaultSrc: ["'self'"],
+  // API JSON döndürür ama Sentry, Cloudflare Insights gibi script'ler enjekte edilebilir.
+  scriptSrc: [
+    "'self'",
+    "'unsafe-inline'",            // shadcn/ui inline event handler'ları
+    "https://browser.sentry-cdn.com",
+    "https://js.sentry-cdn.com",
+    "https://static.cloudflareinsights.com",
+  ],
+  styleSrc: ["'self'", "'unsafe-inline'"],
+  imgSrc: [
+    "'self'", "data:", "blob:",
+    "https://*.ticarium365.com",
+    "https://storage.googleapis.com",     // object storage CDN
+    "https://*.replit.dev",               // dev önizleme
+  ],
+  fontSrc: ["'self'", "data:"],
+  connectSrc: [
+    "'self'",
+    "https://*.ticarium365.com",
+    "https://*.ingest.sentry.io",         // org-prefixed DSN (oXXX.ingest.sentry.io)
+    "https://*.ingest.us.sentry.io",      // US region
+    "https://*.ingest.de.sentry.io",      // EU region
+    "https://ingest.sentry.io",           // apex fallback
+    "https://api.resend.com",             // mail (frontend'den çağrılmaz ama whitelist)
+    "wss://*.ticarium365.com",            // gerçek zamanlı bildirimler (gelecekte)
+  ],
+  // Prod'da clickjacking yüzeyini kıs: yalnızca kendi domain'lerimiz iframe edebilir.
+  // Replit dev önizleme yalnız non-prod'da gerekli (CSP zaten dev'de kapalı).
+  frameAncestors: ["'self'", "https://*.ticarium365.com"],
+  objectSrc: ["'none'"],
+  baseUri: ["'self'"],
+  formAction: ["'self'"],
+  upgradeInsecureRequests: IS_PRODUCTION ? [] : null,
+} as any;
+
 app.use(helmet({
-  // API JSON döndürür; HTML render etmediği için CSP API tarafında devre dışı
-  // (frontend kendi CSP'sini Vite üzerinden uygular)
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: IS_PRODUCTION ? { directives: CSP_DIRECTIVES } : false,
   crossOriginEmbedderPolicy: false,
-  // Replit iframe önizlemesi için cross-origin'e izin
+  // Replit iframe önizlemesi + Cloudflare resource fetch için cross-origin'e izin
   crossOriginResourcePolicy: { policy: "cross-origin" },
   // Tarayıcıya HTTPS zorlat (prod'da)
   hsts: IS_PRODUCTION ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
   // Referrer leak koruması
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
-  // MIME sniff koruması zaten aktif (default)
 }));
 
 // Trust proxy (Replit edge proxy için — rate limit IP doğru çalışsın)
@@ -78,8 +113,33 @@ app.use(
   }),
 );
 
+// ─── CORS allowlist (canlı öncesi sıkılaştırma) ──────────────────────────────
+// Prod: sadece *.ticarium365.com + apex. Dev: localhost + replit.dev + tüm (preview iframe).
+// Same-origin istekler (Origin header'ı yok) her zaman geçer.
+const CORS_PROD_ALLOW = [
+  /^https:\/\/ticarium365\.com$/,
+  /^https:\/\/[a-z0-9-]+\.ticarium365\.com$/,    // wildcard tenant
+];
+const CORS_DEV_ALLOW = [
+  /^http:\/\/localhost(:\d+)?$/,
+  /^http:\/\/127\.0\.0\.1(:\d+)?$/,
+  /^https:\/\/[a-z0-9-]+\.replit\.dev$/,
+  /^https:\/\/.+\.replit\.app$/,
+  /^https:\/\/.+\.kirk\.replit\.dev$/,
+];
+const CORS_EXTRA = (process.env.CORS_EXTRA_ORIGINS || "")
+  .split(",").map(s => s.trim()).filter(Boolean)
+  .map(s => new RegExp("^" + s.replace(/[.*+?^${}()|[\]\\]/g, r => r === "*" ? ".*" : "\\" + r) + "$"));
+
 app.use(cors({
-  origin: true,
+  origin(origin, cb) {
+    if (!origin) return cb(null, true); // same-origin / curl / mobil app
+    const allow = IS_PRODUCTION ? CORS_PROD_ALLOW : [...CORS_PROD_ALLOW, ...CORS_DEV_ALLOW];
+    const all = [...allow, ...CORS_EXTRA];
+    if (all.some(rx => rx.test(origin))) return cb(null, true);
+    logger.warn({ origin }, "cors_origin_rejected");
+    return cb(new Error(`CORS: ${origin} izinli değil`));
+  },
   credentials: true,
 }));
 
@@ -87,9 +147,31 @@ app.use(cors({
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 
+// ─── Session — prod kontrolü sıkılaştırılmış ─────────────────────────────────
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret) {
   throw new Error("SESSION_SECRET environment variable is required");
+}
+if (IS_PRODUCTION) {
+  // Prod'da yetersiz secret = derhal crash. Sızdırılmış/dev secret'la canlıya çıkmayı engeller.
+  if (sessionSecret.length < 32) {
+    throw new Error("SESSION_SECRET prod'da en az 32 karakter olmalı (önerilen 64+).");
+  }
+  // Tam eşleşme denylist — substring kontrolü false-positive üretiyordu (random 64-char
+  // secret tesadüfen "test" içerebilir). Bilinen default/örnek değerlerin tam eşleşmesi yeter.
+  const WEAK_EXACT = new Set([
+    "dev", "development", "test", "secret", "changeme", "example",
+    "password", "admin", "default", "12345678901234567890123456789012",
+    "your-secret-here", "supersecret", "mysecret",
+  ]);
+  if (WEAK_EXACT.has(sessionSecret.toLowerCase().trim())) {
+    throw new Error("SESSION_SECRET prod'da bilinen zayıf/default değer olamaz.");
+  }
+  // Tek karakterli/tekrarlı düşük entropi tespiti (örn. "aaaa...aaaa")
+  const uniqueChars = new Set(sessionSecret).size;
+  if (uniqueChars < 10) {
+    throw new Error(`SESSION_SECRET düşük entropili görünüyor (yalnızca ${uniqueChars} farklı karakter). Rastgele üretin.`);
+  }
 }
 
 app.use(session({
@@ -97,10 +179,12 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: IS_PRODUCTION,   // prod'da HTTPS zorunlu
-    httpOnly: true,           // JS ile erişilemez
+    secure: IS_PRODUCTION,            // prod'da HTTPS zorunlu
+    httpOnly: true,                   // JS ile erişilemez
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    sameSite: IS_PRODUCTION ? "strict" : "lax",
+    // Tenant subdomain'leri arasında auth flow'un (şifre sıfırlama linki, mail doğrulama)
+    // bozulmaması için "lax". "strict" cross-site GET'lerinde cookie göndermez.
+    sameSite: "lax",
   },
 }));
 
