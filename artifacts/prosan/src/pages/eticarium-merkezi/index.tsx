@@ -305,14 +305,23 @@ function ProviderHealthSection() {
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-slate-600" />
             <h3 className="font-semibold text-base text-slate-900">Pazaryeri Sağlık Durumu</h3>
-            {data && (
-              <Badge
-                variant={data.healthy === data.count && data.count > 0 ? "default" : data.count === 0 ? "outline" : "destructive"}
-                className={data.healthy === data.count && data.count > 0 ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" : ""}
-              >
-                {data.healthy}/{data.count} sağlıklı
-              </Badge>
-            )}
+            {data && (() => {
+              const allOk = data.healthy === data.count && data.count > 0;
+              const noneOk = data.count > 0 && data.healthy === 0;
+              const partial = data.count > 0 && !allOk && !noneOk;
+              const tone = data.count === 0
+                ? "bg-slate-100 text-slate-600 border border-slate-200"
+                : allOk
+                  ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                  : noneOk
+                    ? "bg-rose-100 text-rose-700 border border-rose-200"
+                    : "bg-amber-100 text-amber-700 border border-amber-200";
+              return (
+                <Badge variant="outline" className={`${tone} hover:${tone}`}>
+                  {data.healthy}/{data.count} sağlıklı{partial ? "" : ""}
+                </Badge>
+              );
+            })()}
           </div>
           <Button size="sm" variant="outline" onClick={refresh} disabled={isFetching} data-testid="refresh-provider-health">
             {isFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <RefreshCcw className="h-3.5 w-3.5 mr-1.5" />}

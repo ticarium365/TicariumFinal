@@ -385,10 +385,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   return (
                     <Link key={item.href} href={item.href}>
                       <div
-                        className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-all cursor-pointer text-sm ${
+                        className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-all cursor-pointer text-sm border-l-2 ${
                           active
-                            ? "bg-indigo-50 text-indigo-700 font-semibold"
-                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                            ? "bg-slate-100 text-indigo-700 font-semibold border-indigo-500"
+                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-transparent"
                         }`}
                         onClick={() => setIsOpen(false)}
                         data-testid={`nav-link-${item.href.replace(/\//g, "-").replace(/^-/, "")}`}

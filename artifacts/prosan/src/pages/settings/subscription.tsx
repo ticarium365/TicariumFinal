@@ -35,16 +35,16 @@ function usageBar(current: number, max: number) {
 
 function planIcon(slug: string) {
   if (slug === "free") return <Zap className="h-5 w-5 text-muted-foreground" />;
-  if (slug === "starter") return <Star className="h-5 w-5 text-indigo-400" />;
-  if (slug === "pro") return <TrendingUp className="h-5 w-5 text-purple-500" />;
-  return <Crown className="h-5 w-5 text-amber-500" />;
+  if (slug === "starter") return <Star className="h-5 w-5 text-indigo-500" />;
+  if (slug === "pro") return <TrendingUp className="h-5 w-5 text-teal-500" />;
+  return <Crown className="h-5 w-5 text-indigo-600" />;
 }
 
 function planColor(slug: string) {
-  if (slug === "free") return "bg-muted border-border";
-  if (slug === "starter") return "bg-indigo-500/10 border-indigo-500/20";
-  if (slug === "pro") return "bg-purple-500/10 border-purple-500/20 ring-2 ring-purple-300";
-  return "bg-amber-500/10 border-amber-500/20";
+  if (slug === "free") return "bg-slate-50 border-slate-200";
+  if (slug === "starter") return "bg-indigo-50 border-indigo-200";
+  if (slug === "pro") return "bg-teal-50 border-teal-200 ring-2 ring-teal-200";
+  return "bg-gradient-to-br from-indigo-50 to-teal-50 border-indigo-200";
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
