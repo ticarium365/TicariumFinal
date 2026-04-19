@@ -14,10 +14,14 @@ import {
 } from "@workspace/db";
 import { and, eq, gte, lte, sql, desc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
-// Sprint 65 — canonical finance ledger
+// Sprint 65 — canonical finance ledger + forecast engine + budget alerts
 import {
-  getRevenueTotal, getExpenseTotal, getExpenseByCategory,
+  getRevenueTotal, getExpenseByCategory,
 } from "../services/finance/ledger.js";
+import {
+  forecastRevenue, forecastExpenseByCategory, forecastCashflow,
+} from "../services/finance/forecast.js";
+import { computeBudgetAlerts } from "../services/finance/budget-alerts.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -170,41 +174,54 @@ router.get("/comparison", async (req, res) => {
   });
 });
 
-// ─── CIRO TAHMİNİ — son N ay ortalama trend ───
+// ─── CIRO TAHMİNİ — son N ay ortalama trend (forecast engine) ───
 router.get("/forecast/revenue", async (req, res) => {
   const companyId = req.companyId!;
-  const basis = String(req.query.basis || "trend3"); // trend3 | trend6 | trend12
-  const months = basis === "trend12" ? 12 : basis === "trend6" ? 6 : 3;
-  const targetPeriod = String(req.query.period || nextPeriod(currentPeriod()));
-
-  const buckets: { period: string; revenue: number }[] = [];
-  for (let i = months; i >= 1; i--) {
-    const p = shiftPeriod(targetPeriod, -i);
-    const [from, to] = periodToRange(p)!;
-    const [agg] = await db.select({
-      v: sql<number>`COALESCE(SUM(${salesTable.totalPrice}), 0)`,
-    }).from(salesTable).where(and(
-      eq(salesTable.companyId, companyId),
-      eq(salesTable.returned, false),
-      gte(salesTable.createdAt, from),
-      lte(salesTable.createdAt, to),
-    ));
-    buckets.push({ period: p, revenue: Number(agg?.v || 0) });
+  const basisRaw = String(req.query.basis || "trend3");
+  const basis = (basisRaw === "trend12" ? "trend12" : basisRaw === "trend6" ? "trend6" : "trend3") as "trend3" | "trend6" | "trend12";
+  const period = req.query.period ? String(req.query.period) : undefined;
+  if (period !== undefined && !/^\d{4}-\d{2}$/.test(period)) {
+    return res.status(400).json({ error: "period YYYY-MM olmalı" });
   }
-  // Ağırlıklı ortalama (yakın aylar daha ağır)
-  let weighted = 0, weightSum = 0;
-  buckets.forEach((b, i) => {
-    const w = i + 1;
-    weighted += b.revenue * w;
-    weightSum += w;
-  });
-  const forecast = weightSum > 0 ? weighted / weightSum : 0;
+  const result = await forecastRevenue(companyId, { basis, period });
+  res.json(result);
+});
 
+// ─── KATEGORİ BAZINDA GİDER TAHMİNİ — yeni ───
+router.get("/forecast/expenses", async (req, res) => {
+  const companyId = req.companyId!;
+  const months = req.query.months ? Math.min(12, Math.max(2, Number(req.query.months))) : 6;
+  const period = req.query.period ? String(req.query.period) : undefined;
+  if (period !== undefined && !/^\d{4}-\d{2}$/.test(period)) {
+    return res.status(400).json({ error: "period YYYY-MM olmalı" });
+  }
+  const result = await forecastExpenseByCategory(companyId, { months, period });
+  res.json(result);
+});
+
+// ─── BÜTÇE SAPMA UYARILARI — yeni ───
+router.get("/alerts", async (req, res) => {
+  const companyId = req.companyId!;
+  const period = String(req.query.period || currentPeriod());
+  if (!/^\d{4}-\d{2}$/.test(period)) return res.status(400).json({ error: "period YYYY-MM" });
+  const warningPct = req.query.warningPct ? Number(req.query.warningPct) : 20;
+  const criticalPct = req.query.criticalPct ? Number(req.query.criticalPct) : 50;
+  if (!Number.isFinite(warningPct) || warningPct <= 0) {
+    return res.status(400).json({ error: "warningPct > 0 olmalı" });
+  }
+  if (!Number.isFinite(criticalPct) || criticalPct < warningPct) {
+    return res.status(400).json({ error: "criticalPct >= warningPct olmalı" });
+  }
+  const alerts = await computeBudgetAlerts(companyId, { period, warningPct, criticalPct });
   res.json({
-    targetPeriod, basis, sampleMonths: months,
-    history: buckets.map((b) => ({ ...b, revenue: r2(b.revenue) })),
-    forecast: r2(forecast),
-    avg: r2(buckets.reduce((s, b) => s + b.revenue, 0) / Math.max(1, buckets.length)),
+    period,
+    counts: {
+      total: alerts.length,
+      critical: alerts.filter((a) => a.severity === "critical").length,
+      warning: alerts.filter((a) => a.severity === "warning").length,
+      info: alerts.filter((a) => a.severity === "info").length,
+    },
+    alerts,
   });
 });
 
@@ -223,56 +240,12 @@ router.post("/forecast/revenue/save", requireWriter, async (req, res) => {
   res.json(row);
 });
 
-// ─── NAKİT AKIŞI TAHMİNİ — sonraki 8 hafta ───
+// ─── NAKİT AKIŞI TAHMİNİ — sonraki 8 hafta (forecast engine) ───
 router.get("/forecast/cashflow", async (req, res) => {
   const companyId = req.companyId!;
-  const weeks = Math.min(16, Math.max(2, Number(req.query.weeks ?? 8)));
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - start.getDay()); // bu haftanın başı (Pazar)
-
-  // Açık alacaklar (müşteriler bakiyesi pozitifse alacak)
-  const [arAgg] = await db.select({
-    open: sql<number>`COALESCE(SUM(GREATEST(${customersTable.currentBalance}, 0)), 0)`,
-  }).from(customersTable).where(eq(customersTable.companyId, companyId));
-  const ar = Number(arAgg?.open || 0);
-
-  // Açık borçlar (tedarikçi bakiyesi pozitifse borç)
-  const [apAgg] = await db.select({
-    open: sql<number>`COALESCE(SUM(GREATEST(${suppliersTable.currentBalance}, 0)), 0)`,
-  }).from(suppliersTable).where(eq(suppliersTable.companyId, companyId));
-  const ap = Number(apAgg?.open || 0);
-
-  // Geçmiş 90 gün ortalaması — haftalık trend için (canonical ledger)
-  const since = new Date(); since.setDate(since.getDate() - 90);
-  const now = new Date();
-  const sales90 = await getRevenueTotal(companyId, { from: since, to: now });
-  const exp90 = await getExpenseTotal(companyId, { from: since, to: now });
-  const weeklySales = sales90 / 13; // ~13 hafta
-  const weeklyExp = exp90 / 13;
-
-  const buckets: any[] = [];
-  for (let w = 0; w < weeks; w++) {
-    const ws = new Date(start); ws.setDate(ws.getDate() + w * 7);
-    // İlk hafta açık alacak/borçların büyük kısmı toplanır varsayımı
-    const weight = w === 0 ? 0.4 : w === 1 ? 0.25 : w === 2 ? 0.15 : (0.2 / Math.max(1, weeks - 3));
-    const expectedIn = r2(weeklySales + ar * weight);
-    const expectedOut = r2(weeklyExp + ap * weight);
-    buckets.push({
-      weekStart: ws.toISOString().slice(0, 10),
-      expectedIn,
-      expectedOut,
-      net: r2(expectedIn - expectedOut),
-    });
-  }
-
-  res.json({
-    openAR: r2(ar),
-    openAP: r2(ap),
-    weeklyAvgIn: r2(weeklySales),
-    weeklyAvgOut: r2(weeklyExp),
-    weeks: buckets,
-  });
+  const weeks = req.query.weeks ? Number(req.query.weeks) : 8;
+  const result = await forecastCashflow(companyId, { weeks });
+  res.json(result);
 });
 
 function r2(n: number) { return Math.round(Number(n) * 100) / 100; }

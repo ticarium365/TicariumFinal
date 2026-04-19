@@ -7,7 +7,9 @@
 import { db, syncJobsTable, marketplaceOrdersTable } from "@workspace/db";
 import { and, eq, lte, sql } from "drizzle-orm";
 import { getProviderForAccount, logSync } from "./factory.js";
-import type { IncomingOrder } from "./types.js";
+import {
+  RateLimitError, PermanentProviderError, type IncomingOrder,
+} from "./types.js";
 
 const POLL_INTERVAL_MS = 5000;
 const MAX_PARALLEL = 3;
@@ -175,21 +177,38 @@ async function processOne(): Promise<boolean> {
       payload: result,
     });
   } catch (e: any) {
-    const canRetry = (job.attemptCount || 0) < (job.maxAttempts || 3);
+    // Hata sınıfı tanı: Permanent → retry yok; RateLimit → retryAfterMs penceresi;
+    // diğer (Transient veya bilinmeyen) → exponential backoff (attempt^2 dakika).
+    const isPermanent = e?.isPermanent === true || e instanceof PermanentProviderError;
+    const isRateLimit = e?.isRateLimit === true || e instanceof RateLimitError;
+    const canRetry = !isPermanent && (job.attemptCount || 0) < (job.maxAttempts || 3);
+
+    let nextDelayMs: number;
+    if (isRateLimit) {
+      // Provider'ın söylediği bekleme süresine en az 1 sn ekle (jitter)
+      nextDelayMs = Math.max(1000, Number(e?.retryAfterMs || 60_000)) + 1000;
+    } else {
+      nextDelayMs = (job.attemptCount || 1) ** 2 * 60_000;
+    }
+
+    const failureLabel = isPermanent ? "kalıcı" : isRateLimit ? "rate-limit" : "geçici";
+
     await db.update(syncJobsTable).set({
       status: canRetry ? "queued" : "failed",
       completedAt: canRetry ? null : new Date(),
-      lastError: e?.message || String(e),
-      // Exponential backoff: attempt^2 dakika
-      scheduledAt: canRetry ? new Date(Date.now() + (job.attemptCount || 1) ** 2 * 60_000) : new Date(),
+      lastError: `[${failureLabel}] ${e?.message || String(e)}`,
+      scheduledAt: canRetry ? new Date(Date.now() + nextDelayMs) : new Date(),
     }).where(eq(syncJobsTable.id, job.id));
 
     await logSync({
       companyId: job.companyId, accountId: job.accountId, jobId: job.id,
       operation: job.jobType, status: "failed", level: "error",
       durationMs: Date.now() - start, itemsFailed: 1,
-      message: `Job #${job.id} hata: ${e?.message}`,
-      errorPayload: { stack: e?.stack, message: e?.message },
+      message: `Job #${job.id} hata (${failureLabel}): ${e?.message}`,
+      errorPayload: {
+        stack: e?.stack, message: e?.message,
+        category: failureLabel, nextDelayMs: canRetry ? nextDelayMs : null,
+      },
     });
   }
   return true;

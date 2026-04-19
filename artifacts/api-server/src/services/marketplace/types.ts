@@ -95,6 +95,39 @@ export interface MarketplaceProvider {
   pullProducts?(opts?: { since?: Date; limit?: number }): Promise<MarketplaceProductPayload[]>;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Provider hata türleri
+// Provider implementasyonları hata fırlatırken bu yardımcı sınıfları kullanırsa
+// worker özel davranabilir (rate-limit için backoff penceresi gibi).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Provider rate-limit'e takıldığında. Worker `retryAfterMs` kadar bekleyip kuyruğa geri koyar. */
+export class RateLimitError extends Error {
+  readonly isRateLimit = true;
+  constructor(public readonly retryAfterMs: number, message?: string) {
+    super(message || `Rate limit aşıldı, ${Math.round(retryAfterMs / 1000)} sn sonra tekrar denenecek`);
+    this.name = "RateLimitError";
+  }
+}
+
+/** Geçici/iletişim hatası — provider tarafı geçici olarak ulaşılamıyor. */
+export class TransientProviderError extends Error {
+  readonly isTransient = true;
+  constructor(message: string) {
+    super(message);
+    this.name = "TransientProviderError";
+  }
+}
+
+/** Kalıcı hata — retry yapılmamalı (yanlış config, geçersiz veri vb.). */
+export class PermanentProviderError extends Error {
+  readonly isPermanent = true;
+  constructor(message: string) {
+    super(message);
+    this.name = "PermanentProviderError";
+  }
+}
+
 // Pricing engine yardımcıları
 export function applyPricingRule(basePrice: number, rule: {
   type: string; value: number; roundTo?: number | null; minPrice?: number | null; maxPrice?: number | null;

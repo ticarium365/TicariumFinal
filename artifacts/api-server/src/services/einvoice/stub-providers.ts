@@ -3,6 +3,7 @@ import {
   EInvoiceCreateResult, EInvoiceSendResult, EInvoiceCancelResult,
   IncomingInvoice, ProviderHealth,
 } from "./types.js";
+import { buildInvoiceXml } from "./ubl-tr-builder.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Gerçek connector'lar — şu an stub. Kimlik bilgileri geldiğinde her provider
@@ -151,19 +152,31 @@ abstract class BaseHttpStubProvider implements EInvoiceProvider {
     }
   }
 
-  // CRUD operasyonları — her provider gerçek endpoint mapping'i ile override eder.
-  // İskelet: missing config kontrolü + http() çağrısı + response normalization.
-  async createInvoice(_p: EInvoiceCreatePayload): Promise<EInvoiceCreateResult> {
-    throw new Error(`${this.displayName} createInvoice henüz uygulanmadı. Endpoint mapping ve UBL-TR XML üretimi eklenmeli — HTTP iskeleti hazır.`);
+  // CRUD operasyonları:
+  //   createInvoice → UBL-TR 1.2 XML üretir + draft döner (transport API key gerektirir).
+  //   sendInvoice/cancelInvoice → API key gelene kadar transport throw.
+  //   getIncomingInvoices → boş (gerçek polling'i provider override eder).
+  async createInvoice(payload: EInvoiceCreatePayload): Promise<EInvoiceCreateResult> {
+    const built = buildInvoiceXml(payload);
+    return {
+      externalId: built.ettn,
+      externalNo: built.documentNumber,
+      status: "draft",
+      raw: { xml: built.xml, totals: built.totals, generatedBy: "ubl-tr-builder", note: `${this.displayName} draft — transport API key bekliyor.` },
+    };
   }
   async sendInvoice(_id: string): Promise<EInvoiceSendResult> {
-    throw new Error(`${this.displayName} sendInvoice henüz uygulanmadı.`);
+    throw new Error(`${this.displayName} sendInvoice transport'u henüz uygulanmadı (UBL-TR XML hazır; gerçek API key bekleniyor).`);
   }
   async cancelInvoice(_id: string): Promise<EInvoiceCancelResult> {
-    throw new Error(`${this.displayName} cancelInvoice henüz uygulanmadı.`);
+    throw new Error(`${this.displayName} cancelInvoice transport'u henüz uygulanmadı.`);
   }
   async getIncomingInvoices(): Promise<IncomingInvoice[]> {
     return [];
+  }
+  async getInvoiceXml(_externalId: string): Promise<{ xml: string } | null> {
+    // Cache'lemiyoruz — DB'de saklanan raw.xml frontend tarafından okunabilir.
+    return null;
   }
 }
 
