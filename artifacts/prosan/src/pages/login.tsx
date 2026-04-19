@@ -285,24 +285,9 @@ export default function Login() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password" style={{ color: "#334155", fontWeight: 500 }}>
-                      Şifre
-                    </Label>
-                    <Link
-                      href="/sifremi-unuttum"
-                      className="text-xs font-semibold hover:underline"
-                      style={{
-                        background: "linear-gradient(135deg,#2563eb,#0EA5A4)",
-                        WebkitBackgroundClip: "text",
-                        backgroundClip: "text",
-                        color: "transparent",
-                      }}
-                      data-testid="link-forgot-password"
-                    >
-                      Şifremi unuttum
-                    </Link>
-                  </div>
+                  <Label htmlFor="password" style={{ color: "#334155", fontWeight: 500 }}>
+                    Şifre
+                  </Label>
                   <div className="relative">
                     <Lock
                       className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4"
@@ -335,6 +320,21 @@ export default function Login() {
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
+                  </div>
+                  <div className="flex justify-end pt-1">
+                    <Link
+                      href="/sifremi-unuttum"
+                      className="text-xs font-semibold hover:underline"
+                      style={{
+                        background: "linear-gradient(135deg,#2563eb,#0EA5A4)",
+                        WebkitBackgroundClip: "text",
+                        backgroundClip: "text",
+                        color: "transparent",
+                      }}
+                      data-testid="link-forgot-password"
+                    >
+                      Şifremi unuttum
+                    </Link>
                   </div>
                 </div>
 
