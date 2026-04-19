@@ -197,3 +197,15 @@ id = "XI4GQB6GsBWF1JziUDskX"
 uri = "file://screenshots/sprint83-dashboard.jpeg"
 type = "image"
 title = "Sprint 83 - Yeni 6 grupluk menü + arama barı + hızlı işlem"
+
+[[outputs]]
+id = "BV7f3m9Hp5O9V25-bYCtf"
+uri = "file://outputs/Ticarium365-Master-Pitch.docx"
+type = "word_document"
+title = "Ticarium365 — Master Pitch (Taslak)"
+
+[[outputs]]
+id = "8Lsq2ApizM3RktHDrBgf9"
+uri = "file://outputs/Ticarium365-Yatirimci-Ozeti.docx"
+type = "word_document"
+title = "Ticarium365 — Yatırımcı Özeti"
