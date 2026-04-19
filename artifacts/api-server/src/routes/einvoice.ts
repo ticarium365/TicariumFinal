@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
-import { db, einvoiceSettingsTable, einvoiceOutboxTable, einvoiceInboxTable, einvoiceEventsTable } from "@workspace/db";
-import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { db, einvoiceSettingsTable, einvoiceOutboxTable, einvoiceInboxTable, einvoiceEventsTable, salesTable, customersTable, companiesTable } from "@workspace/db";
+import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { encryptSecrets, isSensitiveKey } from "../lib/secret-crypto.js";
 
@@ -261,6 +261,164 @@ router.post("/outbox", requireWriter, async (req: Request, res: Response) => {
         updatedAt: new Date(),
       }).where(eq(einvoiceOutboxTable.id, reservedRow.id));
     }
+    res.status(500).json({ error: "create_failed", detail: e?.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sprint 62 — Satıştan otomatik fatura oluşturma (POS köprüsü)
+// Aynı müşteriye ait bir veya birden çok satış satırını birleştirip e-fatura
+// taslağı üretir. Sender bilgileri einvoice_settings.config'ten okunur.
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/from-sales", requireWriter, async (req: Request, res: Response) => {
+  const companyId = req.companyId!;
+  const userId = req.session.user!.id;
+  const { saleIds, scenario, profile, invoiceType, notes } = req.body || {};
+
+  if (!Array.isArray(saleIds) || saleIds.length === 0) {
+    return res.status(400).json({ error: "saleIds dizisi gerekli" });
+  }
+  const ids = saleIds.map((n: any) => Number(n)).filter((n) => Number.isFinite(n));
+  if (ids.length === 0) {
+    return res.status(400).json({ error: "Geçerli saleId yok" });
+  }
+
+  // 1) Satışları yükle (tenant scoped)
+  const sales = await db.select().from(salesTable)
+    .where(and(eq(salesTable.companyId, companyId), inArray(salesTable.id, ids)));
+  if (sales.length === 0) {
+    return res.status(404).json({ error: "Satış bulunamadı" });
+  }
+  // Tüm satışlar aynı müşteriye ait olmalı
+  const customerIds = new Set(sales.map((s) => s.customerId).filter((c) => c !== null && c !== undefined));
+  if (customerIds.size > 1) {
+    return res.status(400).json({ error: "Tüm satışlar aynı müşteriye ait olmalı" });
+  }
+  const customerId = sales[0].customerId;
+
+  // 2) Müşteri / Şirket / Provider ayarları paralel
+  const [customerRow, companyRow, providerSetup] = await Promise.all([
+    customerId
+      ? db.select().from(customersTable).where(and(eq(customersTable.id, customerId), eq(customersTable.companyId, companyId))).limit(1).then((r) => r[0] || null)
+      : Promise.resolve(null),
+    db.select().from(companiesTable).where(eq(companiesTable.id, companyId)).limit(1).then((r) => r[0] || null),
+    getProviderForCompany(companyId).catch((e: any) => ({ error: e?.message }) as any),
+  ]);
+
+  if ("error" in providerSetup) {
+    return res.status(500).json({ error: "provider_unavailable", detail: (providerSetup as any).error });
+  }
+  const { provider: providerInst, settings } = providerSetup as Awaited<ReturnType<typeof getProviderForCompany>>;
+  const cfg = (settings.config as Record<string, any>) || {};
+
+  if (!customerRow) {
+    return res.status(400).json({ error: "Müşteri seçilmemiş satıştan e-fatura kesilemez" });
+  }
+  if (!customerRow.taxNumber) {
+    return res.status(400).json({ error: "Müşterinin VKN/TCKN bilgisi eksik" });
+  }
+
+  // 3) Sender (kendi şirketimiz) — config'ten oku, eksikse hata
+  const senderVkn = cfg.senderVkn as string | undefined;
+  if (!senderVkn) {
+    return res.status(400).json({ error: "Gönderici VKN tanımsız (Ayarlar → E-Fatura → senderVkn)" });
+  }
+  const sender = {
+    vkn: senderVkn,
+    alias: (settings.defaultSenderAlias as string | null) || (cfg.senderAlias as string | null) || null,
+    name: (cfg.senderName as string | undefined) || companyRow?.name || "Şirketim",
+    taxOffice: (cfg.senderTaxOffice as string | null) || null,
+    address: (cfg.senderAddress as string | null) || null,
+    city: (cfg.senderCity as string | null) || null,
+    district: (cfg.senderDistrict as string | null) || null,
+    country: "TR",
+    email: (cfg.senderEmail as string | null) || null,
+    phone: (cfg.senderPhone as string | null) || null,
+  };
+
+  // 4) Receiver — müşteriden
+  const receiver = {
+    vkn: customerRow.taxNumber,
+    alias: null,
+    name: customerRow.name,
+    taxOffice: customerRow.taxOffice || null,
+    address: customerRow.address || null,
+    country: "TR",
+    email: customerRow.email || null,
+    phone: customerRow.phone || null,
+  };
+
+  // 5) Lines — satışlardan (KDV oranı satışta yok → varsayılan %20; ileride product.vatRate)
+  const defaultVatRate = Number(cfg.defaultVatRate ?? 20);
+  const lines = sales.map((s) => ({
+    productCode: s.productCode,
+    name: s.productName,
+    quantity: s.quantity,
+    unitCode: "C62",
+    unitPrice: s.unitPrice,
+    vatRate: defaultVatRate,
+    discountAmount: 0,
+    description: null,
+  }));
+
+  // 6) Provider'a gönder + outbox'a yaz
+  const totals = lines.reduce((acc, l) => {
+    const sub = l.quantity * l.unitPrice;
+    const vat = sub * (l.vatRate / 100);
+    acc.total += sub + vat;
+    acc.tax += vat;
+    return acc;
+  }, { total: 0, tax: 0 });
+
+  try {
+    const payload: EInvoiceCreatePayload = {
+      invoiceType: invoiceType || "SATIS",
+      profile: profile || (settings as any).defaultProfile || "TICARIFATURA",
+      scenario: scenario || "EFATURA",
+      invoiceDate: new Date(),
+      currency: "TRY",
+      documentNumber: null,
+      notes: notes || [`Satış ID: ${ids.join(", ")}`],
+      sender,
+      receiver,
+      lines,
+    };
+    const result = await providerInst.createInvoice(payload);
+
+    const [row] = await db.insert(einvoiceOutboxTable).values({
+      companyId,
+      saleId: ids[0],
+      documentNumber: null,
+      receiverVkn: receiver.vkn || null,
+      receiverName: receiver.name,
+      receiverAlias: receiver.alias || null,
+      receiverEmail: receiver.email || null,
+      invoiceType: payload.invoiceType,
+      profile: payload.profile,
+      scenario: payload.scenario,
+      invoiceDate: payload.invoiceDate,
+      totalAmount: Math.round(totals.total * 100) / 100,
+      taxAmount: Math.round(totals.tax * 100) / 100,
+      currency: "TRY",
+      provider: settings.provider,
+      externalId: result.externalId,
+      externalNo: result.externalNo || null,
+      status: result.status || "draft",
+      payload,
+      lastResponse: result.raw || null,
+      attemptCount: 0,
+      createdBy: userId,
+      idempotencyKey: null,
+    }).returning();
+
+    await logEvent({
+      companyId, provider: settings.provider, event: "invoice_created_from_sale",
+      outboxId: row.id,
+      message: `Outbox #${row.id} satış #${ids.join(",")} köprüsünden üretildi (ETTN ${result.externalId})`,
+    });
+    res.status(201).json(row);
+  } catch (e: any) {
+    console.error("[einvoice/from-sales] create_failed:", e);
     res.status(500).json({ error: "create_failed", detail: e?.message });
   }
 });
