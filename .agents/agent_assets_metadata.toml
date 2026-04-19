@@ -209,3 +209,9 @@ id = "8Lsq2ApizM3RktHDrBgf9"
 uri = "file://outputs/Ticarium365-Yatirimci-Ozeti.docx"
 type = "word_document"
 title = "Ticarium365 — Yatırımcı Özeti"
+
+[[outputs]]
+id = "irxX18j5nH7wKzlrQif8b"
+uri = "file://outputs/Ticarium365-Yatirimci-Sunumu.docx"
+type = "word_document"
+title = "Ticarium365 — Yatırımcı Sunumu (10 Slayt)"
