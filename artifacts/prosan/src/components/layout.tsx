@@ -422,12 +422,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </SheetTrigger>
 
             <SheetContent side="left" className="w-72 p-0 bg-slate-50">
-              <SheetHeader className="p-4 border-b border-slate-200 text-left bg-white">
-                <SheetTitle className="text-xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "var(--font-display)" }}>{companyName}</SheetTitle>
-                <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest flex items-center gap-1 text-slate-500">
-                  <span>powered by</span>
-                  <span className="text-slate-800">Ticarium<span className="t365-brand-gradient font-extrabold">365</span></span>
-                </p>
+              <SheetHeader className="p-5 border-b border-slate-200 text-left bg-white">
+                <SheetTitle
+                  className="text-2xl font-extrabold tracking-tight"
+                  style={{ fontFamily: "var(--font-display)" }}
+                >
+                  <span className="t365-brand-gradient">Ticarium365</span>
+                </SheetTitle>
               </SheetHeader>
               <div className="p-3 flex-1 overflow-y-auto">
                 <TrialBanner />
@@ -459,11 +460,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col h-screen sticky top-0 bg-slate-50 border-r border-slate-200">
         <div className="px-5 py-5 border-b border-slate-200 bg-white">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "var(--font-display)" }}>{companyName}</h1>
-          <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest flex items-center gap-1 text-slate-500">
-            <span>powered by</span>
-            <span className="text-slate-800">Ticarium<span className="t365-brand-gradient font-extrabold">365</span></span>
-          </p>
+          <h1
+            className="text-2xl font-extrabold tracking-tight"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            <span className="t365-brand-gradient">Ticarium365</span>
+          </h1>
         </div>
 
         <div className="flex-1 overflow-y-auto p-3">
