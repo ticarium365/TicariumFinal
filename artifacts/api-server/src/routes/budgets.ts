@@ -14,6 +14,10 @@ import {
 } from "@workspace/db";
 import { and, eq, gte, lte, sql, desc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+// Sprint 65 — canonical finance ledger
+import {
+  getRevenueTotal, getExpenseTotal, getExpenseByCategory,
+} from "../services/finance/ledger.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -121,29 +125,15 @@ router.get("/comparison", async (req, res) => {
     .leftJoin(expenseCategoriesTable, eq(expenseCategoriesTable.id, budgetsTable.categoryId))
     .where(and(eq(budgetsTable.companyId, companyId), eq(budgetsTable.period, period)));
 
-  // Gerçekleşen — gider kategorileri
-  const actualExpense = await db.select({
-    categoryId: expensesTable.categoryId,
-    total: sql<number>`COALESCE(SUM(${expensesTable.amount}), 0)`,
-  }).from(expensesTable).where(and(
-    eq(expensesTable.companyId, companyId),
-    gte(expensesTable.expenseDate, from),
-    lte(expensesTable.expenseDate, to),
-  )).groupBy(expensesTable.categoryId);
+  // Gerçekleşen — gider kategorileri (canonical ledger)
+  const actualExpense = (await getExpenseByCategory(companyId, { from, to }))
+    .map(r => ({ categoryId: r.categoryId, total: r.total }));
 
   const actualMap = new Map<number | null, number>();
   for (const r of actualExpense) actualMap.set(r.categoryId, Number(r.total || 0));
 
-  // Gerçekleşen — toplam ciro (revenue scope için)
-  const [revAgg] = await db.select({
-    revenue: sql<number>`COALESCE(SUM(${salesTable.totalPrice}), 0)`,
-  }).from(salesTable).where(and(
-    eq(salesTable.companyId, companyId),
-    eq(salesTable.returned, false),
-    gte(salesTable.createdAt, from),
-    lte(salesTable.createdAt, to),
-  ));
-  const totalRevenue = Number(revAgg?.revenue || 0);
+  // Gerçekleşen — toplam ciro (canonical ledger)
+  const totalRevenue = await getRevenueTotal(companyId, { from, to });
 
   const lines = planned.map((p) => {
     const budget = Number(p.budgetAmount || 0);
@@ -163,9 +153,9 @@ router.get("/comparison", async (req, res) => {
 
   // Bütçesiz ama harcama yapılan kategoriler — uyarı için
   const plannedCatIds = new Set(planned.filter((p) => p.scope === "expense").map((p) => p.categoryId));
-  const orphanCats = actualExpense.filter((a) => !plannedCatIds.has(a.categoryId)).map((a) => ({
-    categoryId: a.categoryId, actual: r2(Number(a.total || 0)),
-  }));
+  const orphanCats = actualExpense
+    .filter((a) => !plannedCatIds.has(a.categoryId ?? null))
+    .map((a) => ({ categoryId: a.categoryId, actual: r2(Number(a.total || 0)) }));
 
   res.json({
     period,
@@ -253,23 +243,13 @@ router.get("/forecast/cashflow", async (req, res) => {
   }).from(suppliersTable).where(eq(suppliersTable.companyId, companyId));
   const ap = Number(apAgg?.open || 0);
 
-  // Geçmiş 90 gün ortalaması — haftalık trend için
+  // Geçmiş 90 gün ortalaması — haftalık trend için (canonical ledger)
   const since = new Date(); since.setDate(since.getDate() - 90);
-  const [sales90] = await db.select({
-    s: sql<number>`COALESCE(SUM(${salesTable.totalPrice}), 0)`,
-  }).from(salesTable).where(and(
-    eq(salesTable.companyId, companyId),
-    eq(salesTable.returned, false),
-    gte(salesTable.createdAt, since),
-  ));
-  const [exp90] = await db.select({
-    e: sql<number>`COALESCE(SUM(${expensesTable.amount}), 0)`,
-  }).from(expensesTable).where(and(
-    eq(expensesTable.companyId, companyId),
-    gte(expensesTable.expenseDate, since),
-  ));
-  const weeklySales = Number(sales90?.s || 0) / 13; // ~13 hafta
-  const weeklyExp = Number(exp90?.e || 0) / 13;
+  const now = new Date();
+  const sales90 = await getRevenueTotal(companyId, { from: since, to: now });
+  const exp90 = await getExpenseTotal(companyId, { from: since, to: now });
+  const weeklySales = sales90 / 13; // ~13 hafta
+  const weeklyExp = exp90 / 13;
 
   const buckets: any[] = [];
   for (let w = 0; w < weeks; w++) {

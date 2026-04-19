@@ -15,6 +15,8 @@ import { and, eq, desc, sql, gte, lte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import OpenAI from "openai";
 import * as XLSX from "xlsx";
+// Sprint 65 — canonical finance ledger
+import { getSummary as ledgerSummary, getExpenseByCategory } from "../services/finance/ledger.js";
 
 const router: IRouter = Router();
 router.use(requireAuth);
@@ -40,35 +42,16 @@ router.get("/summary", async (req: Request, res: Response) => {
       .where(and(eq(bankAccountsTable.companyId, companyId), eq(bankAccountsTable.isActive, true)));
     const totalBankBalance = accounts.reduce((s, a) => s + Number(a.currentBalance || 0), 0);
 
-    // Bu ay satış cirosu (sales — totalPrice)
-    const [monthSales] = await db.select({
-      sum: sql<string>`COALESCE(SUM(total_price), 0)`,
-      count: sql<number>`COUNT(*)::int`,
-    }).from(salesTable).where(and(
-      eq(salesTable.companyId, companyId),
-      gte(salesTable.createdAt, monthStart),
-      lte(salesTable.createdAt, monthEnd),
-    ));
-
-    // Bu ay alış (purchases — totalAmount)
-    const [monthPurchases] = await db.select({
-      sum: sql<string>`COALESCE(SUM(total_amount), 0)`,
-      count: sql<number>`COUNT(*)::int`,
-    }).from(purchasesTable).where(and(
-      eq(purchasesTable.companyId, companyId),
-      gte(purchasesTable.invoiceDate, monthStart),
-      lte(purchasesTable.invoiceDate, monthEnd),
-    ));
-
-    // Bu ay giderler
-    const [monthExpenses] = await db.select({
-      sum: sql<string>`COALESCE(SUM(amount), 0)`,
-      count: sql<number>`COUNT(*)::int`,
-    }).from(expensesTable).where(and(
-      eq(expensesTable.companyId, companyId),
-      gte(expensesTable.expenseDate, monthStart),
-      lte(expensesTable.expenseDate, monthEnd),
-    ));
+    // Sprint 65 — sales+purchases+expenses tek ledger çağrısıyla beslenir.
+    // includeReturnedSales=true → /summary geçmiş davranışıyla bire bir uyumlu (iadeler ciroya dahil).
+    const monthLedger = await ledgerSummary(companyId, {
+      from: monthStart, to: monthEnd,
+      sources: ["sales", "purchases", "expenses"],
+      includeReturnedSales: true,
+    });
+    const monthSales = { sum: String(monthLedger.bySource.sales.income), count: monthLedger.bySource.sales.count };
+    const monthPurchases = { sum: String(monthLedger.bySource.purchases.expense), count: monthLedger.bySource.purchases.count };
+    const monthExpenses = { sum: String(monthLedger.bySource.expenses.expense), count: monthLedger.bySource.expenses.count };
 
     // Bekleyen belgeler (yeni + onay bekliyor)
     const [pendingDocs] = await db.select({ c: sql<number>`COUNT(*)::int` })

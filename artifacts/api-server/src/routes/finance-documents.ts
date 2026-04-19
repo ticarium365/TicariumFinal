@@ -42,6 +42,10 @@ function maskSecret(value: string | null | undefined): string {
   return SECRET_MASK;
 }
 
+// Encrypt-at-rest (Sprint 70) — imapPassword AES-256-GCM ile saklanır.
+// IMAP poll worker decrypt etmek için secret-crypto.decryptString kullanmalı.
+import { encryptString as _encryptSecret } from "../lib/secret-crypto.js";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // META — sabit listeler (frontend dropdown'ları için)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -771,9 +775,13 @@ router.put("/mailbox/config", async (req: Request, res: Response) => {
       .where(eq(financeDocMailboxesTable.companyId, companyId))
       .limit(1);
 
-    // Maskeli geldiyse mevcut password'ü koru
+    // Maskeli geldiyse mevcut password'ü koru; yeni password ise encrypt-at-rest
     const finalPassword =
-      imapPassword === SECRET_MASK ? existing?.imapPassword ?? null : imapPassword ?? null;
+      imapPassword === SECRET_MASK
+        ? existing?.imapPassword ?? null
+        : imapPassword
+          ? _encryptSecret(String(imapPassword))
+          : null;
 
     const safeType = (FINANCE_DOC_TYPES as readonly string[]).includes(defaultDocType)
       ? defaultDocType

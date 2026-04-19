@@ -7,8 +7,44 @@ import {
 import { and, eq, desc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { Errors } from "../lib/errors.js";
+import { encryptSecrets, decryptSecrets } from "../lib/secret-crypto.js";
 
 const router = Router();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Credentials encryption helpers — Sprint 70 (security tightening)
+// ext_integrations.credentials JSON metni içindeki tüm sensitive alanlar
+// (apiKey, token, secret, password vb.) AES-256-GCM ile şifreli saklanır.
+// secret-crypto.encryptSecrets recursive olarak SENSITIVE_RE eşleşen
+// key'lerin string değerlerini "enc:v1:..." prefix'iyle şifreler.
+// ─────────────────────────────────────────────────────────────────────────────
+function encryptCredentialsForStorage(credentials: object | undefined): string {
+  if (!credentials) return "{}";
+  return JSON.stringify(encryptSecrets(credentials));
+}
+
+function decryptCredentials(credStr: string): Record<string, unknown> {
+  try {
+    const obj = JSON.parse(credStr) as Record<string, unknown>;
+    // Nested object/array içindeki tüm "enc:v1:" değerleri çözülür
+    return decryptSecrets(obj) as Record<string, unknown>;
+  } catch { return {}; }
+}
+
+// Internal: provider sync için decrypt helper (router dışı kod kullanır)
+export async function getDecryptedAccountingCredentials(integrationId: number, companyId: number) {
+  const [row] = await db.select().from(accountingIntegrationsTable)
+    .where(and(eq(accountingIntegrationsTable.id, integrationId), eq(accountingIntegrationsTable.companyId, companyId)));
+  if (!row) return null;
+  return decryptCredentials(row.credentials);
+}
+
+export async function getDecryptedEcommerceCredentials(integrationId: number, companyId: number) {
+  const [row] = await db.select().from(ecommerceIntegrationsTable)
+    .where(and(eq(ecommerceIntegrationsTable.id, integrationId), eq(ecommerceIntegrationsTable.companyId, companyId)));
+  if (!row) return null;
+  return decryptCredentials(row.credentials);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DESTEKLENEN SAĞLAYICILAR
@@ -86,7 +122,7 @@ router.post("/accounting", requireAuth, requireRole(["admin"]), async (req: Requ
       companyId: cid,
       provider,
       displayName: displayName?.trim() || null,
-      credentials: credentials ? JSON.stringify(credentials) : "{}",
+      credentials: encryptCredentialsForStorage(credentials),
       syncOptions: syncOptions ? JSON.stringify(syncOptions) : "{}",
       createdBy: uid,
     }).returning();
@@ -107,7 +143,7 @@ router.put("/accounting/:id", requireAuth, requireRole(["admin"]), async (req: R
 
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (displayName !== undefined) updateData.displayName = displayName.trim();
-    if (credentials !== undefined) updateData.credentials = JSON.stringify(credentials);
+    if (credentials !== undefined) updateData.credentials = encryptCredentialsForStorage(credentials);
     if (syncOptions !== undefined) updateData.syncOptions = JSON.stringify(syncOptions);
     if (isActive !== undefined) updateData.isActive = isActive;
 
@@ -234,7 +270,7 @@ router.post("/ecommerce", requireAuth, requireRole(["admin"]), async (req: Reque
       companyId: cid,
       platform,
       storeName: storeName.trim(),
-      credentials: credentials ? JSON.stringify(credentials) : "{}",
+      credentials: encryptCredentialsForStorage(credentials),
       syncOptions: syncOptions ? JSON.stringify(syncOptions) : "{}",
       createdBy: uid,
     }).returning();
@@ -255,7 +291,7 @@ router.put("/ecommerce/:id", requireAuth, requireRole(["admin"]), async (req: Re
 
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (storeName !== undefined) updateData.storeName = storeName.trim();
-    if (credentials !== undefined) updateData.credentials = JSON.stringify(credentials);
+    if (credentials !== undefined) updateData.credentials = encryptCredentialsForStorage(credentials);
     if (syncOptions !== undefined) updateData.syncOptions = JSON.stringify(syncOptions);
     if (isActive !== undefined) updateData.isActive = isActive;
 
@@ -349,13 +385,18 @@ router.get("/ecommerce/:id/logs", requireAuth, requireRole(["admin"]), async (re
 
 // ─────────────────────────────────────────────────────────────────────────────
 // YARDIMCI: Credentials maskeleme
+// Encrypted ("enc:v1:...") değerleri tamamen masklenir, eski plain text
+// (legacy satırlar) için de güvenli mask uygulanır.
 // ─────────────────────────────────────────────────────────────────────────────
+const ENC_PREFIX = "enc:v1:";
 function maskCredentials(credStr: string): object {
   try {
     const cred = JSON.parse(credStr) as Record<string, unknown>;
     const masked: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(cred)) {
-      if (typeof v === "string" && v.length > 4) {
+      if (typeof v === "string" && v.startsWith(ENC_PREFIX)) {
+        masked[k] = "••••••••••••";
+      } else if (typeof v === "string" && v.length > 4) {
         masked[k] = v.slice(0, 4) + "•".repeat(Math.min(v.length - 4, 12));
       } else {
         masked[k] = v;
