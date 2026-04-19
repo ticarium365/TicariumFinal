@@ -8,8 +8,10 @@ import {
   Radio, Package, Tag, Truck, Store, Megaphone, ShoppingBag, BarChart3,
   ArrowRight, Sparkles, Globe, Layers, Check, Zap, Brain, Share2, Wallet,
   CreditCard, ShieldCheck, TrendingDown, Building2, Rocket, LineChart,
-  Inbox, Clock, FileText, TrendingUp,
+  Inbox, Clock, FileText, TrendingUp, Activity, RefreshCcw, AlertTriangle,
+  CheckCircle2, XCircle, Loader2,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 type Overview = {
   kpis: { yayindakiUrun: number; bugunGelenTalep: number; buAySatis: number; bekleyenTeklif: number };
@@ -267,6 +269,104 @@ function ChannelCard({ icon: Icon, title, subtitle, urunSayisi, aktif, toplam, c
   );
 }
 
+type AccountHealth = {
+  count: number;
+  healthy: number;
+  results: Array<{
+    accountId: number;
+    name: string;
+    provider: string;
+    sandbox: boolean;
+    ok: boolean;
+    message: string;
+    checkedAt: string;
+  }>;
+};
+
+function ProviderHealthSection() {
+  const queryClient = useQueryClient();
+  const { data, isLoading, isFetching, error } = useQuery<AccountHealth>({
+    queryKey: ["marketplace-accounts-health"],
+    queryFn: async () => {
+      const r = await fetch("/api/marketplace/accounts/health", { credentials: "include" });
+      if (!r.ok) throw new Error(`health_check_failed_${r.status}`);
+      return r.json();
+    },
+    refetchInterval: 5 * 60_000, // 5 dk
+    staleTime: 60_000,
+  });
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["marketplace-accounts-health"] });
+
+  return (
+    <Card data-testid="provider-health-section">
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4 text-slate-600" />
+            <h3 className="font-semibold text-base text-slate-900">Pazaryeri Sağlık Durumu</h3>
+            {data && (
+              <Badge
+                variant={data.healthy === data.count && data.count > 0 ? "default" : data.count === 0 ? "outline" : "destructive"}
+                className={data.healthy === data.count && data.count > 0 ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" : ""}
+              >
+                {data.healthy}/{data.count} sağlıklı
+              </Badge>
+            )}
+          </div>
+          <Button size="sm" variant="outline" onClick={refresh} disabled={isFetching} data-testid="refresh-provider-health">
+            {isFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <RefreshCcw className="h-3.5 w-3.5 mr-1.5" />}
+            Yenile
+          </Button>
+        </div>
+
+        {isLoading ? (
+          <div className="text-sm text-slate-500 py-6 text-center">Sağlık durumu kontrol ediliyor…</div>
+        ) : error ? (
+          <div className="flex items-center gap-2 text-sm text-rose-600 py-3">
+            <AlertTriangle className="h-4 w-4" />
+            Sağlık taraması yapılamadı.
+          </div>
+        ) : !data || data.count === 0 ? (
+          <div className="text-sm text-slate-500 py-6 text-center">
+            Henüz bağlı bir pazaryeri hesabı yok. Kanal eklemek için
+            <button onClick={() => window.location.assign("/marketplace")} className="ml-1 text-blue-600 hover:underline">
+              Pazaryeri Hesapları
+            </button>
+            'na geçin.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {data.results.map((r) => (
+              <div
+                key={r.accountId}
+                className={`flex items-start gap-3 rounded-lg border p-3 ${r.ok ? "border-emerald-200 bg-emerald-50/40" : "border-rose-200 bg-rose-50/40"}`}
+                data-testid={`provider-health-row-${r.accountId}`}
+              >
+                {r.ok ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-rose-600 mt-0.5 shrink-0" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-sm text-slate-900 truncate">{r.name}</span>
+                    <Badge variant="outline" className="text-[10px] h-4 px-1 capitalize">{r.provider}</Badge>
+                    {r.sandbox && (
+                      <Badge variant="outline" className="text-[10px] h-4 px-1 bg-amber-50 text-amber-700 border-amber-200">SANDBOX</Badge>
+                    )}
+                  </div>
+                  <div className="text-xs text-slate-600 mt-0.5 line-clamp-2">{r.message}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function ETicariumMerkeziPage() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
@@ -418,6 +518,9 @@ export default function ETicariumMerkeziPage() {
           />
         </div>
       </div>
+
+      {/* Provider sağlık durumu (yalnızca yönetici) */}
+      {canManage && <ProviderHealthSection />}
 
       {/* Üç hizmet bölümü */}
       <div className="space-y-5">
