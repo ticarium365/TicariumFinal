@@ -10,61 +10,12 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PublicNav } from "@/components/public-nav";
+import { BrandLogo, BrandWordmark as SharedWordmark } from "@/components/brand-logo";
 
-// ─── Marka rozeti ────────────────────────────────────────────────────────────
-function BrandIcon({ size = 48 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" className="shrink-0">
-      <defs>
-        <linearGradient id="t365grad-login" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#818CF8" />
-          <stop offset="55%" stopColor="#6366F1" />
-          <stop offset="100%" stopColor="#22D3EE" />
-        </linearGradient>
-        <linearGradient id="t365grad-login-shine" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width="48" height="48" rx="13" fill="url(#t365grad-login)" />
-      <rect x="0" y="0" width="48" height="24" rx="13" fill="url(#t365grad-login-shine)" />
-      <path d="M11 14 H37 V20 H27 V36 H21 V20 H11 Z" fill="white" />
-      <rect x="28" y="30" width="15" height="9" rx="2.5" fill="white" />
-      <text
-        x="35.5" y="36.7" textAnchor="middle"
-        fontFamily="ui-monospace,SFMono-Regular,Menlo,monospace"
-        fontWeight={800} fontSize={6.4} fill="#2563eb" letterSpacing="0.2"
-      >
-        365
-      </text>
-    </svg>
-  );
-}
-
-function BrandWordmark({ light = false }: { light?: boolean }) {
-  return (
-    <span
-      className="font-bold text-2xl tracking-tight leading-none"
-      style={{ fontFamily: "var(--font-display)", color: light ? "#FFFFFF" : "#0F172A" }}
-    >
-      Ticarium
-      <span
-        style={
-          light
-            ? { color: "#A5F3FC" }
-            : {
-                background: "linear-gradient(135deg,#2563eb 0%,#0EA5A4 100%)",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                color: "transparent",
-              }
-        }
-      >
-        365
-      </span>
-    </span>
-  );
-}
+const BrandIcon = ({ size = 48 }: { size?: number }) => <BrandLogo size={size} />;
+const BrandWordmark = ({ light = false }: { light?: boolean }) => (
+  <SharedWordmark className="font-bold text-2xl tracking-tight leading-none" light={light} />
+);
 
 export default function Login() {
   const [username, setUsername] = useState("");

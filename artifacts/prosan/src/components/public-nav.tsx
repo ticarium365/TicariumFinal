@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Phone, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
+import { BrandLogo } from "@/components/brand-logo";
 
 const items = [
   { href: "/hakkimizda", label: "Hakkımızda" },
@@ -10,36 +11,6 @@ const items = [
   { href: "/karsilastir", label: "Neden Farklıyız" },
   { href: "/iletisim", label: "İletişim" },
 ];
-
-// ─── Marka rozeti — yumuşak indigo→teal gradient + tırpan T monogram ──────
-function NavBrandIcon({ size = 36 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" className="shrink-0">
-      <defs>
-        <linearGradient id="t365grad-nav" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#6366F1" />
-          <stop offset="55%" stopColor="#2563eb" />
-          <stop offset="100%" stopColor="#0EA5A4" />
-        </linearGradient>
-        <linearGradient id="t365grad-nav-glow" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width="48" height="48" rx="13" fill="url(#t365grad-nav)" />
-      <rect x="0" y="0" width="48" height="24" rx="13" fill="url(#t365grad-nav-glow)" />
-      <path d="M11 14 H37 V20 H27 V36 H21 V20 H11 Z" fill="white" />
-      <rect x="28" y="30" width="15" height="9" rx="2.5" fill="white" />
-      <text
-        x="35.5" y="36.7" textAnchor="middle"
-        fontFamily="ui-monospace,SFMono-Regular,Menlo,monospace"
-        fontWeight={800} fontSize={6.4} fill="#2563eb" letterSpacing="0.2"
-      >
-        365
-      </text>
-    </svg>
-  );
-}
 
 export function PublicNav() {
   const [location, setLocation] = useLocation();
@@ -76,7 +47,7 @@ export function PublicNav() {
           data-testid="nav-logo"
         >
           <span className="transition-transform duration-300 group-hover:scale-[1.05]">
-            <NavBrandIcon size={36} />
+            <BrandLogo size={36} />
           </span>
           <span
             className="font-bold text-lg tracking-tight"
@@ -257,7 +228,7 @@ export function PublicFooter() {
       <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm relative">
         <div>
           <div className="flex items-center gap-2.5 mb-3">
-            <NavBrandIcon size={32} />
+            <BrandLogo size={32} />
             <div
               className="font-bold text-base"
               style={{ fontFamily: "var(--font-display)", color: "#0F172A" }}
