@@ -283,25 +283,31 @@ slides.push([
 
 // SLIDE 8 — MOAT
 slides.push([
-  ...SlideTitle(8, TOTAL, "Rakiplere Karşı Moat"),
-  Lead("Pazardaki çözümlerin hiçbiri dört avantajı bir arada sunmuyor."),
+  ...SlideTitle(8, TOTAL, "Kategori Bazlı Rekabet ve Moat"),
+  Lead("Pazarda birebir muadil yok. Rekabet beş ayrı yazılım kategorisinden geliyor; hiçbiri tek başına yetmiyor."),
 
   Tbl(
-    ["Boyut", "Pazardaki Tipik Çözüm", "Ticarium365 Avantajı"],
+    ["Boyut", "Ön Muh. SaaS", "Geleneksel ERP", "Pazaryeri Aracı", "POS Yazılımı", "Niş SaaS", "Ticarium365"],
     [
-      ["Kapsam", "Tek modülde derin, diğer modüllerde yok", "Tek panelde 25+ modül entegre"],
-      ["Kâr motoru", "Sadece satış cirosu görünür", "Komisyon/iade/kargo/sermaye dahil net kâr"],
-      ["Çok kanal", "Her pazaryeri için ayrı panel", "Tek ürün → tüm kanallar tek tıkla"],
-      ["Mimari", "Eski monolitik, tek tenant", "Multi-tenant, modern stack, günden 1 ölçek"],
-      ["Ağ etkisi", "Yok", "Firmalar arası B2B ağı + ortak vitrin"],
-      ["Türkiye'ye özgü", "Çoğu yabancı menşeli, geç adapte", "E-fatura/KVKK günden 1, Türkçe-ilk"],
+      ["Hedef segment",        "KOBİ",         "Orta+Büyük",    "E-tic. satıcı",   "Mağaza/Şube",  "Niş",        "KOBİ + büyüyen orta"],
+      ["Kurulum süresi",       "Düşük",        "Yüksek",        "Düşük",           "Orta",         "Düşük",      "Düşük"],
+      ["Ön muhasebe",          "Çekirdek",     "Çekirdek",      "Yok",             "Sınırlı",      "Değişken",   "Çekirdek"],
+      ["Stok / depo",          "Sınırlı",      "Güçlü",         "Sınırlı",         "Orta",         "Değişken",   "Güçlü"],
+      ["POS",                  "Yok",          "Modüler",       "Yok",             "Çekirdek",     "Yok",        "Çekirdek"],
+      ["Pazaryeri sync",       "Eklenti",      "Sınırlı",       "Çekirdek",        "Yok",          "Bazıları",   "Çekirdek"],
+      ["Gerçek karlılık",      "Sadece ciro",  "Karmaşık rapor","Kısmi",           "Yok",          "Yok",        "Çekirdek"],
+      ["Çoklu kanal birleşik", "Hayır",        "Kısmi",         "Sadece pazaryeri","Hayır",        "Hayır",      "Evet"],
+      ["Multi-tenant mimari",  "Var",          "Genelde yok",   "Var",             "Genelde yok",  "Değişken",   "Var"],
+      ["B2B firma ağı",        "Yok",          "Yok",           "Yok",             "Yok",          "Yok",        "Çekirdek (Faz 4)"],
+      ["AI fiyat / OCR",       "Erken",        "Geç adapte",    "Sınırlı",         "Yok",          "Bazıları",   "Çekirdek (Faz 5)"],
     ],
+    { boldFirst: true },
   ),
   Body(""),
   Lead("Zamanla derinleşen üç moat:"),
-  Bullet("Müşteri verisi büyüdükçe karlılık önerileri sektör benchmarklarına dönüşür.", { label: "Veri:" }),
+  Bullet("Müşteri verisi büyüdükçe karlılık önerileri sektör benchmarklarına dönüşür — taklit edilemez veri katmanı.", { label: "Veri:" }),
   Bullet("Müşavir + dernek kanalları kurulduğunda taklit etmesi yıllar süren dağıtım yapısı.", { label: "Dağıtım:" }),
-  Bullet("Firma sayısı arttıkça B2B ağı her yeni üye için daha değerli hale gelir.", { label: "Ağ:" }),
+  Bullet("Firma sayısı arttıkça B2B ağı her yeni üye için daha değerli hale gelir — klasik ağ etkisi.", { label: "Ağ:" }),
 ]);
 
 // SLIDE 9 — SAYILAR
@@ -333,7 +339,7 @@ slides.push([
 
   Lead("Kurucu hikâyesi"),
   Body("[doldurulacak: kurucunun KOBİ dünyasındaki birikimi, neden bu probleme girdiği, daha önce çözmeye çalıştığı somut deneyim. 4-6 cümle.]"),
-  Body("[doldurulacak: ilk pilot tenant'ın (PROSAN ENDÜSTRİ) gerçek operasyon ihtiyacından doğan ürün geri bildirim döngüsü.]"),
+  Body("[doldurulacak: ilk pilot tenant'ın (endüstriyel dikey) gerçek operasyon ihtiyacından doğan ürün geri bildirim döngüsü.]"),
 
   Lead("Niye AI bu ürün için büyük fırsat"),
   Bullet("KOBİ'de fiyat kararı sezgisel veriliyor; maliyet + kanal komisyonu + rakip + stok devir hızı hesabını insan yapamaz, model yapar.", { label: "Akıllı fiyat:" }),

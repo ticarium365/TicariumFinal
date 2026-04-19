@@ -200,7 +200,7 @@ function buildMasterDoc() {
   // ---- 1. Executive Summary
   children.push(H1("1. Yönetici Özeti"));
   children.push(P("Ticarium365, Türkiye'deki küçük ve orta ölçekli işletmelerin (KOBİ) günlük işletme operasyonlarını tek bir panelde birleştiren çoklu kiracı (multi-tenant) bir SaaS platformudur. Ön muhasebe, stok, satış, pazaryeri entegrasyonları, gerçek kârlılık hesabı ve B2B ticaret ağı tek bir kullanıcı deneyiminde sunulur."));
-  children.push(P("Pazardaki temel boşluk: KOBİ sahibi bugün ön muhasebe (Paraşüt/Bizim Hesap), pazaryeri panelleri, fiziksel POS yazılımı, e-fatura entegratörü ve gider takibini ayrı ayrı kullanıyor. Bu modüller arasında veri kopuk, gerçek kâr (komisyon, kargo, iade dahil) hiçbir araçta net görünmüyor."));
+  children.push(P("Pazardaki temel boşluk: KOBİ sahibi bugün ön muhasebe çözümleri, pazaryeri yönetim araçları, fiziksel POS yazılımları, e-fatura entegratörleri ve gider takip uygulamalarını ayrı ayrı kullanıyor. Bu modüller arasında veri kopuk, gerçek kâr (komisyon, kargo, iade dahil) hiçbir araçta net görünmüyor."));
   children.push(H3("Stratejik Yıldız Modüller"));
   children.push(Bullet("Gerçek Karlılık Motoru — komisyon, kargo, iade, sermaye bağlama dahil ürün bazlı net kâr"));
   children.push(Bullet("e-Ticarium Merkezi — satış, reklam bütçesi, çok kanal yayını tek panelde"));
@@ -216,11 +216,11 @@ function buildMasterDoc() {
   // ---- 2. Problem Statement
   children.push(H1("2. Problem Tanımı"));
   children.push(P("Türkiye'de yaklaşık 3,4 milyon KOBİ bulunmaktadır. Bu işletmelerin büyük çoğunluğu dijital operasyonlarını parçalı bir araç yığınıyla yürütüyor:"));
-  children.push(Bullet("Ön muhasebe → Paraşüt / Bizim Hesap / Logo / Mikro"));
-  children.push(Bullet("Stok → Excel veya yerel POS yazılımı"));
-  children.push(Bullet("Pazaryeri → Trendyol/Hepsiburada/N11 ayrı panelleri"));
-  children.push(Bullet("E-fatura → Üçüncü parti entegratörler"));
-  children.push(Bullet("CRM/cari hesap → kâğıt veya WhatsApp"));
+  children.push(Bullet("Ön muhasebe → bulut tabanlı ön muhasebe çözümleri"));
+  children.push(Bullet("Stok → tablo (spreadsheet) veya yerel POS yazılımı"));
+  children.push(Bullet("Pazaryeri → her pazaryerinin kendi seller paneli"));
+  children.push(Bullet("E-fatura → üçüncü parti entegratör servisleri"));
+  children.push(Bullet("CRM / cari hesap → kâğıt defter veya mesajlaşma uygulaması"));
   children.push(P("Sonuç: KOBİ sahibi her ay 5+ ayrı yazılım için ödeme yapıyor, veriler entegre değil, gerçek kârlılık hiçbir ekranda doğru görünmüyor (komisyon, iade, kargo, sermaye bağlama maliyeti hesap dışı kalıyor)."));
   children.push(H3("Acı Noktası 1 — Görünmez Maliyetler"));
   children.push(P("Pazaryerinde 100 TL'ye satılan bir ürün gerçekte ne kadar kâr getiriyor? Komisyon, KDV, kargo, iade riski, sermaye bağlama günleri hesaba katılınca rakam çoğu zaman negatif çıkıyor. Mevcut araçlar bunu hesaplamıyor."));
@@ -258,7 +258,7 @@ function buildMasterDoc() {
       ["Demirbaş & Amortisman", "Hazır", "Doğrusal amortisman"],
       ["Belge Merkezi", "Hazır", "Object storage entegre"],
       ["Net Kâr Paneli", "Hazır", "Yıldız modül — gerçek karlılık"],
-      ["Pazaryeri (Trendyol/Hepsi/N11)", "Hazır", "API key entegrasyonları sırada"],
+      ["Pazaryeri Sync (büyük yerel pazaryerleri)", "Hazır", "API key entegrasyonları sırada"],
       ["Kampanya & Kupon Motoru", "Hazır", "Yüzde, sabit, kategori bazlı"],
       ["Sadakat & Puan", "Hazır", "Üye kart sistemi"],
       ["Çoklu Para Birimi", "Hazır", "TCMB kurları"],
@@ -279,7 +279,7 @@ function buildMasterDoc() {
       ["Sentry Hata İzleme", "%80", "DSN secret eklenecek"],
       ["E-mail Servisi (SMTP)", "Bekliyor", "Gmail SMTP veya SendGrid hesabı"],
       ["SMS Servisi (NetGSM)", "Bekliyor", "Ücretli — pilot sonrası"],
-      ["Pazaryeri API Bağlantıları", "Hazır altyapı", "Trendyol/Hepsi API key/seller hesabı"],
+      ["Pazaryeri API Bağlantıları", "Hazır altyapı", "Yerel pazaryeri API key + seller hesabı"],
       ["E-Fatura Entegratörü", "Hazır altyapı", "Entegratör seçimi + sözleşme"],
       ["Mali Müşavir Paneli", "Yapılacak", "Kurumsal pakette"],
       ["Akıllı Fiyat Önerisi (AI)", "Faz 5", "OpenAI tüketim modeli netleşmeli"],
@@ -307,8 +307,8 @@ function buildMasterDoc() {
   children.push(Bullet("Akıllı fiyatlandırma motoru ilk versiyon"));
 
   children.push(H2("Faz 3 — Entegrasyonlar"));
-  children.push(Bullet("E-fatura entegratör (Logo, GİB)"));
-  children.push(Bullet("Logo / Mikro / Paraşüt veri içe aktarım sihirbazı"));
+  children.push(Bullet("E-fatura entegratör (GİB onaylı entegratör seçimi)"));
+  children.push(Bullet("Geleneksel ön muhasebe ve ERP sistemlerinden veri içe aktarım sihirbazı"));
   children.push(Bullet("Banka Open API bağlantıları"));
   children.push(Bullet("Kargo entegrasyonları (Yurtiçi, Aras, MNG, PTT)"));
   children.push(Bullet("Webhook çıkış altyapısı"));
@@ -489,8 +489,81 @@ function buildMasterDoc() {
   children.push(Placeholder("Üç senaryo için müşteri kazanım takvimi (örn. ay 6 → 50, ay 18 → 500, ay 30 → 1000)"));
   children.push(new Paragraph({ children: [new PageBreak()] }));
 
-  // ---- 11. SWOT
-  children.push(H1("11. SWOT Analizi"));
+  // ---- 11. Kategori Bazlı Rekabet Matrisi
+  children.push(H1("11. Kategori Bazlı Rekabet Analizi"));
+  children.push(P("Pazarda Ticarium365'in birebir muadili tek bir ürün bulunmamaktadır. Rekabet beş ayrı yazılım kategorisinden gelen kısmi çözümlerle yaşanmaktadır. Aşağıdaki matris bu kategorileri kapsam, hedef segment ve eksik kalan ihtiyaçlar açısından karşılaştırır."));
+
+  children.push(H3("Ana Karşılaştırma Matrisi"));
+  children.push(buildTable(
+    [
+      "Boyut",
+      "Ön Muhasebe SaaS",
+      "Geleneksel ERP",
+      "Pazaryeri Yönetim Aracı",
+      "POS Yazılımı",
+      "Tek Fonksiyonlu SaaS",
+      "Ticarium365",
+    ],
+    [
+      ["Hedef segment",     "KOBİ",            "Orta+Büyük",  "E-ticaret satıcı",      "Mağaza/Şube",   "Niş ihtiyaç",        "KOBİ + büyüyen orta"],
+      ["Kurulum süresi",    "Düşük",           "Yüksek",      "Düşük",                 "Orta",          "Düşük",              "Düşük"],
+      ["Ön muhasebe",       "Çekirdek",        "Çekirdek",    "Yok",                   "Sınırlı",       "Değişken",           "Çekirdek"],
+      ["Stok / depo",       "Sınırlı",         "Güçlü",       "Sınırlı",               "Orta",          "Değişken",           "Güçlü"],
+      ["POS / hızlı satış", "Yok",             "Modüler",     "Yok",                   "Çekirdek",      "Yok",                "Çekirdek"],
+      ["Pazaryeri sync",    "Eklenti",         "Sınırlı",     "Çekirdek",              "Yok",           "Bazıları çekirdek",  "Çekirdek"],
+      ["Gerçek karlılık",   "Sadece ciro",     "Karmaşık raporlar", "Kısmi",         "Yok",           "Yok",                "Çekirdek (ürün bazlı net kâr)"],
+      ["Çoklu kanal birleşik", "Hayır",         "Kısmi",       "Sadece pazaryerleri",   "Hayır",         "Hayır",              "Evet (kanal-agnostik)"],
+      ["Çoklu para birimi", "Sınırlı",         "Var",         "Sınırlı",               "Yok",           "Değişken",           "Var (TCMB entegre)"],
+      ["E-fatura",          "Eklenti / 3.parti","Var",        "Yok",                   "Eklenti",       "Genelde yok",        "Hazır altyapı"],
+      ["Multi-tenant",      "Var",             "Genelde yok", "Var",                   "Genelde yok",   "Değişken",           "Var (subdomain izolasyonu)"],
+      ["Mali müşavir paneli","Sınırlı",        "Karmaşık",    "Yok",                   "Yok",           "Genelde yok",        "Çekirdek (Kurumsal pakette)"],
+      ["B2B firma ağı",     "Yok",             "Yok",         "Yok",                   "Yok",           "Yok",                "Çekirdek (Faz 4)"],
+      ["AI fiyat / OCR",    "Erken aşama",     "Geç adapte",  "Sınırlı",               "Yok",           "Bazıları",           "Çekirdek (Faz 5)"],
+      ["Türkiye-spesifik",  "Yüksek",          "Değişken",    "Yüksek",                "Yüksek",        "Değişken",           "Yüksek (KVKK + GİB günden 1)"],
+      ["Modern teknoloji",  "Karma",           "Eski (10+ yıl)","Modern",              "Karma",         "Modern",             "Modern (TS, multi-tenant)"],
+      ["Aylık maliyet (KOBİ)","Düşük-orta",    "Çok yüksek",  "Orta",                  "Düşük",         "Düşük",              "Orta (paket + entegre)"],
+    ],
+    { boldFirstCol: true },
+  ));
+
+  children.push(H3("Kategori Bazlı Boşluk Analizi"));
+
+  children.push(H3("a) Ön Muhasebe Çözümleri"));
+  children.push(P("Bulut ön muhasebe SaaS pazarı KOBİ tarafında olgunlaştı; muhasebe + faturalama + temel cari yönetimi güçlü. Ancak gerçek karlılık (kanal komisyonu, kargo, iade, sermaye bağlama) pazaryeri operasyonu ve POS, kategorinin doğal kapsamı dışında kalıyor. Bu çözümlere bağlı KOBİ, satış hacmini görür ama net kârını göremez."));
+  children.push(Bullet("Güçlü: muhasebe + faturalama + e-arşiv"));
+  children.push(Bullet("Zayıf: stok derinliği, çoklu kanal, gerçek karlılık, üretim"));
+  children.push(Bullet("Ticarium365 fark: aynı veri modeli üzerinde stok+satış+karlılık tek panelde"));
+
+  children.push(H3("b) Geleneksel ERP Sistemleri"));
+  children.push(P("Modüler güç ve derinlik açısından lider, ancak kurulum süresi, danışmanlık maliyeti ve toplam sahip olma maliyeti KOBİ erişiminin çok üstünde. Eski mimariler genellikle tek-tenant ve modern bulut/multi-tenant ölçek ekonomilerini sunmuyor. KOBİ büyüdüğünde tek seçenek olarak görülüyor; arada köprü ürün eksik."));
+  children.push(Bullet("Güçlü: modül derinliği, üretim, kurumsal raporlama"));
+  children.push(Bullet("Zayıf: kurulum süresi, lisans + danışmanlık maliyeti, modern UX"));
+  children.push(Bullet("Ticarium365 fark: kurumsal modülleri (üretim, BOM, mali müşavir, API) modern multi-tenant SaaS modelinde sunuyor"));
+
+  children.push(H3("c) Pazaryeri Yönetim Araçları"));
+  children.push(P("Çoklu pazaryeri sync, fiyat/stok yayını, sipariş toplama konularında uzmanlaşmış. Ancak ön muhasebe, POS, üretim ve mali müşavir entegrasyonu kategorinin kapsamı dışında. Satıcı yine de paralel olarak ön muhasebe ve POS yazılımı kullanmak zorunda."));
+  children.push(Bullet("Güçlü: pazaryeri API entegrasyonu, sipariş yönetimi"));
+  children.push(Bullet("Zayıf: ön muhasebe, gerçek karlılık, mağaza/şube POS"));
+  children.push(Bullet("Ticarium365 fark: aynı ürün kaydı pazaryeri + POS + e-fatura akışında ortak"));
+
+  children.push(H3("d) POS Yazılımları"));
+  children.push(P("Mağaza içi hızlı satış, barkod, kasa kapanışında lider; çoğunlukla yerel kurulum veya hibrit. Bulut multi-tenant senkronizasyonu, çoklu şube konsolidasyonu ve pazaryeri entegrasyonu zayıf. Veriyi merkezi bir analitik panele aktarmak ek entegrasyon gerektiriyor."));
+  children.push(Bullet("Güçlü: mağaza içi hız, barkod, donanım uyumu"));
+  children.push(Bullet("Zayıf: çoklu kanal, bulut entegrasyon, ön muhasebe"));
+  children.push(Bullet("Ticarium365 fark: POS bir modül, aynı veri modeli pazaryeri + ön muhasebe ile birleşik"));
+
+  children.push(H3("e) Tek Fonksiyonlu SaaS Araçları"));
+  children.push(P("Belirli bir ihtiyacı (CRM, kampanya, sadakat, gider takibi, OCR vb.) çok iyi çözen niş ürünler. Ancak veri silosu yaratıyorlar; KOBİ sahibi 4-6 ayrı SaaS'e abone olup aynı kayıtları farklı sistemlere giriyor. Toplam aylık maliyet entegre tek panel maliyetini geçiyor."));
+  children.push(Bullet("Güçlü: tek konuda derin, hızlı kurulum"));
+  children.push(Bullet("Zayıf: veri silosu, paralel abonelik maliyeti, manuel mutabakat"));
+  children.push(Bullet("Ticarium365 fark: aynı kapsamı tek panelde + tek abonelikte sunuyor"));
+
+  children.push(H3("Stratejik Sonuç"));
+  children.push(P("Beş kategorinin hiçbiri tek başına KOBİ'nin uçtan uca operasyon ihtiyacını karşılamıyor. Pazardaki gerçek rekabet, hangi tek kategoriden gelen oyuncunun komşu kategorilere genişleyeceği üzerinden yaşanıyor. Ticarium365'in stratejik konumu, bu beş kategoriyi tek bir veri modeli üzerinde sunan ve üzerine gerçek karlılık + B2B ağı katmanları ekleyen birleştirici platform olmaktır."));
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+
+  // ---- 12. SWOT
+  children.push(H1("12. SWOT Analizi"));
 
   children.push(H3("Güçlü Yönler (Strengths)"));
   children.push(Bullet("Türkçe-ilk tasarım — KOBİ sahibinin diliyle"));
@@ -515,15 +588,15 @@ function buildMasterDoc() {
   children.push(Bullet("AI ile gerçek karlılık önerisi farklılaşma alanı"));
 
   children.push(H3("Tehditler (Threats)"));
-  children.push(Bullet("Logo, Mikro gibi köklü oyuncuların alt segmente inmesi"));
-  children.push(Bullet("Paraşüt'ün modül genişletmesi"));
-  children.push(Bullet("Pazaryerlerinin kendi seller paneli geliştirmesi"));
+  children.push(Bullet("Geleneksel ERP oyuncularının alt segmente (KOBİ) inmesi"));
+  children.push(Bullet("Mevcut ön muhasebe SaaS oyuncularının modül genişletmesi"));
+  children.push(Bullet("Pazaryerlerinin kendi yönetim paneli kapsamını genişletmesi"));
   children.push(Bullet("Regülasyon değişiklikleri (e-fatura, GİB)"));
   children.push(Bullet("Ekonomik daralma → KOBİ harcama kısıtı"));
   children.push(new Paragraph({ children: [new PageBreak()] }));
 
   // ---- 12. Yatırımcı Bakışı
-  children.push(H1("12. Yatırımcı Bakışı"));
+  children.push(H1("13. Yatırımcı Bakışı"));
 
   children.push(H3("Yatırımcı Neyi Sever"));
   children.push(Bullet("Büyük TAM (Türkiye 3,4M KOBİ × ortalama ARPU = 100+ milyar TL pazar)"));
@@ -549,7 +622,7 @@ function buildMasterDoc() {
   children.push(new Paragraph({ children: [new PageBreak()] }));
 
   // ---- 13. Uzun Dönem Projeksiyon (placeholder iskelet)
-  children.push(H1("13. Uzun Dönem Projeksiyon (1 / 3 / 5 Yıl)"));
+  children.push(H1("14. Uzun Dönem Projeksiyon (1 / 3 / 5 Yıl)"));
   children.push(P("Aşağıdaki tablo iskeleti boş bırakılmıştır. Gerçek pazarlama kanalları, CAC, churn ve takım büyüme planı netleştikçe doldurulacaktır."));
 
   for (const sen of ["Muhafazakâr", "Gerçekçi", "Agresif"]) {
@@ -572,12 +645,12 @@ function buildMasterDoc() {
   children.push(new Paragraph({ children: [new PageBreak()] }));
 
   // ---- 14. Görsel/Grafik Önerileri
-  children.push(H1("14. Görsel & Grafik Önerileri"));
+  children.push(H1("15. Görsel & Grafik Önerileri"));
   children.push(Bullet("Pazar boyutu funnel'i — 3.4M KOBİ → adreslenebilir → hedef segmenti"));
   children.push(Bullet("Modül haritası — radar grafiği (Karlılık, e-Ticarium, Fiyat, B2B)"));
   children.push(Bullet("Müşteri başı maliyet grafiği — ölçek arttıkça düşen birim maliyet"));
   children.push(Bullet("3 senaryo MRR projeksiyonu — kümülatif çizgi grafik"));
-  children.push(Bullet("Rakip karşılaştırma matrisi — Paraşüt, Logo, Mikro, Bizim Hesap"));
+  children.push(Bullet("Kategori bazlı rekabet matrisi — ön muhasebe, ERP, pazaryeri aracı, POS, niş SaaS"));
   children.push(Bullet("Mimari diyagramı — multi-tenant + tenant izolasyonu görsel"));
 
   return new Document({
@@ -606,7 +679,7 @@ function buildSummaryDoc() {
   c.push(P("Türkiye'deki 3,4 milyon KOBİ için ön muhasebe, stok, satış, pazaryeri ve gerçek karlılık hesabını tek panelde birleştiren multi-tenant SaaS işletim sistemi."));
 
   c.push(H2("Problem"));
-  c.push(P("KOBİ sahibi bugün 5+ ayrı yazılım kullanıyor (Paraşüt, pazaryeri panelleri, POS, e-fatura, Excel). Veriler entegre değil, gerçek kâr — komisyon/iade/kargo/sermaye dahil — hiçbir araçta görünmüyor."));
+  c.push(P("KOBİ sahibi bugün 5+ ayrı yazılım kullanıyor — ön muhasebe SaaS, pazaryeri yönetim aracı, POS yazılımı, e-fatura entegratörü ve gider takip tablosu. Veriler entegre değil, gerçek kâr — komisyon, iade, kargo, sermaye bağlama dahil — hiçbir araçta görünmüyor."));
 
   c.push(H2("Çözüm"));
   c.push(P("Tek veri modeli, tek panel, tek aboneliğe entegre edilmiş 25+ modül. Yıldız modüller: Gerçek Karlılık Motoru, e-Ticarium Merkezi, Akıllı Fiyatlandırma, Firmalar Arası B2B Ağ."));
