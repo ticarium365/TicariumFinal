@@ -4,36 +4,36 @@ import { useLogin } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Lock, User, Store, TrendingUp, ShieldCheck, Eye, EyeOff } from "lucide-react";
+import {
+  Loader2, Lock, User, Store, TrendingUp, ShieldCheck,
+  Eye, EyeOff, Sparkles,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PublicNav } from "@/components/public-nav";
 
-// ------------------------------------------------------------------
-// Marka rozeti — temiz, mavi gradyan, beyaz "T" + küçük 365 etiketi
-// ------------------------------------------------------------------
+// ─── Marka rozeti ────────────────────────────────────────────────────────────
 function BrandIcon({ size = 48 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" className="shrink-0">
       <defs>
-        <linearGradient id="t365grad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#3B82F6" />
-          <stop offset="100%" stopColor="#1D4ED8" />
+        <linearGradient id="t365grad-login" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#818CF8" />
+          <stop offset="55%" stopColor="#6366F1" />
+          <stop offset="100%" stopColor="#22D3EE" />
+        </linearGradient>
+        <linearGradient id="t365grad-login-shine" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <rect x="0" y="0" width="48" height="48" rx="11" fill="url(#t365grad)" />
-      {/* Geniş bar + dikey ayak: stilize T */}
+      <rect x="0" y="0" width="48" height="48" rx="13" fill="url(#t365grad-login)" />
+      <rect x="0" y="0" width="48" height="24" rx="13" fill="url(#t365grad-login-shine)" />
       <path d="M11 14 H37 V20 H27 V36 H21 V20 H11 Z" fill="white" />
-      {/* 365 chip */}
       <rect x="28" y="30" width="15" height="9" rx="2.5" fill="white" />
       <text
-        x="35.5"
-        y="36.7"
-        textAnchor="middle"
+        x="35.5" y="36.7" textAnchor="middle"
         fontFamily="ui-monospace,SFMono-Regular,Menlo,monospace"
-        fontWeight={800}
-        fontSize={6.4}
-        fill="#1D4ED8"
-        letterSpacing="0.2"
+        fontWeight={800} fontSize={6.4} fill="#4F46E5" letterSpacing="0.2"
       >
         365
       </text>
@@ -45,13 +45,23 @@ function BrandWordmark({ light = false }: { light?: boolean }) {
   return (
     <span
       className="font-bold text-2xl tracking-tight leading-none"
-      style={{
-        fontFamily: "var(--font-display)",
-        color: light ? "#FFFFFF" : "#0F172A",
-      }}
+      style={{ fontFamily: "var(--font-display)", color: light ? "#FFFFFF" : "#0F172A" }}
     >
       Ticarium
-      <span style={{ color: light ? "#BFDBFE" : "#2563EB" }}>365</span>
+      <span
+        style={
+          light
+            ? { color: "#A5F3FC" }
+            : {
+                background: "linear-gradient(135deg,#4F46E5 0%,#0EA5A4 100%)",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+              }
+        }
+      >
+        365
+      </span>
     </span>
   );
 }
@@ -81,28 +91,64 @@ export default function Login() {
 
   return (
     <div
-      className="min-h-screen w-full flex flex-col"
-      style={{ background: "#F8FAFC", color: "#0F172A" }}
+      className="min-h-screen w-full flex flex-col relative overflow-hidden"
+      style={{
+        background:
+          "linear-gradient(180deg,#F8FAFF 0%, #EEF2FF 60%, #F1FBFB 100%)",
+        color: "#0F172A",
+      }}
     >
+      {/* Sayfa arka plan glow blob'ları (sağ panel için yumuşak doku) */}
+      <div
+        className="absolute top-1/3 right-[-10rem] w-[36rem] h-[36rem] rounded-full pointer-events-none"
+        style={{ background: "radial-gradient(closest-side, rgba(34,211,238,0.10), transparent 70%)" }}
+      />
+      <div
+        className="absolute bottom-[-14rem] right-1/3 w-[30rem] h-[30rem] rounded-full pointer-events-none"
+        style={{ background: "radial-gradient(closest-side, rgba(99,102,241,0.10), transparent 70%)" }}
+      />
+
       <PublicNav />
 
-      <div className="flex-1 w-full flex">
-        {/* Sol panel — açık mavi gradyan, beyaz tipografi */}
+      <div className="flex-1 w-full flex relative z-10">
+        {/* ─── SOL PANEL — premium dark mesh hero ──────────────────────────── */}
         <div
-          className="hidden lg:flex flex-col justify-between w-[480px] shrink-0 p-12 relative overflow-hidden"
+          className="hidden lg:flex flex-col justify-between w-[520px] shrink-0 p-12 relative overflow-hidden"
           style={{
             background:
-              "linear-gradient(140deg, #1E3A8A 0%, #1D4ED8 45%, #2563EB 100%)",
+              "radial-gradient(at 20% 10%, #312E81 0%, transparent 55%), " +
+              "radial-gradient(at 90% 80%, #0E7490 0%, transparent 50%), " +
+              "linear-gradient(140deg,#0B1027 0%, #1E1B4B 50%, #0F172A 100%)",
+            color: "#FFFFFF",
           }}
         >
-          {/* Yumuşak ışık efektleri */}
+          {/* Hareketli yumuşak ışık küreleri */}
           <div
-            className="absolute -top-40 -right-32 w-[28rem] h-[28rem] rounded-full blur-3xl pointer-events-none"
-            style={{ background: "rgba(147,197,253,0.35)" }}
+            className="absolute -top-32 -right-24 w-[28rem] h-[28rem] rounded-full pointer-events-none animate-pulse"
+            style={{
+              background: "radial-gradient(closest-side, rgba(129,140,248,0.40), transparent 70%)",
+              animationDuration: "6s",
+            }}
           />
           <div
-            className="absolute -bottom-40 -left-24 w-96 h-96 rounded-full blur-3xl pointer-events-none"
-            style={{ background: "rgba(96,165,250,0.30)" }}
+            className="absolute -bottom-32 -left-24 w-[26rem] h-[26rem] rounded-full pointer-events-none animate-pulse"
+            style={{
+              background: "radial-gradient(closest-side, rgba(34,211,238,0.32), transparent 70%)",
+              animationDuration: "8s",
+              animationDelay: "1.5s",
+            }}
+          />
+          {/* İnce grid noise overlay */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-[0.10]"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), " +
+                "linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)",
+              backgroundSize: "32px 32px",
+              maskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)",
+              WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)",
+            }}
           />
 
           {/* Logo + alt başlık */}
@@ -110,67 +156,104 @@ export default function Login() {
             <BrandIcon size={52} />
             <div className="leading-tight">
               <BrandWordmark light />
-              <div className="text-[13px] mt-1 text-blue-100/85">
+              <div className="text-[13px] mt-1 text-cyan-100/85">
                 365 gün işinizin yanında
               </div>
             </div>
           </div>
 
           {/* Değer önerisi */}
-          <div className="relative z-10 space-y-7">
-            <h2
-              className="text-3xl font-semibold text-white leading-snug"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              Türkiye'nin esnafı için <br />
-              <span className="text-white/95 underline decoration-blue-300/60 decoration-4 underline-offset-4">
-                tek panelden
-              </span>{" "}
-              yönetim.
-            </h2>
+          <div className="relative z-10 space-y-8">
+            <div>
+              <span
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider mb-5"
+                style={{
+                  background: "rgba(165,243,252,0.10)",
+                  color: "#A5F3FC",
+                  border: "1px solid rgba(165,243,252,0.25)",
+                  backdropFilter: "blur(6px)",
+                }}
+              >
+                <Sparkles className="w-3 h-3" />
+                Yeni nesil işletme platformu
+              </span>
+              <h2
+                className="text-[2.05rem] font-semibold leading-[1.15] tracking-tight"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                Türkiye'nin esnafı için
+                <br />
+                <span
+                  style={{
+                    background:
+                      "linear-gradient(135deg,#A5F3FC 0%,#C7D2FE 50%,#FFFFFF 100%)",
+                    WebkitBackgroundClip: "text",
+                    backgroundClip: "text",
+                    color: "transparent",
+                  }}
+                >
+                  tek panelden yönetim.
+                </span>
+              </h2>
+            </div>
 
-            <div className="space-y-5">
+            <div className="space-y-4">
               {[
                 {
                   icon: Store,
                   title: "Stoktan satışa, kâra kadar tek yerde",
                   desc: "Stok hareketleri, fatura, cari hesap ve raporlar bir arada çalışır.",
+                  ring: "rgba(129,140,248,0.45)",
                 },
                 {
                   icon: TrendingUp,
                   title: "Gerçek kârınızı net görün",
                   desc: "Komisyon, iade ve giderler düşüldükten sonra kalan net kâr.",
+                  ring: "rgba(34,211,238,0.45)",
                 },
                 {
                   icon: ShieldCheck,
                   title: "Güvenli, KVKK uyumlu, yedeklenir",
                   desc: "Verileriniz şifreli kanaldan iletilir, düzenli olarak yedeklenir.",
+                  ring: "rgba(74,222,128,0.45)",
                 },
-              ].map(({ icon: Icon, title, desc }) => (
-                <div key={title} className="flex items-start gap-4">
+              ].map(({ icon: Icon, title, desc, ring }) => (
+                <div
+                  key={title}
+                  className="flex items-start gap-4 p-3.5 rounded-xl transition-all hover:translate-x-0.5"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    backdropFilter: "blur(8px)",
+                  }}
+                >
                   <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: "rgba(255,255,255,0.16)" }}
+                    className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0"
+                    style={{
+                      background: "rgba(255,255,255,0.08)",
+                      border: `1px solid ${ring}`,
+                      boxShadow: `0 0 18px -4px ${ring}`,
+                    }}
                   >
                     <Icon className="w-5 h-5 text-white" />
                   </div>
                   <div>
                     <h3 className="text-white font-medium leading-snug">{title}</h3>
-                    <p className="text-sm mt-0.5 text-blue-100/80">{desc}</p>
+                    <p className="text-sm mt-0.5 text-slate-300/80 leading-relaxed">{desc}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <p className="relative z-10 text-xs text-blue-200/70">
+          <p className="relative z-10 text-xs text-slate-400/80">
             © {new Date().getFullYear()} Ticarium365 · Tüm hakları saklıdır
           </p>
         </div>
 
-        {/* Sağ panel — beyaz, mavi vurgu */}
-        <div className="flex-1 flex items-center justify-center p-6 md:p-8">
-          <div className="w-full max-w-sm">
+        {/* ─── SAĞ PANEL — cam form kartı ──────────────────────────────────── */}
+        <div className="flex-1 flex items-center justify-center p-6 md:p-8 relative">
+          <div className="w-full max-w-sm relative">
             {/* Mobil logo */}
             <div className="lg:hidden flex justify-center mb-8">
               <div className="flex items-center gap-3">
@@ -179,23 +262,37 @@ export default function Login() {
               </div>
             </div>
 
+            {/* Kartın etrafına ince renkli kenarlık halesi */}
             <div
-              className="rounded-2xl p-7 md:p-8"
+              className="absolute -inset-px rounded-[1.25rem] pointer-events-none"
               style={{
-                background: "#FFFFFF",
-                border: "1px solid #E2E8F0",
+                background:
+                  "linear-gradient(135deg, rgba(99,102,241,0.30) 0%, rgba(14,165,164,0.20) 50%, rgba(99,102,241,0.05) 100%)",
+                filter: "blur(0.5px)",
+              }}
+            />
+
+            <div
+              className="relative rounded-2xl p-7 md:p-8"
+              style={{
+                background: "rgba(255,255,255,0.85)",
+                border: "1px solid rgba(255,255,255,0.7)",
+                backdropFilter: "saturate(180%) blur(20px)",
+                WebkitBackdropFilter: "saturate(180%) blur(20px)",
                 boxShadow:
-                  "0 1px 2px rgba(15,23,42,0.04), 0 12px 32px -8px rgba(37,99,235,0.12)",
+                  "0 1px 2px rgba(15,23,42,0.04), " +
+                  "0 20px 50px -16px rgba(79,70,229,0.18), " +
+                  "0 8px 20px -8px rgba(14,165,164,0.10)",
               }}
             >
               <div className="mb-6">
                 <h2
-                  className="text-2xl font-bold tracking-tight"
+                  className="text-[1.65rem] font-bold tracking-tight leading-tight"
                   style={{ color: "#0F172A", fontFamily: "var(--font-display)" }}
                 >
                   Hoş geldiniz
                 </h2>
-                <p className="text-sm mt-1" style={{ color: "#64748B" }}>
+                <p className="text-sm mt-1.5" style={{ color: "#64748B" }}>
                   Hesabınıza giriş yaparak işinize devam edin.
                 </p>
               </div>
@@ -207,7 +304,7 @@ export default function Login() {
                 action="/api/auth/login"
               >
                 <div className="space-y-1.5">
-                  <Label htmlFor="username" style={{ color: "#334155" }}>
+                  <Label htmlFor="username" style={{ color: "#334155", fontWeight: 500 }}>
                     Kullanıcı adı
                   </Label>
                   <div className="relative">
@@ -220,10 +317,10 @@ export default function Login() {
                       name="username"
                       type="text"
                       placeholder="kullanici_adi"
-                      className="pl-9 h-11"
+                      className="pl-9 h-11 transition-all focus:ring-2"
                       style={{
-                        background: "#FFFFFF",
-                        borderColor: "#CBD5E1",
+                        background: "rgba(248,250,255,0.7)",
+                        borderColor: "rgba(99,102,241,0.18)",
                         color: "#0F172A",
                       }}
                       value={username}
@@ -238,13 +335,18 @@ export default function Login() {
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="password" style={{ color: "#334155" }}>
+                    <Label htmlFor="password" style={{ color: "#334155", fontWeight: 500 }}>
                       Şifre
                     </Label>
                     <Link
                       href="/sifremi-unuttum"
-                      className="text-xs font-medium hover:underline"
-                      style={{ color: "#2563EB" }}
+                      className="text-xs font-semibold hover:underline"
+                      style={{
+                        background: "linear-gradient(135deg,#4F46E5,#0EA5A4)",
+                        WebkitBackgroundClip: "text",
+                        backgroundClip: "text",
+                        color: "transparent",
+                      }}
                       data-testid="link-forgot-password"
                     >
                       Şifremi unuttum
@@ -260,10 +362,10 @@ export default function Login() {
                       name="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
-                      className="pl-9 pr-10 h-11"
+                      className="pl-9 pr-10 h-11 transition-all focus:ring-2"
                       style={{
-                        background: "#FFFFFF",
-                        borderColor: "#CBD5E1",
+                        background: "rgba(248,250,255,0.7)",
+                        borderColor: "rgba(99,102,241,0.18)",
                         color: "#0F172A",
                       }}
                       value={password}
@@ -276,7 +378,7 @@ export default function Login() {
                       type="button"
                       tabIndex={-1}
                       onClick={() => setShowPassword((s) => !s)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 inline-flex items-center justify-center rounded-md"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-slate-100/80 transition-colors"
                       style={{ color: "#64748B" }}
                       aria-label={showPassword ? "Şifreyi gizle" : "Şifreyi göster"}
                     >
@@ -287,10 +389,13 @@ export default function Login() {
 
                 <Button
                   type="submit"
-                  className="w-full h-11 mt-2 text-base font-semibold border-0"
+                  className="w-full h-11 mt-2 text-base font-semibold border-0 transition-all hover:translate-y-[-1px]"
                   style={{
-                    background: "#2563EB",
+                    background:
+                      "linear-gradient(135deg,#4F46E5 0%,#5E5CE6 50%,#0EA5A4 100%)",
                     color: "#FFFFFF",
+                    boxShadow:
+                      "0 8px 24px -8px rgba(79,70,229,0.55), 0 2px 4px rgba(14,165,164,0.20)",
                   }}
                   disabled={login.isPending || !username || !password}
                   data-testid="btn-login"
@@ -308,14 +413,19 @@ export default function Login() {
 
               <div
                 className="mt-6 pt-5 text-center"
-                style={{ borderTop: "1px solid #E2E8F0" }}
+                style={{ borderTop: "1px solid rgba(99,102,241,0.12)" }}
               >
                 <p className="text-xs" style={{ color: "#64748B" }}>
                   Hesabınız yok mu?{" "}
                   <a
                     href="mailto:demo@ticarium365.com"
                     className="font-semibold hover:underline"
-                    style={{ color: "#2563EB" }}
+                    style={{
+                      background: "linear-gradient(135deg,#4F46E5,#0EA5A4)",
+                      WebkitBackgroundClip: "text",
+                      backgroundClip: "text",
+                      color: "transparent",
+                    }}
                   >
                     Demo talep edin
                   </a>
@@ -328,11 +438,11 @@ export default function Login() {
               style={{ color: "#64748B" }}
             >
               Bu siteye girerek{" "}
-              <a href="/kvkk" className="underline hover:text-slate-900">
+              <a href="/kvkk" className="underline hover:text-indigo-700">
                 KVKK Aydınlatma Metni
               </a>{" "}
               ve{" "}
-              <a href="/kullanim-kosullari" className="underline hover:text-slate-900">
+              <a href="/kullanim-kosullari" className="underline hover:text-indigo-700">
                 Kullanım Koşulları
               </a>
               'nı kabul etmiş olursunuz.

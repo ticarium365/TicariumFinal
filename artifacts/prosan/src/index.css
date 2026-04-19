@@ -114,10 +114,13 @@
   --app-font-mono: 'Space Mono', ui-monospace, monospace;
 
   /* Ticarium365 brand accents (login + brand surfaces) */
-  --brand-navy: 222 47% 15%;
+  --brand-navy: 224 56% 12%;       /* Derin gece-laciverti */
+  --brand-indigo: 234 89% 60%;     /* Ana marka indigo */
+  --brand-teal: 180 84% 45%;       /* Vurgu teal */
   --brand-emerald: 152 76% 40%;
+  --brand-amber: 38 95% 55%;
 
-  --radius: 0.5rem;                /* Daha yuvarlak köşeler */
+  --radius: 0.625rem;              /* Daha yuvarlak köşeler — premium his */
 }
 
 /* DARK PRO — Modern fintech / glassmorphism */
