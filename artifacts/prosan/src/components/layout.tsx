@@ -53,8 +53,14 @@ import {
   ShieldCheck,
   ChevronDown,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Lock,
   Activity,
 } from "lucide-react";
+import { useFeatures } from "@/components/use-features";
+import { useMenuPrefs } from "@/components/use-menu-prefs";
+import { FeatureGate } from "@/components/feature-gate";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./notification-center";
 import { GlobalSearch } from "./global-search";
@@ -111,6 +117,7 @@ const HERO_ITEM: NavItem = {
 
 
 const STORAGE_KEY = "ticarium365_nav_open_groups_v1";
+const COLLAPSE_KEY = "ticarium365_sidebar_collapsed_v1";
 
 function loadOpenGroups(): Record<string, boolean> {
   try {
@@ -124,6 +131,13 @@ function saveOpenGroups(state: Record<string, boolean>) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* */ }
 }
 
+function loadCollapsed(): boolean {
+  try { return localStorage.getItem(COLLAPSE_KEY) === "1"; } catch { return false; }
+}
+function saveCollapsed(v: boolean) {
+  try { localStorage.setItem(COLLAPSE_KEY, v ? "1" : "0"); } catch { /* */ }
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { company } = useCompany();
@@ -132,16 +146,44 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => loadOpenGroups());
+  const [collapsed, setCollapsed] = useState<boolean>(() => loadCollapsed());
+  const { has: hasFeature } = useFeatures();
+  const { isHidden: isItemHidden } = useMenuPrefs();
+
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    saveCollapsed(next);
+  };
 
   const companyName = company?.name ?? "Ticarium365";
 
-  // Rol filtresi uygulanmış gruplar
+  // Rol filtresi + kullanıcı menü tercihi (hidden) uygulanmış gruplar
   const visibleGroups = useMemo(() => {
     if (!user) return [];
     return NAV_GROUPS
-      .map((g) => ({ ...g, items: g.items.filter((i) => i.roles.includes(user.role)) }))
+      .map((g) => ({
+        ...g,
+        items: g.items.filter((i) => i.roles.includes(user.role) && !isItemHidden(i.href)),
+      }))
       .filter((g) => g.items.length > 0);
-  }, [user]);
+  }, [user, isItemHidden]);
+
+  // Aktif rotanın feature gereksinimi (en uzun href eşleşmesi — nested route güvenliği)
+  const currentRouteFeature = useMemo<string | null>(() => {
+    let bestHref = "";
+    let bestFeature: string | null = null;
+    for (const g of NAV_GROUPS) {
+      for (const i of g.items) {
+        const match = location === i.href || location.startsWith(i.href + "/");
+        if (match && i.href.length > bestHref.length) {
+          bestHref = i.href;
+          bestFeature = i.feature ?? null;
+        }
+      }
+    }
+    return bestFeature;
+  }, [location]);
 
   // Aktif yol hangi gruptaysa o grup otomatik açılır
   const activeGroupId = useMemo(() => {
@@ -261,19 +303,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <div className="ml-2 mt-0.5 mb-1 border-l border-slate-200 pl-2">
                 {group.items.map((item) => {
                   const active = isItemActive(item.href);
+                  const locked = item.feature ? !hasFeature(item.feature) : false;
                   return (
                     <Link key={item.href} href={item.href}>
                       <div
+                        title={locked ? "Bu modül paketinizde yok — tıklayarak yükseltme ekranını görebilirsiniz" : undefined}
                         className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-all cursor-pointer text-sm border-l-2 ${
                           active
                             ? "bg-slate-100 text-blue-700 font-semibold border-blue-500"
-                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-transparent"
+                            : locked
+                              ? "text-slate-400 hover:bg-slate-50 hover:text-slate-600 border-transparent"
+                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-transparent"
                         }`}
                         onClick={() => setIsOpen(false)}
                         data-testid={`nav-link-${item.href.replace(/\//g, "-").replace(/^-/, "")}`}
                       >
                         <item.icon className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{item.label}</span>
+                        <span className="truncate flex-1">{item.label}</span>
+                        {locked && <Lock className="h-3 w-3 shrink-0 opacity-70" data-testid={`nav-lock-${item.href.replace(/\//g, "-").replace(/^-/, "")}`} />}
                       </div>
                     </Link>
                   );
@@ -338,21 +385,68 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 flex-col h-screen sticky top-0 bg-slate-50 border-r border-slate-200">
-        <div className="px-5 py-5 border-b border-slate-200 bg-white">
-          <h1
-            className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5"
-            style={{ fontFamily: "var(--font-display)" }}
+      <aside
+        className={`hidden md:flex ${collapsed ? "w-16" : "w-64"} flex-col h-screen sticky top-0 bg-slate-50 border-r border-slate-200 transition-[width] duration-200`}
+        data-testid="desktop-sidebar"
+        data-collapsed={collapsed ? "true" : "false"}
+      >
+        <div className="px-3 py-5 border-b border-slate-200 bg-white flex items-center justify-between gap-2">
+          {collapsed ? (
+            <div className="mx-auto"><BrandLogo size={28} /></div>
+          ) : (
+            <h1
+              className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5 px-2"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              <BrandLogo size={32} />
+              <span className="t365-brand-gradient">Ticarium365</span>
+            </h1>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleCollapsed}
+            title={collapsed ? "Menüyü genişlet" : "Menüyü daralt"}
+            className="h-7 w-7 shrink-0 text-slate-500 hover:text-slate-900"
+            data-testid="button-sidebar-toggle"
           >
-            <BrandLogo size={32} />
-            <span className="t365-brand-gradient">Ticarium365</span>
-          </h1>
+            {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+          </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3">
-          <TrialBanner />
-          <NavLinks />
-        </div>
+        {collapsed ? (
+          <div className="flex-1 overflow-y-auto py-3 flex flex-col items-center gap-1.5">
+            {user && TOP_ITEM.roles.includes(user.role) && (
+              <Link href={TOP_ITEM.href}>
+                <div
+                  title={TOP_ITEM.label}
+                  className={`h-9 w-9 flex items-center justify-center rounded-lg cursor-pointer ${
+                    isItemActive(TOP_ITEM.href) ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                  data-testid="nav-link-collapsed-dashboard"
+                >
+                  <TOP_ITEM.icon className="h-4 w-4" />
+                </div>
+              </Link>
+            )}
+            {visibleGroups.map((g) => (
+              <div
+                key={g.id}
+                title={g.label}
+                onClick={() => { setCollapsed(false); saveCollapsed(false); toggleGroup(g.id); }}
+                className="h-9 w-9 flex items-center justify-center rounded-lg cursor-pointer text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                data-testid={`nav-group-collapsed-${g.id}`}
+              >
+                <g.icon className="h-4 w-4" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto p-3">
+            <TrialBanner />
+            <NavLinks />
+          </div>
+        )}
 
         <div className="p-3 mt-auto border-t border-slate-200 bg-white">
           <div className="flex items-center gap-3 px-2 py-2">
@@ -384,7 +478,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           <div className="mx-auto max-w-6xl">
-            {children}
+            <FeatureGate feature={currentRouteFeature ?? undefined}>
+              {children}
+            </FeatureGate>
           </div>
         </div>
       </main>
