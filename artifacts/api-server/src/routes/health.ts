@@ -94,7 +94,9 @@ router.get("/healthz/deep", async (_req: Request, res: Response) => {
  * Sadece super_admin tüm bilgileri görür: latency, hata mesajı, node version, memory.
  */
 router.get("/healthz/internal", async (req: Request, res: Response) => {
-  const role = (req.session as any)?.role;
+  // Bu kod tabanında oturum rolü req.session.user.role altında durur.
+  // (Architect bulgusu: önceden req.session.role okunuyordu → super_admin'ler bile 403 alıyordu.)
+  const role = (req.session as any)?.user?.role;
   if (role !== "super_admin") {
     return res.status(403).json({ error: { code: "FORBIDDEN", message: "Yalnızca süper admin" } });
   }
