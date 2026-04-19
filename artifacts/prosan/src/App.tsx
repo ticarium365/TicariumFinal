@@ -100,6 +100,7 @@ import { UpgradeModal, installFeatureLockInterceptor } from "@/components/upgrad
 import CookieConsentBanner from "@/components/cookie-consent-banner";
 import KvkkPage from "@/pages/kvkk";
 import RuntimeFlagsAdminPage from "@/pages/admin/runtime-flags";
+import PazaryeriSaglikPage from "@/pages/super-admin/pazaryeri-saglik";
 
 installFeatureLockInterceptor();
 
@@ -451,6 +452,10 @@ function AuthenticatedRouter() {
 
         <Route path="/admin/runtime-flags">
           {() => <ProtectedRoute component={RuntimeFlagsAdminPage} roles={["super_admin"]} />}
+        </Route>
+
+        <Route path="/super-admin/pazaryeri-saglik">
+          {() => <ProtectedRoute component={PazaryeriSaglikPage} roles={["super_admin"]} />}
         </Route>
 
         <Route path="/pricing">
