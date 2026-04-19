@@ -63,7 +63,10 @@ router.get("/marketplace", async (req: Request, res: Response) => {
     const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "30"), 10) || 30, 1), 100);
     const offset = Math.max(parseInt(String(req.query.offset ?? "0"), 10) || 0, 0);
 
-    const conds: any[] = [eq(b2bCatalogItemsTable.isPublished, true)];
+    // Sprint I — Satınalma vitrin: SADECE onaylı (isPublished=true) VE
+    // (bağlı kaynak ürün yoksa tablo doğrudan stoklu sayılır; varsa stok > 0)
+    const stockOk = sql`(${b2bCatalogItemsTable.sourceProductId} IS NULL OR ${productsTable.stock} > 0)`;
+    const conds: any[] = [eq(b2bCatalogItemsTable.isPublished, true), stockOk];
     if (q) {
       const like = `%${q}%`;
       conds.push(
@@ -112,6 +115,7 @@ router.get("/marketplace", async (req: Request, res: Response) => {
       })
       .from(b2bCatalogItemsTable)
       .innerJoin(companiesTable, eq(b2bCatalogItemsTable.companyId, companiesTable.id))
+      .leftJoin(productsTable, eq(productsTable.id, b2bCatalogItemsTable.sourceProductId))
       .where(where)
       .orderBy(...orderBy)
       .limit(limit)
@@ -121,6 +125,7 @@ router.get("/marketplace", async (req: Request, res: Response) => {
       .select({ total: sql<number>`count(*)::int` })
       .from(b2bCatalogItemsTable)
       .innerJoin(companiesTable, eq(b2bCatalogItemsTable.companyId, companiesTable.id))
+      .leftJoin(productsTable, eq(productsTable.id, b2bCatalogItemsTable.sourceProductId))
       .where(where);
 
     res.json({ items: rows, total, limit, offset });
@@ -136,10 +141,12 @@ router.get("/marketplace", async (req: Request, res: Response) => {
  */
 router.get("/marketplace/categories", async (_req: Request, res: Response) => {
   try {
+    const stockOk = sql`(${b2bCatalogItemsTable.sourceProductId} IS NULL OR ${productsTable.stock} > 0)`;
     const rows = await db
       .selectDistinct({ category: b2bCatalogItemsTable.category })
       .from(b2bCatalogItemsTable)
-      .where(eq(b2bCatalogItemsTable.isPublished, true));
+      .leftJoin(productsTable, eq(productsTable.id, b2bCatalogItemsTable.sourceProductId))
+      .where(and(eq(b2bCatalogItemsTable.isPublished, true), stockOk));
     const cats = rows
       .map((r) => r.category)
       .filter((c): c is string => !!c && c.trim().length > 0)
@@ -164,7 +171,11 @@ router.get("/marketplace/companies", async (_req: Request, res: Response) => {
       })
       .from(b2bCatalogItemsTable)
       .innerJoin(companiesTable, eq(b2bCatalogItemsTable.companyId, companiesTable.id))
-      .where(eq(b2bCatalogItemsTable.isPublished, true))
+      .leftJoin(productsTable, eq(productsTable.id, b2bCatalogItemsTable.sourceProductId))
+      .where(and(
+        eq(b2bCatalogItemsTable.isPublished, true),
+        sql`(${b2bCatalogItemsTable.sourceProductId} IS NULL OR ${productsTable.stock} > 0)`,
+      ))
       .orderBy(asc(companiesTable.name));
     res.json(rows);
   } catch (err) {

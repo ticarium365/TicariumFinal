@@ -194,7 +194,6 @@ export const NAV_GROUPS: NavGroup[] = [
     accountTypes: ["purchasing"],
     items: [
       { href: "/satinalma-merkezi", label: "Satınalma Merkezi", icon: ShoppingBasket, roles: ["admin", "staff", "viewer"], accountTypes: ["purchasing"] },
-      { href: "/satinalma/rfqs", label: "Tekliflerim", icon: ClipboardList, roles: ["admin", "staff", "viewer"], accountTypes: ["purchasing"] },
       { href: "/settings/menu", label: "Menü Tercihleri", icon: Settings, roles: ["admin", "staff", "viewer"], accountTypes: ["purchasing"] },
       { href: "/settings", label: "Marka & Logo", icon: Settings, roles: ["admin"], accountTypes: ["purchasing"] },
       { href: "/firma-profili", label: "Firma Profili", icon: Settings, roles: ["admin"], accountTypes: ["purchasing"] },

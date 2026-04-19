@@ -249,6 +249,9 @@ export default function SatinalmaMerkeziPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => navigate("/satinalma/rfqs")} data-testid="btn-my-rfqs">
+              <FileText className="h-4 w-4 mr-1.5" /> Tekliflerim
+            </Button>
             <Button variant="outline" size="sm" onClick={exportExcel} data-testid="btn-export-excel">
               <FileSpreadsheet className="h-4 w-4 mr-1.5" /> Excel
             </Button>
