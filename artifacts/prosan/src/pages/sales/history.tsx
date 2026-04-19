@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from "@/components/ui/dialog";
-import { History, RotateCcw, Loader2, FileText } from "lucide-react";
+import { History, RotateCcw, Loader2, FileText, Send, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 
@@ -45,6 +45,63 @@ export default function SalesHistory() {
   const [returnNote, setReturnNote] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [invoicing, setInvoicing] = useState(false);
+
+  // ─── Sprint G — Tek tıkla fatura + XML önizleme ─────────────────────────────
+  const [quickSaleId, setQuickSaleId] = useState<number | null>(null);
+  const [previewOutbox, setPreviewOutbox] = useState<any | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  const openQuickInvoice = async (saleId: number) => {
+    setQuickSaleId(saleId);
+    setPreviewLoading(true);
+    setPreviewOutbox(null);
+    try {
+      const r = await fetch("/api/einvoice/from-sales", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ saleIds: [saleId] }),
+      });
+      const body = await r.json();
+      if (!r.ok) throw new Error(body?.error || body?.detail || "Faturalama başarısız");
+      const detail = await fetch(`/api/einvoice/outbox/${body.id}`, { credentials: "include" });
+      const detailJson = await detail.json();
+      if (!detail.ok) throw new Error(detailJson?.error || detailJson?.detail || "Outbox detayı alınamadı");
+      setPreviewOutbox(detailJson);
+    } catch (e: any) {
+      toast({ title: "Fatura kesilemedi", description: e?.message || String(e), variant: "destructive" });
+      setQuickSaleId(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const handleQuickSend = async () => {
+    if (!previewOutbox?.id) return;
+    setSending(true);
+    try {
+      const r = await fetch(`/api/einvoice/outbox/${previewOutbox.id}/send`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const body = await r.json();
+      if (!r.ok) throw new Error(body?.error || body?.detail || "Gönderim başarısız");
+      toast({
+        title: "E-Fatura gönderildi",
+        description: `Outbox #${previewOutbox.id} • Durum: ${body.status}`,
+      });
+      setPreviewOutbox(body);
+    } catch (e: any) {
+      toast({ title: "Gönderim hatası", description: e?.message || String(e), variant: "destructive" });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const previewXml: string | null = previewOutbox?.lastResponse?.xml
+    ?? previewOutbox?.lastResponse?.body
+    ?? null;
 
   const { data, isLoading } = useListSales({
     query: {
@@ -251,14 +308,27 @@ export default function SalesHistory() {
                     </TableCell>
                     <TableCell>
                       {!isReturned && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => { setReturnNote(""); setReturnDialog({ id: sale.id, name: sale.productName, qty: sale.quantity }); }}
-                        >
-                          <RotateCcw className="h-3.5 w-3.5 mr-1" />İade
-                        </Button>
+                        <div className="flex flex-col gap-1">
+                          {hasCustomer && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => openQuickInvoice(sale.id)}
+                              data-testid={`quick-invoice-${sale.id}`}
+                            >
+                              <FileText className="h-3.5 w-3.5 mr-1" />E-Fatura
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => { setReturnNote(""); setReturnDialog({ id: sale.id, name: sale.productName, qty: sale.quantity }); }}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5 mr-1" />İade
+                          </Button>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
@@ -279,6 +349,69 @@ export default function SalesHistory() {
           )}
         </CardContent>
       </Card>
+
+      {/* Sprint G — Tek tıkla fatura + XML önizleme */}
+      <Dialog open={quickSaleId !== null} onOpenChange={(o) => { if (!o) { setQuickSaleId(null); setPreviewOutbox(null); } }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-blue-600" />
+              E-Fatura Önizleme
+            </DialogTitle>
+            <DialogDescription>
+              {previewLoading
+                ? "Taslak hazırlanıyor..."
+                : previewOutbox
+                  ? `Outbox #${previewOutbox.id} • Durum: ${previewOutbox.status} • ETTN ${previewOutbox.externalId || "—"}`
+                  : "Yükleniyor"}
+            </DialogDescription>
+          </DialogHeader>
+          {previewLoading ? (
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" /> XML hazırlanıyor...
+            </div>
+          ) : previewOutbox ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-muted-foreground">Alıcı:</span> <span className="font-medium">{previewOutbox.receiverName}</span></div>
+                <div><span className="text-muted-foreground">Toplam:</span> <span className="font-bold text-primary">{Number(previewOutbox.totalAmount || 0).toFixed(2)} {previewOutbox.currency || "TRY"}</span></div>
+              </div>
+              <div className="rounded-md border bg-slate-950 text-slate-100 p-3 max-h-[360px] overflow-auto">
+                <pre className="text-[11px] leading-relaxed font-mono whitespace-pre-wrap break-all" data-testid="einvoice-xml-preview">
+                  {previewXml || "XML henüz mevcut değil. (Provider lastResponse XML üretmedi)"}
+                </pre>
+              </div>
+              {previewOutbox.statusMessage && (
+                <div className="text-xs text-muted-foreground">Durum mesajı: {previewOutbox.statusMessage}</div>
+              )}
+            </div>
+          ) : null}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setQuickSaleId(null); setPreviewOutbox(null); }}>
+              Kapat
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => previewOutbox && setLocation("/einvoice")}
+              disabled={!previewOutbox}
+            >
+              E-Fatura Listesine Git
+            </Button>
+            <Button
+              onClick={handleQuickSend}
+              disabled={
+                sending ||
+                !previewOutbox ||
+                !["draft", "failed", "queued"].includes(previewOutbox?.status)
+              }
+              data-testid="quick-send-button"
+            >
+              {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+              {previewOutbox && !["draft", "failed", "queued"].includes(previewOutbox.status) ? "Gönderildi" : "Gönder"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* İade Dialog */}
       <Dialog open={!!returnDialog} onOpenChange={() => { setReturnDialog(null); setReturnNote(""); }}>

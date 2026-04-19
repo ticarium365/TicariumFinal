@@ -44,13 +44,50 @@ The frontend is built with React and Vite, styled with Tailwind CSS and `shadcn/
 - **Test (1 PASS)**: Sprint C — GET /marketplace/jobs response shape (errorCategory enum, retryAvailable boolean, retryAvailable=true ⇒ nextRetryAt set).
 - **Tech-debt notu**: Mimari olarak kategori `sync_jobs` tablosuna structured kolon olarak yazılmalı (text-prefix heuristic format-fragile). Sprint H+ için bekletildi.
 
+### Sprint D — Buyer Portal Foundation (PASS)
+- Schema: companies.accountType enum (seller|buyer|both, default seller), buyer_profiles, buyer_rfqs (status: draft|sent|responded|awarded|cancelled|expired), buyer_rfq_targets (target status: pending|viewed|quoted|declined|awarded), awardedTargetId/awardedAt.
+- Artifact: artifacts/buyer-portal (web, /buyer-portal), Vite + React + shadcn/ui, login + dashboard + nav.
+- Auth: /auth/me ve /auth/login response'larında accountType companies join ile dönüyor.
+
+### Sprint E — Buyer Discovery + RFQ (PASS, architect re-review PASS)
+- Backend (routes/buyer-portal.ts):
+  - /buyer/sellers — discovery (q ile firma adı, kendi şirketini hariç, accountType in seller|both & isActive).
+  - /buyer/sellers/:id — public detay + ürün özeti (totalProducts + 20 örnek).
+  - POST /buyer/rfqs — atomik tx: rfq + targets + (opsiyonel) lead. Mixed valid/invalid IDs: response'ta invalidSellerCompanyIds döner, geçerli olanlar yine işlenir (P1 fix).
+  - /buyer/rfqs — list + targetCounts (total/quoted/viewed/pending) türetilmiş alanı.
+  - /buyer/rfqs/:id — detay + targets (seller name join).
+  - /buyer/rfqs/:id/cancel — draft|sent|responded → cancelled.
+  - /seller/rfqs/inbox — kendi tenant'ını hedefleyen target'lar (RFQ + buyer firma name join).
+  - /seller/rfqs/:targetId/view — pending→viewed, idempotent (advanced status'leri korur).
+- Lead linkage (architect P0 fix): contact_requests genişletildi → sellerCompanyId, buyerCompanyId, rfqId, sourceType ('public_form'|'rfq'). Eski lead'ler için tüm alanlar nullable. Satıcının kendi tenant'ında RFQ kaynaklı lead'leri ayırt edebilmesi için deterministic mapping.
+- PATCH /companies/:id accountType field kabul ediyor (super_admin).
+- Frontend (artifacts/buyer-portal): Layout + nav (Ana Sayfa/Keşfet/RFQ'larım), Discovery (search+grid), NewRfq (multi-seller checkbox + dinamik kalemler + lead toggle), Rfqs (list + detail with status badges + target sayıları).
+- Test (8/8 PASS, Sprint A/B/C ile birlikte 18/18): discovery guard, RFQ create transactional, self-target/invalid 400, list+counts, seller inbox+view idempotency, cross-tenant 404, buyer cancel, lead linkage + invalidSellerCompanyIds surface.
+
+### Sprint F — Quote Response & Comparison (PASS, 3/3 tests)
+- Backend (routes/buyer-portal.ts genişletildi):
+  - POST /seller/rfqs/:targetId/quote — quoteLines validate edilir (itemIndex range check), quoteTotal = Σ qty×unitPrice hesaplanır, status pending|viewed→quoted, quotedAt set; RFQ.status sent→responded ilk yanıt geldiğinde. awarded/declined target 409 döner.
+  - POST /seller/rfqs/:targetId/decline — status→declined, idempotent (re-decline 200).
+  - GET /buyer/rfqs/:id/comparison — items × satıcı matrix; her item için en düşük unitPrice'a isBest=true; per-target totals ascending (en ucuz önce); quotedCount/targetCount.
+  - POST /buyer/rfqs/:id/award — body { targetId }: rfq.status→awarded, awardedTargetId+awardedAt set; kazanan target.status→awarded; aynı RFQ'daki diğer 'quoted' target'lar otomatik 'declined' (audit trail). target.status !== 'quoted' ise 400; rfq.status awarded|cancelled ise 409.
+- Audit: AuditAction enum'ına RFQ_CREATE/CANCEL/QUOTE/DECLINE/AWARD eklendi; quote/award path'lerinde audit({req,...}) çağrısı.
+- Frontend (artifacts/buyer-portal):
+  - Rfqs.tsx: ComparisonView (renderlenince responded|awarded|sent statüsünde). Item × satıcı tablosu + best-price hücreleri yeşil arka plan + per-target totals row. canAward iken her satıcı için "Kabul Et" pick butonu + onay butonu (Trophy ikon, yeşil). Award sonrası awarded banner.
+  - SellerInbox.tsx (yeni): seller hesap için inbox listesi. Her RFQ kartında "Görüntüle" → ilk açılışta auto view-mark; teklif formu (per-item Input + canlı satır toplamı + tfoot toplamı) + leadTimeDays + Reddet butonu. quoted/declined/awarded ise read-only mesaj.
+  - App.tsx: Inbox icon nav linkleri (buyer+seller→hem RFQ'larım hem Gelen RFQ; sadece seller→Gelen RFQ). isSellerEnabled flag'i. Seller-only kullanıcılar artık "kısıtlı erişim" uyarısı görmüyor; /inbox routesı SellerInbox component'ine bağlı.
+- Tests (3/3, 21/21 toplam regression PASS):
+  - Seller quote → quoteTotal 800 (10×50 + 200×1.5), RFQ 'sent'→'responded'.
+  - Invalid itemIndex 400; decline idempotent; declined sonrası quote 409.
+  - Comparison best-price highlight; award → status 'awarded' + 409 re-award + 409 late quote.
+
 ### Master Backlog (mimari odaklı sıra)
 1. ✅ Sprint A — Regression tests
-2. ✅ Sprint B — Notification Hub Entegrasyonu (atomic dispatch + bell entegrasyonu)
-3. ✅ Sprint C — Marketplace Worker UI (kategori badge + canlı retry countdown)
-4. Sprint D (eski 71) — **Buyer Portal Foundation**: `companies.accountType` + `buyer_*` tablolar + `artifacts/buyer-portal` artifact iskeleti + auth ← SIRADAKİ
-5. Sprint E (eski 72) — Buyer Discovery + RFQ (firma/ürün listesi + multi-seller RFQ + satıcı RFQ Inbox)
-6. Sprint F (eski 73) — Quote Response & Comparison
+2. ✅ Sprint B — Notification Hub Entegrasyonu
+3. ✅ Sprint C — Marketplace Worker UI
+4. ✅ Sprint D — Buyer Portal Foundation
+5. ✅ Sprint E — Buyer Discovery + RFQ
+6. ✅ Sprint F — Quote Response & Comparison
+7. Sprint G — POS → E-Fatura UI ← SIRADAKİ
 7. Sprint G — POS → E-Fatura "Satıştan Otomatik" UI
 8. Sprint H — Marketplace tech-debt: `sync_jobs.errorCategory` structured kolon + log join
 

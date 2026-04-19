@@ -37,7 +37,12 @@ export type AuditAction =
   | "SUPPLIER_PAYMENT"
   | "SUPPLIER_ADJUSTMENT"
   | "PURCHASE_CREATE"
-  | "PRODUCT_COST_UPDATED";
+  | "PRODUCT_COST_UPDATED"
+  | "RFQ_CREATE"
+  | "RFQ_CANCEL"
+  | "RFQ_QUOTE"
+  | "RFQ_DECLINE"
+  | "RFQ_AWARD";
 
 interface AuditParams {
   req: Request;
