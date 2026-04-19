@@ -221,3 +221,9 @@ id = "JbKIoxH_GZFnZgLdJGWG1"
 uri = "file://outputs/Ticarium365-Musteri-Kullanim-Turu.docx"
 type = "word_document"
 title = "Ticarium365 — Müşteri Kullanım Turu (12 Adım, Ekran Görüntülü)"
+
+[[outputs]]
+id = "ZNOXCOAlBjsQ4YAGzblpN"
+uri = "file://outputs/Ticarium365-Tum-Sayfalar-Kullanim-Kilavuzu.docx"
+type = "word_document"
+title = "Ticarium365 — Tüm Sayfalar Uçtan Uca Kullanım Kılavuzu (52 sayfa)"
