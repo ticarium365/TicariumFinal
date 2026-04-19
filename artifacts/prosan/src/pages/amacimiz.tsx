@@ -4,15 +4,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PublicNav, PublicFooter } from "@/components/public-nav";
 import { Target, Compass, TrendingUp, ArrowRight } from "lucide-react";
 
-const NAVY = "hsl(222 47% 15%)";
-
 export default function AmacimizPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20" data-testid="page-amacimiz">
+    <div className="min-h-screen bg-background" data-testid="page-amacimiz">
       <PublicNav />
-      <section className="container mx-auto px-4 py-16 md:py-24 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6" style={{ fontFamily: "var(--font-display)", color: NAVY }}>
-          Amacımız
+      <section className="t365-page-hero container mx-auto px-4 py-20 md:py-28 text-center">
+        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6" style={{ fontFamily: "var(--font-display)" }}>
+          <span className="t365-brand-gradient">Amacımız</span>
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
           Türkiye'deki her KOBİ'nin işini tek panelde, tek aboneliğin altında, eklentisiz yönetebilmesi.

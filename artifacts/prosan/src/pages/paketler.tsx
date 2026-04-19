@@ -5,8 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { PublicNav, PublicFooter } from "@/components/public-nav";
 import { Check, ArrowRight, Boxes, ShoppingCart, Briefcase, TrendingUp, Building2 } from "lucide-react";
 
-const NAVY = "hsl(222 47% 15%)";
-
 type Pkg = {
   slug: string;
   name: string;
@@ -90,11 +88,11 @@ const packages: Pkg[] = [
 
 export default function PaketlerPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20" data-testid="page-paketler">
+    <div className="min-h-screen bg-background" data-testid="page-paketler">
       <PublicNav />
-      <section className="container mx-auto px-4 py-16 md:py-20 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-5" style={{ fontFamily: "var(--font-display)", color: NAVY }}>
-          Sana uygun bir paket var.
+      <section className="t365-page-hero container mx-auto px-4 py-20 md:py-24 text-center">
+        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-5" style={{ fontFamily: "var(--font-display)" }}>
+          <span className="t365-brand-gradient">Sana uygun bir paket var.</span>
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
           5 paket, küçük bir dükkândan çoklu şubeli işletmeye kadar. İhtiyacın değiştikçe yukarı geç,

@@ -17,8 +17,8 @@ function BrandIcon({ size = 48 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 48 48" className="shrink-0">
       <defs>
         <linearGradient id="t365grad-fp" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#3B82F6" />
-          <stop offset="100%" stopColor="#1D4ED8" />
+          <stop offset="0%" stopColor="#4F46E5" />
+          <stop offset="100%" stopColor="#0EA5A4" />
         </linearGradient>
       </defs>
       <rect x="0" y="0" width="48" height="48" rx="11" fill="url(#t365grad-fp)" />

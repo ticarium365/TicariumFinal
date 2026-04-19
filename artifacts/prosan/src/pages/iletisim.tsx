@@ -8,8 +8,6 @@ import { PublicNav, PublicFooter } from "@/components/public-nav";
 import { Phone, Mail, Clock, CheckCircle2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const NAVY = "hsl(222 47% 15%)";
-
 export default function IletisimPage() {
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
@@ -52,11 +50,11 @@ export default function IletisimPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20" data-testid="page-iletisim">
+    <div className="min-h-screen bg-background" data-testid="page-iletisim">
       <PublicNav />
-      <section className="container mx-auto px-4 py-16 md:py-20 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-5" style={{ fontFamily: "var(--font-display)", color: NAVY }}>
-          Sizi Arayalım
+      <section className="t365-page-hero container mx-auto px-4 py-20 md:py-24 text-center">
+        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-5" style={{ fontFamily: "var(--font-display)" }}>
+          <span className="t365-brand-gradient">Sizi Arayalım</span>
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
           İletişim bilgilerini bırak, ekibimizden biri <strong>1 iş günü içinde</strong> seni arasın.

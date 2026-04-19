@@ -10,8 +10,8 @@ const STEPS = [
     icon: Package,
     title: "Ürün Yönetimi",
     desc: "Sol menüden \"Ürünler\" seçerek ürün ekleyebilir, düzenleyebilir ve toplu Excel import yapabilirsiniz.",
-    color: "text-blue-600",
-    bg: "bg-blue-50",
+    color: "text-indigo-600",
+    bg: "bg-indigo-50",
   },
   {
     icon: ShoppingCart,

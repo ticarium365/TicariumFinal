@@ -4,8 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PublicNav, PublicFooter } from "@/components/public-nav";
 import { Building2, Users, Rocket, Heart, ArrowRight } from "lucide-react";
 
-const NAVY = "hsl(222 47% 15%)";
-
 const values = [
   { icon: Heart, title: "KOBİ odaklı", desc: "Çözümlerimizi mahalle bakkalından bölgesel toptancıya kadar gerçek KOBİ'lerle birlikte tasarlıyoruz." },
   { icon: Rocket, title: "Hızlı ve sade", desc: "Eğitim videosu izlemeden kullanılabilen, dakikalar içinde canlıya alınabilen bir deneyim." },
@@ -15,11 +13,11 @@ const values = [
 
 export default function HakkimizdaPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20" data-testid="page-hakkimizda">
+    <div className="min-h-screen bg-background" data-testid="page-hakkimizda">
       <PublicNav />
-      <section className="container mx-auto px-4 py-16 md:py-24 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6" style={{ fontFamily: "var(--font-display)", color: NAVY }}>
-          Biz Kimiz?
+      <section className="t365-page-hero container mx-auto px-4 py-20 md:py-28 text-center">
+        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6" style={{ fontFamily: "var(--font-display)" }}>
+          <span className="t365-brand-gradient">Biz Kimiz?</span>
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
           <strong>Ticarium365</strong>, Türkiye'deki KOBİ'lerin günlük operasyonunu — stok, satış, e-fatura, pazaryeri ve finans dahil —

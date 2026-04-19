@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PublicNav, PublicFooter } from "@/components/public-nav";
 import {
   Check, X, Minus, ArrowRight, Sparkles, ScanLine, Receipt, Store,
   Boxes, Smartphone, Cloud, BarChart3, Zap, ShieldCheck,
@@ -47,34 +48,17 @@ const differentiators = [
 
 export default function KarsilastirPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20" data-testid="page-karsilastir">
-      {/* HEADER */}
-      <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center text-primary-foreground font-bold" style={{ fontFamily: "var(--font-display)" }}>T</div>
-            <span className="font-bold text-lg" style={{ fontFamily: "var(--font-display)" }}>Ticarium365</span>
-            <Badge variant="secondary" className="ml-2 hidden sm:inline-flex">Neden farklıyız?</Badge>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link href="/login">
-              <Button variant="ghost" size="sm" data-testid="btn-login">Giriş Yap</Button>
-            </Link>
-            <Link href="/login">
-              <Button size="sm" data-testid="btn-cta-trial">21 gün ücretsiz</Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background" data-testid="page-karsilastir">
+      <PublicNav />
 
       {/* HERO */}
-      <section className="container mx-auto px-4 py-16 md:py-24 text-center">
-        <Badge variant="outline" className="mb-4">
-          <Sparkles className="h-3 w-3 mr-1" />
+      <section className="t365-page-hero container mx-auto px-4 py-20 md:py-28 text-center">
+        <Badge variant="outline" className="mb-4 border-primary/30 bg-white/70 backdrop-blur">
+          <Sparkles className="h-3 w-3 mr-1 text-primary" />
           KOBİ ön muhasebesinin ötesinde
         </Badge>
-        <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6 max-w-4xl mx-auto" style={{ fontFamily: "var(--font-display)" }}>
-          Diğer alternatiflerden <span className="text-primary">neden farklıyız?</span>
+        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 max-w-4xl mx-auto" style={{ fontFamily: "var(--font-display)" }}>
+          Diğer alternatiflerden <span className="t365-brand-gradient">neden farklıyız?</span>
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
           Çoğu yazılım ya sadece <strong>ön muhasebe</strong>, ya sadece <strong>perakende</strong>, ya sadece <strong>mobil POS</strong>.

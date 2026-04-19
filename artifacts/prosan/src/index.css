@@ -60,34 +60,34 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* LIGHT MODE — Clean Blue & White */
+/* LIGHT MODE — Premium Indigo & Teal */
 :root {
-  --background: 216 33% 97%;       /* Çok açık mavi-beyaz */
-  --foreground: 222 47% 11%;       /* Koyu lacivert */
+  --background: 220 33% 98%;       /* Yumuşak ışıklı beyaz */
+  --foreground: 224 56% 12%;       /* Derin gece-laciverti */
 
-  --border: 215 25% 88%;
-  --input: 215 25% 88%;
-  --ring: 221 83% 53%;             /* Blue-600 */
+  --border: 226 30% 90%;
+  --input: 226 30% 90%;
+  --ring: 234 89% 60%;             /* Indigo ring */
 
   --card: 0 0% 100%;               /* Saf beyaz kart */
-  --card-foreground: 222 47% 11%;
-  --card-border: 215 25% 91%;
+  --card-foreground: 224 56% 12%;
+  --card-border: 226 30% 92%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --popover-border: 215 25% 91%;
+  --popover-foreground: 224 56% 12%;
+  --popover-border: 226 30% 92%;
 
-  --primary: 221 83% 53%;          /* Blue-600 — #2563EB */
+  --primary: 234 89% 60%;          /* Indigo-500 — #4F46E5 */
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 215 25% 92%;
-  --secondary-foreground: 222 47% 20%;
+  --secondary: 226 30% 94%;
+  --secondary-foreground: 224 56% 18%;
 
-  --muted: 215 25% 93%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 226 30% 95%;
+  --muted-foreground: 220 14% 46%;
 
-  --accent: 214 95% 93%;           /* Blue-50 vurgu */
-  --accent-foreground: 221 83% 40%;
+  --accent: 180 84% 92%;           /* Açık teal vurgu */
+  --accent-foreground: 180 84% 30%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
@@ -130,7 +130,7 @@
 
   --border: 220 30% 16%;             /* white/8 hissi */
   --input: 220 30% 18%;
-  --ring: 189 94% 55%;               /* cyan ring */
+  --ring: 234 89% 65%;               /* indigo ring */
 
   --card: 222 40% 8%;                /* cam kart taban */
   --card-foreground: 210 40% 96%;
@@ -140,8 +140,8 @@
   --popover-foreground: 210 40% 96%;
   --popover-border: 220 30% 20%;
 
-  --primary: 189 94% 50%;            /* cyan-400 ana aksent */
-  --primary-foreground: 222 50% 6%;
+  --primary: 234 89% 65%;            /* indigo ana aksent */
+  --primary-foreground: 0 0% 100%;
 
   --secondary: 220 30% 14%;
   --secondary-foreground: 210 40% 95%;
@@ -149,8 +149,8 @@
   --muted: 220 30% 12%;
   --muted-foreground: 220 14% 62%;
 
-  --accent: 262 83% 65%;             /* violet aksent */
-  --accent-foreground: 222 50% 6%;
+  --accent: 180 70% 45%;             /* teal aksent */
+  --accent-foreground: 0 0% 100%;
 
   --destructive: 350 90% 60%;
   --destructive-foreground: 0 0% 100%;
@@ -164,11 +164,11 @@
   --sidebar: 224 60% 5%;             /* sidebar daha koyu */
   --sidebar-foreground: 215 25% 80%;
   --sidebar-border: 220 30% 14%;
-  --sidebar-primary: 189 94% 55%;    /* cyan aktif */
-  --sidebar-primary-foreground: 222 50% 6%;
+  --sidebar-primary: 234 89% 65%;    /* indigo aktif */
+  --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 220 30% 12%;
   --sidebar-accent-foreground: 210 40% 96%;
-  --sidebar-ring: 189 94% 55%;
+  --sidebar-ring: 234 89% 65%;
 
   --brand-navy: 222 50% 4%;
   --brand-emerald: 152 76% 50%;
@@ -252,9 +252,55 @@
 }
 
 @layer utilities {
-  /* Marka gradyanlı metin — Dark Pro: cyan → violet */
+  /* Premium marka gradyanı — Indigo → Teal (light pages) */
+  .t365-brand-gradient {
+    background: linear-gradient(135deg, hsl(234 89% 60%) 0%, hsl(180 70% 40%) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+  .t365-brand-bg {
+    background: linear-gradient(135deg, hsl(234 89% 60%) 0%, hsl(180 70% 40%) 100%);
+  }
+  /* Page hero — indigo→teal aurora (light + dark uyumlu) */
+  .t365-page-hero {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .t365-page-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(60% 80% at 15% 0%, hsl(234 89% 60% / 0.10), transparent 60%),
+      radial-gradient(50% 70% at 85% 10%, hsl(180 70% 45% / 0.10), transparent 60%);
+  }
+  .dark .t365-page-hero::before {
+    background:
+      radial-gradient(70% 90% at 15% 0%, hsl(234 89% 50% / 0.28), transparent 65%),
+      radial-gradient(60% 80% at 85% 10%, hsl(180 80% 40% / 0.22), transparent 65%),
+      radial-gradient(80% 60% at 50% 100%, hsl(262 60% 30% / 0.18), transparent 70%);
+  }
+  /* Cam kart — light pages */
+  .t365-card-glass {
+    background: hsl(0 0% 100% / 0.85);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid hsl(226 30% 90% / 0.8);
+    box-shadow: 0 10px 40px -20px hsl(234 89% 30% / 0.18);
+  }
+  .dark .t365-card-glass {
+    background: hsl(222 40% 10% / 0.6);
+    border: 1px solid hsl(0 0% 100% / 0.08);
+    box-shadow: 0 20px 60px -20px hsl(234 89% 20% / 0.5);
+  }
+
+  /* Marka gradyanlı metin — Dark Pro (yeni indigo→teal palet) */
   .t365-gradient-text {
-    background: linear-gradient(135deg, hsl(189 94% 65%) 0%, hsl(262 83% 75%) 100%);
+    background: linear-gradient(135deg, hsl(234 89% 70%) 0%, hsl(180 80% 55%) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;

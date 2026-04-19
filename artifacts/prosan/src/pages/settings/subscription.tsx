@@ -35,14 +35,14 @@ function usageBar(current: number, max: number) {
 
 function planIcon(slug: string) {
   if (slug === "free") return <Zap className="h-5 w-5 text-muted-foreground" />;
-  if (slug === "starter") return <Star className="h-5 w-5 text-blue-500" />;
+  if (slug === "starter") return <Star className="h-5 w-5 text-indigo-400" />;
   if (slug === "pro") return <TrendingUp className="h-5 w-5 text-purple-500" />;
   return <Crown className="h-5 w-5 text-amber-500" />;
 }
 
 function planColor(slug: string) {
   if (slug === "free") return "bg-muted border-border";
-  if (slug === "starter") return "bg-blue-500/10 border-blue-500/20";
+  if (slug === "starter") return "bg-indigo-500/10 border-indigo-500/20";
   if (slug === "pro") return "bg-purple-500/10 border-purple-500/20 ring-2 ring-purple-300";
   return "bg-amber-500/10 border-amber-500/20";
 }
@@ -161,7 +161,7 @@ export default function SubscriptionPage() {
                   <div className="text-right">
                     {subscription?.status === "active" && <span className="text-xs px-2 py-0.5 bg-green-500/15 text-green-300 rounded-full font-semibold">Aktif</span>}
                     {subscription?.status === "grace_period" && <span className="text-xs px-2 py-0.5 bg-amber-500/15 text-amber-300 rounded-full font-semibold">İptal Edildi</span>}
-                    {!subscription && current?.companyPlanType === "trial" && <span className="text-xs px-2 py-0.5 bg-blue-500/15 text-blue-300 rounded-full font-semibold">Deneme</span>}
+                    {!subscription && current?.companyPlanType === "trial" && <span className="text-xs px-2 py-0.5 bg-indigo-500/15 text-indigo-300 rounded-full font-semibold">Deneme</span>}
                   </div>
                 </div>
 
@@ -199,7 +199,7 @@ export default function SubscriptionPage() {
                   <p className="font-semibold text-sm mb-3">Kullanım Durumu</p>
                   <div className="space-y-3">
                     {[
-                      { label: "Kullanıcılar", current: usage.users, max: activePlan.maxUsers, icon: Users, color: "bg-blue-500" },
+                      { label: "Kullanıcılar", current: usage.users, max: activePlan.maxUsers, icon: Users, color: "bg-indigo-500" },
                       { label: "Ürünler", current: usage.products, max: activePlan.maxProducts, icon: Package, color: "bg-emerald-500" },
                       { label: "Şubeler", current: usage.branches, max: activePlan.maxBranches, icon: GitBranch, color: "bg-purple-500" },
                       { label: "Bu Ay Satış", current: usage.monthlySales, max: activePlan.maxMonthlySales, icon: ShoppingBag, color: "bg-amber-500" },

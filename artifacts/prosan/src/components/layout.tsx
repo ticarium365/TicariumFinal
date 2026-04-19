@@ -77,7 +77,7 @@ function TrialBanner() {
   if (status.isTrialExpired) return null;
 
   const days = status.trialDaysLeft;
-  const color = days <= 3 ? "bg-red-600" : days <= 7 ? "bg-orange-500" : "bg-blue-600/80";
+  const color = days <= 3 ? "bg-red-600" : days <= 7 ? "bg-orange-500" : "bg-indigo-600/80";
 
   return (
     <div className={`mx-3 mb-2 rounded-lg px-3 py-2 text-white text-xs ${color}`}>
@@ -308,7 +308,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div
             className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer text-sm mb-1.5 ${
               isItemActive(TOP_ITEM.href)
-                ? "bg-blue-50 text-blue-700 font-semibold"
+                ? "bg-indigo-50 text-indigo-700 font-semibold"
                 : "text-slate-600 font-medium hover:bg-slate-100"
             }`}
             onClick={() => setIsOpen(false)}
@@ -326,11 +326,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div
             className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer text-sm mb-3 overflow-hidden ${
               isItemActive(HERO_ITEM.href)
-                ? "shadow-md shadow-blue-500/30"
-                : "hover:shadow-md hover:shadow-blue-500/20"
+                ? "shadow-md shadow-indigo-500/30"
+                : "hover:shadow-md hover:shadow-indigo-500/20"
             }`}
             style={{
-              background: "linear-gradient(135deg, hsl(217 91% 55%) 0%, hsl(199 89% 50%) 100%)",
+              background: "linear-gradient(135deg, hsl(234 89% 60%) 0%, hsl(180 70% 40%) 100%)",
               color: "white",
             }}
             onClick={() => setIsOpen(false)}
@@ -366,7 +366,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               type="button"
               onClick={() => toggleGroup(group.id)}
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer text-xs uppercase tracking-wider ${
-                groupHasActive ? "text-blue-700 font-bold" : "text-slate-500 font-bold hover:bg-slate-100"
+                groupHasActive ? "text-indigo-700 font-bold" : "text-slate-500 font-bold hover:bg-slate-100"
               }`}
               data-testid={`nav-group-${group.id}`}
               aria-expanded={isOpenGroup}
@@ -387,7 +387,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       <div
                         className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-all cursor-pointer text-sm ${
                           active
-                            ? "bg-blue-50 text-blue-700 font-semibold"
+                            ? "bg-indigo-50 text-indigo-700 font-semibold"
                             : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                         }`}
                         onClick={() => setIsOpen(false)}
@@ -426,7 +426,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <SheetTitle className="text-xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "var(--font-display)" }}>{companyName}</SheetTitle>
                 <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest flex items-center gap-1 text-slate-500">
                   <span>powered by</span>
-                  <span className="text-slate-800">Ticarium<span className="text-blue-600">365</span></span>
+                  <span className="text-slate-800">Ticarium<span className="t365-brand-gradient font-extrabold">365</span></span>
                 </p>
               </SheetHeader>
               <div className="p-3 flex-1 overflow-y-auto">
@@ -435,7 +435,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <div className="p-4 mt-auto border-t border-slate-200 bg-white">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 bg-blue-600">
+                  <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 bg-gradient-to-br from-indigo-600 to-teal-600">
                     {user.fullName.charAt(0).toUpperCase()}
                   </div>
                   <div>
@@ -462,7 +462,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <h1 className="text-xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "var(--font-display)" }}>{companyName}</h1>
           <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest flex items-center gap-1 text-slate-500">
             <span>powered by</span>
-            <span className="text-slate-800">Ticarium<span className="text-blue-600">365</span></span>
+            <span className="text-slate-800">Ticarium<span className="t365-brand-gradient font-extrabold">365</span></span>
           </p>
         </div>
 
@@ -473,7 +473,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         <div className="p-3 mt-auto border-t border-slate-200 bg-white">
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 bg-blue-600">
+            <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 bg-gradient-to-br from-indigo-600 to-teal-600">
               {user.fullName.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">

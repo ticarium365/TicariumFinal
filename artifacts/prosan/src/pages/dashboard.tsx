@@ -113,7 +113,7 @@ function useTcmbRates() {
 const NOTIF_META: Record<string, { icon: any; color: string; label: string }> = {
   low_stock: { icon: AlertTriangle, color: "text-amber-500", label: "Stok" },
   stock_zero: { icon: PackageX, color: "text-rose-500", label: "Tükendi" },
-  product_request: { icon: Mail, color: "text-blue-500", label: "Talep" },
+  product_request: { icon: Mail, color: "text-indigo-400", label: "Talep" },
   ecommerce_order: { icon: ShoppingCart, color: "text-emerald-500", label: "E-Ticaret" },
   system_announcement: { icon: Sparkles, color: "text-purple-500", label: "Yenilik" },
   daily_summary: { icon: Bell, color: "text-cyan-500", label: "Özet" },
@@ -298,13 +298,13 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground mt-0.5">{todaySales} satış</p>
           </CardContent>
         </Card>
-        <Card className="border-blue-500/30">
+        <Card className="border-indigo-500/30">
           <CardContent className="px-5 py-4">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <BarChart2 className="h-3.5 w-3.5 text-blue-500" />
+              <BarChart2 className="h-3.5 w-3.5 text-indigo-400" />
               Son 30 Gün Cirosu
             </p>
-            <p className="text-2xl font-bold tracking-tight t365-numeric text-blue-500 mt-1">
+            <p className="text-2xl font-bold tracking-tight t365-numeric text-indigo-400 mt-1">
               {fmt(revenue30)}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">{sales30} satış</p>
@@ -333,7 +333,7 @@ export default function Dashboard() {
 
       {/* Hızlı Satış Butonu */}
       <Link href="/sales">
-        <div className="rounded-xl bg-gradient-to-r from-blue-600 via-blue-600 to-blue-700 hover:brightness-105 active:brightness-95 transition-all shadow-lg shadow-blue-600/20 cursor-pointer">
+        <div className="rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-600 to-teal-600 hover:brightness-105 active:brightness-95 transition-all shadow-lg shadow-indigo-600/20 cursor-pointer">
           <div className="flex items-center justify-between px-6 py-4">
             <div>
               <p className="text-white/80 text-xs font-medium uppercase tracking-widest">Hızlı İşlem</p>
@@ -360,8 +360,8 @@ export default function Dashboard() {
             <AreaChart data={chartData30} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.22} />
-                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.22} />
+                  <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
@@ -388,7 +388,7 @@ export default function Dashboard() {
                 wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
                 formatter={(v) => v === "revenue" ? "Ciro" : "Kâr"}
               />
-              <Area type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} fill="url(#colorRevenue)" dot={false} />
+              <Area type="monotone" dataKey="revenue" stroke="#4F46E5" strokeWidth={2} fill="url(#colorRevenue)" dot={false} />
               <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} fill="url(#colorProfit)" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
