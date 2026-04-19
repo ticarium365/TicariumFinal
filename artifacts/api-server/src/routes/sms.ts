@@ -123,7 +123,8 @@ router.post("/test-send", requireWriter, async (req: Request, res: Response) => 
 });
 
 // ─── Tenant SMS gönderim (uygulamadan tetik) ────────────────────────────────
-router.post("/send", async (req: Request, res: Response) => {
+// Viewer rolü maliyet/güvenlik nedeniyle gönderim tetikleyemez.
+router.post("/send", requireWriter, async (req: Request, res: Response) => {
   const { toPhone, body } = req.body || {};
   if (!toPhone || !body) return res.status(400).json({ error: "toPhone ve body zorunlu" });
   if (body.length > 1000) return res.status(400).json({ error: "Mesaj çok uzun (max 1000 karakter)" });

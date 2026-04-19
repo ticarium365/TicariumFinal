@@ -73,12 +73,14 @@ export async function getSmsProviderForCompany(companyId: number): Promise<{
     }
   }
 
-  // Legacy: env değişkenleriyle NetGSM (eski deploy'lar için geriye dönük destek).
-  // YALNIZ DB satırı yokken devreye girer.
+  // Legacy: env değişkenleriyle NetGSM (eski tek-tenant deploy'lar için geriye dönük destek).
+  // YALNIZ DB satırı yokken VE SMS_ALLOW_ENV_FALLBACK=true ise devreye girer.
+  // Multi-tenant SaaS modunda paylaşılan kimlik bilgileri tenant izolasyonunu bozar.
   const envUser = process.env.NETGSM_USERNAME;
   const envPass = process.env.NETGSM_PASSWORD;
   const envHeader = process.env.NETGSM_HEADER;
-  if (!row && envUser && envPass && envHeader) {
+  const envFallbackAllowed = process.env.SMS_ALLOW_ENV_FALLBACK === "true";
+  if (!row && envFallbackAllowed && envUser && envPass && envHeader) {
     const cfg: SmsAccountConfig = {
       provider: "netgsm", sandbox: false, senderHeader: envHeader,
       credentials: { username: envUser, password: envPass },

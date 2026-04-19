@@ -55,23 +55,24 @@ async function seedDefaultUsers() {
     { username: "goruntule", password: "staff123",  fullName: "Görüntüleyici",  role: "viewer" as const },
   ];
 
+  // İlk şirketi bul (prosan = co1) — hem ilk seed hem upsert dalı için ortak
+  const { eq: eql } = await import("drizzle-orm");
+  const { companiesTable: co } = await import("@workspace/db");
+  const [firstCompany] = await db.select({ id: co.id }).from(co).orderBy(co.id).limit(1);
+  const fallbackCompanyId = firstCompany?.id ?? 1;
+
   if (count === 0) {
     logger.info("No users found, seeding all default accounts...");
     for (const u of defaultUsers) {
       const passwordHash = await bcrypt.hash(u.password, 10);
       await db.insert(usersTable).values({
         username: u.username, passwordHash, fullName: u.fullName, role: u.role,
+        companyId: fallbackCompanyId,
       });
       logger.info({ username: u.username, role: u.role }, "User seeded");
     }
   } else {
     // Upsert: eksik kullanıcıları ekle (yeni kullanıcılar eklendikçe seed genişleyebilir)
-    const { eq: eql } = await import("drizzle-orm");
-    // İlk şirketi bul (prosan = co1)
-    const { companiesTable: co } = await import("@workspace/db");
-    const [firstCompany] = await db.select({ id: co.id }).from(co).orderBy(co.id).limit(1);
-    const fallbackCompanyId = firstCompany?.id ?? 1;
-
     for (const u of defaultUsers) {
       const existing = await db.select({ id: usersTable.id }).from(usersTable).where(eql(usersTable.username, u.username));
       if (existing.length === 0) {

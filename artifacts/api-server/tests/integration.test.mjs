@@ -4918,3 +4918,236 @@ describe("Sprint B — Trendyol gerçek HTTP konnektörü", () => {
     await api("DELETE", `/marketplace/accounts/${accId}`, { jar });
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sprint 80+ — SMS Provider Adapter (per-tenant, registry, encrypted creds)
+// ─────────────────────────────────────────────────────────────────────────────
+describe("SMS Provider Adapter", () => {
+  test("Provider katalog döner — netgsm + mock implemented, stub'lar implemented:false", async () => {
+    const { jar } = await login("admin", "admin123");
+    const { status, json } = await api("GET", "/sms/providers", { jar });
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(json), "providers dizi olmalı");
+    const keys = json.map((p) => p.key);
+    for (const k of ["mock", "netgsm", "iletimerkezi", "vatansms"]) {
+      assert.ok(keys.includes(k), `${k} provider listede olmalı`);
+    }
+    const netgsm = json.find((p) => p.key === "netgsm");
+    assert.equal(netgsm.implemented, true, "netgsm gerçek HTTP — implemented:true");
+    const ilt = json.find((p) => p.key === "iletimerkezi");
+    assert.equal(ilt.implemented, false, "iletimerkezi stub — implemented:false");
+  });
+
+  test("Anonim erişim — 401", async () => {
+    const jar = new CookieJar();
+    const r = await api("GET", "/sms/providers", { jar });
+    assert.equal(r.status, 401);
+  });
+
+  test("Viewer rol PUT settings — 403", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const r = await api("PUT", "/sms/settings", {
+      jar, body: { provider: "mock" },
+    });
+    assert.equal(r.status, 403);
+  });
+
+  test("Bilinmeyen provider PUT — 400", async () => {
+    const { jar } = await login("admin", "admin123");
+    const r = await api("PUT", "/sms/settings", {
+      jar, body: { provider: "olmayan_provider" },
+    });
+    assert.equal(r.status, 400);
+  });
+
+  test("Mock+sandbox ayarla → settings GET'te credentials maskelenir", async () => {
+    const { jar } = await login("admin", "admin123");
+    const upd = await api("PUT", "/sms/settings", {
+      jar,
+      body: {
+        provider: "mock", sandbox: true, senderHeader: "TICARIUMTEST",
+        credentials: { username: "secret_user", password: "secret_pass" },
+        isActive: true,
+      },
+    });
+    assert.equal(upd.status, 200, JSON.stringify(upd.json));
+    assert.equal(upd.json.provider, "mock");
+    // GET'te plaintext sızdırma yok
+    const get = await api("GET", "/sms/settings", { jar });
+    assert.equal(get.status, 200);
+    if (get.json.credentials?.password) {
+      assert.equal(get.json.credentials.password, "********",
+        "password maskelenmeli — gerçek değer dönmemeli");
+    }
+    if (get.json.credentials?.username) {
+      // username hassas değil (isSensitiveKey false), açık dönebilir
+      assert.equal(typeof get.json.credentials.username, "string");
+    }
+  });
+
+  test("Mock provider health-check → ok:true", async () => {
+    const { jar } = await login("admin", "admin123");
+    await api("PUT", "/sms/settings", {
+      jar, body: { provider: "mock", sandbox: true, senderHeader: "TEST", credentials: {}, isActive: true },
+    });
+    const r = await api("POST", "/sms/health-check", { jar });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.ok, true, JSON.stringify(r.json));
+    assert.equal(r.json.source, "db");
+  });
+
+  test("Test-send mock → ok:true ve mesaj geçmişine sent yazılır", async () => {
+    const { jar } = await login("admin", "admin123");
+    await api("PUT", "/sms/settings", {
+      jar, body: { provider: "mock", sandbox: true, senderHeader: "TEST", credentials: {}, isActive: true },
+    });
+    const send = await api("POST", "/sms/test-send", {
+      jar, body: { toPhone: "+905551234567", body: "Mock E2E test" },
+    });
+    assert.equal(send.status, 200, JSON.stringify(send.json));
+    assert.equal(send.ok ?? send.json.ok, true, JSON.stringify(send.json));
+    assert.ok(send.json.messageId, "messageId dönmeli");
+
+    const hist = await api("GET", "/sms/messages?limit=5", { jar });
+    assert.equal(hist.status, 200);
+    const found = hist.json.find((m) => m.id === send.json.messageId);
+    assert.ok(found, "mesaj geçmişte olmalı");
+    assert.equal(found.status, "sent");
+    assert.equal(found.provider, "mock");
+  });
+
+  test("isActive=false → test-send 'disabled' ile bloklanır, gerçek gönderim yapılmaz", async () => {
+    const { jar } = await login("admin", "admin123");
+    await api("PUT", "/sms/settings", {
+      jar, body: { provider: "netgsm", sandbox: false, isActive: false,
+                   credentials: { username: "x", password: "y" }, senderHeader: "X" },
+    });
+    const send = await api("POST", "/sms/test-send", {
+      jar, body: { toPhone: "+905551234567", body: "Disabled test" },
+    });
+    assert.equal(send.status, 200);
+    assert.equal(send.json.ok, false, "isActive=false iken gönderim engellenmeli");
+    const hist = await api("GET", "/sms/messages?limit=5", { jar });
+    const m = hist.json.find((x) => x.id === send.json.messageId);
+    assert.equal(m.status, "disabled", "DB'ye 'disabled' status yazılmalı");
+
+    // Cleanup: tekrar aktif et
+    await api("PUT", "/sms/settings", { jar, body: { isActive: true, provider: "mock", sandbox: true } });
+  });
+
+  test("Geçersiz telefon (kısa) → ok:false", async () => {
+    const { jar } = await login("admin", "admin123");
+    await api("PUT", "/sms/settings", {
+      jar, body: { provider: "netgsm", sandbox: false, senderHeader: "T",
+                   credentials: { username: "u", password: "p" }, isActive: true },
+    });
+    // Mock'a değil gerçek netgsm provider'a gider — geçersiz numara için validation patlar
+    const r = await api("POST", "/sms/test-send", {
+      jar, body: { toPhone: "123", body: "test" },
+    });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.ok, false);
+    assert.match(r.json.error || "", /Türkiye mobil/i,
+      `TR mobil hata mesajı bekleniyor: ${r.json.error}`);
+    // Cleanup
+    await api("PUT", "/sms/settings", { jar, body: { provider: "mock", sandbox: true, isActive: true } });
+  });
+
+  test("Mesaj gövdesi çok uzun (>1000) — 400", async () => {
+    const { jar } = await login("admin", "admin123");
+    const r = await api("POST", "/sms/test-send", {
+      jar, body: { toPhone: "+905551234567", body: "x".repeat(1001) },
+    });
+    assert.equal(r.status, 400);
+  });
+
+  test("Viewer rolü /sms/send tetikleyemez — 403 (maliyet/güvenlik kapısı)", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const r = await api("POST", "/sms/send", {
+      jar, body: { toPhone: "+905551234567", body: "viewer should not send" },
+    });
+    assert.equal(r.status, 403, `viewer 403 bekleniyor: ${JSON.stringify(r.json)}`);
+  });
+
+  test("source='missing' kontratı: settings yok + env fallback kapalı → no_provider failed kayıt", async () => {
+    // Önce nihat tenant ayarlarını sil → settings yok durumuna düşür
+    const { jar } = await login("nihat_admin", "nihat123", "nihatturizm");
+    // Var ise mock'a/aktife çek (silmek yerine kontrollü stub - missing davranışı SMS_ALLOW_ENV_FALLBACK
+    // varsayılan kapalı + DB satırı yok kombinasyonunda doğrulanır; nihat'ta zaten satır olmayabilir)
+    const get = await api("GET", "/sms/settings", { jar });
+    // _empty=true ise satır yok demektir → missing branch'i tetiklenir
+    if (get.json._empty) {
+      const send = await api("POST", "/sms/test-send", {
+        jar, body: { toPhone: "+905551234567", body: "missing branch test" },
+      });
+      assert.equal(send.status, 200);
+      assert.equal(send.json.ok, false, "settings yok + env yok → ok:false");
+      const hist = await api("GET", "/sms/messages?limit=5", { jar });
+      const m = hist.json.find((x) => x.id === send.json.messageId);
+      assert.ok(m, "missing kaydı geçmişte olmalı");
+      assert.equal(m.status, "no_provider", "missing branch için status=no_provider");
+      assert.equal(m.provider, "none");
+    }
+  });
+
+  test("Tenant izolasyonu: prosan ve nihatturizm ayarları ayrı", async () => {
+    const { jar: prosanJar } = await login("admin", "admin123", "prosan");
+    await api("PUT", "/sms/settings", {
+      jar: prosanJar,
+      body: { provider: "mock", sandbox: true, senderHeader: "PROSAN_HDR",
+              credentials: {}, isActive: true },
+    });
+    const { jar: nihatJar } = await login("nihat_admin", "nihat123", "nihatturizm");
+    const nihatSettings = await api("GET", "/sms/settings", { jar: nihatJar });
+    assert.equal(nihatSettings.status, 200);
+    // Nihat'ın PROSAN ayarlarını GÖRMEMELİ
+    assert.notEqual(nihatSettings.json.senderHeader, "PROSAN_HDR",
+      "tenant izolasyonu: nihat prosan'ın senderHeader'ını görmemeli");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sprint 62 — POS → Sale → /einvoice/from-sales kontrat doğrulamaları
+// (gerçek fatura kesme PROSAN senderVkn'i gerektirir — burada validation ön kontrolleri)
+// ─────────────────────────────────────────────────────────────────────────────
+describe("POS → from-sales köprüsü — validation kontratı", () => {
+  test("Boş saleIds → 400", async () => {
+    const { jar } = await login("admin", "admin123");
+    const r = await api("POST", "/einvoice/from-sales", { jar, body: { saleIds: [] } });
+    assert.equal(r.status, 400);
+    assert.match(r.json.error, /saleIds dizisi gerekli/);
+  });
+
+  test("Geçersiz saleIds (dizi değil) → 400", async () => {
+    const { jar } = await login("admin", "admin123");
+    const r = await api("POST", "/einvoice/from-sales", { jar, body: { saleIds: "abc" } });
+    assert.equal(r.status, 400);
+  });
+
+  test("Var olmayan saleId → 404", async () => {
+    const { jar } = await login("admin", "admin123");
+    const r = await api("POST", "/einvoice/from-sales", { jar, body: { saleIds: [99999999] } });
+    assert.equal(r.status, 404);
+  });
+
+  test("Müşterisiz satıştan e-fatura kesilemez → 400 (müşteri seçilmemiş)", async () => {
+    const { jar } = await login("admin", "admin123");
+    const { json: product } = await createTestProduct(jar, { stock: 5 });
+    const sale = await api("POST", "/sales", {
+      jar, body: { productId: product.id, quantity: 1, unitPrice: 100 },
+    });
+    if (sale.status !== 201) { console.warn("sale_create_failed, atlandı"); return; }
+    const r = await api("POST", "/einvoice/from-sales", {
+      jar, body: { saleIds: [sale.json.id] },
+    });
+    // Sale customerId yok → "Müşteri seçilmemiş satıştan e-fatura kesilemez"
+    assert.equal(r.status, 400);
+    assert.match(r.json.error, /Müşteri/);
+  });
+
+  test("Viewer rolü from-sales çağıramaz — 403", async () => {
+    const { jar } = await login("goruntule", "staff123");
+    const r = await api("POST", "/einvoice/from-sales", { jar, body: { saleIds: [1] } });
+    assert.equal(r.status, 403);
+  });
+});
