@@ -1,0 +1,370 @@
+TICARIUM365 ROADMAP
+
+SPRINT 86 — Ticarium Merkezi UX/UI Premium Overhaul
+
+AMAÇ:
+
+Ticarium Merkezi modülünü sade, anlaşılır, premium ve satış odaklı hale getirmek.
+
+Kullanıcı sisteme girdiğinde:
+
+* ne yapacağını hemen anlamalı
+* ürününü nerede sattığını görmeli
+* tek panelden yönetebildiğini hissetmeli
+* karmaşa yaşamamalı
+* güven duymalı
+
+Bu modül ERP ekranı gibi değil,
+modern ticaret merkezi gibi görünmeli.
+
+==================================================
+GENEL TASARIM FELSEFESİ
+=======================
+
+İstenen his:
+
+* ferah
+* modern
+* premium SaaS
+* satış odaklı
+* veri boğmayan
+* güçlü ama sade
+
+Rakip hissi değil,
+yeni nesil ticaret paneli hissi.
+
+==================================================
+
+1. ANA SAYFA TASARIMI
+   ==================================================
+
+Yeni sayfa:
+
+/ticarium-merkezi
+
+Hero üst alan:
+
+Başlık:
+Ticarium Merkezi
+
+Alt metin:
+Ürünlerinizi tüm satış kanallarında tek yerden yönetin.
+
+Sağ üst CTA:
+
+* Ürün Yayınla
+* Kanal Bağla
+
+==================================================
+2. ÜST KPI KARTLARI
+===================
+
+İlk satırda 4 premium kart:
+
+* Yayındaki Ürün Sayısı
+* Bugün Gelen Talep
+* Bu Ay Satış
+* Bekleyen Teklifler
+
+Kart özellikleri:
+
+* radius 18px
+* hafif shadow
+* küçük ikon
+* trend oku
+* hover animasyonu
+
+==================================================
+3. KANAL YAPISI GÖRSELLEŞTİRME
+==============================
+
+Ürünler nerede yayında net gösterilsin.
+
+Kart veya grid görünüm:
+
+[Ticarium Pazar]
+145 ürün aktif
+
+[Kendi Web Sitem]
+92 ürün aktif
+
+[Ortak Vitrin]
+58 ürün aktif
+
+Her kartta:
+
+* durum rengi
+* son senkron zamanı
+* yönet butonu
+
+==================================================
+4. SOL MENÜ YENİ YAPI
+=====================
+
+/ticarium-merkezi altında sade alt menü:
+
+* Genel Bakış
+* Kanallar
+* Ürün Yayınlama
+* Fiyat Kuralları
+* Kargo Kuralları
+* Talepler / Siparişler
+* Analiz
+* Ayarlar
+
+Aktif menü:
+
+* mavi vurgu
+* sol çizgi
+* soft glow
+
+==================================================
+5. ÜRÜN YAYINLAMA EKRANI
+========================
+
+Liste yerine modern tablo + kart hibrit.
+
+Her satırda:
+
+Ürün adı
+stok
+ana fiyat
+
+Kanallar:
+
+[✓] Pazar
+[✓] Web Site
+[ ] Ortak Vitrin
+
+Hızlı aksiyon:
+
+* yayınla
+* kaldır
+* fiyat düzenle
+
+Toplu seçim:
+
+* seçili ürünleri yayına al
+* seçili ürünleri kapat
+
+==================================================
+6. FİYAT KURALLARI EKRANI
+=========================
+
+Basit ve anlaşılır.
+
+Kart mantığı:
+
+Ticarium Pazar
++%10
+
+Kendi Site
+-%5
+
+Ortak Site
++15 TL
+
+Canlı önizleme:
+
+Ana fiyat: 100 TL
+
+Pazar: 110
+Web: 95
+Ortak: 115
+
+Karmaşık tablo değil.
+Kural builder olsun.
+
+==================================================
+7. KARGO KURALLARI EKRANI
+=========================
+
+Kart sistemi:
+
+Kendi Site:
+1000 TL üstü ücretsiz
+
+Pazar:
+Sabit 79 TL
+
+Ortak Site:
+Ücretsiz
+
+Ek özellik:
+
+* şehir bazlı kurallar
+* ürün bazlı override
+* kampanya kargo bannerı
+
+==================================================
+8. TALEP / SİPARİŞ MERKEZİ
+==========================
+
+Kanban + tablo hibrit.
+
+Kolonlar:
+
+* Yeni Talep
+* Teklif Verildi
+* Onay Bekliyor
+* Siparişe Döndü
+
+Kart içinde:
+
+* firma adı
+* ürün
+* tutar
+* tarih
+* hızlı cevapla
+
+==================================================
+9. ANALİZ SAYFASI
+=================
+
+Grafik sade ve net.
+
+Göster:
+
+* hangi kanal daha iyi satıyor
+* en çok görüntülenen ürün
+* en çok teklif alan ürün
+* fiyat değişince performans
+* dönüşüm oranı
+
+Az grafik, çok anlam.
+
+==================================================
+10. BOŞ EKRANLAR
+================
+
+Boş sayfa olursa:
+
+Henüz ürün yayınlamadınız.
+
+[İlk Ürünü Yayınla]
+
+veya
+
+Henüz kanal bağlı değil.
+
+[Kanal Bağla]
+
+==================================================
+11. MOBİL WEB DENEYİMİ
+======================
+
+Mobilde:
+
+* alt tab menü
+* hızlı yayınla butonu
+* swipe kartlar
+* tek kolon KPI kartları
+
+Öncelik ekranlar:
+
+* dashboard
+* talepler
+* ürün yayını
+* hızlı fiyat değiştir
+
+==================================================
+12. RENK SİSTEMİ
+================
+
+Ana ton:
+
+Primary:
+Soft mavi
+
+Success:
+Koyu yeşil
+
+Warning:
+Amber
+
+Danger:
+Soft kırmızı
+
+Background:
+Beyaz / kırık beyaz
+
+Card:
+çok açık gri
+
+Dark mode varsa ikinci planda.
+
+==================================================
+13. TYPOGRAPHY
+==============
+
+Font:
+
+Inter / Manrope / Satoshi
+
+Başlıklar net.
+Tablo yazıları okunaklı.
+Fazla küçük font yasak.
+
+==================================================
+14. MİKRO ETKİLEŞİMLER
+======================
+
+* hover state
+* loading skeleton
+* başarılı kayıt animasyonu
+* ürün yayına alındı toast
+* teklif gönderildi toast
+
+==================================================
+15. GÜVEN HİSSİ
+===============
+
+Her yerde:
+
+* son senkron zamanı
+* güvenli altyapı ibaresi
+* hata yerine açıklayıcı dil
+* işlem başarı geri bildirimi
+
+==================================================
+16. LOGIN / GEÇİŞ
+=================
+
+Ticarium Merkezi girişten sonra ilk görünen alan olabilir.
+
+İlk giriş wizard:
+
+* ürün yayınlamak ister misin?
+* web siteni açmak ister misin?
+* fiyat kuralı tanımla
+
+==================================================
+17. TESTLER
+===========
+
+1. kullanıcı ilk 10 sn içinde ne yapacağını anlıyor mu
+2. ürün yayınlama 3 tık altında mı
+3. fiyat kuralı anlaşılır mı
+4. mobil kullanım rahat mı
+5. tablo yoğunluğu yormuyor mu
+6. boş ekranlar yönlendiriyor mu
+
+==================================================
+DEFINITION OF DONE
+==================
+
+* Ticarium Merkezi modern görünüyor
+* kullanıcı ürünü tek panelden yönetiyor
+* satış kanalları anlaşılır görünüyor
+* fiyat ve kargo kuralları kolay yönetiliyor
+* ürün premium SaaS hissi veriyor
+* demo sırasında etkileyici görünüm oluşuyor
+
+==================================================
+TİCARİ ETKİ
+===========
+
+Müşteri şunu hisseder:
+
+Bu sadece program değil,
+satış büyütme merkezi.

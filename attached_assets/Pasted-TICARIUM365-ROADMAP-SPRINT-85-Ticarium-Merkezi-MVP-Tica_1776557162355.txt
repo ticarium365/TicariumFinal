@@ -1,0 +1,308 @@
+TICARIUM365 ROADMAP
+
+SPRINT 85 — Ticarium Merkezi MVP / İç Ticaret ve Satış Merkezi
+
+AMAÇ:
+
+Ticarium365 içindeki firmaların ürünlerini tek merkezden yönetmesini sağlamak.
+
+Firmalar ürünlerini:
+
+1. Ticarium Pazar’da diğer üyelere gösterebilsin
+2. Kendi web sitesinde yayınlayabilsin
+3. Ticarium ortak vitrinde listeleyebilsin
+
+Böylece sistem sadece ERP değil,
+aynı zamanda satış ve büyüme motoru haline gelsin.
+
+==================================================
+YENİ ANA MENÜ
+=============
+
+/ticarium-merkezi
+
+Alt sekmeler:
+
+1. Ticarium Pazar
+2. Kendi Web Sitem
+3. Ticarium Ortak Site
+4. Sipariş Talepleri
+5. Fiyat / Kargo Kuralları
+6. Performans
+
+==================================================
+
+1. TICARIUM PAZAR
+   ==================================================
+
+AMAÇ:
+
+Firmalar birbirlerinin paylaşılmış ürünlerini görebilsin.
+
+Özellikler:
+
+* ürün arama
+* kategori filtreleme
+* stok adedi gösterimi
+* fiyat gösterimi
+* firma bilgisi
+* hızlı teklif iste
+* hızlı sipariş talebi
+* favorilere ekle
+* şehir bazlı filtre
+* marka bazlı filtre
+
+Paylaşım izinleri:
+
+[ ] ürün paylaş
+[ ] fiyat göster
+[ ] stok göster
+[ ] firma adını göster
+[ ] sadece seçili firmalara açık
+
+Yeni tablolar:
+
+market_shared_products
+market_permissions
+market_requests
+
+==================================================
+2. KENDİ WEB SİTEM
+==================
+
+AMAÇ:
+
+Firma kendi ürünlerini kendi vitrinde satsın.
+
+Yapı:
+
+firmaadi.ticarium365.shop
+
+veya özel domain bağlama
+
+Özellikler:
+
+* logo / renk
+* banner alanı
+* ürün listesi
+* kategori sayfaları
+* ürün detay sayfası
+* whatsapp sipariş
+* teklif al
+* iletişim formu
+* SEO alanları
+* mobil uyumlu tema
+
+Kurallar:
+
+* yalnız seçilen ürünler yayınlansın
+* fiyat kuralı ayrı olsun
+* kargo kuralı ayrı olsun
+
+Yeni tablolar:
+
+storefronts
+storefront_products
+storefront_settings
+
+==================================================
+3. TICARIUM ORTAK SITE
+======================
+
+AMAÇ:
+
+Tüm firmaların onaylı ürünleri ortak vitrinde toplansın.
+
+Özellikler:
+
+* ortak ürün arama
+* kategori bazlı listeleme
+* firma filtreleme
+* teklif toplama
+* müşteri lead toplama
+* SEO landing page mantığı
+
+Kurallar:
+
+* firma isterse katılır
+* seçili ürünler görünür
+* fiyat gizli / açık olabilir
+
+Yeni tablolar:
+
+public_market_listings
+market_leads
+
+==================================================
+4. SİPARİŞ TALEPLERİ
+====================
+
+AMAÇ:
+
+Gelen tüm talepler tek merkezden yönetilsin.
+
+Durumlar:
+
+* yeni talep
+* teklif verildi
+* onay bekliyor
+* siparişe döndü
+* iptal
+
+Özellikler:
+
+* teklif oluştur
+* karşı firmaya gönder
+* not ekle
+* PDF teklif indir
+* geçmişi görüntüle
+
+Yeni tablolar:
+
+market_orders
+market_quotes
+market_messages
+
+==================================================
+5. FİYAT / KARGO KURALLARI
+==========================
+
+AMAÇ:
+
+Her kanal için farklı fiyat ve teslimat mantığı kurulsun.
+
+Kanallar:
+
+* Ticarium Pazar
+* Kendi Web Sitem
+* Ortak Site
+
+Fiyat kuralları:
+
+* ana satış fiyatı kullan
+* +%
+* -%
+* * TL
+* * TL
+* min fiyat limiti
+* kampanya fiyatı
+
+Kargo kuralları:
+
+* ücretsiz kargo
+* ücretli kargo
+* X TL üstü ücretsiz
+* sabit ücret
+* şehir bazlı fiyat
+* mağazadan teslim al
+
+Yeni tablolar:
+
+channel_pricing_rules
+channel_shipping_rules
+
+==================================================
+6. PERFORMANS PANELİ
+====================
+
+Gösterilecekler:
+
+* yayınlanan ürün sayısı
+* gelen talep sayısı
+* teklif dönüş oranı
+* en çok görüntülenen ürün
+* en çok teklif alan ürün
+* kanal bazlı satış
+* kanal bazlı kârlılık
+
+==================================================
+ROL VE YETKİLER
+===============
+
+Yeni feature flag’ler:
+
+commerce.market
+commerce.storefront
+commerce.publicmarket
+commerce.quotes
+commerce.rules
+commerce.analytics
+
+Roller:
+
+admin:
+tam yetki
+
+sales:
+ürün yayınla / teklif ver / sipariş yönet
+
+viewer:
+sadece görüntüleme
+
+==================================================
+BACKEND
+=======
+
+Yeni route yapıları:
+
+/ticarium-center/market
+/ticarium-center/storefront
+/ticarium-center/public
+/ticarium-center/orders
+/ticarium-center/rules
+/ticarium-center/analytics
+
+==================================================
+FRONTEND
+========
+
+Yeni ana sayfa:
+
+/ticarium-merkezi
+
+Dashboard kartları:
+
+* aktif ürün
+* gelen talep
+* bekleyen teklif
+* bu ay satış
+* en çok görüntülenen ürün
+
+==================================================
+TESTLER
+=======
+
+1. ürün paylaşımı çalışıyor mu
+2. izinler doğru mu
+3. mini site açılıyor mu
+4. ortak site listeleme doğru mu
+5. teklif akışı çalışıyor mu
+6. fiyat +% / -% doğru mu
+7. kargo kuralları doğru mu
+8. tenant izolasyonu tam mı
+
+==================================================
+DEFINITION OF DONE
+==================
+
+* firmalar ürünlerini tek merkezden dışarı açabiliyor
+* kendi web sitelerini kullanabiliyor
+* ortak vitrinde ürün yayınlayabiliyor
+* teklif ve sipariş talepleri alabiliyor
+* fiyat ve kargo kuralları ayrı yönetiliyor
+* performans ölçülebiliyor
+
+==================================================
+TİCARİ SONUÇ
+============
+
+Ticarium365 artık yalnızca işletme yazılımı değil.
+
+Aynı zamanda:
+
+* B2B satış ağı
+* mini e-ticaret altyapısı
+* ortak pazar alanı
+* satış büyütme merkezi
+
+haline gelir.
