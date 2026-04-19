@@ -17,6 +17,21 @@ The project uses a monorepo structure managed by `pnpm workspaces`.
 ### UI/UX Decisions
 The frontend is built with React and Vite, styled with Tailwind CSS and `shadcn/ui` for a modern, responsive user experience. It features dynamic branding, a persistent sidebar and header, a `TrialBanner` for trial accounts, and a multi-step user onboarding wizard (`WelcomeTour`). The UI supports integrated POS terminals, data import wizards, loyalty program management, multi-currency handling, and comprehensive reporting dashboards. A public storefront (`/s/:slug`) allows anonymous visitors to browse products and place orders, adapting to tenant-specific themes and offering various payment integration options.
 
+### Sprint A — Architect Regression Tests (yeni)
+- `tests/integration.test.mjs` sonuna `Sprint A — Architect regression: forecast aliases + outbox XML` describe'ı eklendi.
+- **T1 PASS**: `GET /budgets/forecast/expenses` hem alias (`avg`/`slope`/`label`) hem legacy (`categoryName`/`trendSlope`/`forecast`) keys döndürüyor; `slope===trendSlope`, `label===categoryName` kontratı assert ediliyor.
+- **T2 PASS**: `POST /einvoice/outbox` → `GET /einvoice/outbox/:id` akışında UBL-TR XML `lastResponse.xml` JSONB içinden okunabiliyor (schema'da `rawXml` kolonu yoktur). 
+- **MockEInvoiceProvider sertleştirildi**: `createInvoice()` artık `buildInvoiceXml()` ile gerçek UBL-TR XML üretip `raw.xml`'e koyuyor (önceden `getInvoiceXml`'de basit fake XML vardı; route fallback'i için yetersizdi). Tüm provider'lar artık aynı XML kontratını sağlıyor (mimari tutarlılık).
+
+### Master Backlog (mimari odaklı sıra)
+1. ✅ Sprint A — Regression tests (BU ROUND)
+2. Sprint B — Notification Hub Entegrasyonu (bütçe alarmları + e-fatura olayları → bildirim merkezi)
+3. Sprint C — Marketplace Worker UI (rate-limit/permanent-error görselleştirme + retry timer)
+4. Sprint D (eski 71) — **Buyer Portal Foundation**: `companies.accountType` + `buyer_*` tablolar + `artifacts/buyer-portal` artifact iskeleti + auth
+5. Sprint E (eski 72) — Buyer Discovery + RFQ (firma/ürün listesi + multi-seller RFQ + satıcı RFQ Inbox)
+6. Sprint F (eski 73) — Quote Response & Comparison
+7. Sprint G — POS → E-Fatura "Satıştan Otomatik" UI
+
 ### Sprint 86 — Command Palette (⌘K)
 - `components/nav-config.ts` yeni paylaşılan modül: `NavItem`, `NavGroup`, `NAV_GROUPS` tek kaynaktan; layout sidebar ve command palette aynı veriyi tüketir (circular import riski yok).
 - `components/command-palette.tsx`: ⌘K / Ctrl+K ile açılan global hızlı geçiş; rol-filtreli sayfa listesi + Quick Access (Dashboard, e-Ticarium Merkezi, Bildirimler).

@@ -4,9 +4,10 @@ import {
   EInvoiceCreateResult, EInvoiceSendResult, EInvoiceCancelResult,
   IncomingInvoice, ProviderHealth, calculateInvoiceTotals,
 } from "./types.js";
+import { buildInvoiceXml } from "./ubl-tr-builder.js";
 
 // In-memory store — sandbox/test ortamı için. Sunucu restart olunca temizlenir.
-const memInvoices: Record<string, { payload: EInvoiceCreatePayload; status: string; createdAt: Date }> = {};
+const memInvoices: Record<string, { payload: EInvoiceCreatePayload; status: string; createdAt: Date; xml: string }> = {};
 const memIncoming: Record<string, IncomingInvoice[]> = {};
 
 export class MockEInvoiceProvider implements EInvoiceProvider {
@@ -28,12 +29,28 @@ export class MockEInvoiceProvider implements EInvoiceProvider {
   async createInvoice(payload: EInvoiceCreatePayload): Promise<EInvoiceCreateResult> {
     const externalId = randomUUID();
     const externalNo = "MOCK" + new Date().getFullYear() + String(Object.keys(memInvoices).length + 1).padStart(9, "0");
-    memInvoices[externalId] = { payload, status: "draft", createdAt: new Date() };
+    // UBL-TR XML üret (gerçek stub provider'lar ile aynı kontrat).
+    // Mock sandbox kullanıcıları geriye dönük olarak minimal/eksik VKN'li payload gönderebilir;
+    // bu durumda builder throw etmek yerine güvenli fallback XML üretelim — sandbox kabul mantığını korur.
+    let xml: string;
+    let totals: ReturnType<typeof calculateInvoiceTotals>;
+    let generatedBy = "mock+ubl-tr-builder";
+    try {
+      const built = buildInvoiceXml(payload);
+      xml = built.xml;
+      totals = built.totals;
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      totals = calculateInvoiceTotals(payload.lines);
+      xml = `<?xml version="1.0" encoding="UTF-8"?>\n<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" mock-fallback="true">\n  <ProfileID>${payload.profile || "TICARIFATURA"}</ProfileID>\n  <ID>${externalNo}</ID>\n  <UBLValidationNote>${reason.replace(/[<>&]/g, "")}</UBLValidationNote>\n  <Receiver>${(payload.receiver?.name || "").replace(/[<>&]/g, "")}</Receiver>\n  <PayableAmount currencyID="${payload.currency || "TRY"}">${totals.total}</PayableAmount>\n</Invoice>`;
+      generatedBy = "mock+fallback";
+    }
+    memInvoices[externalId] = { payload, status: "draft", createdAt: new Date(), xml };
     return {
       externalId,
       externalNo,
       status: "draft",
-      raw: { totals: calculateInvoiceTotals(payload.lines) },
+      raw: { xml, totals, generatedBy },
     };
   }
 
@@ -88,7 +105,7 @@ export class MockEInvoiceProvider implements EInvoiceProvider {
   async getInvoiceXml(externalId: string) {
     const inv = memInvoices[externalId];
     if (!inv) return null;
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<MockInvoice ettn="${externalId}">\n  <Receiver>${inv.payload.receiver.name}</Receiver>\n</MockInvoice>`;
-    return { xml };
+    // createInvoice'da üretilen UBL-TR XML'i (veya fallback'i) tutarlı olarak geri ver.
+    return { xml: inv.xml };
   }
 }
