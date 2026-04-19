@@ -138,8 +138,10 @@ router.use("/shipping", shippingRouter);
 import featureFlagsRuntimeRouter from "./feature-flags-runtime.js";
 import currencyRatesRouter from "./currency-rates.js";
 import smsPushRouter from "./sms-push.js";
+import smsRouter from "./sms.js";
 router.use("/admin", featureFlagsRuntimeRouter);
 router.use("/currency", currencyRatesRouter);
 router.use(smsPushRouter);
+router.use("/sms", smsRouter);
 
 export default router;

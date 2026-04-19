@@ -1,17 +1,9 @@
+// NOT: /sms/send rotası artık routes/sms.ts içinde — burada yalnız push kalır.
 import { Router, type IRouter, type Request, type Response } from "express";
 import { requireAuth } from "../middlewares/auth.js";
-import { sendSms } from "../services/sms/netgsm-provider.js";
 import { registerPushToken, sendExpoPush } from "../services/push/expo-push.js";
 
 const router: IRouter = Router();
-
-router.post("/sms/send", requireAuth, async (req: Request, res: Response) => {
-  const { toPhone, body } = req.body || {};
-  if (!toPhone || !body) return res.status(400).json({ error: "toPhone ve body zorunlu" });
-  if (body.length > 1000) return res.status(400).json({ error: "Mesaj çok uzun (max 1000 karakter)" });
-  const result = await sendSms({ companyId: req.companyId, toPhone, body });
-  res.json(result);
-});
 
 router.post("/push/register", requireAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;

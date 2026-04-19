@@ -7,7 +7,7 @@ import { requireAuth } from "../middlewares/auth.js";
 import { Errors } from "../lib/errors.js";
 import { audit } from "../lib/audit.js";
 import { logger } from "../lib/logger.js";
-import { sendSms } from "../services/sms/netgsm-provider.js";
+import { sendSms } from "../services/sms/factory.js";
 
 const router = Router();
 

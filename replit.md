@@ -71,7 +71,7 @@ The backend is powered by Express 5, using PostgreSQL as the database with Drizz
 - **OpenAI Vision**: Used for receipt OCR.
 - **multer**: For handling file uploads in data import.
 - **Sentry**: Optional error tracking.
-- **NetGSM**: SMS provider.
+- **SMS Provider Adapter**: Per-tenant pluggable SMS providers (NetGSM gerçek HTTP, İletimerkezi/Vatansms stub, Mock sandbox). `sms_settings` tablosu tenant başına credentials (encrypted) + sandbox + senderHeader + lastHealth tutar. Factory karar ağacı: DB→env→missing/disabled. Rotalar: `/api/sms/{providers,settings,health-check,test-send,send,messages}`. Backward-compat `sendSms()` shim auth.ts ve sms-push.ts için korunur.
 - **Expo Push**: Mobile push notification service.
 - **Trendyol Sapigw**: Marketplace API for product, price, and order synchronization.
 - **Hepsiburada MPOP API**: Marketplace API for product, price, and order synchronization.
