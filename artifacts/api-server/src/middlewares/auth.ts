@@ -8,6 +8,8 @@ export interface SessionUser {
   role: "admin" | "staff" | "viewer" | "super_admin";
   isActive: boolean;
   companyId: number;
+  /** Sprint D: companies.accountType (seller|buyer|both). Buyer portal yetkilendirmesi. */
+  accountType?: "seller" | "buyer" | "both";
 }
 
 declare module "express-session" {

@@ -5188,18 +5188,36 @@ describe("Sprint A — Architect regression: forecast aliases + outbox XML", () 
     assert.ok(Array.isArray(json.categories), "categories array olmalı");
     assert.equal(typeof json.totalForecast, "number", "totalForecast number olmalı");
     assert.ok(json.categories.length > 0, "PROSAN tenant'ında en az 1 gider kategorisi olmalı (production seed garantisi)");
-    const c = json.categories[0];
-    // Frontend'in bağımlı olduğu alias alanları
-    for (const k of ["avg", "slope", "label"]) {
-      assert.ok(k in c, `alias key '${k}' eksik (frontend kullanıyor)`);
+    // Architect feedback: TÜM kategorilerde alias↔legacy invariantı sabit kalmalı
+    for (const [i, c] of json.categories.entries()) {
+      for (const k of ["avg", "slope", "label"]) {
+        assert.ok(k in c, `categories[${i}]: alias key '${k}' eksik (frontend kullanıyor)`);
+      }
+      for (const k of ["categoryName", "trendSlope", "forecast"]) {
+        assert.ok(k in c, `categories[${i}]: legacy key '${k}' eksik (geriye uyumluluk)`);
+      }
+      assert.equal(c.slope, c.trendSlope, `categories[${i}]: slope ve trendSlope eşleşmeli`);
+      assert.equal(c.label, c.categoryName, `categories[${i}]: label ve categoryName eşleşmeli`);
     }
-    // Geriye dönük uyumluluk için orijinal alanlar
-    for (const k of ["categoryName", "trendSlope", "forecast"]) {
-      assert.ok(k in c, `legacy key '${k}' eksik (geriye uyumluluk)`);
+  });
+
+  test("GET /budgets/forecast/expenses months clamp [2,12] + invalid period 400", async () => {
+    const { jar } = await login("admin", "admin123");
+    // months=99 → 12'ye clamp; her kategorinin history.length === 12
+    const big = await api("GET", "/budgets/forecast/expenses?months=99", { jar });
+    assert.equal(big.status, 200);
+    if (big.json.categories.length > 0) {
+      assert.equal(big.json.categories[0].history.length, 12, "months=99 → 12'ye clamp");
     }
-    // Sayısal tutarlılık
-    assert.equal(c.slope, c.trendSlope, "slope ve trendSlope eşleşmeli");
-    assert.equal(c.label, c.categoryName, "label ve categoryName eşleşmeli");
+    // months=1 → 2'ye clamp
+    const small = await api("GET", "/budgets/forecast/expenses?months=1", { jar });
+    assert.equal(small.status, 200);
+    if (small.json.categories.length > 0) {
+      assert.equal(small.json.categories[0].history.length, 2, "months=1 → 2'ye clamp");
+    }
+    // period geçersiz format → 400
+    const bad = await api("GET", "/budgets/forecast/expenses?period=2026-13-99", { jar });
+    assert.equal(bad.status, 400, "geçersiz period 400 dönmeli");
   });
 
   test("POST /einvoice/outbox stores XML retrievable via lastResponse.xml", async () => {
@@ -5233,10 +5251,8 @@ describe("Sprint A — Architect regression: forecast aliases + outbox XML", () 
     const { jar } = await login("admin", "admin123");
     const settingsRes = await api("GET", "/einvoice/settings", { jar });
     assert.equal(settingsRes.status, 200);
-    if (settingsRes.json?.provider !== "mock") {
-      console.log(`[Sprint A] fallback path testi sadece provider=mock için anlamlı, mevcut: ${settingsRes.json?.provider}`);
-      return;
-    }
+    // Architect feedback: silent skip yerine deterministic assertion — PROSAN tenant'ında provider=mock garanti.
+    assert.equal(settingsRes.json?.provider, "mock", `Test ortamında PROSAN tenant provider=mock olmalı (mevcut: ${settingsRes.json?.provider}). Fallback regression testi noop'a düşmemeli.`);
     // Bilinçli geçersiz VKN (UBL builder throw etmeli) → mock fallback path tetiklenir
     const { status, json: created } = await api("POST", "/einvoice/outbox", {
       jar,

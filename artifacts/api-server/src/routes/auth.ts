@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { db, usersTable, companySettingsTable, passwordResetTokensTable } from "@workspace/db";
+import { db, usersTable, companySettingsTable, passwordResetTokensTable, companiesTable } from "@workspace/db";
 import { and, eq, gt } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { Errors } from "../lib/errors.js";
@@ -82,6 +82,16 @@ router.post("/login", async (req: Request, res: Response) => {
       return;
     }
 
+    const sessionCompanyId = user.role === "super_admin" ? (user.companyId ?? companyId) : companyId;
+
+    // Sprint D: companies.accountType session ve response'a yansıtılır.
+    let accountType: "seller" | "buyer" | "both" = "seller";
+    if (sessionCompanyId) {
+      const [c] = await db.select({ accountType: companiesTable.accountType })
+        .from(companiesTable).where(eq(companiesTable.id, sessionCompanyId)).limit(1);
+      if (c?.accountType) accountType = c.accountType as typeof accountType;
+    }
+
     req.session.user = {
       id: user.id,
       username: user.username,
@@ -89,7 +99,8 @@ router.post("/login", async (req: Request, res: Response) => {
       email: user.email,
       role: user.role,
       isActive: user.isActive,
-      companyId: user.role === "super_admin" ? (user.companyId ?? companyId) : companyId,
+      companyId: sessionCompanyId,
+      accountType,
     };
 
     await audit({
@@ -109,6 +120,7 @@ router.post("/login", async (req: Request, res: Response) => {
         role: user.role,
         isActive: user.isActive,
         companyId: req.session.user.companyId,
+        accountType: req.session.user.accountType ?? "seller",
         createdAt: user.createdAt,
       },
       message: "Giriş başarılı",
@@ -150,6 +162,7 @@ router.get("/me", requireAuth, async (req: Request, res: Response) => {
     role: user.role,
     isActive: user.isActive,
     companyId: user.companyId,
+    accountType: user.accountType ?? "seller",
     createdAt: new Date(),
     onboardingCompleted,
   });

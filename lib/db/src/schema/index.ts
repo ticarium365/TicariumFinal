@@ -1,5 +1,6 @@
 export * from "./companies";
 export * from "./users";
+export * from "./buyer_portal";
 export * from "./products";
 export * from "./sales";
 export * from "./stock_movements";

@@ -18,6 +18,14 @@ export const companySectorEnum = pgEnum("company_sector", [
   "other",
 ]);
 
+/**
+ * Sprint D — Buyer Portal Foundation: hesap tipi enum'u.
+ *  - seller : satıcı firma (varsayılan; Ticarium365 ana panelini kullanır)
+ *  - buyer  : sadece alıcı firma (sipariş/RFQ gönderir, satıcı paneline erişmez)
+ *  - both   : hem satıcı hem alıcı (her iki panele de girebilir)
+ */
+export const accountTypeEnum = pgEnum("account_type", ["seller", "buyer", "both"]);
+
 export const companiesTable = pgTable("companies", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -27,6 +35,8 @@ export const companiesTable = pgTable("companies", {
   isActive: boolean("is_active").notNull().default(true),
   planType: planTypeEnum("plan_type").notNull().default("trial"),
   trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+  /** Sprint D: hesap tipi — buyer portal vs satıcı paneli yetkilendirmesi için. */
+  accountType: accountTypeEnum("account_type").notNull().default("seller"),
   // T017 Phase B-2: Onboarding wizard alanları
   sector: companySectorEnum("sector"),
   /** Onboarding wizard tamamlandığında doldurulur (kullanıcı "Bitti" derse veya skip etse de set edilir). */
