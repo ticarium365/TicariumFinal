@@ -335,42 +335,6 @@ export default function ETicariumMerkeziPage() {
         </div>
       </div>
 
-      {/* Genel Bakış — KPI'lar */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" data-testid="hub-kpis">
-        <KpiCard
-          icon={Package}
-          label="Yayındaki Ürün"
-          value={String(overview?.kpis.yayindakiUrun ?? "—")}
-          color="bg-blue-50 text-blue-600"
-          href="/channels"
-          testId="kpi-yayindaki-urun"
-        />
-        <KpiCard
-          icon={Inbox}
-          label="Bugün Gelen Talep"
-          value={String(overview?.kpis.bugunGelenTalep ?? "—")}
-          color="bg-amber-50 text-amber-600"
-          href="/b2b/quotes"
-          testId="kpi-bugun-talep"
-        />
-        <KpiCard
-          icon={TrendingUp}
-          label="Bu Ay Online Satış"
-          value={overview ? TRY(overview.kpis.buAySatis) : "—"}
-          color="bg-emerald-50 text-emerald-600"
-          href="/karlilik-kanal"
-          testId="kpi-ay-satis"
-        />
-        <KpiCard
-          icon={Clock}
-          label="Bekleyen Teklif"
-          value={String(overview?.kpis.bekleyenTeklif ?? "—")}
-          color="bg-purple-50 text-purple-600"
-          href="/b2b/quotes"
-          testId="kpi-bekleyen-teklif"
-        />
-      </div>
-
       {/* Üç hizmet bölümü */}
       <div className="space-y-5">
         {services.map((s) => (
