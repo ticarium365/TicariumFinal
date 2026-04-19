@@ -10,6 +10,7 @@
   },
   "private": true,
   "devDependencies": {
+    "playwright": "^1.59.1",
     "prettier": "^3.8.1",
     "puppeteer-core": "22.15.0",
     "typescript": "~5.9.2"

@@ -215,3 +215,9 @@ id = "irxX18j5nH7wKzlrQif8b"
 uri = "file://outputs/Ticarium365-Yatirimci-Sunumu.docx"
 type = "word_document"
 title = "Ticarium365 — Yatırımcı Sunumu (güncel)"
+
+[[outputs]]
+id = "JbKIoxH_GZFnZgLdJGWG1"
+uri = "file://outputs/Ticarium365-Musteri-Kullanim-Turu.docx"
+type = "word_document"
+title = "Ticarium365 — Müşteri Kullanım Turu (12 Adım, Ekran Görüntülü)"
