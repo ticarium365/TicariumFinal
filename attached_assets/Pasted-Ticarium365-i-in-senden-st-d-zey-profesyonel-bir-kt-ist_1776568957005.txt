@@ -1,0 +1,255 @@
+Ticarium365 için senden üst düzey profesyonel bir çıktı istiyorum.
+
+Bu artık normal not değil.
+Yatırımcıya, stratejik ortağa veya satın alma görüşmesine verilebilecek seviyede olmalı.
+
+==================================================
+İSTEDİĞİM ÇIKTI FORMATLARI
+==========================
+
+1. Ana çıktı:
+   Word (.docx) profesyonel master doküman
+
+2. İkinci çıktı (opsiyonel ama güçlü olur):
+   Yatırımcı özeti / executive summary ayrı Word
+
+3. Gerekirse ek tablo dosyaları:
+   maliyet, roadmap, gelir modeli
+
+==================================================
+ANA GÖREV
+=========
+
+Ticarium365 projesini uçtan uca analiz et ve profesyonel dokümante et.
+
+Hem teknik hem ticari hem ürün hem yatırımcı gözüyle hazırla.
+
+Sadece mevcut durum değil,
+gelecek vizyonu da koy.
+
+==================================================
+MUTLAKA OLSUN
+=============
+
+Aşağıdaki yıldız modüller özellikle öne çıkarılsın:
+
+1. Gerçek Karlılık Motoru
+
+* maliyet hesabı
+* raf ömrü / stok bekleme maliyeti
+* sermaye bağlama etkisi
+* kira/maaş/gider dağıtımı
+* ürün bazlı gerçek kâr
+
+2. e-Ticarium Merkezi
+
+* satış merkezi
+* reklam bütçesi yönetimi
+* ürünleri çok kanala yayma
+* kendi site + ortak site + pazar
+* performans ekranı
+
+3. Akıllı Fiyatlandırma
+
+* +% / -%
+* kanal bazlı fiyat
+* rakip fiyat izleme geleceği
+* kâr koruyan otomatik fiyat önerileri
+
+4. Firmalar Arası B2B Ağ
+
+* ürün paylaşımı
+* stok paylaşımı
+* teklif alma
+* ticaret ağı
+* ileride komisyon modeli
+
+Bu modüller projenin yıldızlarıdır.
+Fazlandırmada ve tanıtımda stratejik sıraya koy.
+
+==================================================
+DOKÜMANDA İSTEDİĞİM BAŞLIKLAR
+=============================
+
+1. Executive Summary
+
+2. Problem Statement
+   Türkiye’de KOBİ’lerin yaşadığı sorunlar
+
+3. Ticarium365 Çözümü
+
+4. Mevcut Tamamlanan Modüller
+
+5. Devam Eden / Yapılacak Modüller
+
+6. Faz Faz Roadmap
+
+FAZ 1:
+çekirdek işletme sistemi
+
+FAZ 2:
+ticaret büyütme
+
+FAZ 3:
+entegrasyonlar
+
+FAZ 4:
+B2B network
+
+FAZ 5:
+AI / veri zekâsı
+
+FAZ 6:
+uluslararasılaşma
+
+7. Teknik Mimari
+
+* multi tenant
+* role based auth
+* backend
+* frontend
+* db
+* ölçeklenebilirlik
+* güvenlik
+
+8. Gelir Modelleri
+
+* abonelik
+* modül satışı
+* komisyon
+* reklam yönetimi
+* white label
+* enterprise lisans
+
+9. Operasyonel Maliyet Analizi
+
+Bunu detaylı istiyorum.
+
+==================================================
+MALİYET HESABI
+==============
+
+Her sürüm için ortalama kullanıcı başı aylık maliyet çıkar:
+
+Starter plan
+Growth plan
+Pro plan
+Enterprise plan
+
+Ayrı ayrı değerlendir:
+
+* düşük kullanım
+* orta kullanım
+* yoğun kullanım
+
+Maliyet kalemleri:
+
+* hosting
+* database
+* storage
+* sms / email
+* dosya upload
+* rapor/export
+* yoğun sorgular
+* pazaryeri sync
+* AI kullanım varsa
+* support yükü
+
+Ayrıca:
+
+En iyi sürümde yoğun kullanan müşteri kişi başı ortalama maliyet ne?
+En düşük planda ortalama maliyet ne?
+
+Tahmini ama mantıklı modelle.
+
+==================================================
+YÜKSEK MASRAF DOĞURABİLECEK KISIMLAR
+====================================
+
+Özellikle belirt:
+
+* ağır sorgular
+* rapor ekranları
+* export işlemleri
+* canlı senkronizasyonlar
+* OCR
+* AI modülleri
+* çok tenant büyük veri
+* medya depolama
+* gerçek zamanlı dashboard
+
+Ve bunlar için çözüm önerileri ver:
+
+* queue
+* cache
+* async jobs
+* cold storage
+* pricing guardrails
+
+==================================================
+UZUN DÖNEMLİ PROJEKSİYON
+========================
+
+1 yıl
+3 yıl
+5 yıl
+
+Senaryolar:
+
+Muhafazakâr
+Gerçekçi
+Agresif
+
+Metrikler:
+
+* müşteri sayısı
+* MRR
+* ARR
+* EBITDA yaklaşımı
+* ekip büyüklüğü
+* altyapı maliyeti
+
+==================================================
+YATIRIMCI BAKIŞI
+================
+
+Yatırımcı neyi sever?
+Nerede risk görür?
+Neden yatırım yapar?
+Neden yapmaz?
+
+SWOT analizi yap.
+
+==================================================
+EKSTRA İSTEK
+============
+
+Belge dili profesyonel olsun.
+Türkçe olsun.
+Tablolar olsun.
+Grafik önerileri olsun.
+Yönetici özeti güçlü olsun.
+
+Sadece güzel anlatma,
+dürüst analiz yap.
+
+==================================================
+TESLİM ŞEKLİ
+============
+
+1. Master Word Dosyası
+2. Executive Summary Word
+3. İsteğe bağlı finans ekleri
+
+==================================================
+SON NOT
+=======
+
+Bu dosya bir gün:
+
+* yatırımcı sunumunda
+* satın alma görüşmesinde
+* ortaklık toplantısında
+* banka / hibe başvurusunda
+
+kullanılabilecek seviyede olsun.
