@@ -1,4 +1,5 @@
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,20 @@ import {
   Radio, Package, Tag, Truck, Store, Megaphone, ShoppingBag, BarChart3,
   ArrowRight, Sparkles, Globe, Layers, Check, Zap, Brain, Share2, Wallet,
   CreditCard, ShieldCheck, TrendingDown, Building2, Rocket, LineChart,
+  Inbox, Clock, FileText, TrendingUp,
 } from "lucide-react";
+
+type Overview = {
+  kpis: { yayindakiUrun: number; bugunGelenTalep: number; buAySatis: number; bekleyenTeklif: number };
+  kanallar: {
+    pazaryeri: { aktifSayisi: number; toplamSayi: number; urunSayisi: number; sonSenkron: string | null };
+    webSitem: { aktifSayisi: number; toplamSayi: number; urunSayisi: number };
+    ortakVitrin: { aktifSayisi: number; toplamSayi: number; urunSayisi: number };
+  };
+  siparisler: { bekleyen: number };
+};
+
+const TRY = (n: number) => new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(n);
 
 const NAVY = "hsl(222 47% 15%)";
 const EMERALD = "hsl(152 76% 45%)";
@@ -189,10 +203,84 @@ function ServiceSection({ service }: { service: Service }) {
   );
 }
 
+function KpiCard({ icon: Icon, label, value, color, href, testId }: { icon: any; label: string; value: string; color: string; href?: string; testId: string }) {
+  const [, setLocation] = useLocation();
+  return (
+    <button
+      type="button"
+      onClick={() => href && setLocation(href)}
+      className="group flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 text-left transition-all hover:border-slate-300 hover:shadow-md"
+      data-testid={testId}
+    >
+      <div className="flex items-center justify-between">
+        <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${color}`}>
+          <Icon className="h-4.5 w-4.5" />
+        </span>
+        {href && <ArrowRight className="h-3.5 w-3.5 text-slate-300 transition-colors group-hover:text-slate-600" />}
+      </div>
+      <div>
+        <div className="text-2xl font-bold tracking-tight text-slate-900">{value}</div>
+        <div className="text-xs text-slate-500">{label}</div>
+      </div>
+    </button>
+  );
+}
+
+function ChannelCard({ icon: Icon, title, subtitle, urunSayisi, aktif, toplam, ctaLabel, ctaHref, color, testId }: {
+  icon: any; title: string; subtitle: string; urunSayisi: number; aktif: number; toplam: number; ctaLabel: string; ctaHref: string; color: string; testId: string;
+}) {
+  const [, setLocation] = useLocation();
+  const isLive = aktif > 0;
+  return (
+    <Card className="overflow-hidden border-slate-200 transition-shadow hover:shadow-md" data-testid={testId}>
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-3">
+            <span className={`flex h-10 w-10 items-center justify-center rounded-lg ${color}`}>
+              <Icon className="h-5 w-5" />
+            </span>
+            <div>
+              <div className="font-semibold text-slate-900">{title}</div>
+              <div className="text-xs text-slate-500">{subtitle}</div>
+            </div>
+          </div>
+          <Badge variant={isLive ? "default" : "outline"} className={isLive ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" : "text-slate-500"}>
+            {isLive ? "Aktif" : "Bağlı değil"}
+          </Badge>
+        </div>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="rounded-lg bg-slate-50 px-3 py-2">
+            <div className="text-[11px] uppercase tracking-wider text-slate-500">Yayında Ürün</div>
+            <div className="text-lg font-semibold text-slate-900">{urunSayisi}</div>
+          </div>
+          <div className="rounded-lg bg-slate-50 px-3 py-2">
+            <div className="text-[11px] uppercase tracking-wider text-slate-500">Bağlı Hesap</div>
+            <div className="text-lg font-semibold text-slate-900">{aktif}<span className="text-sm font-normal text-slate-400">/{toplam}</span></div>
+          </div>
+        </div>
+        <Button size="sm" variant="outline" className="w-full" onClick={() => setLocation(ctaHref)} data-testid={`${testId}-cta`}>
+          {ctaLabel}
+          <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function ETicariumMerkeziPage() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const canManage = user?.role === "admin" || user?.role === "staff";
+
+  const { data: overview } = useQuery<Overview>({
+    queryKey: ["ticarium-center-overview"],
+    queryFn: async () => {
+      const r = await fetch("/api/ticarium-center/overview", { credentials: "include" });
+      if (!r.ok) throw new Error("overview failed");
+      return r.json();
+    },
+    refetchInterval: 60_000,
+  });
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6" data-testid="eticarium-merkezi">
@@ -244,6 +332,90 @@ export default function ETicariumMerkeziPage() {
               </Button>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Genel Bakış — KPI'lar */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" data-testid="hub-kpis">
+        <KpiCard
+          icon={Package}
+          label="Yayındaki Ürün"
+          value={String(overview?.kpis.yayindakiUrun ?? "—")}
+          color="bg-blue-50 text-blue-600"
+          href="/channels"
+          testId="kpi-yayindaki-urun"
+        />
+        <KpiCard
+          icon={Inbox}
+          label="Bugün Gelen Talep"
+          value={String(overview?.kpis.bugunGelenTalep ?? "—")}
+          color="bg-amber-50 text-amber-600"
+          href="/b2b/quotes"
+          testId="kpi-bugun-talep"
+        />
+        <KpiCard
+          icon={TrendingUp}
+          label="Bu Ay Online Satış"
+          value={overview ? TRY(overview.kpis.buAySatis) : "—"}
+          color="bg-emerald-50 text-emerald-600"
+          href="/karlilik-kanal"
+          testId="kpi-ay-satis"
+        />
+        <KpiCard
+          icon={Clock}
+          label="Bekleyen Teklif"
+          value={String(overview?.kpis.bekleyenTeklif ?? "—")}
+          color="bg-purple-50 text-purple-600"
+          href="/b2b/quotes"
+          testId="kpi-bekleyen-teklif"
+        />
+      </div>
+
+      {/* Kanal Durumu */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-slate-900">Kanal Durumu</h2>
+          <span className="text-xs text-slate-500">
+            {overview?.siparisler.bekleyen ? `${overview.siparisler.bekleyen} bekleyen sipariş` : "Tüm siparişler işleniyor"}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <ChannelCard
+            icon={Radio}
+            title="Pazaryeri Senkron"
+            subtitle="Trendyol, Hepsiburada, N11..."
+            urunSayisi={overview?.kanallar.pazaryeri.urunSayisi ?? 0}
+            aktif={overview?.kanallar.pazaryeri.aktifSayisi ?? 0}
+            toplam={overview?.kanallar.pazaryeri.toplamSayi ?? 0}
+            ctaLabel="Kanalları Yönet"
+            ctaHref="/channels"
+            color="bg-blue-50 text-blue-600"
+            testId="channel-pazaryeri"
+          />
+          <ChannelCard
+            icon={Globe}
+            title="Kendi Web Sitem"
+            subtitle="Markanızın bağımsız mağazası"
+            urunSayisi={overview?.kanallar.webSitem.urunSayisi ?? 0}
+            aktif={overview?.kanallar.webSitem.aktifSayisi ?? 0}
+            toplam={overview?.kanallar.webSitem.toplamSayi ?? 0}
+            ctaLabel="Mağazamı Yönet"
+            ctaHref="/magaza"
+            color="bg-emerald-50 text-emerald-600"
+            testId="channel-web-sitem"
+          />
+          <ChannelCard
+            icon={Store}
+            title="Ticarium Pazar"
+            subtitle="Sektörel ortak vitrin"
+            urunSayisi={overview?.kanallar.ortakVitrin.urunSayisi ?? 0}
+            aktif={overview?.kanallar.ortakVitrin.aktifSayisi ?? 0}
+            toplam={overview?.kanallar.ortakVitrin.toplamSayi ?? 0}
+            ctaLabel="Vitrinime Git"
+            ctaHref="/aggregator"
+            color="bg-purple-50 text-purple-600"
+            testId="channel-ortak-vitrin"
+          />
         </div>
       </div>
 

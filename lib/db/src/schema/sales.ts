@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, real, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, real, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { productsTable } from "./products";
@@ -29,7 +29,10 @@ export const salesTable = pgTable("sales", {
   returnedAt: timestamp("returned_at", { withTimezone: true }),
   returnNote: text("return_note"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (t) => [
+  index("sales_company_created_idx").on(t.companyId, t.createdAt),
+  index("sales_company_channel_idx").on(t.companyId, t.channelKey),
+]);
 
 export const insertSaleSchema = createInsertSchema(salesTable).omit({
   id: true,

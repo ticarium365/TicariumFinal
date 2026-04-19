@@ -108,6 +108,8 @@ import importsRouter from "./imports.js";
 import productionRouter from "./production.js";
 import loyaltyRouter from "./loyalty.js";
 import currencyRouter from "./currency.js";
+import ticariumCenterRouter from "./ticarium-center.js";
+router.use("/ticarium-center", requireAuth, ticariumCenterRouter);
 router.use("/accountant", requireAuth, requireFeature("accountant.panel"), accountantRouter);
 router.use("/reports-official", requireAuth, requireFeature("accountant.panel"), reportsOfficialRouter);
 router.use("/budgets", requireAuth, requireFeature("profit.dashboard"), budgetsRouter);
