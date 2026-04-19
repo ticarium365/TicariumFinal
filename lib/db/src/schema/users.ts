@@ -17,6 +17,7 @@ export const usersTable = pgTable("users", {
   kvkkConsentAt: timestamp("kvkk_consent_at", { withTimezone: true }),
   kvkkConsentVersion: text("kvkk_consent_version"),
   marketingConsentAt: timestamp("marketing_consent_at", { withTimezone: true }),
+  setupChecklistDismissedAt: timestamp("setup_checklist_dismissed_at", { withTimezone: true }),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

@@ -31,6 +31,8 @@ import DailySummary from "@/pages/reports/daily-summary";
 import UsersList from "@/pages/users/index";
 import Settings from "@/pages/settings/index";
 import FirmaProfili from "@/pages/settings/firma-profili";
+import SetupScore from "@/pages/setup-score/index";
+import MusteriDoluluk from "@/pages/admin/musteri-doluluk";
 import CompaniesAdmin from "@/pages/admin/companies";
 import AdminPayments from "@/pages/admin/payments";
 import PlatformSettings from "@/pages/admin/platform-settings";
@@ -437,6 +439,14 @@ function AuthenticatedRouter() {
 
         <Route path="/firma-profili">
           {() => <ProtectedRoute component={FirmaProfili} roles={["admin"]} />}
+        </Route>
+
+        <Route path="/kurulum-skoru">
+          {() => <ProtectedRoute component={SetupScore} roles={["admin"]} />}
+        </Route>
+
+        <Route path="/admin/musteri-doluluk">
+          {() => <ProtectedRoute component={MusteriDoluluk} roles={["super_admin"]} />}
         </Route>
 
         <Route path="/admin/companies">
