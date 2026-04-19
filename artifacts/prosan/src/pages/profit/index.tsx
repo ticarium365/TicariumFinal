@@ -89,7 +89,7 @@ export default function ProfitPage() {
       {dash && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <Card><CardContent className="pt-6"><div className="text-xs text-muted-foreground">Ciro</div><div className="text-2xl font-bold" data-testid="kpi-revenue">{fmt(dash.revenue)}</div></CardContent></Card>
-          <Card><CardContent className="pt-6"><div className="text-xs text-muted-foreground">Brüt Kâr</div><div className="text-2xl font-bold text-blue-600" data-testid="kpi-gross">{fmt(dash.grossProfit)}</div><div className="text-xs">COGS: {fmt(dash.cogs)}</div></CardContent></Card>
+          <Card><CardContent className="pt-6"><div className="text-xs text-muted-foreground">Brüt Kâr</div><div className="text-2xl font-bold text-indigo-600" data-testid="kpi-gross">{fmt(dash.grossProfit)}</div><div className="text-xs">COGS: {fmt(dash.cogs)}</div></CardContent></Card>
           <Card><CardContent className="pt-6"><div className="text-xs text-muted-foreground">Toplam Gider</div><div className="text-2xl font-bold text-orange-600" data-testid="kpi-expenses">{fmt(dash.totalExpenses + dash.payroll + dash.depreciation)}</div><div className="text-xs">Personel: {fmt(dash.payroll)} • Amortisman: {fmt(dash.depreciation)}</div></CardContent></Card>
           <Card><CardContent className="pt-6">
             <div className="text-xs text-muted-foreground">Net Kâr</div>

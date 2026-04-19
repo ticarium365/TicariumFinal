@@ -42,7 +42,7 @@ function mimeIcon(mime: string) {
     return <FileSpreadsheet className="h-5 w-5 text-green-500" />;
   if (mime.includes("pdf")) return <FileText className="h-5 w-5 text-red-500" />;
   if (mime.includes("json") || mime.includes("xml") || mime.includes("text"))
-    return <FileCode className="h-5 w-5 text-blue-500" />;
+    return <FileCode className="h-5 w-5 text-indigo-500" />;
   return <File className="h-5 w-5 text-muted-foreground/70" />;
 }
 
@@ -490,7 +490,7 @@ function CategoryModal({
   const [error, setError] = useState("");
 
   const COLORS = [
-    "#6366f1", "#3b82f6", "#10b981", "#f59e0b",
+    "#6366f1", "#6366f1", "#10b981", "#f59e0b",
     "#ef4444", "#8b5cf6", "#06b6d4", "#f97316",
   ];
 

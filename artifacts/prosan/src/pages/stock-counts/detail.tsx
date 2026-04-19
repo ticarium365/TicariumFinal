@@ -258,7 +258,7 @@ export default function StockCountDetail({ id }: { id: string }) {
             <h1 className="text-xl font-bold truncate">{session.name}</h1>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
               isOpen ? "text-amber-600 bg-amber-500/10 border-amber-500/20" :
-              isClosed ? "text-blue-600 bg-blue-500/10 border-blue-500/20" :
+              isClosed ? "text-indigo-600 bg-indigo-500/10 border-indigo-500/20" :
               "text-green-600 bg-green-500/10 border-green-500/20"
             }`}>
               {isOpen ? "Açık" : isClosed ? "Kapalı" : "Onaylandı"}
@@ -302,7 +302,7 @@ export default function StockCountDetail({ id }: { id: string }) {
           { label: "Sayılan Ürün",  value: items.length,        color: "text-foreground" },
           { label: "Fark Olan",     value: diffItems.length,     color: "text-amber-600" },
           { label: "Eşleşen",       value: okItems.length,       color: "text-green-600" },
-          { label: "Onay Bekleyen", value: pendingItems.length,  color: "text-blue-600" },
+          { label: "Onay Bekleyen", value: pendingItems.length,  color: "text-indigo-600" },
         ].map(c => (
           <div key={c.label} className="bg-card border rounded-xl p-3 text-center">
             <p className={`text-2xl font-bold ${c.color}`}>{c.value}</p>
@@ -446,7 +446,7 @@ export default function StockCountDetail({ id }: { id: string }) {
                         {diff === 0 ? (
                           <span className="text-green-600 font-semibold">±0</span>
                         ) : diff > 0 ? (
-                          <span className="flex items-center justify-end gap-1 text-blue-600 font-semibold">
+                          <span className="flex items-center justify-end gap-1 text-indigo-600 font-semibold">
                             <TrendingUp className="h-3.5 w-3.5" />+{diff}
                           </span>
                         ) : (
@@ -489,10 +489,10 @@ export default function StockCountDetail({ id }: { id: string }) {
 
       {/* Onayla özet (sadece closed) */}
       {isClosed && pendingItems.length > 0 && (
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-center justify-between gap-4">
+        <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 flex items-center justify-between gap-4">
           <div>
-            <p className="font-semibold text-blue-300">{pendingItems.length} ürün düzeltme bekliyor</p>
-            <p className="text-sm text-blue-600">Onaylandığında stoklar güncellenir ve hareket kaydı oluşur</p>
+            <p className="font-semibold text-indigo-300">{pendingItems.length} ürün düzeltme bekliyor</p>
+            <p className="text-sm text-indigo-600">Onaylandığında stoklar güncellenir ve hareket kaydı oluşur</p>
           </div>
           <Button className="bg-green-600 hover:bg-green-700 shrink-0" onClick={() => setConfirmApprove(true)}>
             <CheckCircle2 className="h-4 w-4 mr-2" />Toplu Onayla
@@ -542,7 +542,7 @@ export default function StockCountDetail({ id }: { id: string }) {
               {pendingItems.map(i => (
                 <div key={i.id} className="flex justify-between">
                   <span className="truncate mr-2">{i.productName}</span>
-                  <span className={`font-mono font-semibold shrink-0 ${i.diff > 0 ? "text-blue-600" : "text-red-600"}`}>
+                  <span className={`font-mono font-semibold shrink-0 ${i.diff > 0 ? "text-indigo-600" : "text-red-600"}`}>
                     {i.systemStock} → {i.countedQty}
                   </span>
                 </div>

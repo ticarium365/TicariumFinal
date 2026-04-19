@@ -20,7 +20,7 @@ interface Notification {
 const ICON_MAP: Record<string, { icon: any; color: string; label: string }> = {
   low_stock: { icon: AlertTriangle, color: "text-amber-500", label: "Stok Uyarısı" },
   stock_zero: { icon: Package, color: "text-rose-500", label: "Stok Bitti" },
-  product_request: { icon: Mail, color: "text-blue-500", label: "Ürün Talebi" },
+  product_request: { icon: Mail, color: "text-indigo-500", label: "Ürün Talebi" },
   ecommerce_order: { icon: ShoppingCart, color: "text-emerald-500", label: "E-Ticaret Satış" },
   system_announcement: { icon: Sparkles, color: "text-purple-500", label: "Yenilik / Duyuru" },
   daily_summary: { icon: Bell, color: "text-cyan-500", label: "Günlük Özet" },

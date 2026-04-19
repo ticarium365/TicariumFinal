@@ -241,10 +241,10 @@ export function ImportProductsModal({ open, onClose, onSuccess }: Props) {
                   <span className="text-xl font-bold text-green-700 dark:text-green-400">{result.imported}</span>
                   <span className="text-xs text-green-600">Eklendi</span>
                 </div>
-                <div className="flex flex-col items-center p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <CheckCircle2 className="h-5 w-5 text-blue-600 mb-1" />
-                  <span className="text-xl font-bold text-blue-700 dark:text-blue-400">{result.updated}</span>
-                  <span className="text-xs text-blue-600">Güncellendi</span>
+                <div className="flex flex-col items-center p-3 bg-indigo-50 dark:bg-blue-950/30 rounded-lg border border-indigo-200 dark:border-blue-800">
+                  <CheckCircle2 className="h-5 w-5 text-indigo-600 mb-1" />
+                  <span className="text-xl font-bold text-indigo-700 dark:text-indigo-400">{result.updated}</span>
+                  <span className="text-xs text-indigo-600">Güncellendi</span>
                 </div>
                 <div className="flex flex-col items-center p-3 bg-muted rounded-lg border">
                   <AlertCircle className="h-5 w-5 text-muted-foreground mb-1" />

@@ -28,7 +28,7 @@ function typeIcon(type: string) {
   switch (type) {
     case "low_stock": return <AlertTriangle className={`${cls} text-amber-500`} />;
     case "new_sale": return <ShoppingBag className={`${cls} text-green-500`} />;
-    case "daily_summary": return <BarChart3 className={`${cls} text-blue-500`} />;
+    case "daily_summary": return <BarChart3 className={`${cls} text-indigo-500`} />;
     case "subscription_expiry": return <CreditCard className={`${cls} text-purple-500`} />;
     case "overdue_payment": return <Users className={`${cls} text-red-500`} />;
     case "new_purchase": return <Package className={`${cls} text-indigo-500`} />;
@@ -236,7 +236,7 @@ export default function NotificationSettingsPage() {
                           <button
                             onClick={() => testMut.mutate(rule.id)}
                             disabled={!rule.isActive}
-                            className="p-1.5 rounded-lg hover:bg-blue-500/150/150/10 text-muted-foreground hover:text-blue-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-indigo-500/150/150/10 text-muted-foreground hover:text-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                             title="Test Et"
                           >
                             <Play className="h-4 w-4" />

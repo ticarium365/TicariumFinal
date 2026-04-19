@@ -67,7 +67,7 @@ interface QuoteDetail {
 
 const STATUS_META: Record<string, { label: string; color: string; icon: any }> = {
   pending: { label: "Yanıt Bekliyor", color: "bg-amber-500/10 text-amber-300 border-amber-500/20", icon: Hourglass },
-  quoted: { label: "Yanıtlandı", color: "bg-blue-500/10 text-blue-300 border-blue-500/20", icon: FileText },
+  quoted: { label: "Yanıtlandı", color: "bg-indigo-500/10 text-indigo-300 border-indigo-500/20", icon: FileText },
   accepted: { label: "Kabul Edildi", color: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20", icon: CheckCircle2 },
   rejected: { label: "Reddedildi", color: "bg-rose-500/10 text-rose-300 border-rose-500/20", icon: XCircle },
   cancelled: { label: "İptal Edildi", color: "bg-muted text-muted-foreground border-border", icon: XCircle },
@@ -347,9 +347,9 @@ export default function QuoteDetailPage({ id }: Props) {
           })}
 
           {quote.sellerNote && quote.status === "quoted" && (
-            <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm">
-              <p className="text-xs font-medium text-blue-200 mb-1">Satıcı Notu</p>
-              <p className="text-blue-300">{quote.sellerNote}</p>
+            <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-sm">
+              <p className="text-xs font-medium text-indigo-200 mb-1">Satıcı Notu</p>
+              <p className="text-indigo-300">{quote.sellerNote}</p>
             </div>
           )}
           {quote.rejectReason && quote.status === "rejected" && (

@@ -68,7 +68,7 @@ function ProductCard({ product }: { product: CatalogProduct }) {
           </span>
         )}
         {product.brand && (
-          <span className="text-xs bg-blue-500/10 text-blue-300 rounded-md px-2 py-0.5 font-medium">
+          <span className="text-xs bg-indigo-500/10 text-indigo-300 rounded-md px-2 py-0.5 font-medium">
             {product.brand}
           </span>
         )}

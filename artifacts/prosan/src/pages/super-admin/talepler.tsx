@@ -86,8 +86,8 @@ export default function ContactRequestsAdmin() {
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1 text-sm">
-                        <a href={`tel:${r.phone}`} className="flex items-center gap-1 text-blue-600 hover:underline"><Phone className="h-3 w-3" />{r.phone}</a>
-                        <a href={`mailto:${r.email}`} className="flex items-center gap-1 text-blue-600 hover:underline"><Mail className="h-3 w-3" />{r.email}</a>
+                        <a href={`tel:${r.phone}`} className="flex items-center gap-1 text-indigo-600 hover:underline"><Phone className="h-3 w-3" />{r.phone}</a>
+                        <a href={`mailto:${r.email}`} className="flex items-center gap-1 text-indigo-600 hover:underline"><Mail className="h-3 w-3" />{r.email}</a>
                       </div>
                     </TableCell>
                     <TableCell className="min-w-[200px]">

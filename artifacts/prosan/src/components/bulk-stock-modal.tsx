@@ -40,7 +40,7 @@ interface ImportResult {
 }
 
 const MODE_LABELS: Record<string, { label: string; color: string }> = {
-  set: { label: "Çek", color: "bg-blue-100 text-blue-800" },
+  set: { label: "Çek", color: "bg-indigo-100 text-indigo-800" },
   add: { label: "Ekle", color: "bg-green-100 text-green-800" },
   subtract: { label: "Düş", color: "bg-orange-100 text-orange-800" },
 };
@@ -306,7 +306,7 @@ export function BulkStockModal({ open, onClose }: Props) {
               <div className="bg-muted/40 rounded-lg p-3 space-y-1.5">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mod Açıklamaları</p>
                 <div className="flex items-start gap-2 text-xs">
-                  <span className="inline-block px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 font-medium shrink-0">set</span>
+                  <span className="inline-block px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 font-medium shrink-0">set</span>
                   <span>Stoku tam olarak belirtilen değere çeker. Mevcut stoktan bağımsızdır.</span>
                 </div>
                 <div className="flex items-start gap-2 text-xs">

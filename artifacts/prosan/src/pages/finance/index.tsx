@@ -313,7 +313,7 @@ export default function FinancePage() {
               {/* KPI kartları */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                  { label: "Satış Cirosu",    value: summary.revenue,       icon: TrendingUp,   color: "text-blue-600",   bg: "bg-blue-500/10" },
+                  { label: "Satış Cirosu",    value: summary.revenue,       icon: TrendingUp,   color: "text-indigo-600",   bg: "bg-indigo-500/10" },
                   { label: "Satış Kârı",       value: summary.profit,        icon: TrendingUp,   color: "text-green-600",  bg: "bg-green-500/10" },
                   { label: "Toplam Gider",     value: summary.totalExpenses, icon: TrendingDown, color: "text-red-600",    bg: "bg-red-500/10" },
                   { label: "Net Kâr",          value: summary.netProfit,     icon: PiggyBank,    color: summary.netProfit >= 0 ? "text-emerald-600" : "text-red-600", bg: summary.netProfit >= 0 ? "bg-emerald-500/10" : "bg-red-500/10" },

@@ -262,7 +262,7 @@ export default function ForgotPassword() {
             <BrandIcon size={52} />
             <div className="leading-tight">
               <BrandWordmark light />
-              <div className="text-[13px] mt-1 text-blue-100/85">
+              <div className="text-[13px] mt-1 text-indigo-100/85">
                 Hesabınızı güvenle geri alın
               </div>
             </div>
@@ -312,7 +312,7 @@ export default function ForgotPassword() {
             </div>
           </div>
 
-          <p className="relative z-10 text-xs text-blue-200/70">
+          <p className="relative z-10 text-xs text-indigo-200/70">
             © {new Date().getFullYear()} Ticarium365 · Tüm hakları saklıdır
           </p>
         </div>

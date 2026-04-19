@@ -25,7 +25,7 @@ interface StockCountSession {
 
 const STATUS_CONFIG = {
   open:     { label: "Açık",     icon: Clock,         color: "text-amber-600",  bg: "bg-amber-500/10 border-amber-500/20" },
-  closed:   { label: "Kapalı",   icon: XCircle,       color: "text-blue-600",   bg: "bg-blue-500/10 border-blue-500/20" },
+  closed:   { label: "Kapalı",   icon: XCircle,       color: "text-indigo-600",   bg: "bg-indigo-500/10 border-indigo-500/20" },
   approved: { label: "Onaylandı",icon: CheckCircle2,  color: "text-green-600",  bg: "bg-green-500/10 border-green-500/20" },
 };
 

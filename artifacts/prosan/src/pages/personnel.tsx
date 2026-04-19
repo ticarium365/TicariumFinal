@@ -262,7 +262,7 @@ export default function PersonnelPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
-              <Users className="h-8 w-8 text-blue-400" />
+              <Users className="h-8 w-8 text-indigo-400" />
               <div><p className="text-2xl font-bold">{stats.total}</p><p className="text-xs text-muted-foreground">Toplam Personel</p></div>
             </CardContent>
           </Card>
@@ -333,7 +333,7 @@ export default function PersonnelPage() {
                 <Card key={p.id} className={`${!p.isActive ? "opacity-60" : ""}`}>
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-blue-500/15 flex items-center justify-center font-semibold text-blue-300">
+                      <div className="h-10 w-10 rounded-full bg-indigo-500/15 flex items-center justify-center font-semibold text-indigo-300">
                         {p.firstName[0]}{p.lastName[0]}
                       </div>
                       <div>

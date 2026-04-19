@@ -25,7 +25,7 @@ type ChannelRow = {
 
 const CHANNEL_LABELS: Record<string, { label: string; color: string }> = {
   pos: { label: "Mağaza POS", color: "bg-emerald-500/15 text-emerald-300" },
-  storefront: { label: "Hazır Mağaza", color: "bg-blue-500/15 text-blue-300" },
+  storefront: { label: "Hazır Mağaza", color: "bg-indigo-500/15 text-indigo-300" },
   trendyol: { label: "Trendyol", color: "bg-orange-500/15 text-orange-300" },
   hepsiburada: { label: "Hepsiburada", color: "bg-amber-500/15 text-amber-300" },
   n11: { label: "N11", color: "bg-purple-500/15 text-purple-300" },
