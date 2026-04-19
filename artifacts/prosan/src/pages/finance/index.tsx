@@ -63,6 +63,18 @@ export default function FinancePage() {
 
   // Gider formu
   const [showExpenseForm, setShowExpenseForm] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const v = params.get("new");
+    if (v === "expense" || v === "1") {
+      setTab("expenses");
+      setShowExpenseForm(true);
+      params.delete("new");
+      const qs = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (qs ? "?" + qs : ""));
+    }
+  }, []);
   const [expForm, setExpForm] = useState({ categoryId: "", amount: "", description: "", expenseDate: format(new Date(), "yyyy-MM-dd"), paymentMethod: "cash", notes: "" });
 
   // Kategori formu

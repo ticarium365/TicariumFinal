@@ -308,10 +308,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div
             className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer text-sm mb-1.5 ${
               isItemActive(TOP_ITEM.href)
-                ? "bg-card/10 text-white font-semibold"
-                : "font-medium hover:bg-card/8"
+                ? "bg-blue-50 text-blue-700 font-semibold"
+                : "text-slate-600 font-medium hover:bg-slate-100"
             }`}
-            style={{ color: isItemActive(TOP_ITEM.href) ? "white" : "hsl(215 25% 75%)" }}
             onClick={() => setIsOpen(false)}
             data-testid="nav-link-dashboard"
           >
@@ -325,36 +324,33 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {user && HERO_ITEM.roles.includes(user.role) && (
         <Link href={HERO_ITEM.href}>
           <div
-            className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer text-sm mb-3 overflow-hidden border ${
+            className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer text-sm mb-3 overflow-hidden ${
               isItemActive(HERO_ITEM.href)
-                ? "border-white/30 shadow-lg shadow-emerald-500/20"
-                : "border-white/10 hover:border-white/25 hover:shadow-md hover:shadow-emerald-500/15"
+                ? "shadow-md shadow-blue-500/30"
+                : "hover:shadow-md hover:shadow-blue-500/20"
             }`}
             style={{
-              background: isItemActive(HERO_ITEM.href)
-                ? "linear-gradient(135deg, hsl(152 76% 40%) 0%, hsl(190 90% 45%) 100%)"
-                : "linear-gradient(135deg, hsl(152 76% 32%) 0%, hsl(190 80% 38%) 100%)",
+              background: "linear-gradient(135deg, hsl(217 91% 55%) 0%, hsl(199 89% 50%) 100%)",
               color: "white",
             }}
             onClick={() => setIsOpen(false)}
             data-testid="nav-link-eticarium-merkezi"
           >
-            {/* parıltı animasyonu */}
             <span
               aria-hidden
-              className="absolute inset-0 opacity-30 group-hover:opacity-60 transition-opacity"
+              className="absolute inset-0 opacity-30 group-hover:opacity-50 transition-opacity"
               style={{
-                background: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.4) 0%, transparent 50%)",
+                background: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.5) 0%, transparent 60%)",
               }}
             />
-            <span className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-card/20 shrink-0">
+            <span className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-white/20 shrink-0">
               <HERO_ITEM.icon className="h-4 w-4" />
             </span>
             <div className="relative flex-1 min-w-0">
               <div className="font-bold leading-tight">{HERO_ITEM.label}</div>
               <div className="text-[10px] opacity-90 leading-tight mt-0.5">Tek tıkla tüm kanallar</div>
             </div>
-            <span className="relative text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-card/25">
+            <span className="relative text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/25">
               Yeni
             </span>
           </div>
@@ -370,21 +366,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
               type="button"
               onClick={() => toggleGroup(group.id)}
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer text-xs uppercase tracking-wider ${
-                groupHasActive ? "text-white" : "hover:bg-card/5"
+                groupHasActive ? "text-blue-700 font-bold" : "text-slate-500 font-bold hover:bg-slate-100"
               }`}
-              style={{ color: groupHasActive ? "white" : "hsl(215 20% 60%)" }}
               data-testid={`nav-group-${group.id}`}
               aria-expanded={isOpenGroup}
             >
               <group.icon className="h-3.5 w-3.5 shrink-0" />
-              <span className="flex-1 text-left font-bold">{group.label}</span>
+              <span className="flex-1 text-left">{group.label}</span>
               <span className="text-[10px] font-semibold opacity-60">{group.items.length}</span>
               {isOpenGroup
                 ? <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
                 : <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" />}
             </button>
             {isOpenGroup && (
-              <div className="ml-2 mt-0.5 mb-1 border-l pl-2" style={{ borderColor: "hsl(222 40% 22%)" }}>
+              <div className="ml-2 mt-0.5 mb-1 border-l border-slate-200 pl-2">
                 {group.items.map((item) => {
                   const active = isItemActive(item.href);
                   return (
@@ -392,10 +387,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       <div
                         className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-all cursor-pointer text-sm ${
                           active
-                            ? "bg-card/10 text-white font-semibold"
-                            : "hover:bg-card/5"
+                            ? "bg-blue-50 text-blue-700 font-semibold"
+                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                         }`}
-                        style={{ color: active ? "white" : "hsl(215 25% 70%)" }}
                         onClick={() => setIsOpen(false)}
                         data-testid={`nav-link-${item.href.replace(/\//g, "-").replace(/^-/, "")}`}
                       >
@@ -418,57 +412,57 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
       {/* Mobile Header */}
-      <header className="md:hidden px-4 py-3 flex items-center justify-between sticky top-0 z-30 border-b" style={{ background: "hsl(222 47% 15%)" }}>
+      <header className="md:hidden px-4 py-3 flex items-center justify-between sticky top-0 z-30 border-b border-slate-200 bg-white">
         <div className="flex items-center gap-2">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="-ml-2 text-white hover:bg-card/10" data-testid="button-mobile-menu">
+              <Button variant="ghost" size="icon" className="-ml-2 text-slate-700 hover:bg-slate-100" data-testid="button-mobile-menu">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
 
-            <SheetContent side="left" className="w-72 p-0" style={{ background: "hsl(222 47% 15%)" }}>
-              <SheetHeader className="p-4 border-b text-left" style={{ borderColor: "hsl(222 40% 22%)" }}>
-                <SheetTitle className="text-xl font-bold tracking-tight text-white" style={{ fontFamily: "var(--font-display)" }}>{companyName}</SheetTitle>
-                <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest flex items-center gap-1" style={{ color: "hsl(215 25% 55%)" }}>
+            <SheetContent side="left" className="w-72 p-0 bg-slate-50">
+              <SheetHeader className="p-4 border-b border-slate-200 text-left bg-white">
+                <SheetTitle className="text-xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "var(--font-display)" }}>{companyName}</SheetTitle>
+                <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest flex items-center gap-1 text-slate-500">
                   <span>powered by</span>
-                  <span className="text-white">Ticarium<span style={{ color: "hsl(152 76% 50%)" }}>365</span></span>
+                  <span className="text-slate-800">Ticarium<span className="text-blue-600">365</span></span>
                 </p>
               </SheetHeader>
               <div className="p-3 flex-1 overflow-y-auto">
                 <TrialBanner />
                 <NavLinks />
               </div>
-              <div className="p-4 mt-auto" style={{ borderTop: "1px solid hsl(222 40% 22%)" }}>
+              <div className="p-4 mt-auto border-t border-slate-200 bg-white">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: "hsl(221 83% 53%)" }}>
+                  <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 bg-blue-600">
                     {user.fullName.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-white">{user.fullName}</p>
-                    <p className="text-xs capitalize" style={{ color: "hsl(215 25% 55%)" }}>{user.role}</p>
+                    <p className="text-sm font-semibold text-slate-900">{user.fullName}</p>
+                    <p className="text-xs capitalize text-slate-500">{user.role}</p>
                   </div>
                 </div>
-                <Button variant="outline" className="w-full justify-start border-white/10 text-slate-300 hover:text-white hover:bg-card/10 bg-transparent" onClick={handleLogout} data-testid="button-mobile-logout">
+                <Button variant="outline" className="w-full justify-start border-slate-200 text-slate-700 hover:bg-slate-100 bg-white" onClick={handleLogout} data-testid="button-mobile-logout">
                   <LogOut className="mr-2 h-4 w-4" />
                   Çıkış Yap
                 </Button>
               </div>
             </SheetContent>
           </Sheet>
-          <span className="font-bold text-lg tracking-tight text-white">{companyName}</span>
+          <span className="font-bold text-lg tracking-tight text-slate-900">{companyName}</span>
         </div>
         {/* Mobile sağ — zil */}
         {user.role !== "super_admin" && <NotificationCenter />}
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 flex-col h-screen sticky top-0" style={{ background: "hsl(222 47% 15%)" }}>
-        <div className="px-5 py-5 border-b" style={{ borderColor: "hsl(222 40% 22%)" }}>
-          <h1 className="text-xl font-bold tracking-tight text-white" style={{ fontFamily: "var(--font-display)" }}>{companyName}</h1>
-          <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest flex items-center gap-1" style={{ color: "hsl(215 25% 60%)" }}>
+      <aside className="hidden md:flex w-64 flex-col h-screen sticky top-0 bg-slate-50 border-r border-slate-200">
+        <div className="px-5 py-5 border-b border-slate-200 bg-white">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "var(--font-display)" }}>{companyName}</h1>
+          <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest flex items-center gap-1 text-slate-500">
             <span>powered by</span>
-            <span className="text-white">Ticarium<span style={{ color: "hsl(152 76% 50%)" }}>365</span></span>
+            <span className="text-slate-800">Ticarium<span className="text-blue-600">365</span></span>
           </p>
         </div>
 
@@ -477,17 +471,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <NavLinks />
         </div>
 
-        <div className="p-3 mt-auto" style={{ borderTop: "1px solid hsl(222 40% 22%)" }}>
+        <div className="p-3 mt-auto border-t border-slate-200 bg-white">
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: "hsl(221 83% 53%)" }}>
+            <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 bg-blue-600">
               {user.fullName.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{user.fullName}</p>
-              <p className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(215 25% 55%)" }}>{user.role}</p>
+              <p className="text-sm font-semibold text-slate-900 truncate">{user.fullName}</p>
+              <p className="text-[10px] uppercase tracking-wider text-slate-500">{user.role}</p>
             </div>
             {user.role !== "super_admin" && <NotificationCenter />}
-            <Button variant="ghost" size="icon" onClick={handleLogout} title="Çıkış Yap" className="h-8 w-8 shrink-0 text-muted-foreground/70 hover:text-white hover:bg-card/10" data-testid="button-desktop-logout">
+            <Button variant="ghost" size="icon" onClick={handleLogout} title="Çıkış Yap" className="h-8 w-8 shrink-0 text-slate-500 hover:text-slate-900 hover:bg-slate-100" data-testid="button-desktop-logout">
               <LogOut className="h-4 w-4" />
             </Button>
           </div>

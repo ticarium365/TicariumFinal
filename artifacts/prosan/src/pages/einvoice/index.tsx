@@ -60,6 +60,16 @@ export default function EInvoicePage() {
   const [pollBusy, setPollBusy] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("new") === "1") {
+      setCreateOpen(true);
+      params.delete("new");
+      const qs = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (qs ? "?" + qs : ""));
+    }
+  }, []);
+
   const loadAll = useCallback(async () => {
     const [p, s, o, i, e] = await Promise.all([
       fetch(`${API}/providers`, { credentials: "include" }).then((r) => r.json()),

@@ -429,9 +429,14 @@ export default function ProductsList() {
                 ))
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={isAdmin ? 9 : 7} className="py-16 text-center text-muted-foreground">
-                    <Package className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                    <p>Ürün bulunamadı.</p>
+                  <td colSpan={isAdmin ? 9 : 7} className="p-6">
+                    <EmptyState
+                      icon={Package}
+                      title={search || category !== "__all__" || brand !== "__all__" || lowStock ? "Filtrelere uyan ürün yok" : "Henüz ürün eklenmemiş"}
+                      description={search || category !== "__all__" || brand !== "__all__" || lowStock ? "Filtreleri temizleyip tekrar deneyin." : "Stok takibi, satış ve barkod özelliklerini kullanmak için ilk ürününüzü ekleyin."}
+                      primaryAction={isAdmin ? { label: "İlk Ürünü Ekle", href: "/products/new", testId: "empty-add-product" } : undefined}
+                      secondaryAction={isAdmin ? { label: "Excel'den İçe Aktar", href: "/ice-aktarim", testId: "empty-import-product" } : undefined}
+                    />
                   </td>
                 </tr>
               ) : (

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import {
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/components/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "@/hooks/use-debounce";
+import { EmptyState } from "@/components/empty-state";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -85,6 +86,17 @@ export default function CustomersList() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
   const debouncedSearch = useDebounce(search, 300);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("new") === "1") {
+      setEditCustomer(null);
+      setModalOpen(true);
+      params.delete("new");
+      const qs = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (qs ? "?" + qs : ""));
+    }
+  }, []);
 
   const { data, isLoading } = useQuery({
     queryKey: ["customers", debouncedSearch, showInactive, page],
@@ -166,14 +178,13 @@ export default function CustomersList() {
         {isLoading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground">Yükleniyor...</div>
         ) : customers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
-            <UserCircle className="h-12 w-12 opacity-30" />
-            <p>Henüz müşteri eklenmemiş</p>
-            {isAdmin && (
-              <Button variant="outline" size="sm" className="mt-2 gap-1" onClick={() => setModalOpen(true)}>
-                <Plus className="h-3.5 w-3.5" /> İlk müşteriyi ekle
-              </Button>
-            )}
+          <div className="p-6">
+            <EmptyState
+              icon={UserCircle}
+              title={debouncedSearch ? "Aramaya uyan müşteri bulunamadı" : "Henüz müşteri eklenmemiş"}
+              description={debouncedSearch ? "Farklı bir kelime deneyin veya filtreleri temizleyin." : "Müşterilerinizi ekleyerek bakiye, sipariş ve sadakat takibini başlatın."}
+              primaryAction={isAdmin ? { label: "İlk Müşteriyi Ekle", onClick: () => { setEditCustomer(null); setModalOpen(true); }, testId: "empty-add-customer" } : undefined}
+            />
           </div>
         ) : (
           <>

@@ -57,6 +57,16 @@ export default function StockEntryPage() {
   const isAdmin = user?.role === "admin";
   const [showBulkModal, setShowBulkModal] = useState(false);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("new") === "1") {
+      setShowBulkModal(true);
+      params.delete("new");
+      const qs = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (qs ? "?" + qs : ""));
+    }
+  }, []);
+
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [selectedProduct, setSelectedProduct] = useState<EntryRow | null>(null);
