@@ -46,9 +46,9 @@ const services: Service[] = [
     badge: "Hizmet 1",
     badgeColor: "hsl(217 91% 60%)",
     title: "Pazaryeri Entegrasyonları",
-    highlight: "Türkiye'nin büyük pazaryerlerinde tek panelden satış yönetimi",
+    highlight: "Bir ekran. Tüm pazaryerleri. Sıfır karmaşa.",
     desc:
-      "Trendyol, Hepsiburada, N11, Amazon ve diğer pazaryerlerinde satış yapan işletmeler için kurgulandı. Tek bir ekrandan tüm kanallara aynı anda ürün açabilir, fiyatlarınızı ve stok seviyelerinizi anlık olarak güncelleyebilir, kanaldan kanala farklı stratejiler uygulayabilirsiniz. Ürün, sipariş ve fiyat hareketlerini izlemek için kapsamlı bir alarm ve raporlama altyapısı kuruldu; böylece kritik değişiklikleri kaçırmazsınız. Anlaşmalı olduğumuz kargo firmaları sayesinde ise tek başınıza alamayacağınız tarifeleri kullanma fırsatı yakalarsınız.",
+      "Trendyol, Hepsiburada, N11, Amazon… Hepsi tek panelde, tek mantıkta. Ürünü bir kez tanımlarsınız, tüm kanallarda eş zamanlı yayında olur. Stok düştüğünde otomatik düşer, fiyat değiştiğinde dakikalar içinde her vitrine yansır. Kanal bazlı ayrı strateji uygulamak isteyenler için kurallı fiyatlandırma, hata anında uyaran akıllı alarmlar ve karar destekleyici raporlar hazır. Kargoda ise tek başınıza erişemeyeceğiniz toplu tarifelerle çalışırsınız — her gönderiniz baştan kârlı başlar.",
     icon: Globe,
     accent: "hsl(217 91% 60%)",
     features: [
@@ -67,9 +67,9 @@ const services: Service[] = [
     badge: "Hizmet 2",
     badgeColor: "hsl(280 70% 55%)",
     title: "Kendi E-Ticaret Siteniz",
-    highlight: "Kendi markanızla, kendi alan adınızda; profesyonel altyapı bizden",
+    highlight: "Markanız sahnede, altyapı sahne arkasında.",
     desc:
-      "İster kendi web siteniz olsun, ister sizin için sıfırdan tasarladığımız bir site; her durumda Ticarium365'in tüm e-ticaret fonksiyonları arka planda çalışır. Stok, fiyat, kargo ve sipariş yönetimi kesintisiz şekilde ilerler; siteniz kullanıcılarınıza her gün düzenli olarak hizmet verir. Tahsilatta esneklik tanır; bizim sanal POS altyapımızı tercih edebilir veya kendi banka POS'unuzu sisteme tanımlayabilirsiniz. Reklam tarafında ise opsiyonel bir hizmet sunuyoruz: bütçe ayırmayı tercih ederseniz Google ve Meta reklamlarınızı yapay zeka destekli pazarlama ekibimiz yönetir. Sosyal medya hesabı yönetmiyoruz; ancak içerik paylaşımı ve site bağlantısı için gereken altyapıyı hazır hale getiriyoruz.",
+      "Kendi alan adınız, kendi markanız, kendi tasarımınız — fakat arkasında 365 gün hiç durmayan bir motor. Stok, fiyat, kargo, sipariş ve fatura akışları arka planda otomatik çalışır; siz vitrini düşünür, biz işin görünmeyen yükünü taşırız. Tahsilatta esneklik tam: Ticarium365 sanal POS'u ile saniyede başlayın ya da kendi banka POS'unuzu birkaç tıkla bağlayın. Reklam ister misiniz? Yapay zeka destekli pazarlama ekibimiz Google ve Meta bütçenizi sizin için işletir. SSL, sunucu, bakım ve güncelleme dertleri ise tamamen bize devredilir.",
     icon: Store,
     accent: "hsl(280 70% 55%)",
     features: [
@@ -88,9 +88,9 @@ const services: Service[] = [
     badge: "Hizmet 3 — En Önemlisi",
     badgeColor: EMERALD,
     title: "Ticarium Pazar — Sektörel Pazaryerimiz",
-    highlight: "Bizim kurduğumuz pazaryerine ürünleriniz doğrudan akar; rekabet sizin için çalışır",
+    highlight: "Adil bir pazaryeri mümkün. Ticarium Pazar tam olarak bunun için kuruldu.",
     desc:
-      "En büyük yatırımımız olan Ticarium Pazar, sektörel olarak ayrıştırılmış e-ticaret sitelerinden oluşur. Aynı sitede otomotiv yedek parçası ile hırdavat satılmaz; her sektör kendi vitriniyle, kendi müşteri kitlesiyle buluşur. Ticarium365'te tanımlı ürünleriniz hiçbir ek işlem yapmanıza gerek kalmadan ilgili sektörel pazaryerine aktarılır. Bir müşteri arama yaptığında sistem; fiyat, stok durumu ve teslim süresini değerlendirerek en uygun ürünü öne çıkarır. Bu yapı satıcılar arasında gerçek anlamda sağlıklı bir fiyat rekabeti yaratır ve kazanma şansını yalnızca büyük markalara değil, doğru fiyatlandıran herkese verir. Reklam ve pazarlama operasyonu da tek tek satıcılara değil, tüm pazaryeri ekosistemine yönelik yürütülür; yani trafik ve görünürlük ortak çabayla büyür.",
+      "En büyük yatırımımız Ticarium Pazar, sektörlere ayrılmış vitrinlerden oluşur. Otomotiv yedek parçası ile hırdavat aynı sayfada karışmaz — her sektör kendi alanında, kendi müşterisiyle buluşur. Ticarium365'te tanımladığınız ürün, ek bir işlem gerektirmeden uygun pazaryerinde anında yerini alır. Bir müşteri arama yaptığında; fiyat, stok ve teslim süresini değerlendiren motor, en doğru teklifi öne çıkarır. Bu yapı sadece büyük markalara değil, doğru fiyatlandıran her satıcıya kazanma şansı verir. Reklam ve pazarlama yatırımı tüm ekosistem için ortak yapılır — trafik birlikte büyür, fayda birlikte paylaşılır.",
     icon: Building2,
     accent: EMERALD,
     features: [
