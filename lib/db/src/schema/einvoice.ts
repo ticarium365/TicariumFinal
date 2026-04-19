@@ -81,6 +81,11 @@ export const einvoiceOutboxTable = pgTable("einvoice_outbox", {
   index("einvoice_outbox_company_status_idx").on(t.companyId, t.status),
   index("einvoice_outbox_external_idx").on(t.companyId, t.externalId),
   uniqueIndex("einvoice_outbox_idem_idx").on(t.companyId, t.idempotencyKey).where(sql`${t.idempotencyKey} IS NOT NULL`),
+  // Architect 3. round fix: aynı satıştan iptal/red dışı statüde yalnızca TEK aktif outbox olabilir.
+  // Race-safe: concurrent from-sales POST'ları DB seviyesinde 23505 ile çatışır → handler re-fetch yapar.
+  uniqueIndex("einvoice_outbox_active_per_sale_idx")
+    .on(t.companyId, t.saleId)
+    .where(sql`${t.saleId} IS NOT NULL AND ${t.status} NOT IN ('cancelled','rejected')`),
 ]);
 
 // Inbox: karşıdan gelen e-faturalar (otomatik çekilir)

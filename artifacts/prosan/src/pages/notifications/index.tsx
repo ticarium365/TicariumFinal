@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, CheckCheck, Package, AlertTriangle, ShoppingCart, Sparkles, Mail, Inbox } from "lucide-react";
+import { Bell, CheckCheck, Package, AlertTriangle, ShoppingCart, Sparkles, Mail, Inbox, FileText, FileX, FileCheck2, TrendingDown, Wallet } from "lucide-react";
 import { Link } from "wouter";
 
 interface Notification {
@@ -24,6 +24,14 @@ const ICON_MAP: Record<string, { icon: any; color: string; label: string }> = {
   ecommerce_order: { icon: ShoppingCart, color: "text-emerald-500", label: "E-Ticaret Satış" },
   system_announcement: { icon: Sparkles, color: "text-purple-500", label: "Yenilik / Duyuru" },
   daily_summary: { icon: Bell, color: "text-cyan-500", label: "Günlük Özet" },
+  // Sprint B — Bütçe alarmları
+  budget_alert_critical: { icon: TrendingDown, color: "text-rose-600", label: "Bütçe — Kritik" },
+  budget_alert_warning: { icon: AlertTriangle, color: "text-amber-500", label: "Bütçe — Uyarı" },
+  budget_alert_info: { icon: Wallet, color: "text-sky-500", label: "Bütçe — Bilgi" },
+  // Sprint B — E-Fatura olayları
+  einvoice_sent: { icon: FileCheck2, color: "text-emerald-500", label: "E-Fatura Gönderildi" },
+  einvoice_failed: { icon: FileX, color: "text-rose-500", label: "E-Fatura Başarısız" },
+  einvoice_cancelled: { icon: FileText, color: "text-slate-500", label: "E-Fatura İptal" },
   system: { icon: Bell, color: "text-muted-foreground", label: "Sistem" },
 };
 
@@ -142,6 +150,16 @@ export default function NotificationsPage() {
                       {n.entityType === "product" && n.entityId && (
                         <Link href={`/products/${n.entityId}`}>
                           <span className="text-xs text-primary hover:underline mt-1 inline-block">Ürünü Görüntüle →</span>
+                        </Link>
+                      )}
+                      {n.entityType === "einvoice_outbox" && n.entityId && (
+                        <Link href={`/einvoice?outbox=${n.entityId}`}>
+                          <span className="text-xs text-primary hover:underline mt-1 inline-block">Outbox Kaydını Aç →</span>
+                        </Link>
+                      )}
+                      {n.entityType === "budget" && (
+                        <Link href={`/butce`}>
+                          <span className="text-xs text-primary hover:underline mt-1 inline-block">Bütçeyi Aç →</span>
                         </Link>
                       )}
                     </div>

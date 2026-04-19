@@ -10,6 +10,19 @@ import { buildInvoiceXml } from "./ubl-tr-builder.js";
 const memInvoices: Record<string, { payload: EInvoiceCreatePayload; status: string; createdAt: Date; xml: string }> = {};
 const memIncoming: Record<string, IncomingInvoice[]> = {};
 
+// Architect 4. round: createInvoice çağrı sayacı — concurrency testlerinin "tam 1 provider call"
+// invariant'ını assert edebilmesi için. Test runner sayacı sıfırlayıp tüketebilir.
+let __mockCreateInvoiceCalls = 0;
+let __mockFailNext = 0;
+export const __mockCreateInvoiceCounter = {
+  get: () => __mockCreateInvoiceCalls,
+  reset: () => { __mockCreateInvoiceCalls = 0; },
+};
+export const __mockFailController = {
+  failNext: (n: number) => { __mockFailNext = Math.max(0, n | 0); },
+  remaining: () => __mockFailNext,
+};
+
 export class MockEInvoiceProvider implements EInvoiceProvider {
   readonly key = "mock";
   readonly displayName = "Mock E-Fatura (Sandbox)";
@@ -27,6 +40,11 @@ export class MockEInvoiceProvider implements EInvoiceProvider {
   }
 
   async createInvoice(payload: EInvoiceCreatePayload): Promise<EInvoiceCreateResult> {
+    __mockCreateInvoiceCalls++;
+    if (__mockFailNext > 0) {
+      __mockFailNext--;
+      throw new Error("[mock] simulated provider failure");
+    }
     const externalId = randomUUID();
     const externalNo = "MOCK" + new Date().getFullYear() + String(Object.keys(memInvoices).length + 1).padStart(9, "0");
     // UBL-TR XML üret (gerçek stub provider'lar ile aynı kontrat).

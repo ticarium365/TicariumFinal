@@ -94,15 +94,43 @@ export default function EInvoicePage() {
     URL.revokeObjectURL(url);
   };
 
+  // Sprint B — Notification deep-link: /einvoice?outbox=:id ile gelen kullanıcıyı
+  // ilgili outbox satırına odakla (highlight + scroll). ?new=1 davranışı korunur.
+  const [highlightOutboxId, setHighlightOutboxId] = useState<number | null>(null);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    let mutated = false;
     if (params.get("new") === "1") {
       setCreateOpen(true);
       params.delete("new");
+      mutated = true;
+    }
+    const ob = params.get("outbox");
+    if (ob && /^\d+$/.test(ob)) {
+      setHighlightOutboxId(Number(ob));
+      params.delete("outbox");
+      mutated = true;
+    }
+    if (mutated) {
       const qs = params.toString();
       window.history.replaceState({}, "", window.location.pathname + (qs ? "?" + qs : ""));
     }
   }, []);
+
+  // Outbox listesi yüklendikten sonra hedef satıra scroll + highlight pulse
+  useEffect(() => {
+    if (highlightOutboxId == null || outbox.length === 0) return;
+    const el = document.getElementById(`outbox-row-${highlightOutboxId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-primary", "ring-offset-2", "bg-primary/5");
+      const t = setTimeout(() => {
+        el.classList.remove("ring-2", "ring-primary", "ring-offset-2", "bg-primary/5");
+        setHighlightOutboxId(null);
+      }, 3500);
+      return () => clearTimeout(t);
+    }
+  }, [highlightOutboxId, outbox.length]);
 
   const loadAll = useCallback(async () => {
     const [p, s, o, i, e] = await Promise.all([
@@ -265,7 +293,7 @@ export default function EInvoicePage() {
                     <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Henüz fatura yok.</TableCell></TableRow>
                   )}
                   {outbox.map((r) => (
-                    <TableRow key={r.id}>
+                    <TableRow key={r.id} id={`outbox-row-${r.id}`} className="transition-all duration-300">
                       <TableCell className="text-xs">{fmtDate(r.invoiceDate)}</TableCell>
                       <TableCell>
                         <div className="font-medium">{r.receiverName}</div>

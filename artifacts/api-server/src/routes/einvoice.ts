@@ -25,9 +25,65 @@ const requireWriter = requireRole(["admin", "staff", "super_admin"]);
 import { getProviderForCompany, PROVIDER_META, PROVIDER_REGISTRY, logEvent } from "../services/einvoice/factory.js";
 import { dispatchEinvoiceEvent } from "../services/notifications/dispatch.js";
 import type { EInvoiceCreatePayload } from "../services/einvoice/types.js";
+import { __mockCreateInvoiceCounter, __mockFailController } from "../services/einvoice/mock-provider.js";
 
 const router = Router();
+
+// Architect 4. round: test-only counter endpoint (mock provider createInvoice çağrı sayacı).
+// Concurrency testlerinin "tam 1 provider call" invariant'ını assert edebilmesi için.
+// Production'da NODE_ENV=production olduğunda 404 döner (kapalı).
+if (process.env.NODE_ENV !== "production") {
+  router.get("/__test_mock_counter", (_req: Request, res: Response) => {
+    res.json({ createInvoiceCalls: __mockCreateInvoiceCounter.get() });
+  });
+  router.post("/__test_mock_counter/reset", (_req: Request, res: Response) => {
+    __mockCreateInvoiceCounter.reset();
+    res.json({ ok: true });
+  });
+  router.post("/__test_mock_fail_next", (req: Request, res: Response) => {
+    const count = Number(req.body?.count ?? 1);
+    __mockFailController.failNext(count);
+    res.json({ ok: true, willFail: __mockFailController.remaining() });
+  });
+}
+
+// Architect 4. round (III) — late-loser pre-check timing testi için "reserving" satırı enjekte
+// ve temizleme endpoint'leri (NODE_ENV !== production'da açık, requireAuth sonrası).
+// Auth ile korunur, sadece test akışında çağrılır.
+function attachTestReservingEndpoints(r: Router) {
+  if (process.env.NODE_ENV === "production") return;
+  r.post("/__test_inject_reserving", requireWriter, async (req: Request, res: Response) => {
+    const companyId = req.companyId!;
+    const saleId = Number(req.body?.saleId);
+    if (!saleId) return res.status(400).json({ error: "saleId zorunlu" });
+    try {
+      const [row] = await db.insert(einvoiceOutboxTable).values({
+        companyId, saleId, documentNumber: null,
+        receiverVkn: null, receiverName: "TEST RESERVING", receiverAlias: null, receiverEmail: null,
+        invoiceType: "SATIS", profile: "TICARIFATURA", scenario: "EFATURA",
+        invoiceDate: new Date(), totalAmount: "0", taxAmount: "0", currency: "TRY",
+        provider: "mock", externalId: null, externalNo: null,
+        status: "reserving", payload: { __test: true } as any, lastResponse: null,
+        attemptCount: 0, createdBy: req.userId || null, idempotencyKey: null,
+      }).returning();
+      res.status(201).json(row);
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message });
+    }
+  });
+  r.delete("/__test_outbox/:id", requireWriter, async (req: Request, res: Response) => {
+    const companyId = req.companyId!;
+    const id = Number(req.params.id);
+    await db.delete(einvoiceOutboxTable).where(and(
+      eq(einvoiceOutboxTable.id, id),
+      eq(einvoiceOutboxTable.companyId, companyId),
+    ));
+    res.json({ ok: true });
+  });
+}
+
 router.use(requireAuth);
+attachTestReservingEndpoints(router);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AYARLAR
@@ -284,11 +340,71 @@ router.post("/from-sales", requireWriter, async (req: Request, res: Response) =>
     return res.status(400).json({ error: "Geçerli saleId yok" });
   }
 
-  // 1) Satışları yükle (tenant scoped)
+  // 1) Satışları yükle (tenant scoped) — Architect fix: TÜM saleId'ler bulunmalı,
+  // kısmi liste sessizce devam edemez (mükerrer/eksik fatura riski).
+  const uniqueIds = Array.from(new Set(ids));
   const sales = await db.select().from(salesTable)
-    .where(and(eq(salesTable.companyId, companyId), inArray(salesTable.id, ids)));
+    .where(and(eq(salesTable.companyId, companyId), inArray(salesTable.id, uniqueIds)));
   if (sales.length === 0) {
     return res.status(404).json({ error: "Satış bulunamadı" });
+  }
+  if (sales.length !== uniqueIds.length) {
+    const found = new Set(sales.map((s) => s.id));
+    const missing = uniqueIds.filter((id) => !found.has(id));
+    return res.status(404).json({
+      error: "Bazı satış kayıtları bulunamadı (kısmi eşleşme)",
+      missing,
+      requested: uniqueIds,
+    });
+  }
+  // Architect 3. round fix: idempotency — TÜM aktif statüler (draft/queued/failed/sending/sent/accepted)
+  // için kontrol; sent/accepted ise 409 + existingOutboxId (mükerrer hukuki fatura yok),
+  // draft/queued/failed/sending ise 200 + reused=true (dialog re-open güvenli).
+  // İptal/red statüsündeki kayıtlar geçmiş sayılır → yeni fatura kesilebilir.
+  // Race-safety: aşağıdaki INSERT, DB-seviyesi `einvoice_outbox_active_per_sale_idx`
+  // partial unique index'i sayesinde concurrent POST'larda 23505 fırlatır → catch + re-fetch.
+  const ACTIVE_STATUSES = ['draft','queued','failed','sending','sent','accepted'];
+  const SENT_STATUSES = new Set(['sending','sent','accepted']);
+  if (uniqueIds.length === 1) {
+    const [existing] = await db.select().from(einvoiceOutboxTable)
+      .where(and(
+        eq(einvoiceOutboxTable.companyId, companyId),
+        eq(einvoiceOutboxTable.saleId, uniqueIds[0]),
+        sql`${einvoiceOutboxTable.status} NOT IN ('cancelled','rejected')`,
+      )).limit(1);
+    if (existing) {
+      if (SENT_STATUSES.has(existing.status)) {
+        return res.status(409).json({
+          error: "Bu satış için aktif bir e-fatura zaten gönderilmiş",
+          existingOutboxId: existing.id,
+          status: existing.status,
+        });
+      }
+      // Architect 4. round (III): pre-check'te 'reserving' satırı görürsek
+      // ASLA 200/reused dönme (yanıltıcı başarı). Bounded polling ile settle bekle,
+      // hâlâ reserving ise 503 + reserve_pending.
+      if (existing.status === 'reserving') {
+        let settled: any = null;
+        for (let attempt = 0; attempt < 40; attempt++) {
+          const [w] = await db.select().from(einvoiceOutboxTable)
+            .where(and(
+              eq(einvoiceOutboxTable.companyId, companyId),
+              eq(einvoiceOutboxTable.saleId, uniqueIds[0]),
+              sql`${einvoiceOutboxTable.status} NOT IN ('cancelled','rejected')`,
+            )).limit(1);
+          if (w && w.status !== 'reserving') { settled = w; break; }
+          await new Promise((r) => setTimeout(r, 25));
+        }
+        if (settled) {
+          return res.status(200).json({ ...settled, reused: true, raceWon: false });
+        }
+        return res.status(503).set('Retry-After', '1').json({
+          error: 'reserve_pending',
+          detail: 'Aynı satış için bir e-fatura oluşturma işlemi sürüyor; lütfen tekrar deneyin.',
+        });
+      }
+      return res.status(200).json({ ...existing, reused: true });
+    }
   }
   // Tüm satışlar aynı müşteriye ait olmalı
   const customerIds = new Set(sales.map((s) => s.customerId).filter((c) => c !== null && c !== undefined));
@@ -371,6 +487,11 @@ router.post("/from-sales", requireWriter, async (req: Request, res: Response) =>
     return acc;
   }, { total: 0, tax: 0 });
 
+  // Architect 4. round: RESERVE-FIRST pattern.
+  // Önce DB'ye 'reserving' statüsünde placeholder INSERT atılır → DB partial unique index
+  // (`einvoice_outbox_active_per_sale_idx`) yarışı arbitrate eder. SADECE kazanan
+  // `provider.createInvoice` çağırır (mükerrer harici fatura imkânsız). Kaybedenler 23505
+  // alır → kazananı re-fetch edip 200 + reused=true döner.
   try {
     const payload: EInvoiceCreatePayload = {
       invoiceType: invoiceType || "SATIS",
@@ -384,33 +505,91 @@ router.post("/from-sales", requireWriter, async (req: Request, res: Response) =>
       receiver,
       lines,
     };
-    const result = await providerInst.createInvoice(payload);
 
-    const [row] = await db.insert(einvoiceOutboxTable).values({
-      companyId,
-      saleId: ids[0],
-      documentNumber: null,
-      receiverVkn: receiver.vkn || null,
-      receiverName: receiver.name,
-      receiverAlias: receiver.alias || null,
-      receiverEmail: receiver.email || null,
-      invoiceType: payload.invoiceType,
-      profile: payload.profile,
-      scenario: payload.scenario,
-      invoiceDate: payload.invoiceDate,
-      totalAmount: Math.round(totals.total * 100) / 100,
-      taxAmount: Math.round(totals.tax * 100) / 100,
-      currency: "TRY",
-      provider: settings.provider,
+    let placeholderRow: any;
+    try {
+      [placeholderRow] = await db.insert(einvoiceOutboxTable).values({
+        companyId,
+        saleId: ids[0],
+        documentNumber: null,
+        receiverVkn: receiver.vkn || null,
+        receiverName: receiver.name,
+        receiverAlias: receiver.alias || null,
+        receiverEmail: receiver.email || null,
+        invoiceType: payload.invoiceType,
+        profile: payload.profile,
+        scenario: payload.scenario,
+        invoiceDate: payload.invoiceDate,
+        totalAmount: Math.round(totals.total * 100) / 100,
+        taxAmount: Math.round(totals.tax * 100) / 100,
+        currency: "TRY",
+        provider: settings.provider,
+        externalId: null,
+        externalNo: null,
+        status: "reserving",
+        payload,
+        lastResponse: null,
+        attemptCount: 0,
+        createdBy: userId,
+        idempotencyKey: null,
+      }).returning();
+    } catch (err: any) {
+      const pgCode = err?.code || err?.cause?.code;
+      const pgConstraint = err?.constraint || err?.cause?.constraint || '';
+      if (pgCode === '23505' && pgConstraint.includes('einvoice_outbox_active_per_sale')) {
+        // Yarışı kaybettik → kazananı bekle (kazanan provider'ı çağırıp güncelleyene kadar
+        // status='reserving' görebiliriz; sadece terminal/kullanılabilir bir statü görene kadar polla).
+        let settled: any = null;
+        for (let attempt = 0; attempt < 40; attempt++) {
+          const [w] = await db.select().from(einvoiceOutboxTable)
+            .where(and(
+              eq(einvoiceOutboxTable.companyId, companyId),
+              eq(einvoiceOutboxTable.saleId, ids[0]),
+              sql`${einvoiceOutboxTable.status} NOT IN ('cancelled','rejected')`,
+            )).limit(1);
+          if (w && w.status !== 'reserving') { settled = w; break; }
+          await new Promise((r) => setTimeout(r, 25));
+        }
+        if (settled) {
+          return res.status(200).json({ ...settled, reused: true, raceWon: false });
+        }
+        // Architect 4. round (II): polling timeout → kazanan hâlâ 'reserving'.
+        // Asla 'reserving' satırı 'reused' olarak dönmez (yanıltıcı başarı algısı engellenir).
+        return res.status(503).set('Retry-After', '1').json({
+          error: 'reserve_pending',
+          detail: 'Aynı satış için bir e-fatura oluşturma işlemi sürüyor; lütfen tekrar deneyin.',
+        });
+      }
+      throw err;
+    }
+
+    // Kazanan: provider'ı çağır (TEK çağrı garantisi). Hata olursa placeholder'ı 'failed'
+    // yap (unique index'te kalır ama idempotency-katmanı 'failed' için 200/reused döndürür,
+    // böylece kullanıcı yeniden deneyebilir; satır asla 'reserving'de kilitli kalmaz).
+    let result;
+    try {
+      result = await providerInst.createInvoice(payload);
+    } catch (provErr: any) {
+      try {
+        await db.update(einvoiceOutboxTable).set({
+          status: 'failed',
+          statusMessage: (provErr?.message || 'Provider hatası').slice(0, 500),
+          lastResponse: { error: provErr?.message || String(provErr) },
+          updatedAt: new Date(),
+        }).where(eq(einvoiceOutboxTable.id, placeholderRow.id));
+      } catch (cleanupErr) {
+        console.error("[einvoice/from-sales] cleanup_failed:", cleanupErr);
+      }
+      throw provErr;
+    }
+
+    const [row] = await db.update(einvoiceOutboxTable).set({
       externalId: result.externalId,
       externalNo: result.externalNo || null,
       status: result.status || "draft",
-      payload,
       lastResponse: result.raw || null,
-      attemptCount: 0,
-      createdBy: userId,
-      idempotencyKey: null,
-    }).returning();
+      updatedAt: new Date(),
+    }).where(eq(einvoiceOutboxTable.id, placeholderRow.id)).returning();
 
     await logEvent({
       companyId, provider: settings.provider, event: "invoice_created_from_sale",

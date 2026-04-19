@@ -136,20 +136,24 @@ export async function dispatchBudgetAlerts(
       title: `Bütçe uyarısı (${a.period}): ${a.label}`,
       message: a.message,
       entityType: "budget",
-      // Aynı kategori + dönem kombinasyonu için günlük dedup
-      // entityId null olanlarda (orphan_expense kategorisiz) dönem hash'lenir
-      entityId: a.categoryId ?? hashPeriod(a.period, a.type),
+      // Architect fix: dedup hem kategori hem dönem boyutuna duyarlı olmalı.
+      // Aynı kategoride farklı dönem alarmı (örn. 2025-09 vs 2025-10) aynı gün
+      // içinde geldiğinde ayrı kayıt yazılmalı; bu yüzden categoryId varken bile
+      // entityId'ye (period+type) hash'i karıştırıyoruz.
+      entityId: hashPeriod(a.period, a.type, a.categoryId ?? null),
     });
     if (r.created) created++; else deduped++;
   }
   return { created, deduped, total: alerts.length };
 }
 
-function hashPeriod(period: string, type: string): number {
+function hashPeriod(period: string, type: string, categoryId: number | null = null): number {
   // Deterministik hash → NEGATIF integer namespace (gerçek categoryId'ler her
   // zaman pozitif olduğundan synthetic id'lerle collision olmaz).
+  // categoryId dahil edilirse aynı kategori için (period+type) bazlı dedup
+  // kilidi sağlanır; farklı dönem/kategori → farklı hash → farklı kayıt.
   let h = 0;
-  const s = `${period}:${type}`;
+  const s = `${period}:${type}:${categoryId ?? "null"}`;
   for (let i = 0; i < s.length; i++) {
     h = (h * 31 + s.charCodeAt(i)) | 0;
   }

@@ -5177,6 +5177,224 @@ describe("POS → from-sales köprüsü — validation kontratı", () => {
     const r = await api("POST", "/einvoice/from-sales", { jar, body: { saleIds: [1] } });
     assert.equal(r.status, 403);
   });
+
+  // Sprint G — happy path (sertleştirilmiş): sender config setup + 201 zorunlu + UBL XML + idempotency
+  test("Sprint G — müşterili satıştan from-sales 201 + UBL XML + idempotent reuse", async () => {
+    const { jar } = await login("admin", "admin123");
+
+    // 0) Sender VKN config'i sertleştir (test'in 400 'senderVkn tanımsız' yoluna düşmesini engelle)
+    const cfgRes = await api("PUT", "/einvoice/settings", {
+      jar,
+      body: {
+        provider: "mock",
+        sandbox: true,
+        enabled: true,
+        config: {
+          senderVkn: "1234567890",
+          senderName: "Test Şirket A.Ş.",
+          senderAlias: "urn:mail:defaultpk@test.local",
+          senderTaxOffice: "TestVD",
+          senderAddress: "Test Mah. No:1",
+          senderCity: "İstanbul",
+          senderEmail: "sender@test.local",
+          defaultVatRate: 20,
+        },
+      },
+    });
+    assert.ok([200, 201].includes(cfgRes.status), `einvoice settings PUT failed: ${cfgRes.status} ${JSON.stringify(cfgRes.json)}`);
+
+    // 1) Müşteri (VKN ile) yarat — code zorunlu
+    const custName = `__test_qg_customer_${Date.now()}`;
+    const custCode = `QG${Date.now()}`;
+    const cc = await api("POST", "/customers", {
+      jar, body: { code: custCode, name: custName, taxNumber: "1234567890", email: "qg@test.local", taxOffice: "TestVD" },
+    });
+    assert.ok([200, 201].includes(cc.status), `customer create failed: ${cc.status} ${JSON.stringify(cc.json)}`);
+    const customerId = cc.json?.id ?? cc.json?.customer?.id;
+    assert.ok(typeof customerId === "number" && customerId > 0, `customerId çıkarılamadı: ${JSON.stringify(cc.json)}`);
+
+    // 2) Ürün + satış (müşterili)
+    const { json: product } = await createTestProduct(jar, { stock: 10 });
+    const sale = await api("POST", "/sales", {
+      jar, body: { productId: product.id, quantity: 2, unitPrice: 150, customerId },
+    });
+    assert.equal(sale.status, 201, `sale create failed: ${JSON.stringify(sale.json)}`);
+
+    // 3) İlk from-sales çağrısı: 201 + outbox + UBL XML zorunlu
+    const r = await api("POST", "/einvoice/from-sales", {
+      jar, body: { saleIds: [sale.json.id] },
+    });
+    assert.equal(r.status, 201, `from-sales 201 bekleniyor, ${r.status} geldi: ${JSON.stringify(r.json)}`);
+    const outboxId = r.json?.id ?? r.json?.outboxId;
+    assert.ok(typeof outboxId === "number" && outboxId > 0, `outboxId yok: ${JSON.stringify(r.json)}`);
+    assert.ok(!r.json?.reused, "ilk çağrıda reused=true olmamalı");
+
+    // 4) Outbox detayı + UBL XML kontratı
+    const get = await api("GET", `/einvoice/outbox/${outboxId}`, { jar });
+    assert.equal(get.status, 200);
+    assert.equal(get.json?.saleId, sale.json.id, "outbox.saleId from-sales kaynağını tracelemeli");
+    const xml = get.json?.lastResponse?.xml;
+    assert.ok(typeof xml === "string" && xml.length > 0, "lastResponse.xml dolu olmalı");
+    assert.match(xml, /<Invoice/i, "UBL <Invoice root içermeli");
+    assert.match(xml, /<cbc:ID/i, "UBL cbc:ID elementi içermeli");
+
+    // 5) Architect fix: idempotency — aynı saleId ile 2. çağrı 200 + reused=true + AYNI outbox.id döner
+    const r2 = await api("POST", "/einvoice/from-sales", {
+      jar, body: { saleIds: [sale.json.id] },
+    });
+    assert.equal(r2.status, 200, `idempotent 2. çağrı 200 bekleniyor, ${r2.status} geldi: ${JSON.stringify(r2.json)}`);
+    assert.equal(r2.json?.reused, true, "2. çağrıda reused=true olmalı");
+    assert.equal(r2.json?.id, outboxId, "2. çağrıda aynı outbox.id döndürülmeli (mükerrer fatura yok)");
+  });
+
+  // Sprint G — Architect 3. round: sent statüsündeki outbox için 2. from-sales 409 + existingOutboxId
+  test("Sprint G — sent statüsündeki satış için from-sales 409 + existingOutboxId döner (mükerrer fatura yok)", async () => {
+    const { jar } = await login("admin", "admin123");
+    const stamp = Date.now();
+    const custCode = `SENT${stamp}`;
+    const taxNum = String(2_000_000_000 + (stamp % 1_000_000_000));
+    const cc = await api("POST", "/customers", {
+      jar, body: { code: custCode, name: `__test_sent_${stamp}`, taxNumber: taxNum, email: `s${stamp}@test.local`, taxOffice: "TestVD" },
+    });
+    assert.ok([200, 201].includes(cc.status), `customer create failed: ${cc.status} ${JSON.stringify(cc.json)}`);
+    const customerId = cc.json?.id ?? cc.json?.customer?.id;
+    assert.ok(typeof customerId === "number" && customerId > 0, `customerId çıkarılamadı: ${JSON.stringify(cc.json)}`);
+    const { json: product } = await createTestProduct(jar, { stock: 5 });
+    const sale = await api("POST", "/sales", { jar, body: { productId: product.id, quantity: 1, unitPrice: 80, customerId } });
+    assert.equal(sale.status, 201);
+    // 1. from-sales — draft outbox
+    const r1 = await api("POST", "/einvoice/from-sales", { jar, body: { saleIds: [sale.json.id] } });
+    assert.equal(r1.status, 201);
+    const outboxId = r1.json.id;
+    // outbox/:id/send — sent statüsüne taşı (mock provider)
+    const sendRes = await api("POST", `/einvoice/outbox/${outboxId}/send`, { jar });
+    assert.ok([200, 201].includes(sendRes.status), `send failed: ${sendRes.status} ${JSON.stringify(sendRes.json)}`);
+    assert.ok(['sent','accepted','sending'].includes(sendRes.json?.status), `expected sent-like status, got: ${sendRes.json?.status}`);
+    // 2. from-sales aynı satışla → 409 + existingOutboxId
+    const r2 = await api("POST", "/einvoice/from-sales", { jar, body: { saleIds: [sale.json.id] } });
+    assert.equal(r2.status, 409, `sent satış için 409 bekleniyor, ${r2.status} geldi: ${JSON.stringify(r2.json)}`);
+    assert.equal(r2.json?.existingOutboxId, outboxId, "409 cevabı existingOutboxId içermeli");
+    assert.ok(['sent','accepted','sending'].includes(r2.json?.status));
+  });
+
+  // Sprint G — Architect 3. round: concurrent paralel POST'lar TEK outbox üretir (race-safe partial unique index)
+  test("Sprint G — concurrent paralel from-sales POST'ları aynı outbox.id'i döner (race-safe DB)", async () => {
+    const { jar } = await login("admin", "admin123");
+    const stamp = Date.now();
+    const custCode = `RACE${stamp}`;
+    const taxNum = String(3_000_000_000 + (stamp % 1_000_000_000));
+    const cc = await api("POST", "/customers", {
+      jar, body: { code: custCode, name: `__test_race_${stamp}`, taxNumber: taxNum, email: `r${stamp}@test.local`, taxOffice: "TestVD" },
+    });
+    assert.ok([200, 201].includes(cc.status), `customer create failed: ${cc.status} ${JSON.stringify(cc.json)}`);
+    const customerId = cc.json?.id ?? cc.json?.customer?.id;
+    assert.ok(typeof customerId === "number" && customerId > 0, `customerId çıkarılamadı: ${JSON.stringify(cc.json)}`);
+    const { json: product } = await createTestProduct(jar, { stock: 5 });
+    const sale = await api("POST", "/sales", { jar, body: { productId: product.id, quantity: 1, unitPrice: 60, customerId } });
+    assert.equal(sale.status, 201);
+    // Architect 4. round: provider call sayacını sıfırla — 5 paralel POST sadece 1 createInvoice tetiklemeli
+    await api("POST", "/einvoice/__test_mock_counter/reset", { jar });
+    // 5 paralel POST — DB unique partial index sayesinde TEK outbox.id'e yakınsamalı
+    const responses = await Promise.all(
+      Array.from({ length: 5 }, () => api("POST", "/einvoice/from-sales", { jar, body: { saleIds: [sale.json.id] } }))
+    );
+    const statuses = responses.map((r) => r.status);
+    const ids = responses.map((r) => r.json?.id).filter((x) => typeof x === "number");
+    assert.ok(statuses.every((s) => [200, 201].includes(s)), `tüm statuses 200/201 olmalı, gelen: ${JSON.stringify(statuses)}`);
+    assert.equal(ids.length, 5, `tüm cevaplarda id olmalı: ${JSON.stringify(responses.map((r) => r.json))}`);
+    const uniqueIds = new Set(ids);
+    assert.equal(uniqueIds.size, 1, `tüm paralel POST'lar AYNI outbox.id'e yakınsamalı, gelen: ${JSON.stringify([...uniqueIds])}`);
+    // En fazla 1 tane 201 (yarış kazananı), gerisi 200 reused/raceWon=false
+    const created = statuses.filter((s) => s === 201).length;
+    const reused = statuses.filter((s) => s === 200).length;
+    assert.equal(created, 1, `tam 1 'kazanan' 201 olmalı, gelen: created=${created} reused=${reused}`);
+    assert.equal(reused, 4, `4 'kaybeden' 200 olmalı, gelen: created=${created} reused=${reused}`);
+    // KRİTİK: Architect 4. round invariant — provider.createInvoice TAM 1 kez çağrıldı (mükerrer harici fatura yok)
+    const counter = await api("GET", "/einvoice/__test_mock_counter", { jar });
+    assert.equal(counter.json?.createInvoiceCalls, 1, `provider.createInvoice tam 1 kez çağrılmalı (reserve-first); gelen: ${counter.json?.createInvoiceCalls}`);
+  });
+
+  // Sprint G — partial saleIds list → 404 missing detail
+  test("Sprint G — kısmi geçerli saleIds → 404 + missing[] döner (partial silently proceed yok)", async () => {
+    const { jar } = await login("admin", "admin123");
+    // Sender config zaten önceki test'te set edildi
+    const custName = `__test_partial_customer_${Date.now()}`;
+    const custCode = `PART${Date.now()}`;
+    const cc = await api("POST", "/customers", {
+      jar, body: { code: custCode, name: custName, taxNumber: "1234567890", email: "p@test.local", taxOffice: "TestVD" },
+    });
+    if (![200, 201].includes(cc.status)) { console.warn(`partial test skip: customer create ${cc.status}`); return; }
+    const customerId = cc.json?.id ?? cc.json?.customer?.id;
+    const { json: product } = await createTestProduct(jar, { stock: 5 });
+    const sale = await api("POST", "/sales", {
+      jar, body: { productId: product.id, quantity: 1, unitPrice: 50, customerId },
+    });
+    assert.equal(sale.status, 201);
+    const ghostId = 999_999_999;
+    const r = await api("POST", "/einvoice/from-sales", {
+      jar, body: { saleIds: [sale.json.id, ghostId] },
+    });
+    assert.equal(r.status, 404, `partial liste için 404 bekleniyor, ${r.status} geldi: ${JSON.stringify(r.json)}`);
+    assert.ok(Array.isArray(r.json?.missing) && r.json.missing.includes(ghostId), `missing[] ghostId içermeli: ${JSON.stringify(r.json)}`);
+  });
+
+  // Sprint G — Architect 4. round (II): provider hata cleanup invariantı
+  // Provider createInvoice fırlatırsa → reserving satırı 'failed'e çekilmeli, sonraki istek reuse edebilmeli
+  test("Sprint G — provider hata olursa reserving satırı 'failed'e çekilir + sonraki istek reuse eder (deadlock yok)", async () => {
+    const { jar } = await login("admin", "admin123");
+    const custName = `__test_provfail_customer_${Date.now()}`;
+    const custCode = `PFAIL${Date.now()}`;
+    const cc = await api("POST", "/customers", {
+      jar, body: { code: custCode, name: custName, taxNumber: "1234567890", email: "pf@test.local", taxOffice: "TestVD" },
+    });
+    if (![200, 201].includes(cc.status)) { console.warn(`provider-fail test skip: customer ${cc.status}`); return; }
+    const customerId = cc.json?.id ?? cc.json?.customer?.id;
+    const { json: product } = await createTestProduct(jar, { stock: 5 });
+    const sale = await api("POST", "/sales", { jar, body: { productId: product.id, quantity: 1, unitPrice: 70, customerId } });
+    assert.equal(sale.status, 201);
+
+    // 1) Bir sonraki provider çağrısı throw etsin
+    await api("POST", "/einvoice/__test_mock_fail_next", { jar, body: { count: 1 } });
+    // 2) İlk POST → 500 (provider failure surfacing)
+    const r1 = await api("POST", "/einvoice/from-sales", { jar, body: { saleIds: [sale.json.id] } });
+    assert.equal(r1.status, 500, `provider hatası 500 olmalı, gelen: ${r1.status} ${JSON.stringify(r1.json)}`);
+    // 3) İkinci POST → satır 'reserving'de kilitli kalmamalı; idempotency 'failed' satırı reuse etmeli (200)
+    const r2 = await api("POST", "/einvoice/from-sales", { jar, body: { saleIds: [sale.json.id] } });
+    assert.equal(r2.status, 200, `cleanup sonrası 2. istek 200/reused dönmeli, gelen: ${r2.status} ${JSON.stringify(r2.json)}`);
+    assert.equal(r2.json?.reused, true, `reused=true olmalı: ${JSON.stringify(r2.json)}`);
+    assert.equal(r2.json?.status, 'failed', `cleanup sonrası satır 'failed' olmalı, gelen status=${r2.json?.status}`);
+  });
+
+  // Sprint G — Architect 4. round (III): pre-check'te 'reserving' satırı varsa ASLA 200/reused dönmez.
+  // Late-loser pre-check timing: kazanan reserving INSERT etti ama provider henüz settle etmedi.
+  // İkinci istek pre-check'te 'reserving' görür → polling timeout sonu hâlâ reserving → 503 reserve_pending.
+  test("Sprint G — pre-check 'reserving' satırı için 200/reused dönmez (timeout 503 reserve_pending)", async () => {
+    const { jar } = await login("admin", "admin123");
+    const custName = `__test_reserve_pending_${Date.now()}`;
+    const custCode = `RPND${Date.now()}`;
+    const cc = await api("POST", "/customers", {
+      jar, body: { code: custCode, name: custName, taxNumber: "1234567890", email: "rp@test.local", taxOffice: "TestVD" },
+    });
+    if (![200, 201].includes(cc.status)) { console.warn(`reserve-pending test skip: customer ${cc.status}`); return; }
+    const customerId = cc.json?.id ?? cc.json?.customer?.id;
+    const { json: product } = await createTestProduct(jar, { stock: 5 });
+    const sale = await api("POST", "/sales", { jar, body: { productId: product.id, quantity: 1, unitPrice: 80, customerId } });
+    assert.equal(sale.status, 201);
+
+    // 1) Manuel olarak 'reserving' satırı enjekte (sanki kazanan provider'da takıldı)
+    const inj = await api("POST", "/einvoice/__test_inject_reserving", { jar, body: { saleId: sale.json.id } });
+    assert.equal(inj.status, 201, `inject 201 olmalı: ${JSON.stringify(inj.json)}`);
+    const injectedId = inj.json.id;
+    try {
+      // 2) from-sales çağrısı — pre-check 'reserving' görmeli, 200/reused DÖNMEMELİ
+      const r = await api("POST", "/einvoice/from-sales", { jar, body: { saleIds: [sale.json.id] } });
+      assert.equal(r.status, 503, `pre-check reserving için 503 bekleniyor, gelen: ${r.status} ${JSON.stringify(r.json)}`);
+      assert.equal(r.json?.error, 'reserve_pending', `error 'reserve_pending' olmalı: ${JSON.stringify(r.json)}`);
+    } finally {
+      // Cleanup: enjekte edilen satırı sil
+      await api("DELETE", `/einvoice/__test_outbox/${injectedId}`, { jar });
+    }
+  });
 });
 
 // ─── Sprint A — Architect P1 Regression Tests ────────────────────────────────
@@ -5482,6 +5700,109 @@ describe("Sprint B — Bütçe alarmları + e-fatura olayları → bildirim merk
     // İki çağrı arasında alarm sayısı değişebilir ama eşit eşitlik testi anlamsız;
     // burada sadece her iki çağrının da created+deduped=total kontratını koruduğunu doğrularız
     assert.equal(r2.json.created + r2.json.deduped, r2.json.total);
+  });
+
+  // Architect follow-up (deterministik, fixture-controlled):
+  // PROSAN seed'inde geçen ay gideri olmayabilir; bu yüzden test in-line minimal
+  // expense fixture insert eder (pg direkt) — aynı `categoryId` için thisMonth +
+  // lastMonth giderleri yaratır, sonra her iki periodu dispatch eder ve
+  // entityId set'lerinin **disjoint** olduğunu zorunlu doğrular. Hash kontratı
+  // (period+type+categoryId) ihlal edilirse test FAIL eder.
+  test("budget_alert dedup period boyutuna duyarlı (fixture-controlled: aynı kategori farklı dönem → disjoint entityId)", async () => {
+    // pg direkt erişim (drizzle gerekmez): minimal expense + category insert
+    const { Client } = await import("pg");
+    const pgClient = new Client({ connectionString: process.env.DATABASE_URL });
+    await pgClient.connect();
+    let categoryId = null;
+    let insertedExpenseIds = [];
+    try {
+      // 1) Login + companyId çek
+      const { jar } = await login("admin", "admin123");
+      const me = await api("GET", "/auth/me", { jar });
+      assert.equal(me.status, 200);
+      const companyId = me.json?.user?.companyId ?? me.json?.companyId;
+      assert.ok(typeof companyId === "number" && companyId > 0, `companyId çıkarılamadı: ${JSON.stringify(me.json)}`);
+
+      // 2) Test kategorisi oluştur (idempotent: önce ara, yoksa ekle)
+      const catName = `__test_period_dedup_cat`;
+      const catRes = await pgClient.query(
+        `SELECT id FROM expense_categories WHERE company_id=$1 AND name=$2 LIMIT 1`,
+        [companyId, catName],
+      );
+      if (catRes.rows.length > 0) {
+        categoryId = catRes.rows[0].id;
+      } else {
+        const ins = await pgClient.query(
+          `INSERT INTO expense_categories (company_id, name, is_active) VALUES ($1, $2, true) RETURNING id`,
+          [companyId, catName],
+        );
+        categoryId = ins.rows[0].id;
+      }
+      assert.ok(typeof categoryId === "number" && categoryId > 0);
+
+      // 3) thisMonth + lastMonth için 1'er gider satırı insert et (aynı kategori)
+      const now = new Date();
+      const thisMonth = now.toISOString().slice(0, 7);
+      const prevDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 15, 12, 0, 0));
+      const lastMonth = prevDate.toISOString().slice(0, 7);
+      const thisDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 15, 12, 0, 0));
+
+      const e1 = await pgClient.query(
+        `INSERT INTO expenses (company_id, category_id, amount, description, expense_date, payment_method)
+         VALUES ($1, $2, 9999.99, '__period_dedup_thisMonth', $3, 'cash') RETURNING id`,
+        [companyId, categoryId, thisDate.toISOString()],
+      );
+      const e2 = await pgClient.query(
+        `INSERT INTO expenses (company_id, category_id, amount, description, expense_date, payment_method)
+         VALUES ($1, $2, 9999.99, '__period_dedup_lastMonth', $3, 'cash') RETURNING id`,
+        [companyId, categoryId, prevDate.toISOString()],
+      );
+      insertedExpenseIds = [e1.rows[0].id, e2.rows[0].id];
+
+      // 4) Aynı gün içindeki önceki test kayıtlarını temizle ki saf ölçüm yapalım
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+      await pgClient.query(
+        `DELETE FROM notifications WHERE company_id=$1 AND type LIKE 'budget_alert_%' AND entity_type='budget' AND created_at >= $2`,
+        [companyId, todayStart.toISOString()],
+      );
+
+      // 5) İki periodu mikro-eşikle dispatch et → her ikisi de en az 1 alarm üretir
+      const a = await api("POST", "/budgets/alerts/dispatch", {
+        jar, body: { period: thisMonth, warningPct: 0.0001, criticalPct: 0.0001 },
+      });
+      const b = await api("POST", "/budgets/alerts/dispatch", {
+        jar, body: { period: lastMonth, warningPct: 0.0001, criticalPct: 0.0001 },
+      });
+      assert.equal(a.status, 200);
+      assert.equal(b.status, 200);
+      assert.ok(a.json.created >= 1, `thisMonth dispatch hiç alarm üretmedi: ${JSON.stringify(a.json)}`);
+      assert.ok(b.json.created >= 1, `lastMonth dispatch hiç alarm üretmedi: ${JSON.stringify(b.json)}`);
+
+      // 6) Notifications listesini al, period bazında ayır, entityId set'leri DISJOINT olmalı
+      const list = await api("GET", "/notifications?limit=500", { jar });
+      assert.equal(list.status, 200);
+      const budgets = list.json.notifications.filter((n) => /^budget_alert_/.test(n.type) && n.entityType === "budget");
+      const thisM = budgets.filter((n) => typeof n.title === "string" && n.title.includes(`(${thisMonth})`));
+      const lastM = budgets.filter((n) => typeof n.title === "string" && n.title.includes(`(${lastMonth})`));
+      assert.ok(thisM.length > 0, `thisMonth (${thisMonth}) notification yok`);
+      assert.ok(lastM.length > 0, `lastMonth (${lastMonth}) notification yok`);
+      const thisIds = new Set(thisM.map((n) => n.entityId));
+      const lastIds = new Set(lastM.map((n) => n.entityId));
+      const intersection = [...thisIds].filter((x) => lastIds.has(x));
+      assert.equal(intersection.length, 0,
+        `period dimension dedup'ı ihlal edildi: ortak entityId(ler) ${JSON.stringify(intersection)} (this=${[...thisIds].join(",")}, last=${[...lastIds].join(",")})`);
+    } finally {
+      // Cleanup: insert ettiğimiz test kayıtlarını sil
+      try {
+        if (insertedExpenseIds.length > 0) {
+          await pgClient.query(`DELETE FROM expenses WHERE id = ANY($1::int[])`, [insertedExpenseIds]);
+        }
+        if (categoryId) {
+          await pgClient.query(`DELETE FROM expense_categories WHERE id=$1`, [categoryId]);
+        }
+      } catch (_) { /* best-effort */ }
+      await pgClient.end();
+    }
   });
 });
 

@@ -248,6 +248,9 @@ importers:
       pdf-parse:
         specifier: ^2.4.5
         version: 2.4.5
+      pg:
+        specifier: ^8.20.0
+        version: 8.20.0
       pg-boss:
         specifier: ^12.15.0
         version: 12.15.0
