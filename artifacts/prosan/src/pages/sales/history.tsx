@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useListSales, getListSalesQueryKey } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from "@/components/ui/dialog";
-import { History, RotateCcw, Loader2 } from "lucide-react";
+import { History, RotateCcw, Loader2, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 function useReturnSale() {
   return useMutation({
@@ -37,9 +39,12 @@ export default function SalesHistory() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const returnSale = useReturnSale();
+  const [, setLocation] = useLocation();
 
   const [returnDialog, setReturnDialog] = useState<{ id: number; name: string; qty: number } | null>(null);
   const [returnNote, setReturnNote] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [invoicing, setInvoicing] = useState(false);
 
   const { data, isLoading } = useListSales({
     query: {
@@ -67,6 +72,60 @@ export default function SalesHistory() {
 
   const totalRevenue = data?.sales?.filter(s => !(s as any).returned).reduce((s, r) => s + r.totalPrice, 0) ?? 0;
   const totalProfit = data?.sales?.filter(s => !(s as any).returned).reduce((s, r) => s + r.profit, 0) ?? 0;
+
+  // ─── Toplu Faturalama (Sprint 62 köprüsü) ───
+  const invoiceableSales = useMemo(
+    () => (data?.sales || []).filter((s) => !(s as any).returned && (s as any).customerId != null),
+    [data?.sales]
+  );
+  const selectedSales = useMemo(
+    () => invoiceableSales.filter((s) => selectedIds.has(s.id)),
+    [invoiceableSales, selectedIds]
+  );
+  const selectedSameCustomer = useMemo(() => {
+    if (selectedSales.length === 0) return true;
+    const customerIds = new Set(selectedSales.map((s) => (s as any).customerId));
+    return customerIds.size === 1;
+  }, [selectedSales]);
+  const selectedTotal = selectedSales.reduce((s, r) => s + r.totalPrice, 0);
+
+  const toggleSale = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleInvoice = async () => {
+    if (selectedSales.length === 0) return;
+    if (!selectedSameCustomer) {
+      toast({ title: "Faturalanamaz", description: "Seçili satışlar farklı müşterilere ait. Tek müşteri seçin.", variant: "destructive" });
+      return;
+    }
+    setInvoicing(true);
+    try {
+      const r = await fetch("/api/einvoice/from-sales", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ saleIds: selectedSales.map((s) => s.id) }),
+      });
+      const body = await r.json();
+      if (!r.ok) throw new Error(body?.error || body?.detail || "Faturalama başarısız");
+      toast({
+        title: "Fatura taslağı oluşturuldu",
+        description: `Outbox #${body.id} • ETTN ${body.externalId || "—"}. Göndermek için E-Fatura ekranına geçin.`,
+      });
+      setSelectedIds(new Set());
+      setLocation("/einvoice");
+    } catch (e: any) {
+      toast({ title: "Fatura kesilemedi", description: e?.message || String(e), variant: "destructive" });
+    } finally {
+      setInvoicing(false);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -105,11 +164,38 @@ export default function SalesHistory() {
         </div>
       )}
 
+      {selectedSales.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50/60 p-3" data-testid="bulk-invoice-bar">
+          <div className="text-sm text-slate-700">
+            <span className="font-semibold">{selectedSales.length} satış seçildi</span>
+            <span className="text-slate-500"> · Toplam {selectedTotal.toFixed(2)} TL</span>
+            {!selectedSameCustomer && (
+              <Badge variant="destructive" className="ml-2 text-[10px]">Farklı müşteriler</Badge>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
+              Seçimi Temizle
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleInvoice}
+              disabled={invoicing || !selectedSameCustomer}
+              data-testid="bulk-invoice-button"
+            >
+              {invoicing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileText className="h-4 w-4 mr-2" />}
+              Faturayı Oluştur
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
+                <TableHead className="w-[40px]"></TableHead>
                 <TableHead>Saat</TableHead>
                 <TableHead>Ürün</TableHead>
                 <TableHead className="text-right">Birim</TableHead>
@@ -122,17 +208,29 @@ export default function SalesHistory() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Yükleniyor...</TableCell>
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Yükleniyor...</TableCell>
                 </TableRow>
               ) : !data?.sales?.length ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Bu tarihte satış bulunmamaktadır.</TableCell>
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Bu tarihte satış bulunmamaktadır.</TableCell>
                 </TableRow>
               ) : (
                 data.sales.map(sale => {
                   const isReturned = (sale as any).returned as boolean;
+                  const hasCustomer = (sale as any).customerId != null;
+                  const isSelected = selectedIds.has(sale.id);
                   return (
                   <TableRow key={sale.id} className={isReturned ? "opacity-50 bg-muted/20" : ""}>
+                    <TableCell>
+                      {!isReturned && hasCustomer ? (
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleSale(sale.id)}
+                          aria-label={`Satış #${sale.id} seç`}
+                          data-testid={`select-sale-${sale.id}`}
+                        />
+                      ) : null}
+                    </TableCell>
                     <TableCell className="font-mono text-sm text-muted-foreground">
                       {new Date(sale.createdAt).toLocaleTimeString("tr-TR", { hour: '2-digit', minute: '2-digit' })}
                     </TableCell>
