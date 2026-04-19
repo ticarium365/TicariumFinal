@@ -56,6 +56,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./notification-center";
+import { GlobalSearch } from "./global-search";
+import { QuickAction } from "./quick-action";
 import {
   Sheet,
   SheetContent,
@@ -116,109 +118,106 @@ const HERO_ITEM: NavItem = {
   roles: ["admin", "staff", "viewer"],
 };
 
+// Sprint 83 — 6 ana grup (kullanıcı talebi: menüyü sadeleştir).
+// Süper Admin yalnızca super_admin rolü için ayrı görünür.
 const NAV_GROUPS: NavGroup[] = [
   {
-    id: "satis", label: "Satış & Müşteri", icon: ShoppingCart,
+    id: "satis",
+    label: "Satış",
+    icon: ShoppingCart,
     items: [
       { href: "/sales", label: "Satış Ekranı", icon: ShoppingCart, roles: ["admin", "staff"] },
       { href: "/pos", label: "Hızlı Satış (POS)", icon: ScanLine, roles: ["admin", "staff"] },
       { href: "/sales/history", label: "Satış Geçmişi", icon: History, roles: ["admin", "staff", "viewer"] },
       { href: "/customers", label: "Müşteriler", icon: UserCircle, roles: ["admin", "staff", "viewer"] },
+      { href: "/b2b/quotes", label: "Teklifler", icon: FileText, roles: ["admin", "staff"] },
+      { href: "/b2b/orders", label: "Siparişler", icon: Package, roles: ["admin", "staff"] },
       { href: "/sadakat", label: "Sadakat & Puan", icon: Award, roles: ["admin", "staff", "viewer"] },
       { href: "/campaigns", label: "Kampanyalar", icon: Tag, roles: ["admin", "staff", "viewer"] },
     ],
   },
   {
-    id: "stok", label: "Stok & Ürün", icon: Package,
+    id: "urun",
+    label: "Ürün & Stok",
+    icon: Package,
     items: [
       { href: "/products", label: "Ürünler", icon: Package, roles: ["admin", "staff", "viewer"] },
-      { href: "/barcode", label: "Barkod Tarama", icon: ScanBarcode, roles: ["admin", "staff"] },
-      { href: "/barcodes", label: "Etiket Merkezi", icon: Barcode, roles: ["admin", "staff", "viewer"] },
       { href: "/stock", label: "Stok Girişi", icon: PackagePlus, roles: ["admin", "staff"] },
       { href: "/stock-counts", label: "Stok Sayım", icon: ClipboardList, roles: ["admin", "staff"] },
+      { href: "/barcode", label: "Barkod Tarama", icon: ScanBarcode, roles: ["admin", "staff"] },
+      { href: "/barcodes", label: "Etiket Merkezi", icon: Barcode, roles: ["admin", "staff", "viewer"] },
+      { href: "/purchases", label: "Alış Faturaları", icon: ShoppingBag, roles: ["admin", "staff", "viewer"] },
+      { href: "/suppliers", label: "Tedarikçiler", icon: Truck, roles: ["admin", "staff", "viewer"] },
       { href: "/ice-aktarim", label: "Veri İçe Aktarımı", icon: Upload, roles: ["admin", "staff"] },
     ],
   },
   {
-    id: "alis", label: "Alış & Tedarikçi", icon: ShoppingBag,
-    items: [
-      { href: "/purchases", label: "Alış Faturaları", icon: ShoppingBag, roles: ["admin", "staff", "viewer"] },
-      { href: "/suppliers", label: "Tedarikçiler", icon: Truck, roles: ["admin", "staff", "viewer"] },
-    ],
-  },
-  {
-    id: "finans", label: "Finans", icon: Wallet,
+    id: "finans",
+    label: "Finans",
+    icon: Wallet,
     items: [
       { href: "/finance", label: "Kasa / Finans", icon: Wallet, roles: ["admin", "staff", "viewer"] },
       { href: "/banking", label: "Bankacılık", icon: Banknote, roles: ["admin", "staff"] },
       { href: "/finance-dashboard", label: "Finans Paneli", icon: TrendingUp, roles: ["admin", "viewer"] },
-      { href: "/profit", label: "Net Kâr Merkezi", icon: TrendingUp, roles: ["admin", "staff", "viewer"] },
+      { href: "/profit", label: "Net Kâr", icon: TrendingUp, roles: ["admin", "staff", "viewer"] },
       { href: "/gercek-kar", label: "Gerçek Kâr", icon: TrendingUp, roles: ["admin", "viewer"] },
-      { href: "/gercek-kar/oneriler", label: "Akıllı Öneriler", icon: Sparkles, roles: ["admin", "viewer"] },
-      { href: "/butce", label: "Bütçe & Tahmin", icon: PieChart, roles: ["admin", "staff", "viewer"] },
+      { href: "/butce", label: "Bütçe", icon: PieChart, roles: ["admin", "staff", "viewer"] },
       { href: "/muhasebeci", label: "Mali Müşavir", icon: Calculator, roles: ["admin", "staff", "viewer"] },
-      { href: "/doviz", label: "Çoklu Para Birimi", icon: DollarSign, roles: ["admin", "staff", "viewer"] },
+      { href: "/einvoice", label: "e-Fatura", icon: FileText, roles: ["admin", "staff", "viewer"] },
+      { href: "/documents", label: "Evrak", icon: FileText, roles: ["admin", "staff", "viewer"] },
+      { href: "/doviz", label: "Çoklu Para", icon: DollarSign, roles: ["admin", "staff", "viewer"] },
     ],
   },
   {
-    id: "ecommerce", label: "e-Ticaret & Pazaryeri", icon: Store,
+    id: "online",
+    label: "Online Satış",
+    icon: Store,
     items: [
-      { href: "/magaza", label: "Hazır Mağaza", icon: Store, roles: ["admin", "staff", "viewer"] },
+      { href: "/eticarium-merkezi", label: "e-Ticarium Merkezi", icon: Sparkles, roles: ["admin", "staff", "viewer"] },
       { href: "/marketplace", label: "Pazaryeri", icon: Radio, roles: ["admin", "staff"] },
       { href: "/channels", label: "Satış Kanalları", icon: Radio, roles: ["admin", "staff"] },
+      { href: "/magaza", label: "Hazır Mağaza", icon: Store, roles: ["admin", "staff", "viewer"] },
+      { href: "/b2b/vitrin", label: "B2B Vitrin", icon: Store, roles: ["admin", "staff", "viewer"] },
+      { href: "/network", label: "B2B Ağı", icon: Network, roles: ["admin", "staff", "viewer"] },
+      { href: "/aggregator", label: "Ticarium Pazar", icon: ShoppingBasket, roles: ["admin"] },
       { href: "/fiyat-motoru", label: "Fiyat Motoru", icon: Tag, roles: ["admin", "staff", "viewer"] },
       { href: "/karlilik-kanal", label: "Kanal Karlılığı", icon: Trophy, roles: ["admin", "staff", "viewer"] },
-      { href: "/kargo", label: "Kargo Yönetimi", icon: Truck, roles: ["admin", "staff", "viewer"] },
+      { href: "/kargo", label: "Kargo", icon: Truck, roles: ["admin", "staff", "viewer"] },
       { href: "/reklam-butce", label: "Reklam Bütçesi", icon: Megaphone, roles: ["admin", "staff", "viewer"] },
     ],
   },
   {
-    id: "b2b", label: "B2B & Ağ", icon: Network,
+    id: "raporlar",
+    label: "Raporlar",
+    icon: BarChart3,
     items: [
-      { href: "/b2b/vitrin", label: "B2B Vitrin", icon: Store, roles: ["admin", "staff", "viewer"] },
-      { href: "/network", label: "B2B Ağı", icon: Network, roles: ["admin", "staff", "viewer"] },
-      { href: "/b2b/quotes", label: "Teklifler", icon: FileText, roles: ["admin", "staff"] },
-      { href: "/b2b/orders", label: "Siparişler", icon: Package, roles: ["admin", "staff"] },
-      { href: "/b2b/catalog", label: "Kendi B2B Katalogum", icon: PackageOpen, roles: ["admin", "staff"] },
-      { href: "/aggregator", label: "Ticarium Pazar", icon: ShoppingBasket, roles: ["admin"] },
+      { href: "/reports", label: "Genel Raporlar", icon: BarChart3, roles: ["admin", "viewer"] },
+      { href: "/reports/daily-summary", label: "Günlük Kapanış", icon: CalendarCheck, roles: ["admin", "viewer"] },
+      { href: "/gercek-kar/oneriler", label: "Akıllı Öneriler", icon: Sparkles, roles: ["admin", "viewer"] },
     ],
   },
   {
-    id: "belgeler", label: "Belgeler & e-Fatura", icon: FileText,
+    id: "yonetim",
+    label: "Yönetim",
+    icon: Settings,
     items: [
-      { href: "/einvoice", label: "e-Fatura", icon: FileText, roles: ["admin", "staff", "viewer"] },
-      { href: "/documents", label: "Evrak Yönetimi", icon: FileText, roles: ["admin", "staff", "viewer"] },
-      { href: "/finance-documents", label: "Belge Merkezi", icon: Inbox, roles: ["admin", "staff", "viewer"] },
-    ],
-  },
-  {
-    id: "uretim", label: "Üretim & Operasyon", icon: Factory,
-    items: [
-      { href: "/uretim", label: "Üretim & Reçete", icon: Factory, roles: ["admin", "staff", "viewer"] },
       { href: "/personnel", label: "Personel", icon: Users, roles: ["admin", "staff", "viewer"] },
       { href: "/branches", label: "Şubeler", icon: GitBranch, roles: ["admin", "staff", "viewer"] },
-    ],
-  },
-  {
-    id: "raporlar", label: "Raporlar", icon: BarChart3,
-    items: [
-      { href: "/reports", label: "Raporlar", icon: BarChart3, roles: ["admin", "viewer"] },
-      { href: "/reports/daily-summary", label: "Günlük Kapanış", icon: CalendarCheck, roles: ["admin", "viewer"] },
-    ],
-  },
-  {
-    id: "ayarlar", label: "Ayarlar", icon: Settings,
-    items: [
+      { href: "/uretim", label: "Üretim & Reçete", icon: Factory, roles: ["admin", "staff", "viewer"] },
       { href: "/users", label: "Kullanıcılar", icon: Users, roles: ["admin"] },
-      { href: "/settings/subscription", label: "Abonelik", icon: CreditCard, roles: ["admin"] },
-      { href: "/settings/notifications", label: "Bildirim Ayarları", icon: Bell, roles: ["admin"] },
-      { href: "/settings/integrations", label: "Entegrasyonlar", icon: Webhook, roles: ["admin"] },
       { href: "/settings", label: "Genel Ayarlar", icon: Settings, roles: ["admin"] },
+      { href: "/settings/integrations", label: "Entegrasyonlar", icon: Webhook, roles: ["admin"] },
+      { href: "/settings/notifications", label: "Bildirim Ayarları", icon: Bell, roles: ["admin"] },
+      { href: "/settings/subscription", label: "Abonelik", icon: CreditCard, roles: ["admin"] },
       { href: "/pricing", label: "Paketler & Fiyatlar", icon: Tag, roles: ["admin", "staff", "viewer", "super_admin"] },
+      { href: "/finance-documents", label: "Belge Merkezi", icon: Inbox, roles: ["admin", "staff", "viewer"] },
+      { href: "/b2b/catalog", label: "B2B Katalogum", icon: PackageOpen, roles: ["admin", "staff"] },
     ],
   },
   {
-    id: "superadmin", label: "Süper Admin", icon: ShieldCheck,
+    id: "superadmin",
+    label: "Süper Admin",
+    icon: ShieldCheck,
     items: [
       { href: "/admin/companies", label: "Firma Yönetimi", icon: Building2, roles: ["super_admin"] },
       { href: "/super-admin/yeni-firma", label: "Yeni Firma Ekle", icon: Building2, roles: ["super_admin"] },
@@ -497,6 +496,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {/* Sprint 83 — sticky üst bar: global arama + hızlı işlem */}
+        <div className="hidden md:flex sticky top-0 z-20 items-center gap-3 border-b border-slate-200 bg-white/95 px-6 py-2.5 backdrop-blur">
+          <div className="flex-1 max-w-xl">
+            <GlobalSearch />
+          </div>
+          <div className="flex items-center gap-2">
+            <QuickAction />
+          </div>
+        </div>
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           <div className="mx-auto max-w-6xl">
             {children}

@@ -191,3 +191,9 @@ id = "TomP1f6sK7GJpBCE8ZyO6"
 uri = "file://screenshots/ticarium365-all-screenshots.zip"
 type = "unspecified"
 title = "Ticarium365 - 130 Ekran Görüntüsü (65 Masaüstü + 65 Mobil)"
+
+[[outputs]]
+id = "XI4GQB6GsBWF1JziUDskX"
+uri = "file://screenshots/sprint83-dashboard.jpeg"
+type = "image"
+title = "Sprint 83 - Yeni 6 grupluk menü + arama barı + hızlı işlem"
