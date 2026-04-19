@@ -135,7 +135,7 @@ export default function DailySummaryPage() {
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Satış Adedi</span>
-                  <TrendingUp className="h-4 w-4 text-indigo-500" />
+                  <TrendingUp className="h-4 w-4 text-blue-500" />
                 </div>
                 <p className="text-3xl font-bold tabular-nums">{data.totalSalesCount}</p>
                 {data.totalReturnedCount > 0 && (

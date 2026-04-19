@@ -78,7 +78,7 @@ function TrialBanner() {
   if (status.isTrialExpired) return null;
 
   const days = status.trialDaysLeft;
-  const color = days <= 3 ? "bg-red-600" : days <= 7 ? "bg-orange-500" : "bg-indigo-600/80";
+  const color = days <= 3 ? "bg-red-600" : days <= 7 ? "bg-orange-500" : "bg-blue-600/80";
 
   return (
     <div className={`mx-3 mb-2 rounded-lg px-3 py-2 text-white text-xs ${color}`}>
@@ -310,7 +310,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div
             className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer text-sm mb-1.5 ${
               isItemActive(TOP_ITEM.href)
-                ? "bg-indigo-50 text-indigo-700 font-semibold"
+                ? "bg-blue-50 text-blue-700 font-semibold"
                 : "text-slate-600 font-medium hover:bg-slate-100"
             }`}
             onClick={() => setIsOpen(false)}
@@ -368,7 +368,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               type="button"
               onClick={() => toggleGroup(group.id)}
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer text-xs uppercase tracking-wider ${
-                groupHasActive ? "text-indigo-700 font-bold" : "text-slate-500 font-bold hover:bg-slate-100"
+                groupHasActive ? "text-blue-700 font-bold" : "text-slate-500 font-bold hover:bg-slate-100"
               }`}
               data-testid={`nav-group-${group.id}`}
               aria-expanded={isOpenGroup}
@@ -389,7 +389,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       <div
                         className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-all cursor-pointer text-sm border-l-2 ${
                           active
-                            ? "bg-slate-100 text-indigo-700 font-semibold border-indigo-500"
+                            ? "bg-slate-100 text-blue-700 font-semibold border-blue-500"
                             : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-transparent"
                         }`}
                         onClick={() => setIsOpen(false)}
@@ -438,7 +438,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <div className="p-4 mt-auto border-t border-slate-200 bg-white">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 bg-gradient-to-br from-indigo-600 to-teal-600">
+                  <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 bg-gradient-to-br from-blue-600 to-teal-600">
                     {user.fullName.charAt(0).toUpperCase()}
                   </div>
                   <div>
@@ -477,7 +477,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         <div className="p-3 mt-auto border-t border-slate-200 bg-white">
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 bg-gradient-to-br from-indigo-600 to-teal-600">
+            <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 bg-gradient-to-br from-blue-600 to-teal-600">
               {user.fullName.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">

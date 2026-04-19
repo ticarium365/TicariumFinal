@@ -11,7 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getGetSettingsQueryKey } from "@workspace/api-client-react";
 
 const PRESET_COLORS = [
-  "#4F46E5", "#7c3aed", "#059669", "#dc2626",
+  "#2563eb", "#7c3aed", "#059669", "#dc2626",
   "#d97706", "#0891b2", "#be185d", "#374151",
 ];
 
@@ -24,7 +24,7 @@ export default function Settings() {
   const [form, setForm] = useState({
     companyName: "", iban: "", bankName: "", accountHolder: "",
     phone: "", email: "", address: "", website: "", taxNumber: "",
-    primaryColor: "#4F46E5", currency: "TRY",
+    primaryColor: "#2563eb", currency: "TRY",
   });
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -45,7 +45,7 @@ export default function Settings() {
         address: (settings as any).address || "",
         website: (settings as any).website || "",
         taxNumber: (settings as any).taxNumber || "",
-        primaryColor: (settings as any).primaryColor || "#4F46E5",
+        primaryColor: (settings as any).primaryColor || "#2563eb",
         currency: (settings as any).currency || "TRY",
       });
       if ((settings as any).logoUrl) {

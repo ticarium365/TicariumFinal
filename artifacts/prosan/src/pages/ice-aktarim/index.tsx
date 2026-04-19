@@ -110,9 +110,9 @@ export default function ImportPage() {
         </p>
       </div>
 
-      <Card className="bg-indigo-500/10 dark:bg-blue-900/20 border-indigo-500/20 dark:border-blue-800">
+      <Card className="bg-blue-500/10 dark:bg-blue-900/20 border-blue-500/20 dark:border-blue-800">
         <CardContent className="pt-4 flex items-start gap-3">
-          <Info className="h-5 w-5 text-indigo-600 mt-0.5 flex-shrink-0" />
+          <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
           <div className="text-sm">
             <p><strong>Nasıl çalışır:</strong> 1) Veri türünü seç → 2) CSV dosyasını yükle → 3) Kolon eşleşmesini onayla → 4) Önce "Ön Kontrol" yap → 5) "İçe Aktar" ile uygula.</p>
             <p className="mt-1 text-muted-foreground">UTF-8 + noktalı virgül (;) ayırıcısı önerilir. Excel'den kaydederken "CSV UTF-8 (;)" formatını seçin.</p>

@@ -250,7 +250,7 @@ export default function CompanyProfilePage({ subdomain }: Props) {
           {(profile.acceptOffers || profile.acceptOrders) && (
             <div className="mt-4 flex flex-wrap gap-2 items-center">
               {profile.acceptOffers && (
-                <div className="flex items-center gap-1.5 text-sm text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 rounded-lg px-3 py-1.5">
+                <div className="flex items-center gap-1.5 text-sm text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-1.5">
                   <CheckCircle2 className="h-4 w-4" />
                   Teklif Kabul Ediyor
                 </div>

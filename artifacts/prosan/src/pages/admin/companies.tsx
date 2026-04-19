@@ -44,7 +44,7 @@ const emptyForm: NewCompanyForm = {
   adminUsername: "",
   adminPassword: "",
   adminFullName: "",
-  primaryColor: "#4F46E5",
+  primaryColor: "#2563eb",
   trialDays: "21",
 };
 
@@ -237,7 +237,7 @@ export default function CompaniesAdmin() {
                 <Label htmlFor="primaryColor">Ana Renk</Label>
                 <div className="flex items-center gap-3">
                   <input id="primaryColor" type="color" value={form.primaryColor} onChange={f("primaryColor")} className="w-10 h-10 rounded cursor-pointer border border-border" />
-                  <Input value={form.primaryColor} onChange={f("primaryColor")} className="flex-1" placeholder="#4F46E5" />
+                  <Input value={form.primaryColor} onChange={f("primaryColor")} className="flex-1" placeholder="#2563eb" />
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-2">
@@ -262,7 +262,7 @@ export default function CompaniesAdmin() {
         <div className="grid gap-4">
           {companies.map((company) => (
             <div key={company.id} className="bg-card border rounded-xl p-5 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0" style={{ background: company.primaryColor ?? "#4F46E5" }}>
+              <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0" style={{ background: company.primaryColor ?? "#2563eb" }}>
                 {company.name.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">

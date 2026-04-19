@@ -112,7 +112,7 @@ export default function AdminBillingPage() {
     if (t.subStatus === "active") return <Badge variant="default">Aktif</Badge>;
     if (t.subStatus === "grace_period") return <Badge variant="secondary">Grace</Badge>;
     if (t.planType === "trial" && t.trialEndsAt && new Date(t.trialEndsAt) > new Date()) {
-      return <Badge variant="outline" className="text-indigo-600">Trial</Badge>;
+      return <Badge variant="outline" className="text-blue-600">Trial</Badge>;
     }
     return <Badge variant="destructive">Expired</Badge>;
   }
@@ -153,7 +153,7 @@ export default function AdminBillingPage() {
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Trial</CardTitle></CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-indigo-600">{mData?.trialTenantCount ?? 0}</div>
+            <div className="text-2xl font-bold text-blue-600">{mData?.trialTenantCount ?? 0}</div>
           </CardContent>
         </Card>
         <Card>

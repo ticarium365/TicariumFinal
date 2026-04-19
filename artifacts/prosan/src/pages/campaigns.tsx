@@ -35,7 +35,7 @@ interface Campaign {
 
 const statusColors: Record<string, string> = {
   Aktif: "bg-green-100 text-green-800",
-  Planlandı: "bg-indigo-100 text-indigo-800",
+  Planlandı: "bg-blue-100 text-blue-800",
   "Sona Erdi": "bg-muted text-muted-foreground",
   Pasif: "bg-red-100 text-red-700",
 };
@@ -216,10 +216,10 @@ export default function CampaignsPage() {
       {/* Özet kartlar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Toplam", value: campaigns.length, icon: Tag, color: "text-indigo-600" },
+          { label: "Toplam", value: campaigns.length, icon: Tag, color: "text-blue-600" },
           { label: "Aktif", value: activeCampaigns.length, icon: CheckCircle2, color: "text-green-600" },
           { label: "Pasif", value: campaigns.filter((c) => !c.isActive).length, icon: XCircle, color: "text-red-500" },
-          { label: "Planlandı", value: campaigns.filter((c) => c.statusLabel === "Planlandı").length, icon: Clock, color: "text-indigo-500" },
+          { label: "Planlandı", value: campaigns.filter((c) => c.statusLabel === "Planlandı").length, icon: Clock, color: "text-blue-500" },
         ].map((s) => (
           <Card key={s.label}>
             <CardContent className="p-4 flex items-center gap-3">

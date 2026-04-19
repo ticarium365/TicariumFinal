@@ -31,7 +31,7 @@ interface Stats {
 
 const STATUS_META: Record<string, { label: string; color: string; icon: any }> = {
   pending: { label: "Bekliyor", color: "bg-amber-500/10 text-amber-300 border-amber-500/20", icon: Hourglass },
-  quoted: { label: "Yanıtlandı", color: "bg-indigo-500/10 text-indigo-300 border-indigo-500/20", icon: FileText },
+  quoted: { label: "Yanıtlandı", color: "bg-blue-500/10 text-blue-300 border-blue-500/20", icon: FileText },
   accepted: { label: "Kabul Edildi", color: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20", icon: CheckCircle2 },
   rejected: { label: "Reddedildi", color: "bg-rose-500/10 text-rose-300 border-rose-500/20", icon: XCircle },
   cancelled: { label: "İptal", color: "bg-muted text-muted-foreground border-border", icon: XCircle },
@@ -173,7 +173,7 @@ export default function QuotesListPage() {
         {currentStats && (
           <div className="flex flex-wrap gap-2 mt-4">
             <StatChip label="Bekliyor" value={currentStats.pending} color="bg-amber-500/10 text-amber-300 border-amber-500/20" />
-            <StatChip label="Yanıtlandı" value={currentStats.quoted} color="bg-indigo-500/10 text-indigo-300 border-indigo-500/20" />
+            <StatChip label="Yanıtlandı" value={currentStats.quoted} color="bg-blue-500/10 text-blue-300 border-blue-500/20" />
             <StatChip label="Kabul" value={currentStats.accepted} color="bg-emerald-500/10 text-emerald-300 border-emerald-500/20" />
             <StatChip label="Red" value={currentStats.rejected} color="bg-rose-500/10 text-rose-300 border-rose-500/20" />
           </div>

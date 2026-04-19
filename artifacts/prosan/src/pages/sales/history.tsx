@@ -165,7 +165,7 @@ export default function SalesHistory() {
       )}
 
       {selectedSales.length > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50/60 p-3" data-testid="bulk-invoice-bar">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50/60 p-3" data-testid="bulk-invoice-bar">
           <div className="text-sm text-slate-700">
             <span className="font-semibold">{selectedSales.length} satış seçildi</span>
             <span className="text-slate-500"> · Toplam {selectedTotal.toFixed(2)} TL</span>

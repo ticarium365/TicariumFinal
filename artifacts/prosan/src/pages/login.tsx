@@ -33,7 +33,7 @@ function BrandIcon({ size = 48 }: { size?: number }) {
       <text
         x="35.5" y="36.7" textAnchor="middle"
         fontFamily="ui-monospace,SFMono-Regular,Menlo,monospace"
-        fontWeight={800} fontSize={6.4} fill="#4F46E5" letterSpacing="0.2"
+        fontWeight={800} fontSize={6.4} fill="#2563eb" letterSpacing="0.2"
       >
         365
       </text>
@@ -53,7 +53,7 @@ function BrandWordmark({ light = false }: { light?: boolean }) {
           light
             ? { color: "#A5F3FC" }
             : {
-                background: "linear-gradient(135deg,#4F46E5 0%,#0EA5A4 100%)",
+                background: "linear-gradient(135deg,#2563eb 0%,#0EA5A4 100%)",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
                 color: "transparent",
@@ -342,7 +342,7 @@ export default function Login() {
                       href="/sifremi-unuttum"
                       className="text-xs font-semibold hover:underline"
                       style={{
-                        background: "linear-gradient(135deg,#4F46E5,#0EA5A4)",
+                        background: "linear-gradient(135deg,#2563eb,#0EA5A4)",
                         WebkitBackgroundClip: "text",
                         backgroundClip: "text",
                         color: "transparent",
@@ -392,7 +392,7 @@ export default function Login() {
                   className="w-full h-11 mt-2 text-base font-semibold border-0 transition-all hover:translate-y-[-1px]"
                   style={{
                     background:
-                      "linear-gradient(135deg,#4F46E5 0%,#5E5CE6 50%,#0EA5A4 100%)",
+                      "linear-gradient(135deg,#2563eb 0%,#5E5CE6 50%,#0EA5A4 100%)",
                     color: "#FFFFFF",
                     boxShadow:
                       "0 8px 24px -8px rgba(79,70,229,0.55), 0 2px 4px rgba(14,165,164,0.20)",
@@ -421,7 +421,7 @@ export default function Login() {
                     href="mailto:demo@ticarium365.com"
                     className="font-semibold hover:underline"
                     style={{
-                      background: "linear-gradient(135deg,#4F46E5,#0EA5A4)",
+                      background: "linear-gradient(135deg,#2563eb,#0EA5A4)",
                       WebkitBackgroundClip: "text",
                       backgroundClip: "text",
                       color: "transparent",
@@ -438,11 +438,11 @@ export default function Login() {
               style={{ color: "#64748B" }}
             >
               Bu siteye girerek{" "}
-              <a href="/kvkk" className="underline hover:text-indigo-700">
+              <a href="/kvkk" className="underline hover:text-blue-700">
                 KVKK Aydınlatma Metni
               </a>{" "}
               ve{" "}
-              <a href="/kullanim-kosullari" className="underline hover:text-indigo-700">
+              <a href="/kullanim-kosullari" className="underline hover:text-blue-700">
                 Kullanım Koşulları
               </a>
               'nı kabul etmiş olursunuz.

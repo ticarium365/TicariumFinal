@@ -124,7 +124,7 @@ function CompanyCard({ company }: { company: NetworkCompany }) {
           <StarRating score={company.trustScore} count={company.reviewCount} />
           <div className="flex items-center gap-1.5">
             {company.acceptOffers && (
-              <Badge variant="outline" className="text-xs border-indigo-500/20 text-indigo-300">Teklif Alır</Badge>
+              <Badge variant="outline" className="text-xs border-blue-500/20 text-blue-300">Teklif Alır</Badge>
             )}
             {company.acceptOrders && (
               <Badge variant="outline" className="text-xs border-green-500/20 text-green-300">Sipariş Alır</Badge>

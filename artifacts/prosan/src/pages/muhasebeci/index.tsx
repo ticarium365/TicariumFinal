@@ -162,7 +162,7 @@ export default function MuhasebeciPage() {
             </Card>
             <Card data-testid="kpi-input-vat">
               <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">İndirilecek KDV (Alımlar)</CardTitle></CardHeader>
-              <CardContent><div className="text-2xl font-bold text-indigo-600">{fmtTRY(kdv?.inputVat)}</div></CardContent>
+              <CardContent><div className="text-2xl font-bold text-blue-600">{fmtTRY(kdv?.inputVat)}</div></CardContent>
             </Card>
             <Card data-testid="kpi-payable">
               <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Ödenecek KDV</CardTitle></CardHeader>

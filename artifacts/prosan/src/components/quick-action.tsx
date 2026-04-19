@@ -27,12 +27,12 @@ type Action = {
 };
 
 const ACTIONS: Action[] = [
-  { href: "/sales?new=1", label: "Satış Yap", desc: "POS / yeni satış", icon: ShoppingCart, color: "text-indigo-600 bg-indigo-50", roles: ["admin", "staff"] },
+  { href: "/sales?new=1", label: "Satış Yap", desc: "POS / yeni satış", icon: ShoppingCart, color: "text-blue-600 bg-blue-50", roles: ["admin", "staff"] },
   { href: "/products/new", label: "Ürün Ekle", desc: "Yeni ürün kartı", icon: Package, color: "text-emerald-600 bg-emerald-50", roles: ["admin", "staff"] },
   { href: "/customers?new=1", label: "Müşteri Ekle", desc: "Yeni cari", icon: Users, color: "text-violet-600 bg-violet-50", roles: ["admin", "staff"] },
   { href: "/stock?new=1", label: "Stok Girişi", desc: "Stok hareketi", icon: PackagePlus, color: "text-amber-600 bg-amber-50", roles: ["admin", "staff"] },
   { href: "/finance?new=expense", label: "Gider Gir", desc: "Kasa çıkışı", icon: Wallet, color: "text-rose-600 bg-rose-50", roles: ["admin", "staff"] },
-  { href: "/einvoice?new=1", label: "Fatura Kes", desc: "e-Fatura / e-Arşiv", icon: FileText, color: "text-indigo-600 bg-indigo-50", roles: ["admin", "staff"] },
+  { href: "/einvoice?new=1", label: "Fatura Kes", desc: "e-Fatura / e-Arşiv", icon: FileText, color: "text-blue-600 bg-blue-50", roles: ["admin", "staff"] },
 ];
 
 export function QuickAction() {
@@ -54,7 +54,7 @@ export function QuickAction() {
       <PopoverTrigger asChild>
         <Button
           size="sm"
-          className="h-9 gap-1.5 bg-indigo-600 px-3 text-white shadow-sm hover:bg-indigo-700"
+          className="h-9 gap-1.5 bg-blue-600 px-3 text-white shadow-sm hover:bg-blue-700"
           data-testid="button-quick-action"
         >
           <Plus className="h-4 w-4" />

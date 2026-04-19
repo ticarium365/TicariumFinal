@@ -37,7 +37,7 @@ function useProductMovements(productId: number) {
 const movementMeta: Record<string, { label: string; icon: React.ElementType; color: string; sign: string }> = {
   sale:       { label: "Satış",        icon: TrendingDown,  color: "text-rose-600",    sign: "-" },
   purchase:   { label: "Stok Girişi",  icon: PackagePlus,   color: "text-emerald-600", sign: "+" },
-  return:     { label: "İade",         icon: RotateCcw,     color: "text-indigo-600",    sign: "+" },
+  return:     { label: "İade",         icon: RotateCcw,     color: "text-blue-600",    sign: "+" },
   correction: { label: "Düzeltme",     icon: Wrench,        color: "text-amber-600",   sign: "" },
 };
 

@@ -42,7 +42,7 @@ function mimeIcon(mime: string) {
     return <FileSpreadsheet className="h-5 w-5 text-green-500" />;
   if (mime.includes("pdf")) return <FileText className="h-5 w-5 text-red-500" />;
   if (mime.includes("json") || mime.includes("xml") || mime.includes("text"))
-    return <FileCode className="h-5 w-5 text-indigo-500" />;
+    return <FileCode className="h-5 w-5 text-blue-500" />;
   return <File className="h-5 w-5 text-muted-foreground/70" />;
 }
 
@@ -379,7 +379,7 @@ function UploadModal({
           <div
             onClick={() => fileRef.current?.click()}
             className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors
-              ${file ? "border-indigo-500/30 bg-primary/10" : "border-border hover:border-indigo-500/30 hover:bg-muted/30"}`}
+              ${file ? "border-blue-500/30 bg-primary/10" : "border-border hover:border-blue-500/30 hover:bg-muted/30"}`}
           >
             <input ref={fileRef} type="file" className="hidden" onChange={handleFileChange} />
             {file ? (
@@ -457,7 +457,7 @@ function UploadModal({
               </div>
               <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+                  className="h-full bg-blue-500 rounded-full transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -485,12 +485,12 @@ function CategoryModal({
   onSuccess: () => void;
 }) {
   const [name, setName] = useState(existing?.name ?? "");
-  const [color, setColor] = useState(existing?.color ?? "#6366f1");
+  const [color, setColor] = useState(existing?.color ?? "#3b82f6");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const COLORS = [
-    "#6366f1", "#6366f1", "#10b981", "#f59e0b",
+    "#3b82f6", "#3b82f6", "#10b981", "#f59e0b",
     "#ef4444", "#8b5cf6", "#06b6d4", "#f97316",
   ];
 

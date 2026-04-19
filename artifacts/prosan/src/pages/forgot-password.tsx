@@ -17,7 +17,7 @@ function BrandIcon({ size = 48 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 48 48" className="shrink-0">
       <defs>
         <linearGradient id="t365grad-fp" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#4F46E5" />
+          <stop offset="0%" stopColor="#2563eb" />
           <stop offset="100%" stopColor="#0EA5A4" />
         </linearGradient>
       </defs>
@@ -262,7 +262,7 @@ export default function ForgotPassword() {
             <BrandIcon size={52} />
             <div className="leading-tight">
               <BrandWordmark light />
-              <div className="text-[13px] mt-1 text-indigo-100/85">
+              <div className="text-[13px] mt-1 text-blue-100/85">
                 Hesabınızı güvenle geri alın
               </div>
             </div>
@@ -312,7 +312,7 @@ export default function ForgotPassword() {
             </div>
           </div>
 
-          <p className="relative z-10 text-xs text-indigo-200/70">
+          <p className="relative z-10 text-xs text-blue-200/70">
             © {new Date().getFullYear()} Ticarium365 · Tüm hakları saklıdır
           </p>
         </div>

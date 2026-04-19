@@ -18,7 +18,7 @@ function NavBrandIcon({ size = 36 }: { size?: number }) {
       <defs>
         <linearGradient id="t365grad-nav" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="#6366F1" />
-          <stop offset="55%" stopColor="#4F46E5" />
+          <stop offset="55%" stopColor="#2563eb" />
           <stop offset="100%" stopColor="#0EA5A4" />
         </linearGradient>
         <linearGradient id="t365grad-nav-glow" x1="0" y1="0" x2="0" y2="1">
@@ -33,7 +33,7 @@ function NavBrandIcon({ size = 36 }: { size?: number }) {
       <text
         x="35.5" y="36.7" textAnchor="middle"
         fontFamily="ui-monospace,SFMono-Regular,Menlo,monospace"
-        fontWeight={800} fontSize={6.4} fill="#4F46E5" letterSpacing="0.2"
+        fontWeight={800} fontSize={6.4} fill="#2563eb" letterSpacing="0.2"
       >
         365
       </text>
@@ -85,7 +85,7 @@ export function PublicNav() {
             Ticarium
             <span
               style={{
-                background: "linear-gradient(135deg,#4F46E5 0%,#0EA5A4 100%)",
+                background: "linear-gradient(135deg,#2563eb 0%,#0EA5A4 100%)",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
                 color: "transparent",
@@ -150,7 +150,7 @@ export function PublicNav() {
             data-testid="nav-cta-login"
             className="gap-1.5"
             style={{
-              background: "linear-gradient(135deg,#4F46E5 0%,#0EA5A4 100%)",
+              background: "linear-gradient(135deg,#2563eb 0%,#0EA5A4 100%)",
               color: "#FFFFFF",
               border: 0,
               boxShadow: "0 6px 20px -6px rgba(79,70,229,0.55)",
@@ -225,7 +225,7 @@ export function PublicNav() {
                   setLocation("/login");
                 }}
                 style={{
-                  background: "linear-gradient(135deg,#4F46E5 0%,#0EA5A4 100%)",
+                  background: "linear-gradient(135deg,#2563eb 0%,#0EA5A4 100%)",
                   color: "#FFFFFF",
                   border: 0,
                 }}
@@ -265,7 +265,7 @@ export function PublicFooter() {
               Ticarium
               <span
                 style={{
-                  background: "linear-gradient(135deg,#4F46E5,#0EA5A4)",
+                  background: "linear-gradient(135deg,#2563eb,#0EA5A4)",
                   WebkitBackgroundClip: "text",
                   backgroundClip: "text",
                   color: "transparent",
@@ -284,10 +284,10 @@ export function PublicFooter() {
             Şirket
           </div>
           <ul className="space-y-2" style={{ color: "#64748B" }}>
-            <li><Link href="/hakkimizda" className="hover:text-indigo-600 transition-colors">Hakkımızda</Link></li>
-            <li><Link href="/amacimiz" className="hover:text-indigo-600 transition-colors">Amacımız</Link></li>
-            <li><Link href="/paketler" className="hover:text-indigo-600 transition-colors">Paketler</Link></li>
-            <li><Link href="/iletisim" className="hover:text-indigo-600 transition-colors">İletişim</Link></li>
+            <li><Link href="/hakkimizda" className="hover:text-blue-600 transition-colors">Hakkımızda</Link></li>
+            <li><Link href="/amacimiz" className="hover:text-blue-600 transition-colors">Amacımız</Link></li>
+            <li><Link href="/paketler" className="hover:text-blue-600 transition-colors">Paketler</Link></li>
+            <li><Link href="/iletisim" className="hover:text-blue-600 transition-colors">İletişim</Link></li>
           </ul>
         </div>
         <div>
@@ -300,7 +300,7 @@ export function PublicFooter() {
               href="/iletisim"
               className="font-medium hover:underline"
               style={{
-                background: "linear-gradient(135deg,#4F46E5,#0EA5A4)",
+                background: "linear-gradient(135deg,#2563eb,#0EA5A4)",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
                 color: "transparent",

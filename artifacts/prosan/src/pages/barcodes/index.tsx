@@ -541,12 +541,12 @@ export default function BarcodesPage() {
 
               {/* Sayfa bilgisi */}
               {printMode === "a4" && totalLabels > 0 && (
-                <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 text-sm">
-                  <div className="flex items-center gap-2 text-indigo-300 font-semibold">
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-sm">
+                  <div className="flex items-center gap-2 text-blue-300 font-semibold">
                     <FileText className="h-4 w-4" />
                     A4 Özeti
                   </div>
-                  <div className="mt-1.5 space-y-0.5 text-xs text-indigo-300">
+                  <div className="mt-1.5 space-y-0.5 text-xs text-blue-300">
                     <div className="flex justify-between">
                       <span>Sütun sayısı:</span>
                       <strong>{a4Cols}</strong>
@@ -555,7 +555,7 @@ export default function BarcodesPage() {
                       <span>Sayfa başına:</span>
                       <strong>~{approxPerPage} etiket</strong>
                     </div>
-                    <div className="flex justify-between border-t border-indigo-500/20 pt-0.5 mt-1">
+                    <div className="flex justify-between border-t border-blue-500/20 pt-0.5 mt-1">
                       <span>Toplam sayfa:</span>
                       <strong>~{estPages} A4</strong>
                     </div>

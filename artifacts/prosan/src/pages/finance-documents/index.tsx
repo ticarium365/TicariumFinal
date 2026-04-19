@@ -99,7 +99,7 @@ const STATUS_LABEL: Record<DocStatus, string> = {
   arsiv: "Arşiv",
 };
 const STATUS_COLOR: Record<DocStatus, string> = {
-  yeni: "bg-indigo-500/15 text-indigo-300 border-indigo-500/30",
+  yeni: "bg-blue-500/15 text-blue-300 border-blue-500/30",
   islendi: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
   onay_bekliyor: "bg-amber-500/15 text-amber-300 border-amber-500/30",
   iptal: "bg-red-500/15 text-red-300 border-red-500/30",
@@ -150,7 +150,7 @@ export default function FinanceDocumentsPage() {
 
   // Klasör dialog
   const [folderDialog, setFolderDialog] = useState(false);
-  const [newFolder, setNewFolder] = useState({ name: "", color: "#6366f1" });
+  const [newFolder, setNewFolder] = useState({ name: "", color: "#3b82f6" });
 
   // Debounce search
   useEffect(() => {
@@ -292,7 +292,7 @@ export default function FinanceDocumentsPage() {
     });
     if (res.ok) {
       setFolderDialog(false);
-      setNewFolder({ name: "", color: "#6366f1" });
+      setNewFolder({ name: "", color: "#3b82f6" });
       fetchAll();
       toast({ title: "Klasör eklendi" });
     }
@@ -406,9 +406,9 @@ export default function FinanceDocumentsPage() {
     <div className="space-y-4 p-4 md:p-6" onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
       {/* Drag overlay */}
       {dragActive && (
-        <div className="fixed inset-0 z-50 bg-indigo-600/20 border-4 border-dashed border-indigo-600 flex items-center justify-center pointer-events-none">
+        <div className="fixed inset-0 z-50 bg-blue-600/20 border-4 border-dashed border-blue-600 flex items-center justify-center pointer-events-none">
           <div className="bg-card rounded-xl shadow-xl px-8 py-6 text-center">
-            <Upload className="h-12 w-12 mx-auto mb-2 text-indigo-600" />
+            <Upload className="h-12 w-12 mx-auto mb-2 text-blue-600" />
             <p className="text-lg font-bold">Belgeleri buraya bırakın</p>
             <p className="text-sm text-muted-foreground">Birden fazla dosyayı aynı anda yükleyebilirsiniz</p>
           </div>
@@ -419,7 +419,7 @@ export default function FinanceDocumentsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <Inbox className="h-7 w-7 text-indigo-600" />
+            <Inbox className="h-7 w-7 text-blue-600" />
             <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Belge Merkezi</h1>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -458,7 +458,7 @@ export default function FinanceDocumentsPage() {
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
           <StatCard label="Toplam Belge" value={stats.total} icon={FileText} />
-          <StatCard label="Yeni" value={stats.byStatus.yeni} icon={Inbox} color="text-indigo-600" />
+          <StatCard label="Yeni" value={stats.byStatus.yeni} icon={Inbox} color="text-blue-600" />
           <StatCard label="Onay Bekliyor" value={stats.byStatus.onay_bekliyor} icon={Eye} color="text-amber-600" />
           <StatCard label="İşlendi" value={stats.byStatus.islendi} icon={FileCheck2} color="text-emerald-600" />
           <StatCard
@@ -889,7 +889,7 @@ function FolderItem({ label, icon: Icon, color, active, onClick, count }: any) {
     <button
       onClick={onClick}
       className={`w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded text-sm text-left transition-colors ${
-        active ? "bg-indigo-500/15 text-indigo-200 font-medium" : "hover:bg-muted text-foreground"
+        active ? "bg-blue-500/15 text-blue-200 font-medium" : "hover:bg-muted text-foreground"
       }`}
     >
       <span className="flex items-center gap-2 min-w-0">

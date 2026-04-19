@@ -19,7 +19,7 @@ const STEPS = [
 ];
 
 const PRESET_COLORS = [
-  "#4F46E5", "#7c3aed", "#059669", "#dc2626",
+  "#2563eb", "#7c3aed", "#059669", "#dc2626",
   "#d97706", "#0891b2", "#be185d", "#374151",
 ];
 
@@ -36,7 +36,7 @@ export default function OnboardingPage() {
   const [address, setAddress] = useState("");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [primaryColor, setPrimaryColor] = useState("#4F46E5");
+  const [primaryColor, setPrimaryColor] = useState("#2563eb");
   const [saving, setSaving] = useState(false);
 
   const canNext = step === 1 ? companyName.trim().length > 0 : true;
@@ -123,7 +123,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-xl">
         {/* Logo / başlık */}
         <div className="text-center mb-8">
@@ -274,7 +274,7 @@ export default function OnboardingPage() {
                       onChange={(e) => setPrimaryColor(e.target.value)}
                       className="h-9 w-14 rounded cursor-pointer border border-border"
                     />
-                    <Input value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="font-mono" placeholder="#4F46E5" />
+                    <Input value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="font-mono" placeholder="#2563eb" />
                   </div>
                 </div>
 

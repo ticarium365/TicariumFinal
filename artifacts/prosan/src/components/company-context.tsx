@@ -12,7 +12,7 @@ const PLATFORM: CompanyInfo = {
   id: 0,
   name: "Ticarium365",
   subdomain: "admin",
-  primaryColor: "#4F46E5",
+  primaryColor: "#2563eb",
   logoUrl: null,
 };
 

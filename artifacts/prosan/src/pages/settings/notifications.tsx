@@ -28,10 +28,10 @@ function typeIcon(type: string) {
   switch (type) {
     case "low_stock": return <AlertTriangle className={`${cls} text-amber-500`} />;
     case "new_sale": return <ShoppingBag className={`${cls} text-green-500`} />;
-    case "daily_summary": return <BarChart3 className={`${cls} text-indigo-500`} />;
+    case "daily_summary": return <BarChart3 className={`${cls} text-blue-500`} />;
     case "subscription_expiry": return <CreditCard className={`${cls} text-purple-500`} />;
     case "overdue_payment": return <Users className={`${cls} text-red-500`} />;
-    case "new_purchase": return <Package className={`${cls} text-indigo-500`} />;
+    case "new_purchase": return <Package className={`${cls} text-blue-500`} />;
     case "stock_count_closed": return <ClipboardList className={`${cls} text-cyan-500`} />;
     default: return <Bell className={`${cls} text-muted-foreground/70`} />;
   }
@@ -236,7 +236,7 @@ export default function NotificationSettingsPage() {
                           <button
                             onClick={() => testMut.mutate(rule.id)}
                             disabled={!rule.isActive}
-                            className="p-1.5 rounded-lg hover:bg-indigo-500/150/150/10 text-muted-foreground hover:text-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-blue-500/150/150/10 text-muted-foreground hover:text-blue-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                             title="Test Et"
                           >
                             <Play className="h-4 w-4" />
@@ -294,7 +294,7 @@ export default function NotificationSettingsPage() {
                     peer-checked:after:translate-x-full peer-checked:after:border-white after:content-['']
                     after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border
                     after:border after:rounded-full after:h-5 after:w-5 after:transition-all
-                    peer-checked:bg-indigo-600" />
+                    peer-checked:bg-blue-600" />
                 </label>
               </div>
             ))

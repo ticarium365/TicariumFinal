@@ -416,7 +416,7 @@ export default function IntegrationsPage() {
                       <tr key={k.id} className="hover:bg-muted/10">
                         <td className="px-4 py-2.5 font-semibold">{k.name}</td>
                         <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{k.keyPrefix}...</td>
-                        <td className="px-4 py-2.5"><span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${k.scopes === "admin" ? "bg-red-500/15 text-red-300" : k.scopes === "write" ? "bg-amber-500/15 text-amber-300" : "bg-indigo-500/15 text-indigo-300"}`}>{k.scopes === "read" ? "Okuma" : k.scopes === "write" ? "Okuma+Yazma" : "Tam Yetki"}</span></td>
+                        <td className="px-4 py-2.5"><span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${k.scopes === "admin" ? "bg-red-500/15 text-red-300" : k.scopes === "write" ? "bg-amber-500/15 text-amber-300" : "bg-blue-500/15 text-blue-300"}`}>{k.scopes === "read" ? "Okuma" : k.scopes === "write" ? "Okuma+Yazma" : "Tam Yetki"}</span></td>
                         <td className="px-4 py-2.5 text-xs text-muted-foreground">{k.lastUsedAt ? fmt(k.lastUsedAt) : "—"}</td>
                         <td className="px-4 py-2.5"><button onClick={() => toggleKey.mutate({ id: k.id, isActive: !k.isActive })}>{k.isActive ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-muted-foreground/70" />}</button></td>
                         <td className="px-4 py-2.5"><Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deleteKey.mutate(k.id)}><Trash2 className="h-3.5 w-3.5" /></Button></td>

@@ -30,7 +30,7 @@ export default function NewTenantWizard() {
   const [form, setForm] = useState({
     name: "",
     subdomain: "",
-    primaryColor: "#4F46E5",
+    primaryColor: "#2563eb",
     logoUrl: "",
     adminFullName: "",
     adminUsername: "",

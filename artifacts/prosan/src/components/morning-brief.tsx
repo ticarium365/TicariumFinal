@@ -49,7 +49,7 @@ const fmt = (v: number) =>
 
 function GreetingIcon({ greeting }: { greeting: string }) {
   if (greeting.includes("Günaydın")) return <Sun className="h-5 w-5 text-amber-400" />;
-  if (greeting.includes("akşamlar")) return <Moon className="h-5 w-5 text-indigo-400" />;
+  if (greeting.includes("akşamlar")) return <Moon className="h-5 w-5 text-blue-400" />;
   return <Sunset className="h-5 w-5 text-orange-400" />;
 }
 

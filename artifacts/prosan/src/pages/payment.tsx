@@ -73,7 +73,7 @@ export default function PaymentPage() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-indigo-600" />
+                <Building2 className="h-5 w-5 text-blue-600" />
                 <CardTitle className="text-base">Havale / EFT Bilgileri</CardTitle>
               </div>
               {iban.monthlyPrice && (
@@ -102,12 +102,12 @@ export default function PaymentPage() {
                   </Button>
                 </div>
               )}
-              <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2.5">
+              <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
                 <div>
-                  <p className="text-xs text-indigo-600">IBAN</p>
-                  <p className="font-mono font-semibold text-indigo-900 tracking-wide">{iban.iban}</p>
+                  <p className="text-xs text-blue-600">IBAN</p>
+                  <p className="font-mono font-semibold text-blue-900 tracking-wide">{iban.iban}</p>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-indigo-600" onClick={() => copyToClipboard(iban.iban!, "IBAN")}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => copyToClipboard(iban.iban!, "IBAN")}>
                   <Copy className="h-3.5 w-3.5" />
                 </Button>
               </div>

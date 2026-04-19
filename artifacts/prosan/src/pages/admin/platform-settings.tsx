@@ -69,7 +69,7 @@ export default function PlatformSettingsPage() {
       <Card className="max-w-lg">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <Settings className="h-4 w-4 text-indigo-600" />
+            <Settings className="h-4 w-4 text-blue-600" />
             <CardTitle className="text-base">Havale / IBAN Bilgileri</CardTitle>
           </div>
           <CardDescription>Bu bilgiler trial süresi dolan müşterilere gösterilir</CardDescription>

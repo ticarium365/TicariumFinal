@@ -12,7 +12,7 @@ import { useNotificationsCount, useNotifications, useMarkRead, useMarkAllRead, u
 const TYPE_CONFIG: Record<string, { icon: typeof Bell; color: string; bg: string }> = {
   stock_zero: { icon: PackageX, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
   low_stock: { icon: AlertTriangle, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
-  daily_summary: { icon: CheckCheck, color: "text-indigo-600", bg: "bg-indigo-50 dark:bg-indigo-950/30" },
+  daily_summary: { icon: CheckCheck, color: "text-blue-600", bg: "bg-blue-50 dark:bg-indigo-950/30" },
   system: { icon: Info, color: "text-muted-foreground", bg: "bg-muted/30 dark:bg-slate-900/30" },
 };
 
@@ -125,7 +125,7 @@ export function NotificationCenter() {
               return (
                 <div
                   key={n.id}
-                  className={`flex items-start gap-3 px-4 py-3 hover:bg-muted/40 cursor-pointer transition-colors ${!n.isRead ? "bg-indigo-50/30 dark:bg-indigo-950/10" : ""}`}
+                  className={`flex items-start gap-3 px-4 py-3 hover:bg-muted/40 cursor-pointer transition-colors ${!n.isRead ? "bg-blue-50/30 dark:bg-indigo-950/10" : ""}`}
                   onClick={() => !n.isRead && markRead.mutate(n.id)}
                 >
                   <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${cfg.bg}`}>
@@ -134,7 +134,7 @@ export function NotificationCenter() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <p className={`text-sm leading-snug ${!n.isRead ? "font-semibold" : "font-medium"}`}>{n.title}</p>
-                      {!n.isRead && <div className="h-2 w-2 rounded-full bg-indigo-500 shrink-0 mt-1.5" />}
+                      {!n.isRead && <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
                     <p className="text-[10px] text-muted-foreground/70 mt-1">{timeAgo(n.createdAt)}</p>
