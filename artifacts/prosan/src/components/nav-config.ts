@@ -1,3 +1,4 @@
+import type { FeatureCode } from "@workspace/db/feature-codes";
 import {
   ShoppingCart,
   History,
@@ -55,8 +56,12 @@ export type NavItem = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   roles: string[];
-  /** Paket özellik kodu — yoksa kilit göstergesi çıkar (içerik yine erişilebilir, FeatureGate yükseltme ekranı gösterir). */
-  feature?: string;
+  /**
+   * Paket özellik kodu — yoksa kilit göstergesi çıkar (içerik yine erişilebilir, FeatureGate yükseltme ekranı gösterir).
+   * `FeatureCode` union'ı sayesinde tipo derleme zamanında yakalanır
+   * (örn. `"loyalty.point"` yazmak compile error verir).
+   */
+  feature?: FeatureCode;
 };
 
 /** Stabil bir id döndür: item.id varsa onu, yoksa href'ten türetilen sabit string. */

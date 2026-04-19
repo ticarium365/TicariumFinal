@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import helmet from "helmet";
 import compression from "compression";
 import router from "./routes/index.js";
@@ -104,7 +104,10 @@ app.use(session({
   },
 }));
 
-// Brute-force koruması: login endpoint'i 15 dakikada max 20 deneme (prod only)
+// Brute-force koruması: login endpoint'i 15 dakikada max 20 deneme (prod only).
+// T017 (Phase A): Sadece IP yerine `IP + username` key — ofis NAT senaryolarında
+// farklı kullanıcıların denemelerinin birbirini "yemesini" engeller. Aynı IP'den
+// 20 farklı kullanıcı denenebilir; tek bir kullanıcı içinse 20 deneme/15dk sınırı korur.
 const loginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
@@ -116,6 +119,16 @@ const loginRateLimit = rateLimit({
   },
   skipSuccessfulRequests: true,
   skip: () => process.env.NODE_ENV !== "production",
+  // express-rate-limit v8: IPv6 adresleri için resmi `ipKeyGenerator` helper'ı
+  // kullanılmalı, aksi halde aynı /64 prefix'inden farklı IP'ler ayrı bucket'a düşer.
+  keyGenerator: (req, res) => {
+    const ipKey = ipKeyGenerator(req.ip ?? "");
+    const username = (req.body?.username ?? "")
+      .toString()
+      .toLowerCase()
+      .slice(0, 64);
+    return `${ipKey}:${username}`;
+  },
 });
 
 app.use("/api/auth/login", loginRateLimit);

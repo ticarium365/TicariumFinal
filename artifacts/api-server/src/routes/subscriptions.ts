@@ -10,6 +10,7 @@ import { and, eq, desc, sql, gte } from "drizzle-orm";
 import { requireAuth, requireRole, requireSuperAdmin } from "../middlewares/auth.js";
 import { Errors } from "../lib/errors.js";
 import { getCompanyFeatureContext, invalidateFeaturesCache } from "../middlewares/features.js";
+import { audit } from "../lib/audit.js";
 import { inArray, gt, lt, isNull, or, count } from "drizzle-orm";
 
 const router = Router();
@@ -471,6 +472,13 @@ router.post("/subscribe", requireAuth, requireRole(["admin"]), async (req: Reque
     });
 
     invalidateFeaturesCache(cid);
+    await audit({
+      req,
+      action: "SUBSCRIPTION_CHANGE",
+      entity: "company_subscriptions",
+      entityId: newSub.id,
+      details: { planId, planSlug: plan.slug, billingCycle, invoiceNo, companyId: cid },
+    });
     res.status(201).json({ subscription: newSub, plan, invoiceNo });
   } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
 });
@@ -500,6 +508,14 @@ router.post("/cancel", requireAuth, requireRole(["admin"]), async (req: Request,
         updatedAt: new Date(),
       })
       .where(eq(companySubscriptionsTable.id, active.id));
+
+    await audit({
+      req,
+      action: "SUBSCRIPTION_CANCEL",
+      entity: "company_subscriptions",
+      entityId: active.id,
+      details: { reason: reason ?? null, gracePeriodEndsAt, planId: active.planId },
+    });
 
     res.json({ ok: true, gracePeriodEndsAt, message: "Abonelik iptal edildi. Dönem sonuna kadar erişiminiz devam eder." });
   } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
@@ -719,6 +735,20 @@ router.post("/admin/billing/set-plan", requireSuperAdmin, async (req: Request, r
     });
 
     invalidateFeaturesCache(companyId);
+    await audit({
+      req,
+      action: "SUBSCRIPTION_ADMIN_SET",
+      entity: "company_subscriptions",
+      entityId: newSub.id,
+      details: {
+        targetCompanyId: companyId,
+        planSlug,
+        planId: plan.id,
+        billingCycle,
+        markPaid,
+        note: note ?? null,
+      },
+    });
     res.status(201).json({ subscription: newSub, plan });
   } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
 });

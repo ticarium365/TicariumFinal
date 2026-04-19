@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { FEATURES } from "@workspace/db/feature-codes";
 import { requireAuth } from "../middlewares/auth.js";
 import { requireFeature } from "../middlewares/features.js";
 import healthRouter from "./health.js";
@@ -52,9 +53,11 @@ const router: IRouter = Router();
 router.use(healthRouter);
 router.use("/auth", authRouter);
 router.use("/users", usersRouter);
-router.use("/products", productsRouter);
-router.use("/sales", salesRouter);
-router.use("/stock", stockRouter);
+// T017 (Phase A): Temel modül guard'ları — pratik etki düşük (en küçük paket bile bu feature'ları içerir)
+// ama doğruluk + ileride paket "downgrade" senaryoları (örn. "salt görüntüleme" planı) için zorunlu.
+router.use("/products", requireAuth, requireFeature(FEATURES.INVENTORY_CORE), productsRouter);
+router.use("/sales", requireAuth, requireFeature(FEATURES.SALES_INVOICES), salesRouter);
+router.use("/stock", requireAuth, requireFeature(FEATURES.INVENTORY_CORE), stockRouter);
 router.use("/dashboard", dashboardRouter);
 router.use("/reports", reportsRouter);
 router.use("/settings", settingsRouter);
@@ -66,31 +69,31 @@ router.use("/companies", companiesRouter);
 router.use("/payment", paymentRouter);
 router.use("/alerts", alertsRouter);
 router.use("/notifications", notificationsRouter);
-router.use("/customers", customersRouter);
-router.use("/suppliers", suppliersRouter);
-router.use("/purchases", purchasesRouter);
-router.use("/stock-counts", stockCountsRouter);
-router.use("/finance", financeRouter);
+router.use("/customers", requireAuth, requireFeature(FEATURES.CUSTOMERS_CRM), customersRouter);
+router.use("/suppliers", requireAuth, requireFeature(FEATURES.SUPPLIERS), suppliersRouter);
+router.use("/purchases", requireAuth, requireFeature(FEATURES.SUPPLIERS), purchasesRouter);
+router.use("/stock-counts", requireAuth, requireFeature(FEATURES.STOCK_COUNTS), stockCountsRouter);
+router.use("/finance", requireAuth, requireFeature(FEATURES.FINANCE_EXPENSES), financeRouter);
 router.use("/branches", branchesRouter);
 router.use("/integrations", integrationsRouter);
 router.use("/ext-integrations", extIntegrationsRouter);
 router.use("/subscriptions", subscriptionsRouter);
 router.use(storageRouter);
 // documents path-prefix'siz mount → sadece /documents* yollarında "documents" feature gate
-const _documentsGate = requireFeature("documents");
+const _documentsGate = requireFeature(FEATURES.DOCUMENTS);
 const _documentsPathRe = /^\/documents(\/|$)/;
 router.use(requireAuth, (req, res, next) => {
   if (_documentsPathRe.test(req.path)) return _documentsGate(req, res, next);
   next();
 }, documentsRouter);
 router.use("/finance-documents", financeDocumentsRouter);
-router.use("/banking", requireAuth, requireFeature("finance.banking"), bankingRouter);
-router.use("/finance-dashboard", requireAuth, requireFeature("profit.dashboard"), financeDashboardRouter);
+router.use("/banking", requireAuth, requireFeature(FEATURES.FINANCE_BANKING), bankingRouter);
+router.use("/finance-dashboard", requireAuth, requireFeature(FEATURES.PROFIT_DASHBOARD), financeDashboardRouter);
 router.use(notificationRulesRouter);
 // Personnel router için: hr.staff gate'i SADECE personel modülü yollarında uygulanır.
 // Path filtresi tam segment eşleşmesi ile kapsanır (alt yollarla birlikte) — aksi halde
 // path-prefix'siz mount tüm sonraki rotaları kilitler.
-const _hrStaffGate = requireFeature("hr.staff");
+const _hrStaffGate = requireFeature(FEATURES.HR_STAFF);
 const _hrPathRe = /^\/(personnel|departments|leave-requests)(\/|$)/;
 router.use(requireAuth, (req, res, next) => {
   if (_hrPathRe.test(req.path)) return _hrStaffGate(req, res, next);
@@ -98,7 +101,7 @@ router.use(requireAuth, (req, res, next) => {
 }, personnelRouter);
 // Sprint 87 (T015) — eksik backend feature guards. UI lock pazarlama, server-side guard
 // gerçek kapı. Trial'da features=["*"] olduğundan trial kullanıcılar etkilenmez.
-const _campaignsGate = requireFeature("campaigns");
+const _campaignsGate = requireFeature(FEATURES.CAMPAIGNS);
 const _campaignsPathRe = /^\/campaigns(\/|$)/;
 router.use(requireAuth, (req, res, next) => {
   if (_campaignsPathRe.test(req.path)) return _campaignsGate(req, res, next);
@@ -110,13 +113,13 @@ router.use(orderAnalyticsRouter);
 router.use(ordersManageRouter);
 router.use(customerGroupsRouter);
 router.use("/network", networkRouter);
-router.use("/b2b", requireAuth, requireFeature("customers.crm"), b2bRouter);
-router.use("/b2b/orders", requireAuth, requireFeature("customers.crm"), b2bOrdersRouter);
-router.use("/b2b/catalog", requireAuth, requireFeature("customers.crm"), b2bCatalogRouter);
-router.use("/channels", requireAuth, requireFeature("marketplace.pro"), channelsRouter);
-router.use("/einvoice", requireAuth, requireFeature("einvoice.basic"), einvoiceRouter);
-router.use("/marketplace", requireAuth, requireFeature("marketplace.basic"), marketplaceRouter);
-router.use("/profit", requireAuth, requireFeature("profit.dashboard"), profitRouter);
+router.use("/b2b", requireAuth, requireFeature(FEATURES.CUSTOMERS_CRM), b2bRouter);
+router.use("/b2b/orders", requireAuth, requireFeature(FEATURES.CUSTOMERS_CRM), b2bOrdersRouter);
+router.use("/b2b/catalog", requireAuth, requireFeature(FEATURES.CUSTOMERS_CRM), b2bCatalogRouter);
+router.use("/channels", requireAuth, requireFeature(FEATURES.MARKETPLACE_PRO), channelsRouter);
+router.use("/einvoice", requireAuth, requireFeature(FEATURES.EINVOICE_BASIC), einvoiceRouter);
+router.use("/marketplace", requireAuth, requireFeature(FEATURES.MARKETPLACE_BASIC), marketplaceRouter);
+router.use("/profit", requireAuth, requireFeature(FEATURES.PROFIT_DASHBOARD), profitRouter);
 import accountantRouter from "./accountant.js";
 import reportsOfficialRouter from "./reports-official.js";
 import budgetsRouter from "./budgets.js";
@@ -129,35 +132,35 @@ import loyaltyRouter from "./loyalty.js";
 import currencyRouter from "./currency.js";
 import ticariumCenterRouter from "./ticarium-center.js";
 router.use("/ticarium-center", requireAuth, ticariumCenterRouter);
-router.use("/accountant", requireAuth, requireFeature("accountant.panel"), accountantRouter);
-router.use("/reports-official", requireAuth, requireFeature("accountant.panel"), reportsOfficialRouter);
-router.use("/budgets", requireAuth, requireFeature("profit.dashboard"), budgetsRouter);
-router.use("/ad-budgets", requireAuth, requireFeature("profit.dashboard"), adBudgetsRouter);
+router.use("/accountant", requireAuth, requireFeature(FEATURES.ACCOUNTANT_PANEL), accountantRouter);
+router.use("/reports-official", requireAuth, requireFeature(FEATURES.ACCOUNTANT_PANEL), reportsOfficialRouter);
+router.use("/budgets", requireAuth, requireFeature(FEATURES.PROFIT_DASHBOARD), budgetsRouter);
+router.use("/ad-budgets", requireAuth, requireFeature(FEATURES.PROFIT_DASHBOARD), adBudgetsRouter);
 router.use("/audit-logs", auditLogsRouter);
 // aggregator path-prefix'siz mount → sadece /aggregator* yollarında marketplace.pro gate
-const _aggregatorGate = requireFeature("marketplace.pro");
+const _aggregatorGate = requireFeature(FEATURES.MARKETPLACE_PRO);
 const _aggregatorPathRe = /^\/aggregator(\/|$)/;
 router.use(requireAuth, (req, res, next) => {
   if (_aggregatorPathRe.test(req.path)) return _aggregatorGate(req, res, next);
   next();
 }, aggregatorRouter);
-router.use("/import", importsRouter);
-router.use("/production", requireAuth, requireFeature("production.bom"), productionRouter);
-router.use("/loyalty", requireAuth, requireFeature("loyalty.points"), loyaltyRouter);
-router.use("/currency", requireAuth, requireFeature("currency.multi"), currencyRouter);
+router.use("/import", requireAuth, requireFeature(FEATURES.INVENTORY_CORE), importsRouter);
+router.use("/production", requireAuth, requireFeature(FEATURES.PRODUCTION_BOM), productionRouter);
+router.use("/loyalty", requireAuth, requireFeature(FEATURES.LOYALTY_POINTS), loyaltyRouter);
+router.use("/currency", requireAuth, requireFeature(FEATURES.CURRENCY_MULTI), currencyRouter);
 
 // Sprint 72 — Gerçek Kârlılık Motoru (paket kapıları router içinde)
 import profitEngineRouter from "./profit-engine.js";
 router.use("/profit-engine", profitEngineRouter);
 
 import storefrontsRouter from "./storefronts.js";
-router.use("/storefronts", requireAuth, requireFeature("marketplace.basic"), storefrontsRouter);
+router.use("/storefronts", requireAuth, requireFeature(FEATURES.MARKETPLACE_BASIC), storefrontsRouter);
 
 import pricingRulesRouter from "./pricing-rules.js";
-router.use("/pricing-rules", requireAuth, requireFeature("marketplace.pro"), pricingRulesRouter);
+router.use("/pricing-rules", requireAuth, requireFeature(FEATURES.MARKETPLACE_PRO), pricingRulesRouter);
 
 import shippingRouter from "./shipping.js";
-router.use("/shipping", shippingRouter);
+router.use("/shipping", requireAuth, requireFeature(FEATURES.MARKETPLACE_BASIC), shippingRouter);
 
 // Sprint 80 — KVKK + Multi-currency + Feature flags runtime + SMS/Push
 import featureFlagsRuntimeRouter from "./feature-flags-runtime.js";
