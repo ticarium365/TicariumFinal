@@ -4,6 +4,20 @@ import { z } from "zod/v4";
 
 export const planTypeEnum = pgEnum("plan_type", ["trial", "active", "suspended"]);
 
+/**
+ * Sektör enum'u — onboarding wizard'da kullanıcının seçtiği iş kolu.
+ * Demo veri seçimini, varsayılan vergi/KDV ayarlarını ve ileride sektöre
+ * özel rapor şablonlarını yönlendirmek için kullanılır.
+ *  - industrial: B2B endüstriyel (PROSAN tarzı: vida, makine parçaları)
+ *  - retail   : Perakende/Bakkal-Market (FMCG, POS odaklı)
+ *  - other    : Sınıflandırılmamış / karma
+ */
+export const companySectorEnum = pgEnum("company_sector", [
+  "industrial",
+  "retail",
+  "other",
+]);
+
 export const companiesTable = pgTable("companies", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -13,6 +27,12 @@ export const companiesTable = pgTable("companies", {
   isActive: boolean("is_active").notNull().default(true),
   planType: planTypeEnum("plan_type").notNull().default("trial"),
   trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+  // T017 Phase B-2: Onboarding wizard alanları
+  sector: companySectorEnum("sector"),
+  /** Onboarding wizard tamamlandığında doldurulur (kullanıcı "Bitti" derse veya skip etse de set edilir). */
+  onboardingCompletedAt: timestamp("onboarding_completed_at", { withTimezone: true }),
+  /** Demo verisi yüklendiğinde doldurulur — idempotency için kontrol edilir, ikinci kez seed edilmez. */
+  demoSeededAt: timestamp("demo_seeded_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

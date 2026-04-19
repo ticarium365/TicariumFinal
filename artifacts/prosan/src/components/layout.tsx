@@ -67,6 +67,7 @@ import { NotificationCenter } from "./notification-center";
 import { GlobalSearch } from "./global-search";
 import { QuickAction } from "./quick-action";
 import { TrialBadge } from "./trial-badge";
+import { DemoDataBanner } from "./demo-data-banner";
 import { CommandPalette } from "./command-palette";
 import { SetupChecklistPopover } from "./setup-checklist-popover";
 import { NAV_GROUPS, type NavItem } from "./nav-config";
@@ -481,6 +482,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <QuickAction />
           </div>
         </div>
+        <DemoDataBanner />
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           <div className="mx-auto max-w-6xl">
             <FeatureGate feature={currentRouteFeature ?? undefined}>
