@@ -40,6 +40,32 @@ async function processOne(): Promise<boolean> {
     let result: any = null;
     let processed = 0;
 
+    // ─── Capability gate ───
+    // Provider'ın desteklemediği işlerde retry yapma, "skipped" işaretle.
+    // Sözleşmeyi tek tek tip eşliyoruz ki yeni jobType eklendiğinde unutulmasın.
+    const cap = provider.capabilities;
+    const requiredCap: Partial<Record<string, keyof typeof cap>> = {
+      push_product: "pushProduct",
+      push_stock: "pushStock",
+      push_price: "pushPrice",
+      pull_orders: "pullOrders",
+      pull_products: "pullProducts",
+    };
+    const need = requiredCap[job.jobType];
+    if (need && !cap[need]) {
+      await db.update(syncJobsTable).set({
+        status: "skipped", completedAt: new Date(),
+        result: { skipped: true, reason: `Provider ${provider.displayName} ${job.jobType} desteklemiyor` },
+      }).where(eq(syncJobsTable.id, job.id));
+      await logSync({
+        companyId: job.companyId, accountId: account.id, jobId: job.id,
+        operation: job.jobType, status: "partial", level: "warn",
+        durationMs: Date.now() - start,
+        message: `Job #${job.id} atlandı: ${provider.displayName} ${job.jobType} desteklemiyor`,
+      });
+      return true;
+    }
+
     switch (job.jobType) {
       case "health_check": result = await provider.healthCheck(); break;
       case "push_product": {

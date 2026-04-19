@@ -6,6 +6,7 @@ import {
 abstract class BaseStub implements MarketplaceProvider {
   abstract readonly key: string;
   abstract readonly displayName: string;
+  // capabilities=false ⇒ worker bu çağrıları SKIP eder (failed/retry değil)
   readonly capabilities = { pushProduct: false, pushStock: false, pushPrice: false, pullOrders: false, pullProducts: false };
   constructor(protected cfg: MarketplaceAccountConfig) {}
   protected abstract requiredKeys(): string[];
@@ -13,16 +14,17 @@ abstract class BaseStub implements MarketplaceProvider {
     for (const k of this.requiredKeys()) if (!this.cfg.credentials?.[k]) return `Eksik: ${k}`;
     return null;
   }
+  protected notImpl(op: string): PushResult {
+    return { success: false, message: `${this.displayName} ${op} henüz uygulanmadı (sözleşme tamam, HTTP eklenmeyi bekliyor).` };
+  }
   async healthCheck(): Promise<ProviderHealth> {
     const m = this.missing();
     if (m) return { ok: false, message: m, checkedAt: new Date() };
     return { ok: false, message: `${this.displayName} HTTP entegrasyonu henüz uygulanmadı (kimlikler kayıtlı, çağrı eklenmeyi bekliyor).`, checkedAt: new Date() };
   }
-  async pushProduct(_: MarketplaceProductPayload): Promise<PushResult> {
-    throw new Error(`${this.displayName} pushProduct henüz uygulanmadı.`);
-  }
-  async pushStock(_: any): Promise<PushResult> { throw new Error(`${this.displayName} pushStock henüz uygulanmadı.`); }
-  async pushPrice(_: any): Promise<PushResult> { throw new Error(`${this.displayName} pushPrice henüz uygulanmadı.`); }
+  async pushProduct(_: MarketplaceProductPayload): Promise<PushResult> { return this.notImpl("pushProduct"); }
+  async pushStock(_: any): Promise<PushResult> { return this.notImpl("pushStock"); }
+  async pushPrice(_: any): Promise<PushResult> { return this.notImpl("pushPrice"); }
   async pullOrders(): Promise<IncomingOrder[]> { return []; }
 }
 

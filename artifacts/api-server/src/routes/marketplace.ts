@@ -27,7 +27,44 @@ function maskCreds(c: Record<string, any> | null | undefined) {
 function sanitizeAccount(a: any) { return a ? { ...a, credentials: maskCreds(a.credentials) } : a; }
 
 // ─── Providers ────────────────────────────────────────────────────────────────
-router.get("/providers", (_req, res) => res.json(MP_META));
+// Capability bilgisini de döndür ki UI desteklenmeyen butonları kapatabilsin.
+router.get("/providers", (_req, res) => {
+  const out = MP_META.map((m) => {
+    let caps = { pushProduct: false, pushStock: false, pushPrice: false, pullOrders: false, pullProducts: false };
+    let implemented = false;
+    try {
+      const Klass = MP_REGISTRY[m.key];
+      if (Klass) {
+        const probe = new Klass({ provider: m.key, sandbox: true, credentials: {}, settings: {} });
+        caps = probe.capabilities;
+        implemented = caps.pushStock || caps.pushPrice || caps.pullOrders || caps.pushProduct;
+      }
+    } catch { /* ignore probe errors */ }
+    return { ...m, capabilities: caps, implemented };
+  });
+  res.json(out);
+});
+
+// Tüm hesaplar için toplu sağlık taraması — hub kartı / nightly check için.
+router.get("/accounts/health", async (req, res) => {
+  const companyId = req.companyId!;
+  const accounts = await db.select().from(channelAccountsTable)
+    .where(and(eq(channelAccountsTable.companyId, companyId), eq(channelAccountsTable.isActive, true)));
+  const results = await Promise.all(accounts.map(async (a) => {
+    try {
+      const { provider } = await getProviderForAccount(companyId, a.id);
+      const h = await provider.healthCheck();
+      // Hesabın son durumunu güncelle (cache)
+      await db.update(channelAccountsTable).set({
+        lastHealthOk: h.ok, lastHealthMessage: h.message, lastSyncAt: new Date(),
+      }).where(eq(channelAccountsTable.id, a.id));
+      return { accountId: a.id, name: a.name, provider: a.provider, sandbox: a.sandbox, ok: h.ok, message: h.message, checkedAt: h.checkedAt };
+    } catch (e: any) {
+      return { accountId: a.id, name: a.name, provider: a.provider, sandbox: a.sandbox, ok: false, message: e?.message || "health_check_failed", checkedAt: new Date() };
+    }
+  }));
+  res.json({ count: results.length, healthy: results.filter((r) => r.ok).length, results });
+});
 
 // ─── Accounts (mağazalar) ────────────────────────────────────────────────────
 router.get("/accounts", async (req, res) => {
