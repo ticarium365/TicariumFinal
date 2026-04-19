@@ -123,15 +123,15 @@ const STORAGE_KEY = "ticarium365_nav_open_groups_v1";
 const COLLAPSE_KEY = "ticarium365_sidebar_collapsed_v1";
 
 function loadOpenGroups(): Record<string, boolean> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch { /* */ }
+  // Sayfa girişinde tüm alt menüler kapalı gelsin — sadece aktif rotanın grubu
+  // useEffect içinde otomatik açılır (bkz. activeGroupId effect).
   return {};
 }
 
-function saveOpenGroups(state: Record<string, boolean>) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* */ }
+function saveOpenGroups(_state: Record<string, boolean>) {
+  // Açık-grup durumu sekme/sayfa içi tutulur, kalıcı kaydedilmez.
+  // (Eski sürümden kalan kayıtları temizle.)
+  try { localStorage.removeItem(STORAGE_KEY); } catch { /* */ }
 }
 
 function loadCollapsed(): boolean {
