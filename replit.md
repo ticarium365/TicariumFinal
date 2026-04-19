@@ -76,12 +76,17 @@ The backend is developed with Express 5, utilizing PostgreSQL as the database, D
 - **Paraşüt API**: Integrated for e-Invoice functionalities via OAuth2.
 - **TCMB EVDS**: Provides exchange rate data.
 
-## Sprint H (v2) — Test Suite Auth + Subscription Repair (TAMAM)
-- `node --test integration.test.mjs` (484 test) tam yeşil — exit=0, 0 fail.
-- Auth fix: `index.ts` dev-only seed self-heal (`NODE_ENV !== production`) — `nihat_admin/nihat123`, `superadmin/superadmin123`, `admin/admin123` hash'leri normalize ediliyor.
-- Test fixture: `cenan→admin`, `admin123/nihat123/superadmin123` standardize.
-- Sprint 11 fixture v2 paket geçişi: testler `free/starter/pro/enterprise` → `pkg_inventory/pkg_trade/pkg_growth/pkg_enterprise_v2` (seed v2 legacy slug'ları otomatik deactivate ediyor — production migration korunuyor).
-- **Kritik isolation fix**: Sprint 11 `after()` hook eklendi — testler PROSAN'ı pkg_growth/yearly active'e geri yüklüyor; aksi halde Sprint 12/22/23/73 (documents/hr.staff/campaigns/marketplace.*) FEATURE_LOCKED 403 alıyordu. Concurrency=8'de tüm suite'ler 115s içinde tamamlanıyor.
+## Sprint H (v3) — Test Suite Auth + Subscription Repair + Prod Hardening (TAMAM)
+- `node --test integration.test.mjs` (484 test) tam yeşil — exit=0, 0 fail (concurrency=8, ~115s).
+- **Auth seed kapsamı tam**: `seedDefaultUsers` artık 8 kullanıcı: `admin/admin123`, `talha/talha123`, `nihat/nihat123`, `nihat_admin/nihat123`, `cenan/cenan123`, `superadmin/superadmin123` (rol=`super_admin`, enum-uyumlu), `personel/staff123`, `goruntule/staff123`. Dev/test'te parola hash'leri otomatik tazelenir (`bcrypt.compare` mismatch → rehash).
+- **Production bootstrap hardening**: `seedDefaultUsers` `NODE_ENV=production`'da otomatik çalışmaz; tek seferlik bootstrap için `SEED_DEFAULT_USERS=1` env override gerekir → deterministik default-credential expose riski kapatıldı.
+- Test fixture standardize: `cenan→admin`, `admin123/nihat123/superadmin123` unified.
+- Sprint 11 fixture v2 paket geçişi: testler `free/starter/pro/enterprise` → `pkg_inventory/pkg_trade/pkg_growth/pkg_enterprise_v2` (seed v2 legacy slug'ları otomatik deactivate ediyor — production migration korundu).
+- **Kritik isolation fix (Sprint 11 STRICT after())**: PROSAN'ı `pkg_growth/yearly/active`'e geri yükler + assert-driven doğrulama (plans 200, growth bulunur, subscribe 201, /current → active+pkg_growth). Aksi halde Sprint 12/22/23/73 (documents/hr.staff/campaigns/marketplace.*) FEATURE_LOCKED 403 cascade'i.
+- **Tenant string normalize**: line ~1166 "co2 tedarikçisi co1'den görünmez" `tenant="nihat"` → `"nihatturizm"` + supplier-create 201 explicit assert (silent early-return kaldırıldı, false-positive kapanışı).
+- **Sprint 62 before() düzeltme**: einvoice plan bootstrap loop'u `["prosan", "nihat"]` → `["prosan", "nihatturizm"]` + nihat-side credentials `nihat_admin/nihat123` (önceden mismatch vardı).
+- Architect 4 tur (FAIL → FAIL → PASS → PASS) — milestone kabul.
+- **Deferred (sıradaki sprint'e)**: per-suite isolated-fixture rewrite, talha cross-suite plan-coupling refactor, clean-DB bootstrap re-validation. Bunlar 484-pass için bloklayıcı değil.
 
 ## Sprint H — Buyer Portal × PROSAN Birleşmesi (TAMAM)
 - Buyer-portal sayfaları PROSAN içine taşındı: artifacts/prosan/src/pages/satinalma/{Discovery,NewRfq,Rfqs,SellerInbox,index}.tsx — tüm internal navigation /satinalma/* prefix'ine güncellendi (Discovery "Teklif İste" + NewRfq onSuccess redirect dahil).

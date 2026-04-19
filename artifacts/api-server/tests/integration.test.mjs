@@ -1161,14 +1161,15 @@ describe("18. Tedarikçi CRUD", () => {
   });
 
   test("co2 tedarikçisi co1'den görünmez", async () => {
-    const { jar: j2 } = await login("nihat_admin", "nihat123", "nihat");
+    const { jar: j2 } = await login("nihat_admin", "nihat123", "nihatturizm");
     const code2 = `NIT-SUPP-${Date.now()}`;
-    const { json: createJson } = await api("POST", "/suppliers", {
+    const { status: createStatus, json: createJson } = await api("POST", "/suppliers", {
       jar: j2,
       body: { code: code2, name: "Nihat Tedarikçi" },
     });
+    assert.equal(createStatus, 201, `co2 supplier create 201 olmalı — ${JSON.stringify(createJson)}`);
     const newId = createJson.supplier?.id;
-    if (!newId) return;
+    assert.ok(newId, `co2 supplier id dönmeli — ${JSON.stringify(createJson)}`);
     const { jar: j1 } = await login("admin", "admin123");
     const { status } = await api("GET", `/suppliers/${newId}`, { jar: j1 });
     assert.equal(status, 404, "Farklı tenant tedarikçisi görünmemeli");
@@ -4349,8 +4350,8 @@ describe("PWA & SEO", () => {
 describe("Sprint 62 — E-Fatura", () => {
   before(async () => {
     // PROSAN ve NİHAT için einvoice feature'ı içeren plana abone ol (idempotent)
-    for (const tenant of ["prosan", "nihat"]) {
-      const adminUser = tenant === "prosan" ? "talha" : "nihat";
+    for (const tenant of ["prosan", "nihatturizm"]) {
+      const adminUser = tenant === "prosan" ? "talha" : "nihat_admin";
       const adminPass = tenant === "prosan" ? "talha123" : "nihat123";
       const { jar } = await login(adminUser, adminPass, tenant);
       const plansResp = await api("GET", "/subscriptions/plans", { jar });

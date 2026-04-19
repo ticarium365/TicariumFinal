@@ -42,6 +42,16 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 async function seedDefaultUsers() {
+  // PRODUCTION HARDENING: deterministik default credential'lar (admin/admin123, vs.)
+  // production'da otomatik seed edilmez. SEED_DEFAULT_USERS=1 explicit set edilirse
+  // tek seferlik bootstrap için açılır (yine de ilk admin'i el ile rotate etmek tavsiye edilir).
+  const isProd = process.env.NODE_ENV === "production";
+  const explicitlyEnabled = process.env.SEED_DEFAULT_USERS === "1";
+  if (isProd && !explicitlyEnabled) {
+    logger.info("Production mode: default user seeding disabled (set SEED_DEFAULT_USERS=1 for one-time bootstrap)");
+    return;
+  }
+
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(usersTable);
