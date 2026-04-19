@@ -70,7 +70,7 @@ import { TrialBadge } from "./trial-badge";
 import { DemoDataBanner } from "./demo-data-banner";
 import { CommandPalette } from "./command-palette";
 import { SetupChecklistPopover } from "./setup-checklist-popover";
-import { NAV_GROUPS, type NavItem } from "./nav-config";
+import { NAV_GROUPS, type NavItem, isVisibleForAccount } from "./nav-config";
 import { BrandLogo } from "./brand-logo";
 import {
   Sheet,
@@ -161,22 +161,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const companyName = company?.name ?? "Ticarium365";
 
+  const accountType = ((user as any)?.accountType ?? "seller") as "buyer" | "seller" | "both" | "purchasing";
+  const isPurchasing = accountType === "purchasing";
+
   // Rol filtresi + kullanıcı menü tercihi (hidden) uygulanmış gruplar
   const visibleGroups = useMemo(() => {
     if (!user) return [];
-    const accountType = ((user as any).accountType ?? "seller") as "buyer" | "seller" | "both";
     return NAV_GROUPS
-      .filter((g) => !g.accountTypes || g.accountTypes.includes(accountType))
+      .filter((g) => isVisibleForAccount(g.accountTypes, accountType))
       .map((g) => ({
         ...g,
         items: g.items.filter((i) =>
           i.roles.includes(user.role) &&
-          (!i.accountTypes || i.accountTypes.includes(accountType)) &&
+          isVisibleForAccount(i.accountTypes, accountType) &&
           !isItemHidden(navItemId(i))
         ),
       }))
       .filter((g) => g.items.length > 0);
-  }, [user, isItemHidden]);
+  }, [user, isItemHidden, accountType]);
 
   // Aktif rotanın feature gereksinimi (en uzun href eşleşmesi — nested route güvenliği)
   const currentRouteFeature = useMemo<string | null>(() => {
@@ -232,8 +234,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const NavLinks = () => (
     <nav className="flex flex-col gap-0.5">
-      {/* Ana Panel — sabit üst */}
-      {user && TOP_ITEM.roles.includes(user.role) && (
+      {/* Ana Panel — sabit üst (Sprint I: Satınalma Hesabı'nda gizli) */}
+      {user && !isPurchasing && TOP_ITEM.roles.includes(user.role) && (
         <Link href={TOP_ITEM.href}>
           <div
             className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer text-sm mb-1.5 ${
@@ -250,8 +252,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </Link>
       )}
 
-      {/* HERO — e-Ticarium Merkezi (öne çıkarılmış) */}
-      {user && HERO_ITEM.roles.includes(user.role) && (
+      {/* HERO — e-Ticarium Merkezi (öne çıkarılmış; Sprint I: Satınalma Hesabı'nda gizli) */}
+      {user && !isPurchasing && HERO_ITEM.roles.includes(user.role) && (
         <Link href={HERO_ITEM.href}>
           <div
             className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer text-sm mb-3 overflow-hidden ${

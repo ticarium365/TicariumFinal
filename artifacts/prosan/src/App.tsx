@@ -112,10 +112,28 @@ import SatinalmaNewRfq from "@/pages/satinalma/NewRfq";
 import { RfqsList as SatinalmaRfqsList, RfqDetail as SatinalmaRfqDetail } from "@/pages/satinalma/Rfqs";
 import SatinalmaSellerInbox from "@/pages/satinalma/SellerInbox";
 import SatinalmaHome from "@/pages/satinalma/index";
+import SatinalmaMerkeziPage from "@/pages/satinalma-merkezi/index";
 
 installFeatureLockInterceptor();
 
 const queryClient = new QueryClient();
+
+/**
+ * Sprint I — kök rotada accountType'a göre yönlendirme.
+ * - purchasing → /satinalma-merkezi (sade B2B vitrin)
+ * - diğerleri  → /dashboard
+ */
+function HomeRedirect() {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (!isAuthenticated) {
+    window.location.href = "/login";
+    return null;
+  }
+  const at = ((user as any)?.accountType ?? "seller") as string;
+  window.location.href = at === "purchasing" ? "/satinalma-merkezi" : "/dashboard";
+  return null;
+}
 
 function ProtectedRoute({
   component: Component,
@@ -184,14 +202,16 @@ function AuthenticatedRouter() {
         <Route path="/kvkk" component={KvkkPage} />
 
         <Route path="/">
-          {() => {
-            window.location.href = "/dashboard";
-            return null;
-          }}
+          {() => <HomeRedirect />}
         </Route>
 
         <Route path="/dashboard">
           {() => <ProtectedRoute component={Dashboard} />}
+        </Route>
+
+        {/* Sprint I — Satınalma Hesabı (purchasing): B2B Vitrin */}
+        <Route path="/satinalma-merkezi">
+          {() => <ProtectedRoute component={SatinalmaMerkeziPage} />}
         </Route>
 
         {/* Sprint H — Satınalma rotaları (eski buyer-portal birleştirildi) */}

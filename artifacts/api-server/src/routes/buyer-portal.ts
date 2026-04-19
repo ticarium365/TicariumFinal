@@ -13,6 +13,7 @@ import {
   productsTable,
   contactRequestsTable,
   usersTable,
+  buyerFavoriteSellersTable,
 } from "@workspace/db";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { audit } from "../lib/audit.js";
@@ -24,12 +25,13 @@ const sellerRouter = Router();
 
 // ─── Authz: buyer modunda olmayanları engelle ─────────────────────────────────
 function requireBuyerAccount(req: Request, res: Response, next: Function) {
-  // accountType session'a auth.ts tarafından login'de yazıldı (Sprint D)
+  // accountType session'a auth.ts tarafından login'de yazıldı (Sprint D + I)
+  // purchasing hesap tipi de tüm /buyer/* endpoint'lerini kullanabilir.
   const at = (req.session.user as any)?.accountType ?? "seller";
-  if (at !== "buyer" && at !== "both") {
+  if (at !== "buyer" && at !== "both" && at !== "purchasing") {
     return res.status(403).json({
       error: "buyer_access_required",
-      message: "Bu uç nokta sadece alıcı (buyer) hesap tipi için kullanılabilir.",
+      message: "Bu uç nokta sadece alıcı/satınalma hesap tipi için kullanılabilir.",
     });
   }
   next();
@@ -634,6 +636,64 @@ buyerRouter.post("/rfqs/:id/award", requireAuth, requireBuyerAccount, requireWri
 
   await audit({ req, action: "RFQ_AWARD", entity: "buyer_rfq", entityId: id, details: { targetId, sellerCompanyId: target.sellerCompanyId, total: target.quoteTotal } });
   res.json(result);
+});
+
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sprint I — Favori Tedarikçiler (Satınalma Hesabı için)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** GET /buyer/favorites — kendi firmanın favori satıcıları (firma bilgileriyle join). */
+buyerRouter.get("/favorites", requireAuth, requireBuyerAccount, async (req: Request, res: Response) => {
+  const myCompanyId = req.session.user!.companyId;
+  const rows = await db
+    .select({
+      id: buyerFavoriteSellersTable.id,
+      sellerCompanyId: buyerFavoriteSellersTable.sellerCompanyId,
+      note: buyerFavoriteSellersTable.note,
+      createdAt: buyerFavoriteSellersTable.createdAt,
+      sellerName: companiesTable.name,
+      sellerSubdomain: companiesTable.subdomain,
+      sellerLogoUrl: companiesTable.logoUrl,
+    })
+    .from(buyerFavoriteSellersTable)
+    .innerJoin(companiesTable, eq(buyerFavoriteSellersTable.sellerCompanyId, companiesTable.id))
+    .where(eq(buyerFavoriteSellersTable.buyerCompanyId, myCompanyId))
+    .orderBy(desc(buyerFavoriteSellersTable.createdAt));
+  res.json({ favorites: rows });
+});
+
+/** POST /buyer/favorites — { sellerCompanyId, note? } — idempotent (zaten varsa sessizce başarılı). */
+buyerRouter.post("/favorites", requireAuth, requireBuyerAccount, requireWriter, async (req: Request, res: Response) => {
+  const myCompanyId = req.session.user!.companyId;
+  const sid = Number((req.body as any)?.sellerCompanyId);
+  if (!Number.isFinite(sid) || sid <= 0) return res.status(400).json({ error: "invalid_seller_id" });
+  if (sid === myCompanyId) return res.status(400).json({ error: "cannot_favorite_self" });
+  const note = typeof (req.body as any)?.note === "string" ? String((req.body as any).note).slice(0, 500) : null;
+  try {
+    const [row] = await db.insert(buyerFavoriteSellersTable).values({
+      buyerCompanyId: myCompanyId, sellerCompanyId: sid, note,
+    }).returning();
+    res.status(201).json({ favorite: row });
+  } catch (err: any) {
+    if (String(err?.code) === "23505") {
+      const [existing] = await db.select().from(buyerFavoriteSellersTable)
+        .where(and(eq(buyerFavoriteSellersTable.buyerCompanyId, myCompanyId), eq(buyerFavoriteSellersTable.sellerCompanyId, sid)));
+      return res.status(200).json({ favorite: existing, deduped: true });
+    }
+    throw err;
+  }
+});
+
+/** DELETE /buyer/favorites/:sellerId — favoriden çıkar. */
+buyerRouter.delete("/favorites/:sellerId", requireAuth, requireBuyerAccount, requireWriter, async (req: Request, res: Response) => {
+  const myCompanyId = req.session.user!.companyId;
+  const sid = Number(req.params.sellerId);
+  if (!Number.isFinite(sid) || sid <= 0) return res.status(400).json({ error: "invalid_seller_id" });
+  await db.delete(buyerFavoriteSellersTable)
+    .where(and(eq(buyerFavoriteSellersTable.buyerCompanyId, myCompanyId), eq(buyerFavoriteSellersTable.sellerCompanyId, sid)));
+  res.json({ ok: true });
 });
 
 

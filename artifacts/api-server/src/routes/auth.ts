@@ -85,7 +85,7 @@ router.post("/login", async (req: Request, res: Response) => {
     const sessionCompanyId = user.role === "super_admin" ? (user.companyId ?? companyId) : companyId;
 
     // Sprint D: companies.accountType session ve response'a yansıtılır.
-    let accountType: "seller" | "buyer" | "both" = "seller";
+    let accountType: "seller" | "buyer" | "both" | "purchasing" = "seller";
     if (sessionCompanyId) {
       const [c] = await db.select({ accountType: companiesTable.accountType })
         .from(companiesTable).where(eq(companiesTable.id, sessionCompanyId)).limit(1);

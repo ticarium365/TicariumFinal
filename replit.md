@@ -84,3 +84,15 @@ The backend is developed with Express 5, utilizing PostgreSQL as the database, D
 - layout.tsx + command-palette.tsx: visibleGroups → group-level + item-level accountType filtresi (her iki nav yüzeyinde tutarlı).
 - E2E PASS: admin (both) login → tüm 5 satinalma item görünür; Discovery → "Teklif İste" → /satinalma/rfqs/new?sellerId=X; NewRfq submit → /satinalma/rfqs/:id (404 yok).
 - Eski buyer-portal artifact bozulmadı (geçiş sürecinde yedek olarak duruyor).
+
+## Master Backlog (mimari odaklı sıra)
+| # | Sprint | Açıklama | Durum |
+|---|---|---|---|
+| 0 | Sprint 51-55, 62, 65, 70 + Frontend UI | E-Fatura UBL-TR + Bütçe & Tahmin + Marketplace hardening + canonical ledger + PROSAN UI | TAMAM |
+| 1 | **Sprint A — Architect Regression Tests** | Forecast aliases (avg/slope/label + legacy categoryName/trendSlope/forecast invariant) + e-fatura outbox `lastResponse.xml` (UBL `<Invoice` root, namespace, mock fallback PayableAmount numeric) — `tests/integration.test.mjs` describe "Sprint A — Architect regression: forecast aliases + outbox XML" 4/4 PASS | TAMAM |
+| 2 | Sprint B — Notification Hub Entegrasyonu | Bütçe alarmları + e-fatura olayları → site-içi bildirim merkezi | sıradaki |
+| 3 | Sprint C — Marketplace Worker UI | Rate-limit/permanent-error görselleştirme; outbox tablosunda retry timer + status badge | sıradaki |
+| 4 | Sprint D (eski 71) — Buyer Portal Foundation | Schema (`accountType`, `buyer_*`), buyer-portal artifact iskeleti, auth | TAMAM (Sprint H ile birleşti) |
+| 5 | Sprint E (eski 72) — Buyer Discovery + RFQ | Firma/ürün listesi + multi-seller RFQ submit + satıcı RFQ Inbox + lead düşürme | TAMAM |
+| 6 | Sprint F (eski 73) — Quote Response & Comparison | Satıcı yanıt formu + buyer karşılaştırma ekranı + accept/reject + audit | TAMAM |
+| 7 | Sprint G — POS → E-Fatura "Satıştan Otomatik" UI | Satışlar listesinden tek tıkla outbox + XML preview entegrasyonu | sıradaki |

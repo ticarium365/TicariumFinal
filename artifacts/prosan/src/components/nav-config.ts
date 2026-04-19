@@ -64,10 +64,10 @@ export type NavItem = {
    */
   feature?: FeatureCode;
   /**
-   * Sprint H — item-level accountType filtresi. Verilmezse her account tipinde görünür.
-   * Örn: ["buyer","both"] → satıcı-yalnız kullanıcıdan gizlenir.
+   * Sprint H — item-level accountType filtresi. Verilmezse her account tipinde görünür
+   * (purchasing hariç — purchasing yalnızca explicit olarak listelenen item'ları görür).
    */
-  accountTypes?: Array<"buyer" | "seller" | "both">;
+  accountTypes?: Array<"buyer" | "seller" | "both" | "purchasing">;
 };
 
 /** Stabil bir id döndür: item.id varsa onu, yoksa href'ten türetilen sabit string. */
@@ -86,12 +86,26 @@ export type NavGroup = {
   icon: React.ComponentType<{ className?: string }>;
   items: NavItem[];
   /**
-   * Sprint H — accountType bazlı görünürlük.
-   * Verilmezse her zaman görünür (varsayılan satıcı paneli davranışı).
-   * Örn. ["buyer", "both"] → sadece alıcı yetkili kullanıcılarda.
+   * Sprint H + I — accountType bazlı görünürlük.
+   * - Verilmezse: seller/buyer/both kullanıcılarda görünür, purchasing'de GİZLİDİR
+   *   (purchasing sade panel; sadece explicit olarak işaretlenmiş gruplar görünür).
+   * Örn. ["purchasing"] → sadece Satınalma Hesabı görür.
    */
-  accountTypes?: Array<"buyer" | "seller" | "both">;
+  accountTypes?: Array<"buyer" | "seller" | "both" | "purchasing">;
 };
+
+/**
+ * Sprint I — bir grup/item bu hesap tipinde görünür mü?
+ * - purchasing: SADECE accountTypes içinde "purchasing" olanlar görünür (whitelist).
+ * - diğerleri (seller/buyer/both): accountTypes verilmemişse görünür; verilmişse içinde olmalı.
+ */
+export function isVisibleForAccount(
+  xs: Array<"buyer" | "seller" | "both" | "purchasing"> | undefined,
+  at: "buyer" | "seller" | "both" | "purchasing",
+): boolean {
+  if (at === "purchasing") return !!xs && xs.includes("purchasing");
+  return !xs || xs.includes(at);
+}
 
 // Sprint 83 — 6 ana grup (kullanıcı talebi: menüyü sadeleştir).
 // Süper Admin yalnızca super_admin rolü için ayrı görünür.
@@ -170,6 +184,21 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/reports", label: "Genel Raporlar", icon: BarChart3, roles: ["admin", "viewer"] },
       { href: "/reports/daily-summary", label: "Günlük Kapanış", icon: CalendarCheck, roles: ["admin", "viewer"] },
       { href: "/gercek-kar/oneriler", label: "Akıllı Öneriler", icon: Sparkles, roles: ["admin", "viewer"] },
+    ],
+  },
+  // ── Sprint I — Satınalma Hesabı (purchasing) için sade menü ──
+  {
+    id: "satinalma-merkezi",
+    label: "Satınalma Merkezi",
+    icon: ShoppingBasket,
+    accountTypes: ["purchasing"],
+    items: [
+      { href: "/satinalma-merkezi", label: "Satınalma Merkezi", icon: ShoppingBasket, roles: ["admin", "staff", "viewer"], accountTypes: ["purchasing"] },
+      { href: "/satinalma/rfqs", label: "Tekliflerim", icon: ClipboardList, roles: ["admin", "staff", "viewer"], accountTypes: ["purchasing"] },
+      { href: "/settings/menu", label: "Menü Tercihleri", icon: Settings, roles: ["admin", "staff", "viewer"], accountTypes: ["purchasing"] },
+      { href: "/settings", label: "Marka & Logo", icon: Settings, roles: ["admin"], accountTypes: ["purchasing"] },
+      { href: "/firma-profili", label: "Firma Profili", icon: Settings, roles: ["admin"], accountTypes: ["purchasing"] },
+      { href: "/users", label: "Kullanıcılar", icon: Users, roles: ["admin"], accountTypes: ["purchasing"] },
     ],
   },
   {

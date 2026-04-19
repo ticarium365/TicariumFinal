@@ -118,3 +118,22 @@ export type BuyerRfqTarget = typeof buyerRfqTargetsTable.$inferSelect;
 export type InsertBuyerProfile = z.infer<typeof insertBuyerProfileSchema>;
 export type InsertBuyerRfq = z.infer<typeof insertBuyerRfqSchema>;
 export type InsertBuyerRfqTarget = z.infer<typeof insertBuyerRfqTargetSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sprint I — Satınalma Hesabı (purchasing): favori tedarikçi listesi.
+// ─────────────────────────────────────────────────────────────────────────────
+import { uniqueIndex } from "drizzle-orm/pg-core";
+export const buyerFavoriteSellersTable = pgTable(
+  "buyer_favorite_sellers",
+  {
+    id: serial("id").primaryKey(),
+    buyerCompanyId: integer("buyer_company_id").notNull().references(() => companiesTable.id, { onDelete: "cascade" }),
+    sellerCompanyId: integer("seller_company_id").notNull().references(() => companiesTable.id, { onDelete: "cascade" }),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    uniq: uniqueIndex("buyer_fav_unique").on(t.buyerCompanyId, t.sellerCompanyId),
+  }),
+);
+export type BuyerFavoriteSeller = typeof buyerFavoriteSellersTable.$inferSelect;

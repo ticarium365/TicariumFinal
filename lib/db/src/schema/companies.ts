@@ -20,11 +20,12 @@ export const companySectorEnum = pgEnum("company_sector", [
 
 /**
  * Sprint D — Buyer Portal Foundation: hesap tipi enum'u.
- *  - seller : satıcı firma (varsayılan; Ticarium365 ana panelini kullanır)
- *  - buyer  : sadece alıcı firma (sipariş/RFQ gönderir, satıcı paneline erişmez)
- *  - both   : hem satıcı hem alıcı (her iki panele de girebilir)
+ *  - seller     : satıcı firma (varsayılan; Ticarium365 ana panelini kullanır)
+ *  - buyer      : sadece alıcı firma (sipariş/RFQ gönderir, satıcı paneline erişmez)
+ *  - both       : hem satıcı hem alıcı (her iki panele de girebilir)
+ *  - purchasing : Sprint I — sade Satınalma Hesabı; sadece B2B vitrin + 4 ayar item'ı görür.
  */
-export const accountTypeEnum = pgEnum("account_type", ["seller", "buyer", "both"]);
+export const accountTypeEnum = pgEnum("account_type", ["seller", "buyer", "both", "purchasing"]);
 
 export const companiesTable = pgTable("companies", {
   id: serial("id").primaryKey(),

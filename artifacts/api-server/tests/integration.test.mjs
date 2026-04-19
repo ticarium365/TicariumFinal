@@ -5187,33 +5187,51 @@ describe("Sprint A — Architect regression: forecast aliases + outbox XML", () 
     assert.equal(status, 200, "endpoint 200 dönmeli");
     assert.ok(Array.isArray(json.categories), "categories array olmalı");
     assert.equal(typeof json.totalForecast, "number", "totalForecast number olmalı");
+    assert.equal(json.sampleMonths, 6, "sampleMonths istek months ile eşleşmeli");
+    assert.match(String(json.targetPeriod || ""), /^\d{4}-\d{2}$/, "targetPeriod YYYY-MM");
     assert.ok(json.categories.length > 0, "PROSAN tenant'ında en az 1 gider kategorisi olmalı (production seed garantisi)");
-    // Architect feedback: TÜM kategorilerde alias↔legacy invariantı sabit kalmalı
+    // Architect feedback: TÜM kategorilerde alias↔legacy invariantı + numeric/shape kontratı
+    let sumForecast = 0;
     for (const [i, c] of json.categories.entries()) {
       for (const k of ["avg", "slope", "label"]) {
         assert.ok(k in c, `categories[${i}]: alias key '${k}' eksik (frontend kullanıyor)`);
       }
-      for (const k of ["categoryName", "trendSlope", "forecast"]) {
+      for (const k of ["categoryName", "trendSlope", "forecast", "forecastWithTrend"]) {
         assert.ok(k in c, `categories[${i}]: legacy key '${k}' eksik (geriye uyumluluk)`);
       }
       assert.equal(c.slope, c.trendSlope, `categories[${i}]: slope ve trendSlope eşleşmeli`);
       assert.equal(c.label, c.categoryName, `categories[${i}]: label ve categoryName eşleşmeli`);
+      // Numeric finiteness — NaN/Infinity regression guard
+      for (const k of ["avg", "slope", "forecast", "forecastWithTrend"]) {
+        assert.ok(Number.isFinite(c[k]), `categories[${i}].${k} finite number olmalı, alındı: ${c[k]}`);
+      }
+      // history schema: period+total
+      assert.ok(Array.isArray(c.history) && c.history.length === 6, `categories[${i}].history length=6 (sampleMonths) olmalı`);
+      for (const [hi, h] of c.history.entries()) {
+        assert.match(String(h.period || ""), /^\d{4}-\d{2}$/, `categories[${i}].history[${hi}].period YYYY-MM`);
+        assert.ok(Number.isFinite(h.total), `categories[${i}].history[${hi}].total finite olmalı`);
+      }
+      sumForecast += c.forecast;
     }
+    // totalForecast ≈ sum(category.forecast) — yuvarlama farkı için tolerans
+    assert.ok(Math.abs(json.totalForecast - sumForecast) < 1, `totalForecast (${json.totalForecast}) ≈ sum(forecast) (${sumForecast.toFixed(2)}) olmalı`);
   });
 
   test("GET /budgets/forecast/expenses months clamp [2,12] + invalid period 400", async () => {
     const { jar } = await login("admin", "admin123");
-    // months=99 → 12'ye clamp; her kategorinin history.length === 12
+    // months=99 → 12'ye clamp; TÜM kategorilerin history.length === 12 (architect: tek kategori değil)
     const big = await api("GET", "/budgets/forecast/expenses?months=99", { jar });
     assert.equal(big.status, 200);
-    if (big.json.categories.length > 0) {
-      assert.equal(big.json.categories[0].history.length, 12, "months=99 → 12'ye clamp");
+    assert.equal(big.json.sampleMonths, 12, "sampleMonths 99→12 clamp");
+    for (const [i, c] of big.json.categories.entries()) {
+      assert.equal(c.history.length, 12, `categories[${i}].history.length=12 (months=99 clamp)`);
     }
     // months=1 → 2'ye clamp
     const small = await api("GET", "/budgets/forecast/expenses?months=1", { jar });
     assert.equal(small.status, 200);
-    if (small.json.categories.length > 0) {
-      assert.equal(small.json.categories[0].history.length, 2, "months=1 → 2'ye clamp");
+    assert.equal(small.json.sampleMonths, 2, "sampleMonths 1→2 clamp");
+    for (const [i, c] of small.json.categories.entries()) {
+      assert.equal(c.history.length, 2, `categories[${i}].history.length=2 (months=1 clamp)`);
     }
     // period geçersiz format → 400
     const bad = await api("GET", "/budgets/forecast/expenses?period=2026-13-99", { jar });
@@ -5275,6 +5293,71 @@ describe("Sprint A — Architect regression: forecast aliases + outbox XML", () 
     assert.ok(m, "PayableAmount etiketi bulunamadı");
     assert.ok(!isNaN(Number(m[1])), `PayableAmount numeric olmalı, alındı: '${m[1]}'`);
     assert.match(xml, /mock-fallback="true"/, "fallback marker eksik (debugging için gerekli)");
+  });
+
+  // ─── Architect follow-up: XML edge regressions ──────────────────────────
+  test("Outbox XML: non-TRY currency propagates to DocumentCurrencyCode + PayableAmount@currencyID", async () => {
+    const { jar } = await login("admin", "admin123");
+    // Determinizm: provider'ı mock'a sabitle
+    await api("PUT", "/einvoice/settings", { jar, body: { provider: "mock", sandbox: true } });
+    const { status, json: created } = await api("POST", "/einvoice/outbox", {
+      jar,
+      body: {
+        invoiceType: "SATIS", profile: "TICARIFATURA", scenario: "EFATURA",
+        invoiceDate: new Date().toISOString().slice(0, 10),
+        currency: "USD",
+        sender: { name: "USD Sender Co.", vkn: "1234567890" },
+        receiver: { name: "USD Buyer Ltd.", vkn: "9876543210" },
+        lines: [{ name: "USD Item", quantity: 1, unitPrice: 200, vatRate: 20, unitCode: "C62" }],
+      },
+    });
+    assert.equal(status, 201, `USD outbox 201 dönmeli, response: ${JSON.stringify(created)}`);
+    const detail = await api("GET", `/einvoice/outbox/${created.id}`, { jar });
+    assert.equal(detail.status, 200);
+    const xml = detail.json.rawXml || detail.json.lastResponse?.xml;
+    assert.ok(xml, "USD XML lastResponse içinde olmalı");
+    assert.match(xml, /<cbc:DocumentCurrencyCode>USD<\/cbc:DocumentCurrencyCode>/, "DocumentCurrencyCode=USD propagate olmalı");
+    const m = xml.match(/<cbc:PayableAmount\s+currencyID="USD">([^<]+)<\/cbc:PayableAmount>/);
+    assert.ok(m, "PayableAmount currencyID=USD bulunamadı (currency propagation regressed)");
+    assert.ok(!isNaN(Number(m[1])), `PayableAmount numeric olmalı, alındı: ${m[1]}`);
+    // taşma kontrolü: TRY referansı XML totals içinde kalmamalı
+    assert.doesNotMatch(xml, /currencyID="TRY"/, "USD faturada TRY currencyID sızıntısı olmamalı");
+  });
+
+  test("Outbox XML: multi-line + discount → 2× InvoiceLine + AllowanceTotalAmount + payable math", async () => {
+    const { jar } = await login("admin", "admin123");
+    await api("PUT", "/einvoice/settings", { jar, body: { provider: "mock", sandbox: true } });
+    const { status, json: created } = await api("POST", "/einvoice/outbox", {
+      jar,
+      body: {
+        invoiceType: "SATIS", profile: "TICARIFATURA", scenario: "EFATURA",
+        invoiceDate: new Date().toISOString().slice(0, 10),
+        currency: "TRY",
+        sender: { name: "Multi Sender", vkn: "1234567890" },
+        receiver: { name: "Multi Buyer", vkn: "9876543210" },
+        lines: [
+          { name: "Ürün A", quantity: 2, unitPrice: 100, vatRate: 20, discountAmount: 20, unitCode: "C62" },
+          { name: "Ürün B", quantity: 1, unitPrice: 50,  vatRate: 10, discountAmount: 5,  unitCode: "C62" },
+        ],
+      },
+    });
+    assert.equal(status, 201, `multi-line outbox 201 dönmeli, response: ${JSON.stringify(created)}`);
+    const detail = await api("GET", `/einvoice/outbox/${created.id}`, { jar });
+    assert.equal(detail.status, 200);
+    const xml = detail.json.rawXml || detail.json.lastResponse?.xml;
+    assert.ok(xml, "multi-line XML olmalı");
+    // 2 satır olmalı
+    const lineMatches = xml.match(/<cac:InvoiceLine>/g) || [];
+    assert.equal(lineMatches.length, 2, `2 InvoiceLine bekleniyor, alındı: ${lineMatches.length}`);
+    // discount toplamı XML'e yansımalı (toplam = 25)
+    assert.match(xml, /<cbc:AllowanceTotalAmount[^>]*>25/, "AllowanceTotalAmount=25 (20+5) bulunamadı");
+    // PayableAmount = (200-20)+(50-5) = 225 net + (180*0.20 + 45*0.10) = 36 + 4.5 = 40.5 → 265.5
+    const pm = xml.match(/<cbc:PayableAmount[^>]*>([^<]+)<\/cbc:PayableAmount>/);
+    assert.ok(pm, "PayableAmount tag bulunamadı");
+    const payable = Number(pm[1]);
+    assert.ok(Math.abs(payable - 265.5) < 0.05, `PayableAmount 265.5 olmalı, alındı: ${payable}`);
+    // outbox row totalAmount aynı miktar olmalı
+    assert.ok(Math.abs(Number(detail.json.totalAmount) - 265.5) < 0.05, `outbox.totalAmount 265.5 olmalı, alındı: ${detail.json.totalAmount}`);
   });
 });
 

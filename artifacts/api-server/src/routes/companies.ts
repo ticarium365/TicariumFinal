@@ -136,7 +136,7 @@ router.patch("/:id", requireAuth, requireSuperAdmin, async (req: Request, res: R
     if (logoUrl !== undefined) updateData.logoUrl = logoUrl;
     if (isActive !== undefined) updateData.isActive = isActive;
     if (planType !== undefined) updateData.planType = planType;
-    if (accountType !== undefined && ["seller","buyer","both"].includes(accountType)) updateData.accountType = accountType;
+    if (accountType !== undefined && ["seller","buyer","both","purchasing"].includes(accountType)) updateData.accountType = accountType;
 
     // Trial bitiş tarihini doğrudan tarihe göre veya gün sayısına göre ayarla
     if (trialEndsAt !== undefined) {
