@@ -371,56 +371,6 @@ export default function ETicariumMerkeziPage() {
         />
       </div>
 
-      {/* Kanal Durumu */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-slate-900">Kanal Durumu</h2>
-          <span className="text-xs text-slate-500">
-            {overview?.siparisler.bekleyen ? `${overview.siparisler.bekleyen} bekleyen sipariş` : "Tüm siparişler işleniyor"}
-          </span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <ChannelCard
-            icon={Radio}
-            title="Pazaryeri Senkron"
-            subtitle="Trendyol, Hepsiburada, N11..."
-            urunSayisi={overview?.kanallar.pazaryeri.urunSayisi ?? 0}
-            aktif={overview?.kanallar.pazaryeri.aktifSayisi ?? 0}
-            toplam={overview?.kanallar.pazaryeri.toplamSayi ?? 0}
-            ctaLabel="Kanalları Yönet"
-            ctaHref="/channels"
-            color="bg-blue-50 text-blue-600"
-            testId="channel-pazaryeri"
-          />
-          <ChannelCard
-            icon={Globe}
-            title="Kendi Web Sitem"
-            subtitle="Markanızın bağımsız mağazası"
-            urunSayisi={overview?.kanallar.webSitem.urunSayisi ?? 0}
-            aktif={overview?.kanallar.webSitem.aktifSayisi ?? 0}
-            toplam={overview?.kanallar.webSitem.toplamSayi ?? 0}
-            ctaLabel="Mağazamı Yönet"
-            ctaHref="/magaza"
-            color="bg-emerald-50 text-emerald-600"
-            testId="channel-web-sitem"
-          />
-          <ChannelCard
-            icon={Store}
-            title="Ticarium Pazar"
-            subtitle="Sektörel ortak vitrin"
-            urunSayisi={overview?.kanallar.ortakVitrin.urunSayisi ?? 0}
-            aktif={overview?.kanallar.ortakVitrin.aktifSayisi ?? 0}
-            toplam={overview?.kanallar.ortakVitrin.toplamSayi ?? 0}
-            ctaLabel="Vitrinime Git"
-            ctaHref="/aggregator"
-            color="bg-purple-50 text-purple-600"
-            testId="channel-ortak-vitrin"
-          />
-        </div>
-      </div>
-
-      {/* Provider sağlık durumu (yalnızca yönetici) */}
-
       {/* Üç hizmet bölümü */}
       <div className="space-y-5">
         {services.map((s) => (
