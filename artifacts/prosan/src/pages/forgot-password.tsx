@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { PublicNav } from "@/components/public-nav";
+import { BrandLogo, BrandWordmark as SharedWordmark } from "@/components/brand-logo";
 import {
   Loader2, Phone, KeyRound, Lock, ArrowLeft, ArrowRight,
   CheckCircle2, Eye, EyeOff, ShieldCheck,
@@ -12,48 +13,10 @@ import {
 
 type Step = "phone" | "code" | "newPassword" | "done";
 
-function BrandIcon({ size = 48 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" className="shrink-0">
-      <defs>
-        <linearGradient id="t365grad-fp" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#2563eb" />
-          <stop offset="100%" stopColor="#0EA5A4" />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width="48" height="48" rx="11" fill="url(#t365grad-fp)" />
-      <path d="M11 14 H37 V20 H27 V36 H21 V20 H11 Z" fill="white" />
-      <rect x="28" y="30" width="15" height="9" rx="2.5" fill="white" />
-      <text
-        x="35.5"
-        y="36.7"
-        textAnchor="middle"
-        fontFamily="ui-monospace,SFMono-Regular,Menlo,monospace"
-        fontWeight={800}
-        fontSize={6.4}
-        fill="#1D4ED8"
-        letterSpacing="0.2"
-      >
-        365
-      </text>
-    </svg>
-  );
-}
-
-function BrandWordmark({ light = false }: { light?: boolean }) {
-  return (
-    <span
-      className="font-bold text-2xl tracking-tight leading-none"
-      style={{
-        fontFamily: "var(--font-display)",
-        color: light ? "#FFFFFF" : "#0F172A",
-      }}
-    >
-      Ticarium
-      <span style={{ color: light ? "#BFDBFE" : "#2563EB" }}>365</span>
-    </span>
-  );
-}
+const BrandIcon = ({ size = 48 }: { size?: number }) => <BrandLogo size={size} />;
+const BrandWordmark = ({ light = false }: { light?: boolean }) => (
+  <SharedWordmark className="font-bold text-2xl tracking-tight leading-none" light={light} />
+);
 
 function StepIndicator({ step }: { step: Step }) {
   const steps: Array<{ key: Step; label: string }> = [

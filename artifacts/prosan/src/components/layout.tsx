@@ -301,9 +301,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <SheetContent side="left" className="w-72 p-0 bg-slate-50">
               <SheetHeader className="p-5 border-b border-slate-200 text-left bg-white">
                 <SheetTitle
-                  className="text-2xl font-extrabold tracking-tight"
+                  className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
+                  <BrandLogo size={32} />
                   <span className="t365-brand-gradient">Ticarium365</span>
                 </SheetTitle>
               </SheetHeader>
@@ -338,9 +339,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <aside className="hidden md:flex w-64 flex-col h-screen sticky top-0 bg-slate-50 border-r border-slate-200">
         <div className="px-5 py-5 border-b border-slate-200 bg-white">
           <h1
-            className="text-2xl font-extrabold tracking-tight"
+            className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5"
             style={{ fontFamily: "var(--font-display)" }}
           >
+            <BrandLogo size={32} />
             <span className="t365-brand-gradient">Ticarium365</span>
           </h1>
         </div>
