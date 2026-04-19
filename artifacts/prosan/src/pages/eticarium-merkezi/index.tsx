@@ -25,6 +25,29 @@ type Overview = {
 
 const TRY = (n: number) => new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(n);
 
+function cleanProviderMessage(msg: string | undefined | null, ok: boolean): string {
+  if (!msg) return ok ? "Bağlantı sağlıklı." : "Bilinmeyen hata.";
+  let m = String(msg);
+  // HTTP <kod>: ön-eki yakala
+  const httpMatch = m.match(/HTTP\s*(\d{3})/i);
+  // <html>...</html> ya da <!DOCTYPE...> içeren ham yanıtları temizle
+  if (/<!doctype|<html|<head|<body/i.test(m)) {
+    if (httpMatch) {
+      const code = httpMatch[1];
+      if (code === "401" || code === "403") return `Yetki reddedildi (HTTP ${code}). API anahtarlarını kontrol edin.`;
+      if (code === "404") return `Sağlayıcı uç noktası bulunamadı (HTTP ${code}).`;
+      if (code === "429") return `Sağlayıcı istekleri kısıtladı (HTTP ${code}).`;
+      if (code.startsWith("5")) return `Sağlayıcı sunucu hatası (HTTP ${code}).`;
+      return `Sağlayıcı geçersiz yanıt verdi (HTTP ${code}).`;
+    }
+    return "Sağlayıcıdan geçersiz yanıt alındı.";
+  }
+  // Tüm HTML etiketlerini temizle, çoklu boşlukları sıkıştır
+  m = m.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  if (m.length > 160) m = m.slice(0, 157) + "…";
+  return m || (ok ? "Bağlantı sağlıklı." : "Bilinmeyen hata.");
+}
+
 const NAVY = "hsl(222 47% 15%)";
 const EMERALD = "hsl(152 76% 45%)";
 
@@ -365,7 +388,7 @@ function ProviderHealthSection() {
                       <Badge variant="outline" className="text-[10px] h-4 px-1 bg-amber-50 text-amber-700 border-amber-200">SANDBOX</Badge>
                     )}
                   </div>
-                  <div className="text-xs text-slate-600 mt-0.5 line-clamp-2">{r.message}</div>
+                  <div className="text-xs text-slate-600 mt-0.5 line-clamp-2">{cleanProviderMessage(r.message, r.ok)}</div>
                 </div>
               </div>
             ))}
