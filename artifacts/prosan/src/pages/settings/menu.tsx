@@ -1,5 +1,5 @@
 import { useAuth } from "@/components/auth-context";
-import { NAV_GROUPS } from "@/components/nav-config";
+import { NAV_GROUPS, navItemId, navIdToTestSlug } from "@/components/nav-config";
 import { useMenuPrefs } from "@/components/use-menu-prefs";
 import { useFeatures } from "@/components/use-features";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,15 +68,17 @@ export default function MenuPrefsPage() {
             <CardContent className="pt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                 {g.items.map((item) => {
-                  const off = isHidden(item.href);
+                  const id = navItemId(item);
+                  const slug = navIdToTestSlug(id);
+                  const off = isHidden(id);
                   const locked = item.feature ? !has(item.feature) : false;
                   return (
                     <label
-                      key={item.href}
+                      key={id}
                       className={`flex items-center justify-between gap-3 px-3 py-2 rounded-md cursor-pointer hover:bg-slate-50 ${
                         off ? "opacity-50" : ""
                       }`}
-                      data-testid={`menu-pref-row-${item.href.replace(/\//g, "-").replace(/^-/, "")}`}
+                      data-testid={`menu-pref-row-${slug}`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <item.icon className="h-4 w-4 shrink-0 text-slate-500" />
@@ -91,8 +93,8 @@ export default function MenuPrefsPage() {
                         )}
                         <Switch
                           checked={!off}
-                          onCheckedChange={() => toggle(item.href)}
-                          data-testid={`menu-pref-switch-${item.href.replace(/\//g, "-").replace(/^-/, "")}`}
+                          onCheckedChange={() => toggle(id)}
+                          data-testid={`menu-pref-switch-${slug}`}
                         />
                       </div>
                     </label>

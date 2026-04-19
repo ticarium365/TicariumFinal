@@ -1,6 +1,7 @@
 import {
-  pgTable, serial, integer, text, timestamp, boolean, index, numeric,
+  pgTable, serial, integer, text, timestamp, boolean, index, numeric, uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { companiesTable } from "./companies";
 import { usersTable } from "./users";
 
@@ -48,6 +49,11 @@ export const companySubscriptionsTable = pgTable("company_subscriptions", {
 }, (t) => [
   index("company_subscriptions_company_idx").on(t.companyId),
   index("company_subscriptions_status_idx").on(t.status, t.expiresAt),
+  // T015: Bir company için en fazla 1 aktif abonelik kuralı (partial unique).
+  // Yeni "active" satırı eklenmeden önce eski active satırı 'cancelled' yapılmalı.
+  uniqueIndex("company_subscriptions_active_per_company_uq")
+    .on(t.companyId)
+    .where(sql`${t.status} = 'active'`),
 ]);
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -46,6 +46,11 @@ import {
 } from "lucide-react";
 
 export type NavItem = {
+  /**
+   * Stabil id — href değişse de menü tercihi ve testid korunur.
+   * Opsiyonel; verilmezse `nav:${href}` türetilir. Önemli öğelere mutlaka manuel id atanmalı.
+   */
+  id?: string;
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -53,6 +58,16 @@ export type NavItem = {
   /** Paket özellik kodu — yoksa kilit göstergesi çıkar (içerik yine erişilebilir, FeatureGate yükseltme ekranı gösterir). */
   feature?: string;
 };
+
+/** Stabil bir id döndür: item.id varsa onu, yoksa href'ten türetilen sabit string. */
+export function navItemId(item: { id?: string; href: string }): string {
+  return item.id ?? `nav:${item.href}`;
+}
+
+/** Test/UI için id'yi DOM-güvenli hale getir. */
+export function navIdToTestSlug(id: string): string {
+  return id.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
 
 export type NavGroup = {
   id: string;

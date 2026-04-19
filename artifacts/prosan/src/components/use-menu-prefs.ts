@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/components/auth-context";
 
-const KEY_PREFIX = "tcrm_menu_hidden_v1_";
+// v2: artık href değil, stabil item id (navItemId helper) saklanıyor.
+// Eski v1 kayıtları bir kerelik göz ardı edilir (kullanıcılar tercihlerini sıfırlanmış görür).
+const KEY_PREFIX = "tcrm_menu_hidden_v2_";
 
 function loadHidden(userKey: string): string[] {
   try {
@@ -41,11 +43,11 @@ export function useMenuPrefs() {
     };
   }, [userKey]);
 
-  const isHidden = useCallback((href: string) => hidden.includes(href), [hidden]);
+  const isHidden = useCallback((id: string) => hidden.includes(id), [hidden]);
 
   const toggle = useCallback(
-    (href: string) => {
-      const next = hidden.includes(href) ? hidden.filter((h) => h !== href) : [...hidden, href];
+    (id: string) => {
+      const next = hidden.includes(id) ? hidden.filter((h) => h !== id) : [...hidden, id];
       setHidden(next);
       saveHidden(userKey, next);
     },

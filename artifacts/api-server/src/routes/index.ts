@@ -76,7 +76,13 @@ router.use("/integrations", integrationsRouter);
 router.use("/ext-integrations", extIntegrationsRouter);
 router.use("/subscriptions", subscriptionsRouter);
 router.use(storageRouter);
-router.use(documentsRouter);
+// documents path-prefix'siz mount → sadece /documents* yollarında "documents" feature gate
+const _documentsGate = requireFeature("documents");
+const _documentsPathRe = /^\/documents(\/|$)/;
+router.use(requireAuth, (req, res, next) => {
+  if (_documentsPathRe.test(req.path)) return _documentsGate(req, res, next);
+  next();
+}, documentsRouter);
 router.use("/finance-documents", financeDocumentsRouter);
 router.use("/banking", requireAuth, requireFeature("finance.banking"), bankingRouter);
 router.use("/finance-dashboard", requireAuth, requireFeature("profit.dashboard"), financeDashboardRouter);
@@ -90,16 +96,24 @@ router.use(requireAuth, (req, res, next) => {
   if (_hrPathRe.test(req.path)) return _hrStaffGate(req, res, next);
   next();
 }, personnelRouter);
-router.use(campaignsRouter);
+// Sprint 87 (T015) — eksik backend feature guards. UI lock pazarlama, server-side guard
+// gerçek kapı. Trial'da features=["*"] olduğundan trial kullanıcılar etkilenmez.
+const _campaignsGate = requireFeature("campaigns");
+const _campaignsPathRe = /^\/campaigns(\/|$)/;
+router.use(requireAuth, (req, res, next) => {
+  if (_campaignsPathRe.test(req.path)) return _campaignsGate(req, res, next);
+  next();
+}, campaignsRouter);
+
 router.use(catalogSettingsRouter);
 router.use(orderAnalyticsRouter);
 router.use(ordersManageRouter);
 router.use(customerGroupsRouter);
 router.use("/network", networkRouter);
-router.use("/b2b", b2bRouter);
-router.use("/b2b/orders", b2bOrdersRouter);
-router.use("/b2b/catalog", b2bCatalogRouter);
-router.use("/channels", channelsRouter);
+router.use("/b2b", requireAuth, requireFeature("customers.crm"), b2bRouter);
+router.use("/b2b/orders", requireAuth, requireFeature("customers.crm"), b2bOrdersRouter);
+router.use("/b2b/catalog", requireAuth, requireFeature("customers.crm"), b2bCatalogRouter);
+router.use("/channels", requireAuth, requireFeature("marketplace.pro"), channelsRouter);
 router.use("/einvoice", requireAuth, requireFeature("einvoice.basic"), einvoiceRouter);
 router.use("/marketplace", requireAuth, requireFeature("marketplace.basic"), marketplaceRouter);
 router.use("/profit", requireAuth, requireFeature("profit.dashboard"), profitRouter);
@@ -120,7 +134,13 @@ router.use("/reports-official", requireAuth, requireFeature("accountant.panel"),
 router.use("/budgets", requireAuth, requireFeature("profit.dashboard"), budgetsRouter);
 router.use("/ad-budgets", requireAuth, requireFeature("profit.dashboard"), adBudgetsRouter);
 router.use("/audit-logs", auditLogsRouter);
-router.use(aggregatorRouter);
+// aggregator path-prefix'siz mount → sadece /aggregator* yollarında marketplace.pro gate
+const _aggregatorGate = requireFeature("marketplace.pro");
+const _aggregatorPathRe = /^\/aggregator(\/|$)/;
+router.use(requireAuth, (req, res, next) => {
+  if (_aggregatorPathRe.test(req.path)) return _aggregatorGate(req, res, next);
+  next();
+}, aggregatorRouter);
 router.use("/import", importsRouter);
 router.use("/production", requireAuth, requireFeature("production.bom"), productionRouter);
 router.use("/loyalty", requireAuth, requireFeature("loyalty.points"), loyaltyRouter);
@@ -131,10 +151,10 @@ import profitEngineRouter from "./profit-engine.js";
 router.use("/profit-engine", profitEngineRouter);
 
 import storefrontsRouter from "./storefronts.js";
-router.use("/storefronts", storefrontsRouter);
+router.use("/storefronts", requireAuth, requireFeature("marketplace.basic"), storefrontsRouter);
 
 import pricingRulesRouter from "./pricing-rules.js";
-router.use("/pricing-rules", pricingRulesRouter);
+router.use("/pricing-rules", requireAuth, requireFeature("marketplace.pro"), pricingRulesRouter);
 
 import shippingRouter from "./shipping.js";
 router.use("/shipping", shippingRouter);

@@ -424,47 +424,51 @@ router.post("/subscribe", requireAuth, requireRole(["admin"]), async (req: Reque
       .where(and(eq(subscriptionPlansTable.id, planId), eq(subscriptionPlansTable.isActive, true)));
     if (!plan) return void res.status(404).json(Errors.notFound("Plan"));
 
-    // Mevcut aktif aboneliği iptal et
-    await db.update(companySubscriptionsTable)
-      .set({ status: "cancelled", cancelledAt: new Date(), updatedAt: new Date() })
-      .where(and(
-        eq(companySubscriptionsTable.companyId, cid),
-        eq(companySubscriptionsTable.status, "active"),
-      ));
-
     // Bitiş tarihini hesapla
     const expiresAt = new Date();
     if (billingCycle === "monthly") expiresAt.setMonth(expiresAt.getMonth() + 1);
     else expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
-    const [newSub] = await db.insert(companySubscriptionsTable).values({
-      companyId: cid,
-      planId,
-      billingCycle,
-      status: "active",
-      expiresAt,
-      managedBy: uid,
-    }).returning();
-
-    // Fatura oluştur (simülasyon)
+    // T016 (architect): cancel + insert + invoice + company update tek transaction içinde.
+    // Partial unique index `company_subscriptions_active_per_company_uq` aynı anda 2 active'i
+    // engellediği için (atomic olmadan) eş zamanlı isteklerde 23505 fırlayabilir.
     const price = billingCycle === "monthly" ? plan.priceMonthly : plan.priceYearly;
     const invoiceNo = `INV-${cid}-${Date.now()}`;
-    await db.insert(subscriptionInvoicesTable).values({
-      subscriptionId: newSub.id,
-      companyId: cid,
-      invoiceNo,
-      amount: price,
-      status: Number(price) > 0 ? "pending" : "paid",
-      dueDate: new Date(Date.now() + 7 * 24 * 3600 * 1000),
-      description: `${plan.name} plan aboneliği — ${billingCycle === "monthly" ? "Aylık" : "Yıllık"}`,
-      periodStart: new Date(),
-      periodEnd: expiresAt,
-    });
+    const newSub = await db.transaction(async (tx) => {
+      await tx.update(companySubscriptionsTable)
+        .set({ status: "cancelled", cancelledAt: new Date(), updatedAt: new Date() })
+        .where(and(
+          eq(companySubscriptionsTable.companyId, cid),
+          eq(companySubscriptionsTable.status, "active"),
+        ));
 
-    // Şirketin plan tipini güncelle
-    await db.update(companiesTable)
-      .set({ planType: "active", updatedAt: new Date() })
-      .where(eq(companiesTable.id, cid));
+      const [created] = await tx.insert(companySubscriptionsTable).values({
+        companyId: cid,
+        planId,
+        billingCycle,
+        status: "active",
+        expiresAt,
+        managedBy: uid,
+      }).returning();
+
+      await tx.insert(subscriptionInvoicesTable).values({
+        subscriptionId: created.id,
+        companyId: cid,
+        invoiceNo,
+        amount: price,
+        status: Number(price) > 0 ? "pending" : "paid",
+        dueDate: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+        description: `${plan.name} plan aboneliği — ${billingCycle === "monthly" ? "Aylık" : "Yıllık"}`,
+        periodStart: new Date(),
+        periodEnd: expiresAt,
+      });
+
+      await tx.update(companiesTable)
+        .set({ planType: "active", updatedAt: new Date() })
+        .where(eq(companiesTable.id, cid));
+
+      return created;
+    });
 
     invalidateFeaturesCache(cid);
     res.status(201).json({ subscription: newSub, plan, invoiceNo });
@@ -669,46 +673,50 @@ router.post("/admin/billing/set-plan", requireSuperAdmin, async (req: Request, r
     const [plan] = await db.select().from(subscriptionPlansTable).where(eq(subscriptionPlansTable.slug, planSlug));
     if (!plan) return void res.status(404).json(Errors.notFound("Plan"));
 
-    // Mevcut aktif aboneliği iptal et
-    await db.update(companySubscriptionsTable)
-      .set({ status: "cancelled", cancelledAt: new Date(), updatedAt: new Date() })
-      .where(and(
-        eq(companySubscriptionsTable.companyId, companyId),
-        inArray(companySubscriptionsTable.status, ["active", "grace_period"]),
-      ));
-
     const expiresAt = new Date();
     if (billingCycle === "yearly") expiresAt.setFullYear(expiresAt.getFullYear() + 1);
     else expiresAt.setMonth(expiresAt.getMonth() + 1);
 
-    const [newSub] = await db.insert(companySubscriptionsTable).values({
-      companyId,
-      planId: plan.id,
-      billingCycle,
-      status: "active",
-      expiresAt,
-      managedBy: req.session.user!.id,
-      notes: note ?? `Super admin tarafından ayarlandı (${plan.name})`,
-    }).returning();
+    // T016 (architect): atomic cancel+insert+invoice+company update — partial unique index ile race önle
+    const newSub = await db.transaction(async (tx) => {
+      await tx.update(companySubscriptionsTable)
+        .set({ status: "cancelled", cancelledAt: new Date(), updatedAt: new Date() })
+        .where(and(
+          eq(companySubscriptionsTable.companyId, companyId),
+          inArray(companySubscriptionsTable.status, ["active", "grace_period"]),
+        ));
 
-    if (markPaid) {
-      const price = billingCycle === "yearly" ? plan.priceYearly : plan.priceMonthly;
-      await db.insert(subscriptionInvoicesTable).values({
-        subscriptionId: newSub.id,
+      const [created] = await tx.insert(companySubscriptionsTable).values({
         companyId,
-        invoiceNo: `ADM-${companyId}-${Date.now()}`,
-        amount: price,
-        status: "paid",
-        paidAt: new Date(),
-        description: `Manuel ödeme — ${plan.name} (${billingCycle})`,
-        periodStart: new Date(),
-        periodEnd: expiresAt,
-      });
-    }
+        planId: plan.id,
+        billingCycle,
+        status: "active",
+        expiresAt,
+        managedBy: req.session.user!.id,
+        notes: note ?? `Super admin tarafından ayarlandı (${plan.name})`,
+      }).returning();
 
-    await db.update(companiesTable)
-      .set({ planType: "active", updatedAt: new Date() })
-      .where(eq(companiesTable.id, companyId));
+      if (markPaid) {
+        const price = billingCycle === "yearly" ? plan.priceYearly : plan.priceMonthly;
+        await tx.insert(subscriptionInvoicesTable).values({
+          subscriptionId: created.id,
+          companyId,
+          invoiceNo: `ADM-${companyId}-${Date.now()}`,
+          amount: price,
+          status: "paid",
+          paidAt: new Date(),
+          description: `Manuel ödeme — ${plan.name} (${billingCycle})`,
+          periodStart: new Date(),
+          periodEnd: expiresAt,
+        });
+      }
+
+      await tx.update(companiesTable)
+        .set({ planType: "active", updatedAt: new Date() })
+        .where(eq(companiesTable.id, companyId));
+
+      return created;
+    });
 
     invalidateFeaturesCache(companyId);
     res.status(201).json({ subscription: newSub, plan });

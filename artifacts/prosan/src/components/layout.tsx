@@ -61,6 +61,7 @@ import {
 import { useFeatures } from "@/components/use-features";
 import { useMenuPrefs } from "@/components/use-menu-prefs";
 import { FeatureGate } from "@/components/feature-gate";
+import { navItemId, navIdToTestSlug } from "@/components/nav-config";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./notification-center";
 import { GlobalSearch } from "./global-search";
@@ -164,7 +165,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     return NAV_GROUPS
       .map((g) => ({
         ...g,
-        items: g.items.filter((i) => i.roles.includes(user.role) && !isItemHidden(i.href)),
+        items: g.items.filter((i) => i.roles.includes(user.role) && !isItemHidden(navItemId(i))),
       }))
       .filter((g) => g.items.length > 0);
   }, [user, isItemHidden]);
@@ -304,8 +305,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 {group.items.map((item) => {
                   const active = isItemActive(item.href);
                   const locked = item.feature ? !hasFeature(item.feature) : false;
+                  const itemId = navItemId(item);
+                  const slug = navIdToTestSlug(itemId);
                   return (
-                    <Link key={item.href} href={item.href}>
+                    <Link key={itemId} href={item.href}>
                       <div
                         title={locked ? "Bu modül paketinizde yok — tıklayarak yükseltme ekranını görebilirsiniz" : undefined}
                         className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-all cursor-pointer text-sm border-l-2 ${
@@ -316,11 +319,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                               : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-transparent"
                         }`}
                         onClick={() => setIsOpen(false)}
-                        data-testid={`nav-link-${item.href.replace(/\//g, "-").replace(/^-/, "")}`}
+                        data-testid={`nav-link-${slug}`}
                       >
                         <item.icon className="h-3.5 w-3.5 shrink-0" />
                         <span className="truncate flex-1">{item.label}</span>
-                        {locked && <Lock className="h-3 w-3 shrink-0 opacity-70" data-testid={`nav-lock-${item.href.replace(/\//g, "-").replace(/^-/, "")}`} />}
+                        {locked && <Lock className="h-3 w-3 shrink-0 opacity-70" data-testid={`nav-lock-${slug}`} />}
                       </div>
                     </Link>
                   );
