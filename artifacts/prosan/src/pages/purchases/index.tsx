@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { Plus, FileText, ChevronLeft, ChevronRight, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth-context";
+import { EmptyState } from "@/components/empty-state";
 
 interface Purchase {
   id: number; supplierId: number; supplierName: string; invoiceNo: string | null;
@@ -59,14 +60,14 @@ export default function PurchasesList() {
         {isLoading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground">Yükleniyor...</div>
         ) : purchases.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
-            <FileText className="h-12 w-12 opacity-30" />
-            <p>Henüz alış faturası girilmemiş</p>
-            {(isAdmin || user?.role === "staff") && (
-              <Link href="/purchases/new">
-                <Button variant="outline" size="sm" className="mt-2 gap-1"><Plus className="h-3.5 w-3.5" /> Fatura gir</Button>
-              </Link>
-            )}
+          <div className="p-6">
+            <EmptyState
+              icon={FileText}
+              title="Henüz alış faturası girilmemiş"
+              description="Tedarikçilerinizden gelen faturaları kaydedin; stok girişi, borç bakiyesi ve maliyet hesabı otomatik güncellensin."
+              primaryAction={(isAdmin || user?.role === "staff") ? { label: "İlk Faturayı Gir", href: "/purchases/new", testId: "empty-add-purchase" } : undefined}
+              secondaryAction={isAdmin ? { label: "Tedarikçi Ekle", href: "/suppliers", testId: "empty-go-suppliers" } : undefined}
+            />
           </div>
         ) : (
           <>

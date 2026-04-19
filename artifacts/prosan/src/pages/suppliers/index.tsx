@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/empty-state";
 import { useAuth } from "@/components/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -137,14 +138,13 @@ export default function SuppliersList() {
         {isLoading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground">Yükleniyor...</div>
         ) : suppliers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
-            <Truck className="h-12 w-12 opacity-30" />
-            <p>Henüz tedarikçi eklenmemiş</p>
-            {isAdmin && (
-              <Button variant="outline" size="sm" className="mt-2 gap-1" onClick={() => setModalOpen(true)}>
-                <Plus className="h-3.5 w-3.5" /> İlk tedarikçiyi ekle
-              </Button>
-            )}
+          <div className="p-6">
+            <EmptyState
+              icon={Truck}
+              title={search ? "Aramaya uyan tedarikçi bulunamadı" : "Henüz tedarikçi eklenmemiş"}
+              description={search ? "Farklı bir kelime deneyin veya filtreleri temizleyin." : "Tedarikçilerinizi ekleyerek alış faturalarını ve borç bakiyesini takip edin."}
+              primaryAction={isAdmin && !search ? { label: "İlk Tedarikçiyi Oluştur", onClick: () => setModalOpen(true), testId: "empty-add-supplier" } : undefined}
+            />
           </div>
         ) : (
           <>

@@ -66,6 +66,7 @@ import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./notification-center";
 import { GlobalSearch } from "./global-search";
 import { QuickAction } from "./quick-action";
+import { TrialBadge } from "./trial-badge";
 import { CommandPalette } from "./command-palette";
 import { SetupChecklistPopover } from "./setup-checklist-popover";
 import { NAV_GROUPS, type NavItem } from "./nav-config";
@@ -476,6 +477,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <GlobalSearch />
           </div>
           <div className="flex items-center gap-2">
+            <TrialBadge />
             <QuickAction />
           </div>
         </div>

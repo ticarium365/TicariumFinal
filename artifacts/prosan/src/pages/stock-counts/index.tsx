@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/hooks/use-toast";
 
 interface StockCountSession {
@@ -126,13 +127,12 @@ export default function StockCountsPage() {
       {isLoading ? (
         <div className="py-16 text-center text-muted-foreground">Yükleniyor...</div>
       ) : sessions.length === 0 ? (
-        <div className="py-16 text-center space-y-3 border-2 border-dashed rounded-xl">
-          <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground/40" />
-          <p className="text-muted-foreground">Henüz sayım yok</p>
-          <Button onClick={() => setShowForm(true)} variant="outline" className="gap-2">
-            <Plus className="h-4 w-4" /> İlk Sayımı Başlat
-          </Button>
-        </div>
+        <EmptyState
+          icon={ClipboardList}
+          title="Henüz stok sayımı yapılmamış"
+          description="Düzenli sayım stok güvenirliğini artırır, fire ve fark raporları üretir. Hemen ilk sayımı başlatın."
+          primaryAction={{ label: "İlk Sayımı Başlat", onClick: () => setShowForm(true), testId: "empty-start-count" }}
+        />
       ) : (
         <div className="space-y-2">
           {sessions.map(session => {
