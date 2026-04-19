@@ -164,10 +164,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
   // Rol filtresi + kullanıcı menü tercihi (hidden) uygulanmış gruplar
   const visibleGroups = useMemo(() => {
     if (!user) return [];
+    const accountType = ((user as any).accountType ?? "seller") as "buyer" | "seller" | "both";
     return NAV_GROUPS
+      .filter((g) => !g.accountTypes || g.accountTypes.includes(accountType))
       .map((g) => ({
         ...g,
-        items: g.items.filter((i) => i.roles.includes(user.role) && !isItemHidden(navItemId(i))),
+        items: g.items.filter((i) =>
+          i.roles.includes(user.role) &&
+          (!i.accountTypes || i.accountTypes.includes(accountType)) &&
+          !isItemHidden(navItemId(i))
+        ),
       }))
       .filter((g) => g.items.length > 0);
   }, [user, isItemHidden]);

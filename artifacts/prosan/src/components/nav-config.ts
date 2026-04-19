@@ -44,6 +44,7 @@ import {
   Wrench,
   Activity,
   ScanLine,
+  Search,
 } from "lucide-react";
 
 export type NavItem = {
@@ -62,6 +63,11 @@ export type NavItem = {
    * (örn. `"loyalty.point"` yazmak compile error verir).
    */
   feature?: FeatureCode;
+  /**
+   * Sprint H — item-level accountType filtresi. Verilmezse her account tipinde görünür.
+   * Örn: ["buyer","both"] → satıcı-yalnız kullanıcıdan gizlenir.
+   */
+  accountTypes?: Array<"buyer" | "seller" | "both">;
 };
 
 /** Stabil bir id döndür: item.id varsa onu, yoksa href'ten türetilen sabit string. */
@@ -79,6 +85,12 @@ export type NavGroup = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   items: NavItem[];
+  /**
+   * Sprint H — accountType bazlı görünürlük.
+   * Verilmezse her zaman görünür (varsayılan satıcı paneli davranışı).
+   * Örn. ["buyer", "both"] → sadece alıcı yetkili kullanıcılarda.
+   */
+  accountTypes?: Array<"buyer" | "seller" | "both">;
 };
 
 // Sprint 83 — 6 ana grup (kullanıcı talebi: menüyü sadeleştir).
@@ -158,6 +170,19 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/reports", label: "Genel Raporlar", icon: BarChart3, roles: ["admin", "viewer"] },
       { href: "/reports/daily-summary", label: "Günlük Kapanış", icon: CalendarCheck, roles: ["admin", "viewer"] },
       { href: "/gercek-kar/oneriler", label: "Akıllı Öneriler", icon: Sparkles, roles: ["admin", "viewer"] },
+    ],
+  },
+  {
+    id: "satinalma",
+    label: "Satınalma",
+    icon: ShoppingBasket,
+    accountTypes: ["buyer", "seller", "both"],
+    items: [
+      { href: "/satinalma", label: "Satınalma Anasayfa", icon: ShoppingBasket, roles: ["admin", "staff", "viewer"] },
+      { href: "/satinalma/kesfet", label: "Tedarikçi Keşfet", icon: Search, roles: ["admin", "staff", "viewer"], accountTypes: ["buyer", "both"] },
+      { href: "/satinalma/rfqs/new", label: "Yeni Teklif Talebi", icon: FileText, roles: ["admin", "staff"], accountTypes: ["buyer", "both"] },
+      { href: "/satinalma/rfqs", label: "RFQ'larım", icon: ClipboardList, roles: ["admin", "staff", "viewer"], accountTypes: ["buyer", "both"] },
+      { href: "/satinalma/inbox", label: "Gelen RFQ Kutusu", icon: Inbox, roles: ["admin", "staff"], accountTypes: ["seller", "both"] },
     ],
   },
   {

@@ -106,6 +106,12 @@ import KvkkPage from "@/pages/kvkk";
 import RuntimeFlagsAdminPage from "@/pages/admin/runtime-flags";
 import PazaryeriSaglikPage from "@/pages/super-admin/pazaryeri-saglik";
 import SistemSaglikPage from "@/pages/super-admin/sistem-saglik";
+// Sprint H — Satınalma (eski buyer-portal entegrasyonu)
+import SatinalmaDiscovery from "@/pages/satinalma/Discovery";
+import SatinalmaNewRfq from "@/pages/satinalma/NewRfq";
+import { RfqsList as SatinalmaRfqsList, RfqDetail as SatinalmaRfqDetail } from "@/pages/satinalma/Rfqs";
+import SatinalmaSellerInbox from "@/pages/satinalma/SellerInbox";
+import SatinalmaHome from "@/pages/satinalma/index";
 
 installFeatureLockInterceptor();
 
@@ -186,6 +192,26 @@ function AuthenticatedRouter() {
 
         <Route path="/dashboard">
           {() => <ProtectedRoute component={Dashboard} />}
+        </Route>
+
+        {/* Sprint H — Satınalma rotaları (eski buyer-portal birleştirildi) */}
+        <Route path="/satinalma">
+          {() => <ProtectedRoute component={SatinalmaHome} />}
+        </Route>
+        <Route path="/satinalma/kesfet">
+          {() => <ProtectedRoute component={SatinalmaDiscovery} />}
+        </Route>
+        <Route path="/satinalma/rfqs/new">
+          {() => <ProtectedRoute component={SatinalmaNewRfq} roles={["admin", "staff"]} />}
+        </Route>
+        <Route path="/satinalma/rfqs/:id">
+          {() => <ProtectedRoute component={SatinalmaRfqDetail} />}
+        </Route>
+        <Route path="/satinalma/rfqs">
+          {() => <ProtectedRoute component={SatinalmaRfqsList} />}
+        </Route>
+        <Route path="/satinalma/inbox">
+          {() => <ProtectedRoute component={SatinalmaSellerInbox} roles={["admin", "staff"]} />}
         </Route>
 
         <Route path="/products">

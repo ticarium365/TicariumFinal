@@ -36,13 +36,19 @@ export function CommandPalette() {
   }, []);
 
   const role = (user?.role ?? "") as string;
+  const accountType = ((user as any)?.accountType ?? "seller") as "buyer" | "seller" | "both";
 
   const filteredGroups = useMemo(() => {
     return NAV_GROUPS.map((group) => ({
       ...group,
-      items: group.items.filter((it) => it.roles.includes(role)),
-    })).filter((g) => g.items.length > 0);
-  }, [role]);
+      items: group.items.filter((it) =>
+        it.roles.includes(role) &&
+        (!it.accountTypes || it.accountTypes.includes(accountType))
+      ),
+    }))
+      .filter((g) => !g.accountTypes || g.accountTypes.includes(accountType))
+      .filter((g) => g.items.length > 0);
+  }, [role, accountType]);
 
   function go(href: string) {
     setOpen(false);
