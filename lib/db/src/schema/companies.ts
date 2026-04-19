@@ -19,6 +19,12 @@ export const companySectorEnum = pgEnum("company_sector", [
 ]);
 
 /**
+ * Sprint J — Membership: yeni kayıt sonrası doğrulama yöntemi.
+ * UI'da kullanıcı tercih ederse SMS, etmezse e-posta default.
+ */
+export const verificationMethodEnum = pgEnum("verification_method", ["sms", "email"]);
+
+/**
  * Sprint D — Buyer Portal Foundation: hesap tipi enum'u.
  *  - seller     : satıcı firma (varsayılan; Ticarium365 ana panelini kullanır)
  *  - buyer      : sadece alıcı firma (sipariş/RFQ gönderir, satıcı paneline erişmez)
@@ -42,6 +48,16 @@ export const companiesTable = pgTable("companies", {
   city: text("city"),
   /** Sprint I — Satınalma Merkezi: "Sertifikalı tedarikçi" rozeti (super-admin onayı). */
   isVerified: boolean("is_verified").notNull().default(false),
+  /** Sprint J — kayıt formundaki ilçe alanı. */
+  district: text("district"),
+  /** Sprint J — kayıt sonrası doğrulama tercihi (sms|email). */
+  verificationMethod: verificationMethodEnum("verification_method").default("email"),
+  /** Sprint J — e-posta doğrulama tamamlandı. */
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  /** Sprint J — telefon doğrulama tamamlandı. */
+  phoneVerifiedAt: timestamp("phone_verified_at", { withTimezone: true }),
+  /** Sprint J — trial başlatıldığı an (registration anında set edilir). */
+  trialStartedAt: timestamp("trial_started_at", { withTimezone: true }),
   // T017 Phase B-2: Onboarding wizard alanları
   sector: companySectorEnum("sector"),
   /** Onboarding wizard tamamlandığında doldurulur (kullanıcı "Bitti" derse veya skip etse de set edilir). */
