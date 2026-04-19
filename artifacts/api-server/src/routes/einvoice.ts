@@ -23,6 +23,7 @@ function sanitizeSettings(row: any) {
 
 const requireWriter = requireRole(["admin", "staff", "super_admin"]);
 import { getProviderForCompany, PROVIDER_META, PROVIDER_REGISTRY, logEvent } from "../services/einvoice/factory.js";
+import { dispatchEinvoiceEvent } from "../services/notifications/dispatch.js";
 import type { EInvoiceCreatePayload } from "../services/einvoice/types.js";
 
 const router = Router();
@@ -460,12 +461,25 @@ router.post("/outbox/:id/send", requireWriter, async (req: Request, res: Respons
     }).where(eq(einvoiceOutboxTable.id, id)).returning();
     await logEvent({ companyId, provider: row.provider, event: "invoice_sent",
       outboxId: id, level: result.status === "failed" ? "error" : "info", message: result.message });
+    // Sprint B — bell badge'e olay düşür (sent veya failed)
+    void dispatchEinvoiceEvent({
+      companyId, outboxId: id,
+      externalNo: updated?.externalNo ?? row.externalNo,
+      receiverName: row.receiverName,
+      event: result.status === "failed" ? "failed" : "sent",
+      reason: result.message,
+    }).catch(() => {/* dispatch hataları send akışını bozmasın */});
     res.json(updated);
   } catch (e: any) {
     await db.update(einvoiceOutboxTable).set({
       status: "failed", statusMessage: e?.message || String(e),
       attemptCount: (row.attemptCount || 0) + 1, lastAttemptAt: new Date(),
     }).where(eq(einvoiceOutboxTable.id, id));
+    void dispatchEinvoiceEvent({
+      companyId, outboxId: id,
+      externalNo: row.externalNo, receiverName: row.receiverName,
+      event: "failed", reason: e?.message || String(e),
+    }).catch(() => {});
     res.status(500).json({ error: "send_failed", detail: e?.message });
   }
 });
@@ -503,11 +517,23 @@ router.post("/outbox/:id/cancel", requireWriter, async (req: Request, res: Respo
     }).where(eq(einvoiceOutboxTable.id, id)).returning();
     await logEvent({ companyId, provider: locked.provider, event: "invoice_cancelled",
       outboxId: id, message: result.message });
+    void dispatchEinvoiceEvent({
+      companyId, outboxId: id,
+      externalNo: updated?.externalNo ?? locked.externalNo,
+      receiverName: locked.receiverName,
+      event: result.status === "cancelled" ? "cancelled" : "failed",
+      reason: result.message || reason,
+    }).catch(() => {});
     res.json(updated);
   } catch (e: any) {
     await db.update(einvoiceOutboxTable).set({
       status: "failed", statusMessage: e?.message || String(e), updatedAt: new Date(),
     }).where(eq(einvoiceOutboxTable.id, id));
+    void dispatchEinvoiceEvent({
+      companyId, outboxId: id,
+      externalNo: locked.externalNo, receiverName: locked.receiverName,
+      event: "failed", reason: e?.message || String(e),
+    }).catch(() => {});
     res.status(500).json({ error: "cancel_failed", detail: e?.message });
   }
 });

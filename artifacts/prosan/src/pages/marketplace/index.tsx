@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, RefreshCw, Activity, Trash2, ShoppingCart, ListChecks, Settings as SettingsIcon, Package, CheckCircle2, AlertCircle } from "lucide-react";
+import { Plus, RefreshCw, Activity, Trash2, ShoppingCart, ListChecks, Settings as SettingsIcon, Package, CheckCircle2, AlertCircle, Clock, AlertOctagon, Hourglass } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type Provider = { key: string; label: string; needs: string[] };
@@ -17,7 +17,16 @@ type Account = {
   credentials: Record<string, string>; settings: Record<string, any>;
   lastHealthOk: boolean | null; lastHealthMessage: string | null; lastSyncAt: string | null;
 };
-type Job = { id: number; jobType: string; status: string; accountId: number; attemptCount: number; lastError: string | null; createdAt: string; result: any };
+type Job = {
+  id: number; jobType: string; status: string; accountId: number;
+  attemptCount: number; maxAttempts?: number; lastError: string | null;
+  createdAt: string; result: any;
+  // Sprint C — backend türetilmiş alanlar
+  errorCategory?: "rate-limit" | "permanent" | "transient" | null;
+  errorMessage?: string | null;
+  nextRetryAt?: string | null;
+  retryAvailable?: boolean;
+};
 type MOrder = {
   id: number; companyId: number; accountId: number; channelKey: string;
   externalOrderId: string; status: string; totalAmount: number | null;
@@ -298,25 +307,7 @@ export default function MarketplacePage() {
         </TabsContent>
 
         <TabsContent value="jobs" className="mt-4">
-          <Card><CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead className="bg-muted text-left"><tr><th className="p-2">#</th><th>Tür</th><th>Mağaza</th><th>Durum</th><th>Deneme</th><th>Tarih</th><th>Hata</th></tr></thead>
-              <tbody>
-                {jobs.map((j) => (
-                  <tr key={j.id} className="border-t">
-                    <td className="p-2">{j.id}</td>
-                    <td>{j.jobType}</td>
-                    <td>{accounts.find((a) => a.id === j.accountId)?.name || j.accountId}</td>
-                    <td><Badge variant={j.status === "completed" ? "default" : j.status === "failed" ? "destructive" : "secondary"}>{j.status}</Badge></td>
-                    <td>{j.attemptCount}</td>
-                    <td className="text-xs">{new Date(j.createdAt).toLocaleString("tr-TR")}</td>
-                    <td className="text-xs text-red-500">{j.lastError || "-"}</td>
-                  </tr>
-                ))}
-                {jobs.length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Henüz iş yok</td></tr>}
-              </tbody>
-            </table>
-          </CardContent></Card>
+          <JobsTab jobs={jobs} accounts={accounts} />
         </TabsContent>
 
         <TabsContent value="logs" className="mt-4">
@@ -340,5 +331,96 @@ export default function MarketplacePage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// ─── Sprint C — Jobs Tab: tek paylaşımlı 1s tick (per-row interval yerine) ──
+function JobsTab({ jobs, accounts }: { jobs: Job[]; accounts: Account[] }) {
+  const needsTick = jobs.some((j) => j.retryAvailable && j.nextRetryAt);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!needsTick) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [needsTick]);
+  return (
+    <Card><CardContent className="p-0">
+      <table className="w-full text-sm">
+        <thead className="bg-muted text-left">
+          <tr>
+            <th className="p-2">#</th><th>Tür</th><th>Mağaza</th><th>Durum</th>
+            <th>Hata Tipi</th><th>Deneme</th><th>Sonraki Tekrar</th>
+            <th>Tarih</th><th>Hata Mesajı</th>
+          </tr>
+        </thead>
+        <tbody>
+          {jobs.map((j) => (
+            <JobRow key={j.id} job={j} now={now} accountName={accounts.find((a) => a.id === j.accountId)?.name || String(j.accountId)} />
+          ))}
+          {jobs.length === 0 && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Henüz iş yok</td></tr>}
+        </tbody>
+      </table>
+    </CardContent></Card>
+  );
+}
+
+function JobRow({ job: j, accountName, now }: { job: Job; accountName: string; now: number }) {
+  const max = j.maxAttempts ?? 3;
+  const attemptsExhausted = j.attemptCount >= max;
+  const remainMs = j.nextRetryAt ? new Date(j.nextRetryAt).getTime() - now : 0;
+
+  const categoryUI = (() => {
+    if (!j.errorCategory) return null;
+    if (j.errorCategory === "permanent") {
+      return <Badge variant="destructive" className="gap-1" data-testid={`job-cat-${j.id}`}><AlertOctagon className="h-3 w-3" />Kalıcı Hata</Badge>;
+    }
+    if (j.errorCategory === "rate-limit") {
+      return <Badge className="gap-1 bg-amber-500 hover:bg-amber-500/90" data-testid={`job-cat-${j.id}`}><Hourglass className="h-3 w-3" />Hız Limiti</Badge>;
+    }
+    return <Badge variant="secondary" className="gap-1" data-testid={`job-cat-${j.id}`}><Clock className="h-3 w-3" />Geçici</Badge>;
+  })();
+
+  const retryUI = (() => {
+    if (j.errorCategory === "permanent") {
+      return <span className="text-xs text-destructive">Tekrar yok</span>;
+    }
+    if (attemptsExhausted) {
+      return <span className="text-xs text-muted-foreground">Limit doldu</span>;
+    }
+    if (j.retryAvailable && remainMs > 0) {
+      const total = Math.ceil(remainMs / 1000);
+      const m = Math.floor(total / 60);
+      const s = total % 60;
+      const fmt = m > 0 ? `${m}d ${s.toString().padStart(2, "0")}s` : `${s}s`;
+      return <span className="text-xs font-mono tabular-nums text-amber-600" data-testid={`job-retry-${j.id}`}>{fmt} sonra</span>;
+    }
+    if (j.status === "running" || j.status === "queued") {
+      return <span className="text-xs text-blue-600">Sırada</span>;
+    }
+    return <span className="text-xs text-muted-foreground">-</span>;
+  })();
+
+  return (
+    <tr className="border-t" data-testid={`job-row-${j.id}`}>
+      <td className="p-2">{j.id}</td>
+      <td>{j.jobType}</td>
+      <td>{accountName}</td>
+      <td>
+        <Badge variant={j.status === "completed" ? "default" : j.status === "failed" ? "destructive" : "secondary"}>
+          {j.status}
+        </Badge>
+      </td>
+      <td>{categoryUI ?? <span className="text-xs text-muted-foreground">-</span>}</td>
+      <td>
+        <span className={attemptsExhausted ? "text-destructive font-semibold" : ""}>
+          {j.attemptCount}/{max}
+        </span>
+      </td>
+      <td>{retryUI}</td>
+      <td className="text-xs">{new Date(j.createdAt).toLocaleString("tr-TR")}</td>
+      <td className="text-xs text-red-500 max-w-[280px] truncate" title={j.errorMessage || j.lastError || ""}>
+        {j.errorMessage || j.lastError || "-"}
+      </td>
+    </tr>
   );
 }

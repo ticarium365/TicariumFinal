@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link } from "wouter";
 import {
   Bell, AlertTriangle, PackageX, Check, CheckCheck,
-  Info, Package, ChevronRight, RefreshCw, Zap
+  Info, Package, ChevronRight, RefreshCw, Zap,
+  TrendingDown, FileText, FileX, FileMinus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,14 @@ const TYPE_CONFIG: Record<string, { icon: typeof Bell; color: string; bg: string
   low_stock: { icon: AlertTriangle, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
   daily_summary: { icon: CheckCheck, color: "text-blue-600", bg: "bg-blue-50 dark:bg-indigo-950/30" },
   system: { icon: Info, color: "text-muted-foreground", bg: "bg-muted/30 dark:bg-slate-900/30" },
+  // Sprint B — bütçe alarmları
+  budget_alert_critical: { icon: TrendingDown, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
+  budget_alert_warning: { icon: TrendingDown, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
+  budget_alert_info: { icon: TrendingDown, color: "text-blue-600", bg: "bg-blue-50 dark:bg-indigo-950/30" },
+  // Sprint B — e-fatura olayları
+  einvoice_sent: { icon: FileText, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
+  einvoice_failed: { icon: FileX, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
+  einvoice_cancelled: { icon: FileMinus, color: "text-slate-500", bg: "bg-slate-50 dark:bg-slate-900/30" },
 };
 
 function timeAgo(dateStr: string) {

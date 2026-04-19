@@ -23,14 +23,36 @@ The frontend is built with React and Vite, styled with Tailwind CSS and `shadcn/
 - **T2 PASS**: `POST /einvoice/outbox` → `GET /einvoice/outbox/:id` akışında UBL-TR XML `lastResponse.xml` JSONB içinden okunabiliyor (schema'da `rawXml` kolonu yoktur). 
 - **MockEInvoiceProvider sertleştirildi**: `createInvoice()` artık `buildInvoiceXml()` ile gerçek UBL-TR XML üretip `raw.xml`'e koyuyor (önceden `getInvoiceXml`'de basit fake XML vardı; route fallback'i için yetersizdi). Tüm provider'lar artık aynı XML kontratını sağlıyor (mimari tutarlılık).
 
+### Sprint B — Notification Hub Entegrasyonu (PASS, architect onaylı)
+- **Yeni servis** `services/notifications/dispatch.ts`: tek-nokta in-app notification yazıcı.
+  - `dispatchNotification()` günlük dedup'lı; `db.transaction` + `pg_advisory_xact_lock(lockKey)` ile atomik (race-driven dup yok). LockKey = FNV-1a 64-bit hash (companyId+type+entityType+entityId+dayBucket).
+  - `dispatchBudgetAlerts()` BudgetAlert[]'i `budget_alert_critical/warning/info` olarak yazar; orphan_expense (categoryId null) için `hashPeriod()` deterministik **negatif** integer entityId üretir (gerçek pozitif categoryId'lerle çakışmaz).
+  - `dispatchEinvoiceEvent()` outbox state-change'i (`einvoice_sent/failed/cancelled`) bell'e düşürür; `bypassDedup:true` (her geçiş görünür).
+- **notification-rules ile ilişki**: rules engine kullanıcı tercih/kanal katmanı; dispatch sistem-kritik olaylar için doğrudan in-app yazar (architectural note dosya başında belgelendi).
+- **Endpoint'ler**: `POST /budgets/alerts/dispatch` (computeBudgetAlerts→dispatch, `{period,created,deduped,total}` döner); `/einvoice/outbox/:id/send|cancel` route'ları success+failure'da fire-and-forget `dispatchEinvoiceEvent` çağırır.
+- **Frontend**: `notification-center.tsx` TYPE_CONFIG genişletildi (TrendingDown, FileText, FileX, FileMinus ikonlarıyla 6 yeni tip).
+- **Testler (4/4 PASS)**: idempotent dedup; budget_alert_* listede görünür; e-fatura outbox→notification (state-coupled assert + 3s/100ms polling); dedup günlük entity-bazlı.
+
+### Sprint C — Marketplace Worker UI (PASS, architect onaylı)
+- **Backend** `routes/marketplace.ts` GET /jobs response'u zenginleştirildi: `parseJobMeta()` worker'ın `lastError` prefix'inden (`[kalıcı|rate-limit|geçici] msg`) `errorCategory` (permanent|rate-limit|transient) + `errorMessage` parse eder; `nextRetryAt` (scheduledAt > now ∧ attempts < max ∧ !permanent ∧ status != completed iken ISO döner) ve `retryAvailable: boolean` türetilir.
+- **Frontend** `pages/marketplace/index.tsx` Jobs tabı 9 sütuna genişledi:
+  - Hata Tipi badge'leri: Hız Limiti (amber+Hourglass), Kalıcı Hata (destructive+AlertOctagon), Geçici (secondary+Clock).
+  - Deneme `attemptCount/maxAttempts` (limit dolduysa kırmızı font-bold).
+  - Sonraki Tekrar — canlı countdown ("3d 42s sonra"), 'Tekrar yok' / 'Limit doldu' / 'Sırada' durumları.
+  - **Tek paylaşımlı 1s tick** (per-row interval yerine `JobsTab` parent'ında; `needsTick` false ise hiç çalışmaz).
+  - Hata Mesajı: truncate + tooltip.
+- **Test (1 PASS)**: Sprint C — GET /marketplace/jobs response shape (errorCategory enum, retryAvailable boolean, retryAvailable=true ⇒ nextRetryAt set).
+- **Tech-debt notu**: Mimari olarak kategori `sync_jobs` tablosuna structured kolon olarak yazılmalı (text-prefix heuristic format-fragile). Sprint H+ için bekletildi.
+
 ### Master Backlog (mimari odaklı sıra)
-1. ✅ Sprint A — Regression tests (BU ROUND)
-2. Sprint B — Notification Hub Entegrasyonu (bütçe alarmları + e-fatura olayları → bildirim merkezi)
-3. Sprint C — Marketplace Worker UI (rate-limit/permanent-error görselleştirme + retry timer)
-4. Sprint D (eski 71) — **Buyer Portal Foundation**: `companies.accountType` + `buyer_*` tablolar + `artifacts/buyer-portal` artifact iskeleti + auth
+1. ✅ Sprint A — Regression tests
+2. ✅ Sprint B — Notification Hub Entegrasyonu (atomic dispatch + bell entegrasyonu)
+3. ✅ Sprint C — Marketplace Worker UI (kategori badge + canlı retry countdown)
+4. Sprint D (eski 71) — **Buyer Portal Foundation**: `companies.accountType` + `buyer_*` tablolar + `artifacts/buyer-portal` artifact iskeleti + auth ← SIRADAKİ
 5. Sprint E (eski 72) — Buyer Discovery + RFQ (firma/ürün listesi + multi-seller RFQ + satıcı RFQ Inbox)
 6. Sprint F (eski 73) — Quote Response & Comparison
 7. Sprint G — POS → E-Fatura "Satıştan Otomatik" UI
+8. Sprint H — Marketplace tech-debt: `sync_jobs.errorCategory` structured kolon + log join
 
 ### Sprint 86 — Command Palette (⌘K)
 - `components/nav-config.ts` yeni paylaşılan modül: `NavItem`, `NavGroup`, `NAV_GROUPS` tek kaynaktan; layout sidebar ve command palette aynı veriyi tüketir (circular import riski yok).

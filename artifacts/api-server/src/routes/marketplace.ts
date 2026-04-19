@@ -221,11 +221,47 @@ router.post("/preview-stock", async (req, res) => {
 });
 
 // ─── Sync Jobs (kuyruğa al) ──────────────────────────────────────────────────
+// Sprint C: response'a errorCategory + nextRetryAt + retryAvailable türetilmiş
+// alanları eklenir. lastError formatı worker.ts tarafında `[kalıcı|rate-limit|geçici] msg`
+// olarak yazıldığından prefix'ten kategori parse edilir; scheduledAt gelecekteyse
+// retry countdown için frontend tarafından kullanılır.
+function parseJobMeta(row: any): {
+  errorCategory: "rate-limit" | "permanent" | "transient" | null;
+  errorMessage: string | null;
+  nextRetryAt: string | null;
+  retryAvailable: boolean;
+} {
+  let category: "rate-limit" | "permanent" | "transient" | null = null;
+  let message: string | null = null;
+  if (typeof row.lastError === "string" && row.lastError.length > 0) {
+    const m = row.lastError.match(/^\[(kalıcı|rate-limit|geçici)\]\s*(.*)$/);
+    if (m) {
+      category = m[1] === "kalıcı" ? "permanent" : m[1] === "rate-limit" ? "rate-limit" : "transient";
+      message = m[2] || null;
+    } else {
+      message = row.lastError;
+    }
+  }
+  const now = Date.now();
+  const sched = row.scheduledAt ? new Date(row.scheduledAt).getTime() : null;
+  // Retry pencerelendi: status 'failed' ya da 'queued', deneme limiti aşılmadı, scheduledAt gelecekte
+  const attempts = Number(row.attemptCount || 0);
+  const max = Number(row.maxAttempts || 3);
+  const inFuture = sched != null && sched > now;
+  const retryAvailable = inFuture && attempts < max && category !== "permanent" && row.status !== "completed";
+  return {
+    errorCategory: category,
+    errorMessage: message,
+    nextRetryAt: retryAvailable ? new Date(sched!).toISOString() : null,
+    retryAvailable,
+  };
+}
+
 router.get("/jobs", async (req, res) => {
   const rows = await db.select().from(syncJobsTable)
     .where(eq(syncJobsTable.companyId, req.companyId!))
     .orderBy(desc(syncJobsTable.createdAt)).limit(100);
-  res.json(rows);
+  res.json(rows.map((r) => ({ ...r, ...parseJobMeta(r) })));
 });
 
 router.post("/jobs", requireWriter, async (req, res) => {

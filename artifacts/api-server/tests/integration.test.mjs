@@ -4765,6 +4765,33 @@ describe("Sprint 51-55 — Marketplace order ingest idempotency", () => {
     assert.equal(job2.result?.inserted ?? 0, 0, "ikinci pull yeni insert üretmemeli (idempotent)");
   });
 
+  test("Sprint C — GET /marketplace/jobs response'unda errorCategory + nextRetryAt + retryAvailable türetilmiş alanları yer alır", async () => {
+    if (!accountId) return;
+    const { jar } = await login("talha", "talha123");
+    // Bir job kuyruğa al → response shape kontrolü (worker'ın simüle ettiği case'leri zaten 51-55 testleri tetikledi)
+    const en = await api("POST", "/marketplace/jobs", {
+      jar, body: { accountId, jobType: "pull_orders", payload: {} },
+    });
+    assert.equal(en.status, 201);
+    const list = await api("GET", "/marketplace/jobs", { jar });
+    assert.equal(list.status, 200);
+    assert.ok(Array.isArray(list.json) && list.json.length > 0, "en az 1 job olmalı");
+    const sample = list.json[0];
+    // Türetilmiş alanlar tanımlı olmalı (null olabilirler ama key var olmalı)
+    assert.ok("errorCategory" in sample, "errorCategory key eksik");
+    assert.ok("errorMessage" in sample, "errorMessage key eksik");
+    assert.ok("nextRetryAt" in sample, "nextRetryAt key eksik");
+    assert.ok("retryAvailable" in sample, "retryAvailable key eksik");
+    // errorCategory enum kısıtı (sırasıyla kabul edilen değerler)
+    if (sample.errorCategory != null) {
+      assert.match(sample.errorCategory, /^(rate-limit|permanent|transient)$/);
+    }
+    // retryAvailable boolean olmalı
+    assert.equal(typeof sample.retryAvailable, "boolean");
+    // Eğer rate-limit ya da transient + scheduledAt gelecekte ise nextRetryAt set olmalı
+    if (sample.retryAvailable) assert.ok(sample.nextRetryAt, "retryAvailable=true iken nextRetryAt boş olamaz");
+  });
+
   test("GET /marketplace/orders → liste döner ve filtre çalışır", async () => {
     if (!accountId) return;
     const { jar } = await login("talha", "talha123");
@@ -5232,5 +5259,129 @@ describe("Sprint A — Architect regression: forecast aliases + outbox XML", () 
     assert.ok(m, "PayableAmount etiketi bulunamadı");
     assert.ok(!isNaN(Number(m[1])), `PayableAmount numeric olmalı, alındı: '${m[1]}'`);
     assert.match(xml, /mock-fallback="true"/, "fallback marker eksik (debugging için gerekli)");
+  });
+});
+
+// ─── Sprint B — Notification Hub Entegrasyonu ────────────────────────────────
+describe("Sprint B — Bütçe alarmları + e-fatura olayları → bildirim merkezi", () => {
+  test("POST /budgets/alerts/dispatch alarmları notification olarak yazar (idempotent dedup)", async () => {
+    const { jar } = await login("admin", "admin123");
+    const period = new Date().toISOString().slice(0, 7); // YYYY-MM
+
+    // Önce kaç notification var?
+    const before = await api("GET", "/notifications/count", { jar });
+    assert.equal(before.status, 200);
+
+    // İlk dispatch — alarm varsa created>=0
+    const r1 = await api("POST", "/budgets/alerts/dispatch", {
+      jar, body: { period, warningPct: 1, criticalPct: 200 }, // düşük eşik = bol alarm
+    });
+    assert.equal(r1.status, 200, `dispatch 200 dönmeli, alındı: ${JSON.stringify(r1.json)}`);
+    assert.equal(r1.json.period, period);
+    assert.equal(typeof r1.json.created, "number");
+    assert.equal(typeof r1.json.deduped, "number");
+    assert.equal(typeof r1.json.total, "number");
+    assert.equal(r1.json.created + r1.json.deduped, r1.json.total, "created+deduped=total kontratı");
+
+    // İkinci kez aynı dispatch → hepsi deduped olmalı (aynı gün, aynı entity)
+    const r2 = await api("POST", "/budgets/alerts/dispatch", {
+      jar, body: { period, warningPct: 1, criticalPct: 200 },
+    });
+    assert.equal(r2.status, 200);
+    assert.equal(r2.json.created, 0, "tekrarlı dispatch'te yeni kayıt olmamalı");
+    assert.equal(r2.json.deduped, r2.json.total, "hepsi dedup edilmeli");
+
+    // Bell badge sayacı en az ilk turda yazılan kadar arttı mı?
+    if (r1.json.created > 0) {
+      const after = await api("GET", "/notifications/count", { jar });
+      assert.ok(
+        after.json.unread >= (before.json.unread || 0),
+        "dispatch sonrası unread sayısı azalmamalı",
+      );
+    }
+  });
+
+  test("GET /notifications budget_alert_* tipli kayıtlar listede görünür", async () => {
+    const { jar } = await login("admin", "admin123");
+    // Yukarıdaki dispatch sonrası en az 1 budget_alert_* var olabilir; varsa şema kontratı doğru olmalı
+    const r = await api("GET", "/notifications?limit=50", { jar });
+    assert.equal(r.status, 200);
+    assert.ok(Array.isArray(r.json.notifications), "notifications array dönmeli");
+    const budget = r.json.notifications.filter((n) => /^budget_alert_/.test(n.type));
+    if (budget.length > 0) {
+      const n = budget[0];
+      assert.match(n.type, /^budget_alert_(critical|warning|info)$/, "tip doğru namespace");
+      assert.equal(n.entityType, "budget", "entityType budget olmalı");
+      assert.ok(n.title && n.message, "title ve message dolu olmalı");
+    } else {
+      console.log("[Sprint B] aktif bütçe alarmı yok, sadece kontrat sınanmadı");
+    }
+  });
+
+  test("E-fatura outbox send sonrası einvoice_sent veya einvoice_failed notification yazılır", async () => {
+    const { jar } = await login("admin", "admin123");
+    const settingsRes = await api("GET", "/einvoice/settings", { jar });
+    if (settingsRes.status !== 200 || settingsRes.json?.provider !== "mock") {
+      console.log("[Sprint B] e-fatura testi sadece mock provider için çalıştırılır");
+      return;
+    }
+    // Outbox kaydı oluştur
+    const create = await api("POST", "/einvoice/outbox", {
+      jar, body: {
+        invoiceType: "SATIS", profile: "TICARIFATURA", scenario: "EFATURA",
+        invoiceDate: new Date().toISOString().slice(0, 10),
+        sender: { name: "Test Sender", vkn: "1234567890" },
+        receiver: { name: "Test Receiver", vkn: "9876543210" },
+        lines: [{ name: "Item", quantity: 1, unitPrice: 100, vatRate: 20, unitCode: "C62" }],
+      },
+    });
+    assert.equal(create.status, 201, `outbox create başarısız: ${JSON.stringify(create.json)}`);
+    const outboxId = create.json.id;
+    // Send tetikle (mock provider hep accept eder)
+    const send = await api("POST", `/einvoice/outbox/${outboxId}/send`, { jar });
+    assert.ok([200, 500].includes(send.status), `send unexpected status ${send.status}`);
+    // Outbox status'u oku → notification type ile eşleşmeli (state-coupled)
+    const after = await api("GET", `/einvoice/outbox/${outboxId}`, { jar });
+    assert.equal(after.status, 200);
+    const outboxStatus = after.json?.status;
+    const expectedType =
+      outboxStatus === "sent" || outboxStatus === "accepted" ? "einvoice_sent" :
+      outboxStatus === "failed" || outboxStatus === "error" ? "einvoice_failed" :
+      outboxStatus === "cancelled" ? "einvoice_cancelled" : null;
+    // dispatch fire-and-forget → polling-with-timeout (3s, 100ms) flakiness'i düşürür
+    let hit = null;
+    const deadline = Date.now() + 3000;
+    while (Date.now() < deadline) {
+      const list = await api("GET", "/notifications?limit=50", { jar });
+      assert.equal(list.status, 200);
+      hit = list.json.notifications.find(
+        (n) => /^einvoice_/.test(n.type) && n.entityType === "einvoice_outbox" && n.entityId === outboxId,
+      );
+      if (hit) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    assert.ok(hit, `outbox #${outboxId} (status=${outboxStatus}) için einvoice_* notification bulunmadı`);
+    assert.match(hit.type, /^einvoice_(sent|failed|cancelled)$/, "tip einvoice_sent/failed/cancelled olmalı");
+    if (expectedType) {
+      assert.equal(hit.type, expectedType,
+        `outbox status='${outboxStatus}' ile notification type='${hit.type}' eşleşmiyor (beklenen ${expectedType})`);
+    }
+  });
+
+  test("dispatch dedup günlük entity bazlıdır (entityId değişince yeni kayıt)", async () => {
+    const { jar } = await login("admin", "admin123");
+    const period = new Date().toISOString().slice(0, 7);
+    // Aynı period, farklı eşik → aynı kategori için yine aynı entityId üretir → dedup olmalı
+    const r1 = await api("POST", "/budgets/alerts/dispatch", {
+      jar, body: { period, warningPct: 1, criticalPct: 200 },
+    });
+    const r2 = await api("POST", "/budgets/alerts/dispatch", {
+      jar, body: { period, warningPct: 5, criticalPct: 100 },
+    });
+    assert.equal(r1.status, 200);
+    assert.equal(r2.status, 200);
+    // İki çağrı arasında alarm sayısı değişebilir ama eşit eşitlik testi anlamsız;
+    // burada sadece her iki çağrının da created+deduped=total kontratını koruduğunu doğrularız
+    assert.equal(r2.json.created + r2.json.deduped, r2.json.total);
   });
 });

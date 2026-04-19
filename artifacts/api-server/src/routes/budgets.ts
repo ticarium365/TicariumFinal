@@ -22,6 +22,7 @@ import {
   forecastRevenue, forecastExpenseByCategory, forecastCashflow,
 } from "../services/finance/forecast.js";
 import { computeBudgetAlerts } from "../services/finance/budget-alerts.js";
+import { dispatchBudgetAlerts } from "../services/notifications/dispatch.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -223,6 +224,20 @@ router.get("/alerts", async (req, res) => {
     },
     alerts,
   });
+});
+
+// ─── Sprint B — Bütçe alarmlarını in-app bildirime dağıt ───
+router.post("/alerts/dispatch", requireWriter, async (req, res) => {
+  const companyId = req.companyId!;
+  const period = String(req.body?.period || req.query?.period || currentPeriod());
+  if (!/^\d{4}-\d{2}$/.test(period)) return res.status(400).json({ error: "period YYYY-MM" });
+  const warningPct = req.body?.warningPct ? Number(req.body.warningPct) : 20;
+  const criticalPct = req.body?.criticalPct ? Number(req.body.criticalPct) : 50;
+  if (!Number.isFinite(warningPct) || warningPct <= 0) return res.status(400).json({ error: "warningPct > 0 olmalı" });
+  if (!Number.isFinite(criticalPct) || criticalPct < warningPct) return res.status(400).json({ error: "criticalPct >= warningPct olmalı" });
+  const alerts = await computeBudgetAlerts(companyId, { period, warningPct, criticalPct });
+  const result = await dispatchBudgetAlerts(companyId, alerts);
+  res.json({ period, ...result });
 });
 
 router.post("/forecast/revenue/save", requireWriter, async (req, res) => {
