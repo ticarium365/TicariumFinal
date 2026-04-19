@@ -1843,6 +1843,66 @@ describe("Sprint 10 — Finans: Kasa Hareketleri", () => {
 });
 
 describe("Sprint 10 — Finans: Özet & Rapor", () => {
+  // Architect 3. round: feature-based guard + conditional lost-update-safe restore.
+  // /finance/* requires `finance.expenses`. Plan slug listesi yerine GET /subscriptions/features
+  // ile gerçek feature bilgisini sorgula — yeni eklenen veya `*` (trial/superuser) içeren plan
+  // varyantlarında da doğru NO-OP. Restore: re-check current → SADECE hala bizim set ettiğimiz
+  // plan'daysa ve yetki hala fazlaysa pre-state'e dön (paralel test/process lost-update koruması).
+  const FINANCE_FEATURE = "finance.expenses";
+  let nihatPrePlan = null;       // { slug, cycle } captured at before
+  let nihatUpgraded = false;
+  const UPGRADE_TARGET = "pkg_growth";
+  before(async () => {
+    const { jar: nihat } = await login("nihat_admin", "nihat123", "nihatturizm");
+    // Feature-based guard — Architect 4. round residual: fail-CLOSED.
+    // Feature probe 200 değilse "yetkisiz" varsayma (gereksiz mutation tetikler);
+    // emin olamadığımızda mutation'ı atla, izolasyon testi feature gate ile gerçek durumu raporlar.
+    const feats = await api("GET", "/subscriptions/features", { jar: nihat });
+    if (feats.status !== 200) {
+      nihatPrePlan = null;
+      nihatUpgraded = false;
+      return;
+    }
+    const hasFinance =
+      feats.json?.isAllUnlocked === true ||
+      (Array.isArray(feats.json?.features) && feats.json.features.includes(FINANCE_FEATURE));
+    // Architect 3. round residual: risky fallback restore default kaldırıldı.
+    // Pre-state okunamazsa MUTASYON YAPMA (fail-safe: yanlış restore'dan iyidir).
+    const cur = await api("GET", "/subscriptions/current", { jar: nihat });
+    if (cur.status !== 200 || !cur.json?.plan?.slug) {
+      // Pre-state okunamadı → upgrade'i atla; testler izolasyon assertion'ında
+      // doğal olarak feature gate (403) ile fail eder, sessiz pass'e izin verme.
+      nihatPrePlan = null;
+      nihatUpgraded = false;
+      return;
+    }
+    nihatPrePlan = { slug: cur.json.plan.slug, cycle: cur.json.subscription?.billingCycle || "monthly" };
+    if (hasFinance) return; // zaten finance.expenses var → mutation yok
+    const { jar: sa } = await login("superadmin", "superadmin123");
+    const r = await api("POST", "/subscriptions/admin/billing/set-plan", {
+      jar: sa,
+      body: { companyId: 2, planSlug: UPGRADE_TARGET, billingCycle: "monthly", note: "Sprint 10 isolation test setup" },
+    });
+    assert.equal(r.status, 201, `nihatturizm ${UPGRADE_TARGET} set 201 dönmeli, response: ${JSON.stringify(r.json)}`);
+    nihatUpgraded = true;
+  });
+  after(async () => {
+    if (!nihatUpgraded || !nihatPrePlan) return;
+    // Lost-update guard: restore yalnızca hala bizim setlediğimiz plan'daysa
+    const { jar: nihat } = await login("nihat_admin", "nihat123", "nihatturizm");
+    const cur = await api("GET", "/subscriptions/current", { jar: nihat });
+    const stillOurs =
+      cur.status === 200 && cur.json?.plan?.slug === UPGRADE_TARGET &&
+      (cur.json?.subscription?.billingCycle || "monthly") === "monthly";
+    if (!stillOurs) return; // başka bir process/describe ezmiş — dokunma (lost-update önlenmiş)
+    const { jar: sa } = await login("superadmin", "superadmin123");
+    const r = await api("POST", "/subscriptions/admin/billing/set-plan", {
+      jar: sa,
+      body: { companyId: 2, planSlug: nihatPrePlan.slug, billingCycle: nihatPrePlan.cycle, note: "Sprint 10 isolation test teardown" },
+    });
+    assert.equal(r.status, 201, `nihatturizm restore→${nihatPrePlan.slug}/${nihatPrePlan.cycle} 201 dönmeli, response: ${JSON.stringify(r.json)}`);
+  });
+
   test("Finans özeti döner", async () => {
     const { jar } = await login("admin", "admin123");
     const start = "2026-04-01";
@@ -1890,18 +1950,92 @@ describe("Sprint 10 — Finans: Özet & Rapor", () => {
     assert.ok(text.includes("Tarih"), "Header satırı olmalı");
   });
 
-  test("Şirket izolasyonu — nihat sadece kendi özetini görür", async () => {
+  test("Şirket izolasyonu — nihat sadece kendi özetini görür (deterministic delta)", async () => {
+    // Architect 3. round: causal delta invariant — eşitlik/shape değil, NEDENSEL fark.
+    // nihat'a benzersiz bir gider INSERT et → nihat summary'de delta gözlemlenmeli,
+    // cenan summary'de DEĞİŞİM olmamalı. Bu cross-tenant leak için deterministik kanıt.
     const { jar: nihat } = await login("nihat_admin", "nihat123", "nihatturizm");
-    const { status, json: nihatSummary } = await api("GET", "/finance/summary", { jar: nihat });
-    assert.equal(status, 200);
-
     const { jar: cenan } = await login("admin", "admin123");
-    const { json: cenanSummary } = await api("GET", "/finance/summary", { jar: cenan });
+    // Bu ay aralığı (default summary penceresi) — insert tarihi de bu pencerede olmalı
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    const startDate = `${yyyy}-${mm}-01`;
+    const endDate = `${yyyy}-${mm}-${dd}`;
+    const qs = `?startDate=${startDate}&endDate=${endDate}`;
 
-    // İzolasyon: farklı veri olabilir (her ikisi de 200, ama birinin giderini
-    // diğerinin kasasında görmemek yeterli — bu basit bir smoke check)
-    assert.ok(typeof nihatSummary.revenue === "number");
-    assert.ok(typeof cenanSummary.revenue === "number");
+    // Baseline (insert öncesi)
+    const { status: ns0, json: nihatBefore } = await api("GET", `/finance/summary${qs}`, { jar: nihat });
+    assert.equal(ns0, 200, "nihat /finance/summary 200 (before insert) — feature gate setup doğrulaması");
+    const { json: cenanBefore } = await api("GET", `/finance/summary${qs}`, { jar: cenan });
+
+    // Shape kontratı — her iki tenant'ta da
+    for (const [label, s] of [["nihat", nihatBefore], ["cenan", cenanBefore]]) {
+      for (const k of ["revenue", "totalExpenses", "netProfit", "totalCashBalance"]) {
+        assert.ok(typeof s[k] === "number" && Number.isFinite(s[k]), `${label}.${k} finite number olmalı`);
+      }
+      assert.ok(Array.isArray(s.categoryBreakdown), `${label}: categoryBreakdown array olmalı`);
+    }
+
+    // Unique marker: nonce tabanlı amount → deterministik beklenen delta
+    const nonce = Math.floor(Math.random() * 1e6);
+    const markerAmount = 42000.5 + nonce / 1000;
+    const markerDescription = `[ISOLATION_TEST_${nonce}_${Date.now()}]`;
+    const insertRes = await api("POST", "/finance/expenses", {
+      jar: nihat,
+      body: {
+        amount: markerAmount,
+        description: markerDescription,
+        expenseDate: `${yyyy}-${mm}-${dd}`,
+        paymentMethod: "bank", // cash hareketi yaratmasın → cleanup basit
+      },
+    });
+    assert.equal(insertRes.status, 201, `nihat marker expense 201, response: ${JSON.stringify(insertRes.json)}`);
+    const expenseId = insertRes.json?.expense?.id;
+    assert.ok(typeof expenseId === "number", "insert response.expense.id sayı olmalı");
+
+    try {
+      // After insert
+      const { json: nihatAfter } = await api("GET", `/finance/summary${qs}`, { jar: nihat });
+      const { json: cenanAfter } = await api("GET", `/finance/summary${qs}`, { jar: cenan });
+
+      // Architect 3. round residual: tek dimension yetmez — tüm summary dimension'larında delta invariant.
+      // Marker bir gider olduğu için beklenen delta vektörü:
+      //   nihat: totalExpenses=+marker, netProfit=-marker, revenue=0, totalCashBalance=0 (paymentMethod=bank)
+      //   cenan: hepsi 0 (cross-tenant leak yok)
+      const EPS = 0.01;
+      const checkDelta = (label, before, after, expected) => {
+        for (const [k, exp] of Object.entries(expected)) {
+          const delta = after[k] - before[k];
+          assert.ok(Math.abs(delta - exp) < EPS,
+            `${label}.${k} delta beklenen=${exp}, alındı=${delta} (before=${before[k]}, after=${after[k]})`);
+        }
+      };
+      checkDelta("nihat", nihatBefore, nihatAfter, {
+        totalExpenses: markerAmount,
+        netProfit: -markerAmount,
+        revenue: 0,
+        totalCashBalance: 0, // paymentMethod=bank → kasa dokunulmadı
+      });
+      checkDelta("cenan", cenanBefore, cenanAfter, {
+        totalExpenses: 0,
+        netProfit: 0,
+        revenue: 0,
+        totalCashBalance: 0,
+      });
+
+      // 3) categoryBreakdown id intersection = 0 (her tenant kendi expense_categories tablosundan)
+      const nihatCats = new Set(nihatAfter.categoryBreakdown.map((c) => c.categoryId).filter((x) => x != null));
+      const cenanCats = new Set(cenanAfter.categoryBreakdown.map((c) => c.categoryId).filter((x) => x != null));
+      const overlap = [...nihatCats].filter((id) => cenanCats.has(id));
+      assert.equal(overlap.length, 0,
+        `İzolasyon ihlali: nihat ve cenan aynı expense category id'lerini paylaşıyor: ${JSON.stringify(overlap)}`);
+    } finally {
+      // Cleanup — marker expense'i sil (test stateini koru). Nihat admin bu silebilir.
+      const del = await api("DELETE", `/finance/expenses/${expenseId}`, { jar: nihat });
+      assert.equal(del.status, 200, `cleanup: marker expense delete 200, response: ${JSON.stringify(del.json)}`);
+    }
   });
 });
 
