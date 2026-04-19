@@ -61,6 +61,7 @@ import { GlobalSearch } from "./global-search";
 import { QuickAction } from "./quick-action";
 import { CommandPalette } from "./command-palette";
 import { NAV_GROUPS, type NavItem } from "./nav-config";
+import { BrandLogo } from "./brand-logo";
 import {
   Sheet,
   SheetContent,
