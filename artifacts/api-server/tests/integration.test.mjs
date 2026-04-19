@@ -6,7 +6,7 @@
  * Testler birbirinden bağımsızdır — her test kendi session'ını yönetir.
  */
 
-import { test, describe, before } from "node:test";
+import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 
 const BASE = "http://localhost:8080/api";
@@ -109,7 +109,7 @@ describe("1. Auth", () => {
   test("Başarılı login — kullanıcı ve companyId döner", async () => {
     const { status, json } = await login("admin", "admin123");
     assert.equal(status, 200, JSON.stringify(json));
-    assert.equal(json.user.username, "cenan");
+    assert.equal(json.user.username, "admin");
     assert.equal(json.user.companyId, 1);
     assert.ok(json.user.role, "role dolu olmalı");
   });
@@ -133,7 +133,7 @@ describe("1. Auth", () => {
     const { jar } = await login("admin", "admin123");
     const { status, json } = await api("GET", "/auth/me", { jar });
     assert.equal(status, 200, JSON.stringify(json));
-    assert.equal(json.username, "cenan");
+    assert.equal(json.username, "admin");
   });
 
   test("Logout sonrası /auth/me — 401 döner", async () => {
@@ -2610,10 +2610,10 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
     assert.ok(Array.isArray(json.plans), "plans dizisi bekleniyor");
     assert.ok(json.plans.length >= 4, "En az 4 plan olmalı");
     const slugs = json.plans.map(p => p.slug);
-    assert.ok(slugs.includes("free"), "free planı olmalı");
-    assert.ok(slugs.includes("starter"), "starter planı olmalı");
-    assert.ok(slugs.includes("pro"), "pro planı olmalı");
-    assert.ok(slugs.includes("enterprise"), "enterprise planı olmalı");
+    assert.ok(slugs.includes("pkg_inventory"), "pkg_inventory planı olmalı");
+    assert.ok(slugs.includes("pkg_trade"), "pkg_trade planı olmalı");
+    assert.ok(slugs.includes("pkg_growth"), "pkg_growth planı olmalı");
+    assert.ok(slugs.includes("pkg_enterprise_v2"), "pkg_enterprise_v2 planı olmalı");
   });
 
   test("Mevcut abonelik bilgisi alınabilir", async () => {
@@ -2637,8 +2637,8 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
     const { jar } = await login("admin", "admin123");
     // Pro planın id'sini bul
     const { json: plansJson } = await api("GET", "/subscriptions/plans", { jar });
-    const proPlan = plansJson.plans.find(p => p.slug === "pro");
-    assert.ok(proPlan, "Pro plan bulunmalı");
+    const proPlan = plansJson.plans.find(p => p.slug === "pkg_growth");
+    assert.ok(proPlan, "pkg_growth plan bulunmalı");
 
     const { status, json } = await api("POST", "/subscriptions/subscribe", {
       jar, body: { planId: proPlan.id, billingCycle: "monthly" },
@@ -2655,13 +2655,13 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
     const { status, json } = await api("GET", "/subscriptions/current", { jar });
     assert.equal(status, 200);
     assert.ok(json.subscription?.status === "active", "Abonelik aktif olmalı");
-    assert.equal(json.plan.slug, "pro", "Pro plan aktif olmalı");
+    assert.equal(json.plan.slug, "pkg_growth", "pkg_growth plan aktif olmalı");
   });
 
   test("Aynı plana tekrar abone olunabilir (yenileme)", async () => {
     const { jar } = await login("admin", "admin123");
     const { json: plansJson } = await api("GET", "/subscriptions/plans", { jar });
-    const starterPlan = plansJson.plans.find(p => p.slug === "starter");
+    const starterPlan = plansJson.plans.find(p => p.slug === "pkg_trade");
     const { status } = await api("POST", "/subscriptions/subscribe", {
       jar, body: { planId: starterPlan.id, billingCycle: "yearly" },
     });
@@ -2680,7 +2680,7 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
   test("Geçersiz billingCycle reddedilir", async () => {
     const { jar } = await login("admin", "admin123");
     const { json: plansJson } = await api("GET", "/subscriptions/plans", { jar });
-    const proPlan = plansJson.plans.find(p => p.slug === "pro");
+    const proPlan = plansJson.plans.find(p => p.slug === "pkg_growth");
     const { status } = await api("POST", "/subscriptions/subscribe", {
       jar, body: { planId: proPlan.id, billingCycle: "weekly" },
     });
@@ -2763,6 +2763,25 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
       jar, body: { planId: 1, billingCycle: "monthly" },
     });
     assert.equal(status, 403);
+  });
+
+  // Cleanup (STRICT): PROSAN'i tekrar pkg_growth/active'e döndür — aksi halde
+  // sonraki suite'ler (Sprint 12/22/23/73) FEATURE_LOCKED 403 alir.
+  // Silent catch yok: cleanup hata verirse test suite'ini fail et.
+  after(async () => {
+    const { jar } = await login("admin", "admin123");
+    const { status: pStatus, json: plansJson } = await api("GET", "/subscriptions/plans", { jar });
+    assert.equal(pStatus, 200, `cleanup: plans listesi 200 olmali — ${JSON.stringify(plansJson)}`);
+    const growthPlan = plansJson.plans?.find(p => p.slug === "pkg_growth");
+    assert.ok(growthPlan, "cleanup: pkg_growth plani bulunamadi (seed bozuk olabilir)");
+    const { status: sStatus, json: sJson } = await api("POST", "/subscriptions/subscribe", {
+      jar, body: { planId: growthPlan.id, billingCycle: "yearly" },
+    });
+    assert.equal(sStatus, 201, `cleanup: pkg_growth aboneligine donus 201 olmali — ${JSON.stringify(sJson)}`);
+    const { status: cStatus, json: cJson } = await api("GET", "/subscriptions/current", { jar });
+    assert.equal(cStatus, 200, "cleanup: current 200 olmali");
+    assert.equal(cJson.subscription?.status, "active", `cleanup: aktif olmali — ${JSON.stringify(cJson.subscription)}`);
+    assert.equal(cJson.plan?.slug, "pkg_growth", `cleanup: pkg_growth aktif olmali — ${JSON.stringify(cJson.plan)}`);
   });
 });
 
@@ -4273,7 +4292,7 @@ describe("Süper Admin & Audit Log Kapsamı", () => {
     const r = await fetch("http://localhost:8080/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ username: "superadmin", password: "SuperAdmin2026!" }),
+      body: JSON.stringify({ username: "superadmin", password: "superadmin123" }),
     });
     assert.equal(r.status, 200);
     const data = await r.json();
@@ -4285,7 +4304,7 @@ describe("Süper Admin & Audit Log Kapsamı", () => {
     const login = await fetch("http://localhost:8080/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ username: "superadmin", password: "SuperAdmin2026!" }),
+      body: JSON.stringify({ username: "superadmin", password: "superadmin123" }),
     });
     const cookie = login.headers.get("set-cookie")?.split(";")[0] || "";
     const r = await fetch("http://localhost:8080/api/audit-logs?limit=5", {
@@ -4300,7 +4319,7 @@ describe("Süper Admin & Audit Log Kapsamı", () => {
     const login = await fetch("http://localhost:8080/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ username: "superadmin", password: "SuperAdmin2026!" }),
+      body: JSON.stringify({ username: "superadmin", password: "superadmin123" }),
     });
     const cookie = login.headers.get("set-cookie")?.split(";")[0] || "";
     const r = await fetch("http://localhost:8080/api/audit-logs/actions", { headers: { cookie } });
@@ -5896,7 +5915,7 @@ describe("Sprint E — Buyer Portal: discovery + RFQ + seller inbox", () => {
   });
 
   test("Seller inbox: NIHAT /seller/rfqs/inbox sees PROSAN's RFQ + view marks pending→viewed", async () => {
-    const { jar } = await login("nihat_admin", "admin123", "nihatturizm");
+    const { jar } = await login("nihat_admin", "nihat123", "nihatturizm");
     const inbox = await api("GET", "/seller/rfqs/inbox", { jar });
     assert.equal(inbox.status, 200, `inbox 200 olmalı; got ${inbox.status}`);
     assert.ok(Array.isArray(inbox.json));
@@ -5933,7 +5952,7 @@ describe("Sprint E — Buyer Portal: discovery + RFQ + seller inbox", () => {
     assert.equal(cancelled.json.status, "cancelled");
 
     // Cross-tenant: NIHAT, başka tenant'ın target'ına view atamaz (404)
-    const { jar: jarN } = await login("nihat_admin", "admin123", "nihatturizm");
+    const { jar: jarN } = await login("nihat_admin", "nihat123", "nihatturizm");
     const cross = await api("POST", `/seller/rfqs/999999/view`, { jar: jarN });
     assert.equal(cross.status, 404);
   });
@@ -5997,7 +6016,7 @@ describe("Sprint F — Quote Response & Comparison", () => {
     const targetId = created.json.targets[0].id;
 
     // 2) Seller (NIHAT admin) target'ı görür ve teklif verir
-    const { jar: sellerJar } = await login("nihat_admin", "admin123", "nihatturizm");
+    const { jar: sellerJar } = await login("nihat_admin", "nihat123", "nihatturizm");
     const view = await api("POST", `/seller/rfqs/${targetId}/view`, { jar: sellerJar, body: {} });
     assert.equal(view.status, 200);
 
@@ -6036,7 +6055,7 @@ describe("Sprint F — Quote Response & Comparison", () => {
     });
     const targetId = created.json.targets[0].id;
 
-    const { jar: sellerJar } = await login("nihat_admin", "admin123", "nihatturizm");
+    const { jar: sellerJar } = await login("nihat_admin", "nihat123", "nihatturizm");
     // Out-of-range itemIndex
     const bad = await api("POST", `/seller/rfqs/${targetId}/quote`, {
       jar: sellerJar,
@@ -6075,7 +6094,7 @@ describe("Sprint F — Quote Response & Comparison", () => {
     const rfqId = created.json.rfq.id;
     const targetId = created.json.targets[0].id;
 
-    const { jar: sellerJar } = await login("nihat_admin", "admin123", "nihatturizm");
+    const { jar: sellerJar } = await login("nihat_admin", "nihat123", "nihatturizm");
     const q = await api("POST", `/seller/rfqs/${targetId}/quote`, {
       jar: sellerJar,
       body: { quoteLines: [{ itemIndex: 0, unitPrice: 100 }], quoteCurrency: "TRY" },
@@ -6127,7 +6146,7 @@ describe("Sprint F — State transition guards", () => {
     });
     const targetId = created.json.targets[0].id;
 
-    const { jar: sellerJar } = await login("nihat_admin", "admin123", "nihatturizm");
+    const { jar: sellerJar } = await login("nihat_admin", "nihat123", "nihatturizm");
     const q1 = await api("POST", `/seller/rfqs/${targetId}/quote`, {
       jar: sellerJar,
       body: { quoteLines: [{ itemIndex: 0, unitPrice: 10 }], quoteCurrency: "TRY" },

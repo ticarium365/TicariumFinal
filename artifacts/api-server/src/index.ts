@@ -47,12 +47,14 @@ async function seedDefaultUsers() {
     .from(usersTable);
 
   const defaultUsers = [
-    { username: "admin",     password: "admin123",  fullName: "Yönetici",       role: "admin"  as const },
-    { username: "talha",     password: "talha123",  fullName: "Talha",          role: "admin"  as const },
-    { username: "nihat",     password: "nihat123",  fullName: "Nihat",          role: "admin"  as const },
-    { username: "cenan",     password: "cenan123",  fullName: "Cenan",          role: "admin"  as const },
-    { username: "personel",  password: "staff123",  fullName: "Personel",       role: "staff"  as const },
-    { username: "goruntule", password: "staff123",  fullName: "Görüntüleyici",  role: "viewer" as const },
+    { username: "admin",       password: "admin123",       fullName: "Yönetici",       role: "admin"      as const },
+    { username: "talha",       password: "talha123",       fullName: "Talha",          role: "admin"      as const },
+    { username: "nihat",       password: "nihat123",       fullName: "Nihat",          role: "admin"      as const },
+    { username: "nihat_admin", password: "nihat123",       fullName: "NİHAT Admin",    role: "admin"      as const },
+    { username: "cenan",       password: "cenan123",       fullName: "Cenan",          role: "admin"      as const },
+    { username: "superadmin",  password: "superadmin123",  fullName: "Süper Admin",    role: "super_admin" as const },
+    { username: "personel",    password: "staff123",       fullName: "Personel",       role: "staff"      as const },
+    { username: "goruntule",   password: "staff123",       fullName: "Görüntüleyici",  role: "viewer"     as const },
   ];
 
   // İlk şirketi bul (prosan = co1) — hem ilk seed hem upsert dalı için ortak
@@ -73,15 +75,25 @@ async function seedDefaultUsers() {
     }
   } else {
     // Upsert: eksik kullanıcıları ekle (yeni kullanıcılar eklendikçe seed genişleyebilir)
+    const isProd = process.env.NODE_ENV === "production";
     for (const u of defaultUsers) {
-      const existing = await db.select({ id: usersTable.id }).from(usersTable).where(eql(usersTable.username, u.username));
-      if (existing.length === 0) {
+      const [existing] = await db.select({ id: usersTable.id, passwordHash: usersTable.passwordHash })
+        .from(usersTable).where(eql(usersTable.username, u.username));
+      if (!existing) {
         const passwordHash = await bcrypt.hash(u.password, 10);
         await db.insert(usersTable).values({
           username: u.username, passwordHash, fullName: u.fullName, role: u.role,
           companyId: fallbackCompanyId,
         });
         logger.info({ username: u.username, role: u.role }, "Missing user seeded");
+      } else if (!isProd) {
+        // Dev/test: default user'ın parolası beklenenle eşleşmiyorsa hash'i tazele
+        const matches = await bcrypt.compare(u.password, existing.passwordHash);
+        if (!matches) {
+          const passwordHash = await bcrypt.hash(u.password, 10);
+          await db.update(usersTable).set({ passwordHash }).where(eql(usersTable.id, existing.id));
+          logger.info({ username: u.username }, "Default user password rehashed (dev)");
+        }
       }
     }
   }

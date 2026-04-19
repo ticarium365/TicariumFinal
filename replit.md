@@ -76,6 +76,13 @@ The backend is developed with Express 5, utilizing PostgreSQL as the database, D
 - **Paraşüt API**: Integrated for e-Invoice functionalities via OAuth2.
 - **TCMB EVDS**: Provides exchange rate data.
 
+## Sprint H (v2) — Test Suite Auth + Subscription Repair (TAMAM)
+- `node --test integration.test.mjs` (484 test) tam yeşil — exit=0, 0 fail.
+- Auth fix: `index.ts` dev-only seed self-heal (`NODE_ENV !== production`) — `nihat_admin/nihat123`, `superadmin/superadmin123`, `admin/admin123` hash'leri normalize ediliyor.
+- Test fixture: `cenan→admin`, `admin123/nihat123/superadmin123` standardize.
+- Sprint 11 fixture v2 paket geçişi: testler `free/starter/pro/enterprise` → `pkg_inventory/pkg_trade/pkg_growth/pkg_enterprise_v2` (seed v2 legacy slug'ları otomatik deactivate ediyor — production migration korunuyor).
+- **Kritik isolation fix**: Sprint 11 `after()` hook eklendi — testler PROSAN'ı pkg_growth/yearly active'e geri yüklüyor; aksi halde Sprint 12/22/23/73 (documents/hr.staff/campaigns/marketplace.*) FEATURE_LOCKED 403 alıyordu. Concurrency=8'de tüm suite'ler 115s içinde tamamlanıyor.
+
 ## Sprint H — Buyer Portal × PROSAN Birleşmesi (TAMAM)
 - Buyer-portal sayfaları PROSAN içine taşındı: artifacts/prosan/src/pages/satinalma/{Discovery,NewRfq,Rfqs,SellerInbox,index}.tsx — tüm internal navigation /satinalma/* prefix'ine güncellendi (Discovery "Teklif İste" + NewRfq onSuccess redirect dahil).
 - Tek API host, tek auth, tek subdomain — backend hiç değişmedi.
