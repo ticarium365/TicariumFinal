@@ -45,7 +45,12 @@ function fmtTime(d: string) { return new Date(d).toLocaleString("tr-TR", { day: 
 export default function IntegrationsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const [tab, setTab] = useState<TabId>("webhooks");
+  const [tab, setTab] = useState<TabId>(() => {
+    if (typeof window === "undefined") return "webhooks";
+    const t = new URLSearchParams(window.location.search).get("tab");
+    if (t === "accounting" || t === "ecommerce" || t === "api-keys" || t === "webhooks") return t;
+    return "webhooks";
+  });
 
   // Webhook form
   const [showHookForm, setShowHookForm] = useState(false);

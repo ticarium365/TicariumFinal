@@ -200,9 +200,6 @@ function AuthenticatedRouter() {
         <Route path="/entegrasyonlar">
           {() => <ProtectedRoute component={EntegrasyonlarPage} />}
         </Route>
-        <Route path="/settings/integrations">
-          {() => <ProtectedRoute component={EntegrasyonlarPage} roles={["admin"]} />}
-        </Route>
         <Route path="/sifremi-unuttum" component={ForgotPassword} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/karsilastir" component={KarsilastirPage} />
