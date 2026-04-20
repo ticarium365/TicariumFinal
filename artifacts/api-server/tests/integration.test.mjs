@@ -6631,6 +6631,8 @@ describe("Sprint J — Membership + Verification", () => {
     assert.ok(r.json?.companyId);
     assert.ok(r.json?.subdomain);
     assert.ok(new Date(r.json.trialEndsAt).getTime() > Date.now() + 20 * 86400_000);
+    // Sonraki istekleri yeni şirkete yönlendir (X-Tenant header)
+    jar.tenant = r.json.subdomain;
 
     // Oturum açık olmalı — /auth/me 200 ve plan pkg_growth/yearly
     const me = await api("GET", "/auth/me", { jar });
@@ -6674,6 +6676,7 @@ describe("Sprint J — Membership + Verification", () => {
       },
     });
     assert.equal(r.status, 201, JSON.stringify(r.json));
+    jar.tenant = r.json.subdomain;
     const me = await api("GET", "/auth/me", { jar });
     assert.equal(me.status, 200);
     assert.equal(me.json?.accountType, "purchasing");
@@ -6692,6 +6695,7 @@ describe("Sprint J — Membership + Verification", () => {
       },
     });
     assert.equal(reg.status, 201);
+    jar.tenant = reg.json.subdomain;
 
     // SUPER_ADMIN test arka kapısı: code'u DB'den alacak public endpoint yok.
     // En son verification token'ı dev mode'da loglara da yazıyor; test için
@@ -6718,6 +6722,7 @@ describe("Sprint J — Membership + Verification", () => {
       },
     });
     assert.equal(reg.status, 201);
+    jar.tenant = reg.json.subdomain;
 
     let saw429 = false;
     for (let i = 0; i < 6; i++) {
