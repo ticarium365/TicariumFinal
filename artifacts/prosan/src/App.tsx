@@ -10,6 +10,8 @@ import NotFound from "@/pages/not-found";
 
 // Pages
 import Login from "@/pages/login";
+import RegisterPage from "@/pages/register";
+import VerifyPage from "@/pages/verify";
 import ForgotPassword from "@/pages/forgot-password";
 import KarsilastirPage from "@/pages/karsilastir";
 import HakkimizdaPage from "@/pages/hakkimizda";
@@ -190,6 +192,10 @@ function AuthenticatedRouter() {
     <AuthProvider>
       <Switch>
         <Route path="/login" component={Login} />
+        <Route path="/kayit" component={RegisterPage} />
+        <Route path="/kayit/isletme">{() => <RegisterPage />}</Route>
+        <Route path="/kayit/satinalmaci">{() => <RegisterPage />}</Route>
+        <Route path="/verify" component={VerifyPage} />
         <Route path="/sifremi-unuttum" component={ForgotPassword} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/karsilastir" component={KarsilastirPage} />

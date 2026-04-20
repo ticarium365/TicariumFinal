@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Loader2, Lock, User, Store, TrendingUp, ShieldCheck,
-  Eye, EyeOff, Sparkles,
+  Eye, EyeOff, Sparkles, Building2, ShoppingCart,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PublicNav } from "@/components/public-nav";
@@ -21,6 +21,7 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loginMode, setLoginMode] = useState<"business" | "buyer">("business");
   const login = useLogin();
   const { toast } = useToast();
 
@@ -236,7 +237,7 @@ export default function Login() {
                   "0 8px 20px -8px rgba(14,165,164,0.10)",
               }}
             >
-              <div className="mb-6">
+              <div className="mb-5">
                 <h2
                   className="text-[1.65rem] font-bold tracking-tight leading-tight"
                   style={{ color: "#0F172A", fontFamily: "var(--font-display)" }}
@@ -244,8 +245,48 @@ export default function Login() {
                   Hoş geldiniz
                 </h2>
                 <p className="text-sm mt-1.5" style={{ color: "#64748B" }}>
-                  Hesabınıza giriş yaparak işinize devam edin.
+                  {loginMode === "business"
+                    ? "İşletmenizi yönetmek için giriş yapın."
+                    : "Satınalma portalına erişmek için giriş yapın."}
                 </p>
+              </div>
+
+              {/* Sprint J — segmented control: İşletme / Satınalmacı */}
+              <div
+                className="grid grid-cols-2 gap-1 p-1 rounded-xl mb-5"
+                style={{
+                  background: "rgba(99,102,241,0.06)",
+                  border: "1px solid rgba(99,102,241,0.10)",
+                }}
+                role="tablist"
+                aria-label="Giriş türü"
+              >
+                {([
+                  { v: "business", icon: Building2, label: "İşletme Girişi" },
+                  { v: "buyer", icon: ShoppingCart, label: "Satınalmacı Girişi" },
+                ] as const).map(({ v, icon: Icon, label }) => {
+                  const active = loginMode === v;
+                  return (
+                    <button
+                      key={v}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setLoginMode(v)}
+                      data-testid={`tab-login-${v}`}
+                      className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-all"
+                      style={{
+                        background: active
+                          ? "linear-gradient(135deg,#2563eb 0%,#0EA5A4 100%)"
+                          : "transparent",
+                        color: active ? "white" : "#475569",
+                        boxShadow: active ? "0 6px 18px -8px rgba(79,70,229,0.45)" : "none",
+                      }}
+                    >
+                      <Icon className="w-3.5 h-3.5" /> {label}
+                    </button>
+                  );
+                })}
               </div>
 
               <form
@@ -368,9 +409,10 @@ export default function Login() {
               >
                 <p className="text-xs" style={{ color: "#64748B" }}>
                   Hesabınız yok mu?{" "}
-                  <a
-                    href="mailto:demo@ticarium365.com"
+                  <Link
+                    href="/kayit"
                     className="font-semibold hover:underline"
+                    data-testid="link-register"
                     style={{
                       background: "linear-gradient(135deg,#2563eb,#0EA5A4)",
                       WebkitBackgroundClip: "text",
@@ -378,8 +420,8 @@ export default function Login() {
                       color: "transparent",
                     }}
                   >
-                    Demo talep edin
-                  </a>
+                    Hemen kayıt olun
+                  </Link>
                 </p>
               </div>
             </div>

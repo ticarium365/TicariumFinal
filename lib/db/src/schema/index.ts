@@ -48,3 +48,4 @@ export * from "./feature_flags_runtime";
 export * from "./domain_events";
 export * from "./webhook_inbound";
 export * from "./messaging";
+export * from "./verification_tokens";

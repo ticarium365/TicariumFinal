@@ -116,9 +116,23 @@ export function PublicNav() {
             Sizi Arayalım
           </Button>
           <Button
+            variant="outline"
             size="sm"
             onClick={() => setLocation("/login")}
             data-testid="nav-cta-login"
+            className="gap-1.5"
+            style={{
+              background: "rgba(255,255,255,0.7)",
+              borderColor: "rgba(99,102,241,0.20)",
+              color: "#334155",
+            }}
+          >
+            Giriş Yap
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setLocation("/kayit")}
+            data-testid="nav-cta-register"
             className="gap-1.5"
             style={{
               background: "linear-gradient(135deg,#2563eb 0%,#0EA5A4 100%)",
@@ -127,7 +141,7 @@ export function PublicNav() {
               boxShadow: "0 6px 20px -6px rgba(79,70,229,0.55)",
             }}
           >
-            Giriş Yap
+            Kayıt Ol
             <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -193,7 +207,7 @@ export function PublicNav() {
                 className="w-full"
                 onClick={() => {
                   setOpen(false);
-                  setLocation("/login");
+                  setLocation("/kayit");
                 }}
                 style={{
                   background: "linear-gradient(135deg,#2563eb 0%,#0EA5A4 100%)",
@@ -201,7 +215,7 @@ export function PublicNav() {
                   border: 0,
                 }}
               >
-                Giriş Yap
+                Kayıt Ol
               </Button>
             </div>
           </div>

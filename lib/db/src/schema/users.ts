@@ -1,4 +1,5 @@
 import { pgTable, serial, text, boolean, timestamp, integer, pgEnum, uniqueIndex, index, varchar } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -24,6 +25,11 @@ export const usersTable = pgTable("users", {
 }, (table) => ({
   usernameCompanyIdx: uniqueIndex("users_username_company_idx").on(table.username, table.companyId),
   phoneIdx: index("users_phone_idx").on(table.phone),
+  // Sprint J — global cross-tenant email uniqueness (NULL'lar serbest, partial unique).
+  // Bu, register/business + register/buyer race condition'larını DB seviyesinde kapatır.
+  emailUq: uniqueIndex("users_email_lower_uq")
+    .on(sql`LOWER(${table.email})`)
+    .where(sql`${table.email} IS NOT NULL`),
 }));
 
 // Şifre sıfırlama / SMS doğrulama kayıtları
