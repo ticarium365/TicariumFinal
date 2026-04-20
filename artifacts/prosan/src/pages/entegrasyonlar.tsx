@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/page-header";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/components/auth-context";
 import {
   ShoppingBag, Banknote, FileText, MessageSquare, Mail, Building2,
   Truck, BarChart3, Plug, Search, CheckCircle2, Clock,

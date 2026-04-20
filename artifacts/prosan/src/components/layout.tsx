@@ -321,12 +321,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     <Link key={itemId} href={item.href}>
                       <div
                         title={locked ? "Bu modül paketinizde yok — tıklayarak yükseltme ekranını görebilirsiniz" : undefined}
-                        className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-all cursor-pointer text-sm border-l-2 ${
+                        className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer text-sm ${
                           active
-                            ? "bg-slate-100 text-blue-700 font-semibold border-blue-500"
+                            ? "bg-blue-50 text-blue-700 font-semibold shadow-sm shadow-blue-500/10"
                             : locked
-                              ? "text-slate-400 hover:bg-slate-50 hover:text-slate-600 border-transparent"
-                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-transparent"
+                              ? "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                         }`}
                         onClick={() => setIsOpen(false)}
                         data-testid={`nav-link-${slug}`}
@@ -376,12 +376,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <div className="p-4 mt-auto border-t border-slate-200 bg-white">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 bg-gradient-to-br from-blue-600 to-teal-600">
+                  <div className="h-9 w-9 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0 bg-gradient-to-br from-blue-600 to-teal-600 shadow-sm">
                     {user.fullName.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{user.fullName}</p>
-                    <p className="text-xs capitalize text-slate-500">{user.role}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-900 truncate">{user.fullName}</p>
+                    <div className="flex items-center gap-1 text-[11px] text-slate-500 truncate">
+                      <Building2 className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{companyName}</span>
+                    </div>
                   </div>
                 </div>
                 <Button variant="outline" className="w-full justify-start border-slate-200 text-slate-700 hover:bg-slate-100 bg-white" onClick={handleLogout} data-testid="button-mobile-logout">
@@ -462,13 +465,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
         )}
 
         <div className="p-3 mt-auto border-t border-slate-200 bg-white">
-          <div className="flex items-center gap-3 px-2 py-2">
-            <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 bg-gradient-to-br from-blue-600 to-teal-600">
+          <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-slate-50 transition-colors">
+            <div className="h-9 w-9 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0 bg-gradient-to-br from-blue-600 to-teal-600 shadow-sm">
               {user.fullName.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 truncate">{user.fullName}</p>
-              <p className="text-[10px] uppercase tracking-wider text-slate-500">{user.role}</p>
+              <p className="text-sm font-semibold text-slate-900 truncate" data-testid="sidebar-user-name">{user.fullName}</p>
+              <div className="flex items-center gap-1 text-[11px] text-slate-500 truncate">
+                <Building2 className="h-3 w-3 shrink-0" />
+                <span className="truncate" data-testid="sidebar-tenant-name">{companyName}</span>
+              </div>
             </div>
             {user.role !== "super_admin" && <NotificationCenter />}
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Çıkış Yap" className="h-8 w-8 shrink-0 text-slate-500 hover:text-slate-900 hover:bg-slate-100" data-testid="button-desktop-logout">
