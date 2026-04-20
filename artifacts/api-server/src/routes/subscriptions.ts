@@ -680,8 +680,16 @@ router.get("/admin/billing/tenants", requireSuperAdmin, async (_req, res) => {
 // Tenant'a manuel plan ata (trial uzat, ücretsiz upgrade vb.)
 router.post("/admin/billing/set-plan", requireSuperAdmin, async (req: Request, res: Response) => {
   try {
-    const { companyId, planSlug, billingCycle = "monthly", markPaid = false, note } = req.body as {
+    const {
+      companyId, planSlug, billingCycle = "monthly", markPaid = false, note,
+      // Sprint H — CAS/version precondition: opsiyonel. Gönderilirse: mevcut active/grace
+      // subscription.id BU değere eşit olmalı; aksi halde 409 + currentSubscriptionId döner.
+      // Tek-process testler bunu kullanmadan da çalışır (geri-uyumlu); paralel testler veya
+      // eşzamanlı admin oturumları lost-update'i provably engellemek için bunu set etmeli.
+      expectedSubscriptionId,
+    } = req.body as {
       companyId?: number; planSlug?: string; billingCycle?: string; markPaid?: boolean; note?: string;
+      expectedSubscriptionId?: number | null;
     };
     if (!companyId || !planSlug) {
       return void res.status(400).json(Errors.badRequest("companyId ve planSlug gerekli"));
@@ -694,7 +702,33 @@ router.post("/admin/billing/set-plan", requireSuperAdmin, async (req: Request, r
     else expiresAt.setMonth(expiresAt.getMonth() + 1);
 
     // T016 (architect): atomic cancel+insert+invoice+company update — partial unique index ile race önle
-    const newSub = await db.transaction(async (tx) => {
+    // Sprint H: CAS check + per-company advisory lock + FOR UPDATE row lock → TOCTOU + no-row race kapalı.
+    const txResult = await db.transaction(async (tx) => {
+      // Sprint H Round 2 — per-company pg_advisory_xact_lock: companyId üzerine deterministik lock.
+      // Aktif/grace satır YOKSA bile (FOR UPDATE empty result → lock yok) iki paralel set-plan
+      // çağrısı bu lock üzerinden serileştirilir; null-precondition yarışı kapatılır.
+      // Lock key: namespaced bigint (yüksek bit'ler subscription set-plan namespace, düşükler companyId).
+      const lockKey = (BigInt(0x53455450) << 32n) | BigInt(companyId); // 'SETP' << 32 | companyId
+      const signedLockKey = lockKey & 0x7fffffffffffffffn;
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${signedLockKey})`);
+
+      // Sprint H — CAS precondition (opsiyonel). Advisory lock + FOR UPDATE row-lock kombinasyonu
+      // hem aktif satır var hem yok durumlarında transaction süresince state'i dondurur.
+      if (typeof expectedSubscriptionId !== "undefined") {
+        const currentRows = await tx.select({ id: companySubscriptionsTable.id })
+          .from(companySubscriptionsTable)
+          .where(and(
+            eq(companySubscriptionsTable.companyId, companyId),
+            inArray(companySubscriptionsTable.status, ["active", "grace_period"]),
+          ))
+          .for("update");
+        const currentId = currentRows[0]?.id ?? null;
+        const expected = expectedSubscriptionId ?? null; // null = "no active sub bekleniyor"
+        if (currentId !== expected) {
+          return { conflict: true as const, currentSubscriptionId: currentId };
+        }
+      }
+
       await tx.update(companySubscriptionsTable)
         .set({ status: "cancelled", cancelledAt: new Date(), updatedAt: new Date() })
         .where(and(
@@ -731,8 +765,21 @@ router.post("/admin/billing/set-plan", requireSuperAdmin, async (req: Request, r
         .set({ planType: "active", updatedAt: new Date() })
         .where(eq(companiesTable.id, companyId));
 
-      return created;
+      return { conflict: false as const, created };
     });
+
+    if (txResult.conflict) {
+      // Sprint H — CAS mismatch: caller stale state üzerinden işlem yapıyor.
+      return void res.status(409).json({
+        ...Errors.conflict(
+          "subscription_version_mismatch",
+          "Aboneliğin beklenen sürümüyle mevcut sürümü uyuşmuyor (lost-update koruması)",
+          { currentSubscriptionId: txResult.currentSubscriptionId },
+        ),
+        currentSubscriptionId: txResult.currentSubscriptionId,
+      });
+    }
+    const newSub = txResult.created;
 
     invalidateFeaturesCache(companyId);
     await audit({
@@ -750,8 +797,60 @@ router.post("/admin/billing/set-plan", requireSuperAdmin, async (req: Request, r
       },
     });
     res.status(201).json({ subscription: newSub, plan });
-  } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
+  } catch (e: unknown) {
+    // Sprint H Round 2 — partial unique index (active_per_company) çakışması: paralel yarış
+    // kazananı hemen sonra başka tx tarafından insert edildi. 500 yerine 409 döndür ki
+    // caller stale state olduğunu anlasın ve refresh ile yeniden denesin.
+    const err = e as { code?: string; constraint?: string; message?: string };
+    // Sprint H Round 3: SADECE active-per-company unique index çakışmasını mismatch sayalım;
+    // başka unique ihlalleri (örn. invoice number vb.) yanıltıcı olmasın.
+    const isActiveSubUniqueViolation = err?.code === "23505"
+      && (err.constraint === "company_subscriptions_active_per_company_uq"
+        || (err.message ?? "").includes("company_subscriptions_active_per_company_uq"));
+    if (isActiveSubUniqueViolation) {
+      try {
+        const [active] = await db.select({ id: companySubscriptionsTable.id })
+          .from(companySubscriptionsTable)
+          .where(and(
+            eq(companySubscriptionsTable.companyId, req.body?.companyId),
+            inArray(companySubscriptionsTable.status, ["active", "grace_period"]),
+          ));
+        const currentSubscriptionId = active?.id ?? null;
+        return void res.status(409).json({
+          ...Errors.conflict(
+            "subscription_version_mismatch",
+            "Eşzamanlı plan değişikliği nedeniyle çakışma (lost-update koruması)",
+            { currentSubscriptionId, constraint: err.constraint ?? null },
+          ),
+          currentSubscriptionId,
+        });
+      } catch (refreshErr) {
+        console.error("set-plan 23505 refresh failed", refreshErr);
+      }
+    }
+    console.error(e);
+    res.status(500).json({ message: "Sunucu hatası" });
+  }
 });
+
+// Sprint H Round 3 — TEST-ONLY: aktif/grace subscription'ları cancel et (null-precondition race testi için).
+// Production guard: NODE_ENV === "production" iken endpoint hiç mount edilmez (404).
+if (process.env.NODE_ENV !== "production") {
+  router.post("/admin/billing/__test_cancel_active", requireSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const { companyId } = req.body as { companyId?: number };
+      if (!companyId) return void res.status(400).json(Errors.badRequest("companyId gerekli"));
+      const updated = await db.update(companySubscriptionsTable)
+        .set({ status: "cancelled", cancelledAt: new Date(), updatedAt: new Date() })
+        .where(and(
+          eq(companySubscriptionsTable.companyId, companyId),
+          inArray(companySubscriptionsTable.status, ["active", "grace_period"]),
+        ))
+        .returning({ id: companySubscriptionsTable.id });
+      res.status(200).json({ cancelled: updated.length, ids: updated.map((u) => u.id) });
+    } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
+  });
+}
 
 // Trial uzat
 router.post("/admin/billing/extend-trial", requireSuperAdmin, async (req: Request, res: Response) => {

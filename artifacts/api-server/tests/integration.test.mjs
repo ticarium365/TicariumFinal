@@ -1851,6 +1851,7 @@ describe("Sprint 10 — Finans: Özet & Rapor", () => {
   const FINANCE_FEATURE = "finance.expenses";
   let nihatPrePlan = null;       // { slug, cycle } captured at before
   let nihatUpgraded = false;
+  let nihatUpgradeSubId = null;  // Sprint H — CAS expected version after our upgrade
   const UPGRADE_TARGET = "pkg_growth";
   before(async () => {
     const { jar: nihat } = await login("nihat_admin", "nihat123", "nihatturizm");
@@ -1879,28 +1880,40 @@ describe("Sprint 10 — Finans: Özet & Rapor", () => {
     nihatPrePlan = { slug: cur.json.plan.slug, cycle: cur.json.subscription?.billingCycle || "monthly" };
     if (hasFinance) return; // zaten finance.expenses var → mutation yok
     const { jar: sa } = await login("superadmin", "superadmin123");
+    // Sprint H — pre-state subscription.id'yi capture et (CAS expected version, lost-update'i provably engeller).
+    // /subscriptions/current'ın subscription.id'si daha önce nihatPrePlan ile beraber okundu; oradan al.
+    const curResp = await api("GET", "/subscriptions/current", { jar: nihat });
+    const expectedPreId = curResp.json?.subscription?.id ?? null;
     const r = await api("POST", "/subscriptions/admin/billing/set-plan", {
       jar: sa,
-      body: { companyId: 2, planSlug: UPGRADE_TARGET, billingCycle: "monthly", note: "Sprint 10 isolation test setup" },
+      body: {
+        companyId: 2, planSlug: UPGRADE_TARGET, billingCycle: "monthly",
+        note: "Sprint 10 isolation test setup",
+        expectedSubscriptionId: expectedPreId, // CAS: pre-state hala bu olmalı
+      },
     });
     assert.equal(r.status, 201, `nihatturizm ${UPGRADE_TARGET} set 201 dönmeli, response: ${JSON.stringify(r.json)}`);
     nihatUpgraded = true;
+    nihatUpgradeSubId = r.json?.subscription?.id ?? null;
+    assert.ok(typeof nihatUpgradeSubId === "number", "Sprint H: setup response.subscription.id sayı olmalı");
   });
   after(async () => {
     if (!nihatUpgraded || !nihatPrePlan) return;
-    // Lost-update guard: restore yalnızca hala bizim setlediğimiz plan'daysa
-    const { jar: nihat } = await login("nihat_admin", "nihat123", "nihatturizm");
-    const cur = await api("GET", "/subscriptions/current", { jar: nihat });
-    const stillOurs =
-      cur.status === 200 && cur.json?.plan?.slug === UPGRADE_TARGET &&
-      (cur.json?.subscription?.billingCycle || "monthly") === "monthly";
-    if (!stillOurs) return; // başka bir process/describe ezmiş — dokunma (lost-update önlenmiş)
+    // Sprint H — CAS-guarded teardown: stillOurs sezgisel kontrolü kaldırıldı, yerine
+    // expectedSubscriptionId=nihatUpgradeSubId. Backend FOR UPDATE row-lock ile TOCTOU yok:
+    // başka bir process bizim sub'ı override etmişse 409+currentSubscriptionId döner → no-op.
     const { jar: sa } = await login("superadmin", "superadmin123");
     const r = await api("POST", "/subscriptions/admin/billing/set-plan", {
       jar: sa,
-      body: { companyId: 2, planSlug: nihatPrePlan.slug, billingCycle: nihatPrePlan.cycle, note: "Sprint 10 isolation test teardown" },
+      body: {
+        companyId: 2, planSlug: nihatPrePlan.slug, billingCycle: nihatPrePlan.cycle,
+        note: "Sprint 10 isolation test teardown",
+        expectedSubscriptionId: nihatUpgradeSubId,
+      },
     });
-    assert.equal(r.status, 201, `nihatturizm restore→${nihatPrePlan.slug}/${nihatPrePlan.cycle} 201 dönmeli, response: ${JSON.stringify(r.json)}`);
+    // 201 = restore başarılı; 409 = başka process ezmiş, lost-update korundu (ikisi de OK).
+    assert.ok(r.status === 201 || r.status === 409,
+      `nihatturizm restore: 201 (success) veya 409 (CAS conflict, lost-update korundu) bekleniyor, alındı: ${r.status} ${JSON.stringify(r.json)}`);
   });
 
   test("Finans özeti döner", async () => {
@@ -5548,6 +5561,217 @@ describe("POS → from-sales köprüsü — validation kontratı", () => {
       // Cleanup: enjekte edilen satırı sil
       await api("DELETE", `/einvoice/__test_outbox/${injectedId}`, { jar });
     }
+  });
+});
+
+// ─── Sprint H — set-plan CAS/version precondition ─────────────────────────
+describe("Sprint H — set-plan CAS (compare-and-set, lost-update precondition)", () => {
+  // Test tenant: nihatturizm (companyId=2). Bütün set-plan'ler superadmin oturumuyla.
+  // Bu suite kendi state-preserving teardown'ını yönetir: önce mevcut planı oku, üst üste
+  // 2 idempotent set-plan ile doğrula (CAS doğru), kasıtlı stale id ile 409 doğrula, sonunda restore et.
+  let saJar = null;
+  let prePlan = null;        // { slug, cycle }
+  let preSubId = null;
+  let mutationsDone = false;
+
+  before(async () => {
+    const sa = await login("superadmin", "superadmin123");
+    saJar = sa.jar;
+    const { jar: nihat } = await login("nihat_admin", "nihat123", "nihatturizm");
+    const cur = await api("GET", "/subscriptions/current", { jar: nihat });
+    if (cur.status !== 200 || !cur.json?.plan?.slug || !cur.json?.subscription?.id) return;
+    prePlan = { slug: cur.json.plan.slug, cycle: cur.json.subscription.billingCycle || "monthly" };
+    preSubId = cur.json.subscription.id;
+  });
+
+  after(async () => {
+    if (!mutationsDone || !prePlan || !saJar) return;
+    // Best-effort restore: hangi sub aktifse onu CAS expected olarak yolla; reddederse no-op.
+    const { jar: nihat } = await login("nihat_admin", "nihat123", "nihatturizm");
+    const cur = await api("GET", "/subscriptions/current", { jar: nihat });
+    const currentId = cur.json?.subscription?.id ?? null;
+    const r = await api("POST", "/subscriptions/admin/billing/set-plan", {
+      jar: saJar,
+      body: {
+        companyId: 2, planSlug: prePlan.slug, billingCycle: prePlan.cycle,
+        note: "Sprint H test teardown",
+        expectedSubscriptionId: currentId,
+      },
+    });
+    assert.ok(r.status === 201 || r.status === 409,
+      `Sprint H teardown 201 veya 409 bekleniyor, alındı: ${r.status}`);
+  });
+
+  test("CAS doğru → 201; sonra stale id ile 409 + currentSubscriptionId döner", async () => {
+    if (!prePlan || !saJar || !preSubId) {
+      // Pre-state okunamadıysa Sprint H semantiği test edilemez; skip yerine fail-loud.
+      assert.fail("Sprint H test için pre-state okunmalıydı (nihatturizm /subscriptions/current 200 + subscription.id)");
+    }
+
+    // 1) CAS doğru: pkg_growth/monthly hedefine eşit-veya-değişik geçiş.
+    const target1 = { slug: "pkg_growth", cycle: "monthly" };
+    const r1 = await api("POST", "/subscriptions/admin/billing/set-plan", {
+      jar: saJar,
+      body: {
+        companyId: 2, planSlug: target1.slug, billingCycle: target1.cycle,
+        note: "Sprint H CAS test step 1",
+        expectedSubscriptionId: preSubId,
+      },
+    });
+    mutationsDone = true;
+    assert.equal(r1.status, 201, `step1 201 dönmeli, response: ${JSON.stringify(r1.json)}`);
+    const sub1 = r1.json?.subscription?.id;
+    assert.ok(typeof sub1 === "number" && sub1 !== preSubId, "step1 yeni sub.id üretmeli");
+
+    // 2) Stale id ile retry → 409 + currentSubscriptionId döner; mevcut sub değişmemeli.
+    const r2 = await api("POST", "/subscriptions/admin/billing/set-plan", {
+      jar: saJar,
+      body: {
+        companyId: 2, planSlug: "pkg_business", billingCycle: "monthly",
+        note: "Sprint H CAS test step 2 (stale id)",
+        expectedSubscriptionId: preSubId, // KASITLI stale: artık sub1 aktif
+      },
+    });
+    assert.equal(r2.status, 409, `step2 stale CAS 409 dönmeli, alındı: ${r2.status} ${JSON.stringify(r2.json)}`);
+    assert.equal(r2.json?.error?.code, "subscription_version_mismatch",
+      `step2 error.code subscription_version_mismatch olmalı, alındı: ${JSON.stringify(r2.json)}`);
+    assert.equal(r2.json?.currentSubscriptionId, sub1,
+      `step2 currentSubscriptionId taze değer olmalı (sub1=${sub1}), alındı: ${r2.json?.currentSubscriptionId}`);
+
+    // 3) Mevcut sub gerçekten değişmemiş mi? (409 sonrası state stable)
+    const { jar: nihat2 } = await login("nihat_admin", "nihat123", "nihatturizm");
+    const cur = await api("GET", "/subscriptions/current", { jar: nihat2 });
+    assert.equal(cur.json?.subscription?.id, sub1, "409 sonrası aktif sub değişmemeli");
+    assert.equal(cur.json?.plan?.slug, target1.slug, "409 sonrası plan değişmemeli");
+
+    // 4) Doğru taze id ile retry → 201 (akıllı caller flow'u).
+    const r3 = await api("POST", "/subscriptions/admin/billing/set-plan", {
+      jar: saJar,
+      body: {
+        companyId: 2, planSlug: "pkg_business", billingCycle: "monthly",
+        note: "Sprint H CAS test step 3 (refreshed id)",
+        expectedSubscriptionId: sub1,
+      },
+    });
+    assert.equal(r3.status, 201, `step3 doğru CAS 201 dönmeli, response: ${JSON.stringify(r3.json)}`);
+  });
+
+  test("Paralel race: aynı expectedSubscriptionId ile 5 eşzamanlı çağrı → 1 success + 4×409 (deterministik)", async () => {
+    if (!prePlan || !saJar) {
+      assert.fail("Sprint H race test için pre-state okunmalıydı");
+    }
+    // Setup: tek bir baseline'a sıfırla → tüm paralel çağrılar AYNI expectedId görür.
+    const setup = await api("POST", "/subscriptions/admin/billing/set-plan", {
+      jar: saJar,
+      body: {
+        companyId: 2, planSlug: "pkg_growth", billingCycle: "monthly",
+        note: "Sprint H race test baseline",
+      },
+    });
+    mutationsDone = true;
+    assert.equal(setup.status, 201, "race baseline 201");
+    const baselineSubId = setup.json?.subscription?.id;
+    assert.ok(typeof baselineSubId === "number", "baselineSubId number");
+
+    // 5 paralel set-plan, hepsi aynı expectedSubscriptionId ile.
+    // Backend: per-company advisory lock → tx'ler serileştirilir; ilki kazanır + CAS pass + sub değişir;
+    // sonrakiler tx alır, CAS check yapar, currentId artık baselineSubId değil → 409 conflict döner.
+    // 23505 unique violation oluşursa o da 409'a map edilir (yine deterministik).
+    const cycle = "monthly";
+    const targets = ["pkg_business", "pkg_growth", "pkg_business", "pkg_growth", "pkg_business"];
+    const results = await Promise.all(targets.map((slug, idx) =>
+      api("POST", "/subscriptions/admin/billing/set-plan", {
+        jar: saJar,
+        body: {
+          companyId: 2, planSlug: slug, billingCycle: cycle,
+          note: `Sprint H race ${idx}`,
+          expectedSubscriptionId: baselineSubId,
+        },
+      })
+    ));
+    const successes = results.filter((r) => r.status === 201);
+    const conflicts = results.filter((r) => r.status === 409);
+    const others = results.filter((r) => r.status !== 201 && r.status !== 409);
+    assert.equal(others.length, 0,
+      `Tüm yanıtlar 201 veya 409 olmalı (500 yok); other: ${JSON.stringify(others.map((r) => ({ s: r.status, j: r.json })))}`);
+    assert.equal(successes.length, 1,
+      `Tam 1 success bekleniyor, alındı: ${successes.length}; statuses: ${results.map((r) => r.status).join(",")}`);
+    assert.equal(conflicts.length, 4,
+      `Tam 4 conflict bekleniyor, alındı: ${conflicts.length}`);
+    // Conflict response shape kontratı
+    for (const c of conflicts) {
+      assert.equal(c.json?.error?.code, "subscription_version_mismatch",
+        `conflict response error.code subscription_version_mismatch olmalı, alındı: ${JSON.stringify(c.json)}`);
+      assert.ok(typeof c.json?.currentSubscriptionId === "number",
+        `conflict response currentSubscriptionId number olmalı, alındı: ${JSON.stringify(c.json)}`);
+    }
+  });
+
+  test("Null-precondition race: aktif sub yokken 2 paralel expectedNull → 1×201 + 1×409 (no-row gap kapanmış)", async () => {
+    if (!prePlan || !saJar) {
+      assert.fail("Sprint H null-race test için pre-state okunmalıydı");
+    }
+    // Setup: company 2'nin tüm aktif/grace sub'larını cancel et (no-row baseline).
+    const clear = await api("POST", "/subscriptions/admin/billing/__test_cancel_active", {
+      jar: saJar,
+      body: { companyId: 2 },
+    });
+    mutationsDone = true;
+    assert.equal(clear.status, 200, `__test_cancel_active 200 olmalı, alındı: ${clear.status} ${JSON.stringify(clear.json)}`);
+
+    // 2 paralel set-plan, expectedSubscriptionId: null (yani "hiç aktif yok bekliyorum").
+    // Backend: per-company advisory lock → tx'ler seri; ilki kazanır + insert; ikincisi tx'e
+    // girip CAS check yapar, currentRows artık [yeni sub] → null !== id → 409 conflict.
+    // Kontrat: tam 1×201 + 1×409, asla 23505 500 sızıntısı YOK; final state = tek aktif sub.
+    const results = await Promise.all([
+      api("POST", "/subscriptions/admin/billing/set-plan", {
+        jar: saJar,
+        body: {
+          companyId: 2, planSlug: "pkg_business", billingCycle: "monthly",
+          note: "Sprint H null-race A", expectedSubscriptionId: null,
+        },
+      }),
+      api("POST", "/subscriptions/admin/billing/set-plan", {
+        jar: saJar,
+        body: {
+          companyId: 2, planSlug: "pkg_growth", billingCycle: "monthly",
+          note: "Sprint H null-race B", expectedSubscriptionId: null,
+        },
+      }),
+    ]);
+    const successes = results.filter((r) => r.status === 201);
+    const conflicts = results.filter((r) => r.status === 409);
+    const others = results.filter((r) => r.status !== 201 && r.status !== 409);
+    assert.equal(others.length, 0,
+      `Null-race: yanıtlar 201 veya 409 olmalı (500 yok); other: ${JSON.stringify(others.map((r) => ({ s: r.status, j: r.json })))}`);
+    assert.equal(successes.length, 1,
+      `Null-race: tam 1 success bekleniyor, alındı: ${successes.length}; statuses: ${results.map((r) => r.status).join(",")}`);
+    assert.equal(conflicts.length, 1,
+      `Null-race: tam 1 conflict bekleniyor, alındı: ${conflicts.length}`);
+    assert.equal(conflicts[0].json?.error?.code, "subscription_version_mismatch",
+      `Null-race: conflict.error.code subscription_version_mismatch, alındı: ${JSON.stringify(conflicts[0].json)}`);
+    assert.ok(typeof conflicts[0].json?.currentSubscriptionId === "number",
+      `Null-race: conflict.currentSubscriptionId number olmalı (winner sub.id), alındı: ${JSON.stringify(conflicts[0].json)}`);
+    // Final state invariantı: tam 1 aktif sub var ve o = winner sub.id.
+    const winnerId = successes[0].json?.subscription?.id;
+    assert.equal(conflicts[0].json.currentSubscriptionId, winnerId,
+      `Null-race: conflict currentSubscriptionId == winner.subscription.id olmalı`);
+  });
+
+  test("expectedSubscriptionId GÖNDERİLMEZSE backward-compatible (CAS bypass, 201)", async () => {
+    if (!prePlan || !saJar) {
+      assert.fail("Sprint H backward-compat için pre-state okunmalıydı");
+    }
+    // expectedSubscriptionId yok → eski davranış (CAS check skip), sadece atomic transaction.
+    const r = await api("POST", "/subscriptions/admin/billing/set-plan", {
+      jar: saJar,
+      body: {
+        companyId: 2, planSlug: "pkg_growth", billingCycle: "monthly",
+        note: "Sprint H backward-compat (no expectedSubscriptionId)",
+      },
+    });
+    mutationsDone = true;
+    assert.equal(r.status, 201, `backward-compat 201, alındı: ${r.status} ${JSON.stringify(r.json)}`);
   });
 });
 
