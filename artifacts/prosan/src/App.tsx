@@ -207,7 +207,6 @@ function AuthenticatedRouter() {
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/karsilastir" component={KarsilastirPage} />
         <Route path="/neden-ticarium365" component={KarsilastirPage} />
-        <Route path="/neden-smsystems" component={KarsilastirPage} />
         <Route path="/hakkimizda" component={HakkimizdaPage} />
         <Route path="/amacimiz" component={AmacimizPage} />
         <Route path="/paketler" component={PaketlerPage} />

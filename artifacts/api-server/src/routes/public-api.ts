@@ -14,7 +14,7 @@ router.use("/public/v1", requireApiKey);
 router.get("/public/v1/info", async (req: Request, res: Response) => {
   const company = (req as any).company;
   res.json({
-    api: { version: "1.0", name: "SMSYSTEMS Public API" },
+    api: { version: "1.0", name: "Ticarium365 Public API" },
     company: {
       id: company.id,
       name: company.name,

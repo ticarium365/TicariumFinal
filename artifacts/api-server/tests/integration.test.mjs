@@ -1,5 +1,5 @@
 /**
- * SMSYSTEMS API — Integration Test Suite
+ * Ticarium365 API — Integration Test Suite
  * node --test tests/integration.test.mjs
  *
  * Gerçek çalışan sunucuya (localhost:8080) HTTP istekleri atar.

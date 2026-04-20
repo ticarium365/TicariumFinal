@@ -284,7 +284,7 @@ function buildMasterDoc() {
       ["Mali Müşavir Paneli", "Yapılacak", "Kurumsal pakette"],
       ["Akıllı Fiyat Önerisi (AI)", "Faz 5", "OpenAI tüketim modeli netleşmeli"],
       ["Rakip Fiyat İzleme", "Faz 3", "Web scraping altyapısı"],
-      ["Mobil App (Expo)", "İskelet hazır", "SMSYSTEMS mobil — özellik açılımı"],
+      ["Mobil App (Expo)", "İskelet hazır", "Ticarium365 mobil — özellik açılımı"],
       ["Webhook Çıkışı", "Yapılacak", "Kurumsal pakette"],
       ["White Label / Mali Müşavir markası", "Yapılacak", "Faz 4-5"],
     ],

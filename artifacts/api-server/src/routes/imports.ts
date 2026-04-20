@@ -1,4 +1,4 @@
-// Paraşüt / Bizim Hesap / Logo CSV-Excel'den SMSYSTEMS'e veri içe aktarımı
+// Paraşüt / Bizim Hesap / Logo CSV-Excel'den Ticarium365'e veri içe aktarımı
 // Adım 1: /api/import/preview ile dosyayı parse et, kolon haritasını döndür
 // Adım 2: /api/import/{kind} ile haritayı uygula
 import { Router } from "express";

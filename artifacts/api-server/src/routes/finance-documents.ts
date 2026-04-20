@@ -738,7 +738,7 @@ router.get("/mailbox/config", async (req: Request, res: Response) => {
     if (!mb) {
       return res.json({
         configured: false,
-        suggestedInboundAddress: `belgeler+co${companyId}@smsystems.com`,
+        suggestedInboundAddress: `belgeler+co${companyId}@ticarium365.com`,
       });
     }
 

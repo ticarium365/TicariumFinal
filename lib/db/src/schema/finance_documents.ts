@@ -135,7 +135,7 @@ export const financeDocumentsTable = pgTable("finance_documents", {
 export const financeDocMailboxesTable = pgTable("finance_doc_mailboxes", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull().references(() => companiesTable.id),
-  // İleride her tenant'a özel inbound adres: belgeler+co<id>@smsystems.com
+  // İleride her tenant'a özel inbound adres: belgeler+co<id>@ticarium365.com
   // veya IMAP ile pull. Şu an sadece konfig saklıyoruz.
   inboundAddress: text("inbound_address").notNull(),
   imapHost: text("imap_host"),

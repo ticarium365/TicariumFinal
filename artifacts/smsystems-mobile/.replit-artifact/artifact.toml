@@ -1,6 +1,6 @@
 kind = "mobile"
 previewPath = "/smsystems-mobile/"
-title = "SMSYSTEMS Mobil"
+title = "Ticarium365 Mobil"
 version = "1.0.0"
 id = "artifacts/smsystems-mobile"
 router = "expo-domain"
