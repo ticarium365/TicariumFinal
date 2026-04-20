@@ -204,15 +204,8 @@ export default function Login() {
         </div>
 
         {/* ─── SAĞ PANEL — cam form kartı ──────────────────────────────────── */}
-        <div className="flex-1 flex items-center justify-center p-6 md:p-8 relative">
+        <div className="flex-1 flex items-center justify-center p-4 md:p-8 relative">
           <div className="w-full max-w-sm relative">
-            {/* Mobil logo */}
-            <div className="lg:hidden flex justify-center mb-8">
-              <div className="flex items-center gap-3">
-                <BrandIcon size={44} />
-                <BrandWordmark />
-              </div>
-            </div>
 
             {/* Kartın etrafına ince renkli kenarlık halesi */}
             <div
@@ -225,7 +218,7 @@ export default function Login() {
             />
 
             <div
-              className="relative rounded-2xl p-7 md:p-8"
+              className="relative rounded-2xl p-5 sm:p-7 md:p-8"
               style={{
                 background: "rgba(255,255,255,0.85)",
                 border: "1px solid rgba(255,255,255,0.7)",
@@ -274,7 +267,7 @@ export default function Login() {
                       aria-selected={active}
                       onClick={() => setLoginMode(v)}
                       data-testid={`tab-login-${v}`}
-                      className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-all"
+                      className="flex items-center justify-center gap-1.5 py-2 px-1 rounded-lg text-xs sm:text-sm font-semibold transition-all"
                       style={{
                         background: active
                           ? "linear-gradient(135deg,#2563eb 0%,#0EA5A4 100%)"
@@ -283,7 +276,9 @@ export default function Login() {
                         boxShadow: active ? "0 6px 18px -8px rgba(79,70,229,0.45)" : "none",
                       }}
                     >
-                      <Icon className="w-3.5 h-3.5" /> {label}
+                      <Icon className="w-3.5 h-3.5 shrink-0" />
+                      <span className="sm:hidden">{v === "business" ? "İşletme" : "Satınalmacı"}</span>
+                      <span className="hidden sm:inline">{label}</span>
                     </button>
                   );
                 })}
