@@ -17,6 +17,8 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
+import { TrialBanner } from "@/components/TrialBanner";
+import { BrandMark } from "@/components/BrandMark";
 
 interface DashboardStats {
   totalProducts: number;
@@ -122,9 +124,12 @@ export default function DashboardScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.topRow}>
-        <View>
-          <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Hoş geldiniz</Text>
-          <Text style={[styles.username, { color: colors.foreground }]}>{user?.fullName ?? user?.username}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+          <BrandMark size={36} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Hoş geldiniz</Text>
+            <Text style={[styles.username, { color: colors.foreground }]} numberOfLines={1}>{user?.fullName ?? user?.username}</Text>
+          </View>
         </View>
         <Pressable
           onPress={() => { Haptics.selectionAsync(); logout(); }}
@@ -133,6 +138,8 @@ export default function DashboardScreen() {
           <Feather name="log-out" size={18} color={colors.mutedForeground} />
         </Pressable>
       </View>
+
+      <TrialBanner />
 
       <View style={styles.todayCard}>
         <View style={[styles.todayInner, { backgroundColor: colors.primary }]}>

@@ -6273,12 +6273,13 @@ describe("Sprint E — Buyer Portal: discovery + RFQ + seller inbox", () => {
   test("GET /buyer/sellers buyer-only guard + discovery returns other tenants", async () => {
     const { jar } = await login("admin", "admin123");
     // Seller-only login (PROSAN şu an 'both' — admin re-login'de session refresh olur)
-    const r = await api("GET", "/buyer/sellers", { jar });
+    // Test seed data birikimi default limit=50'yi aşabildiğinden hedef firmayı ?q= ile daraltıyoruz.
+    const r = await api("GET", "/buyer/sellers?q=NIHAT", { jar });
     assert.equal(r.status, 200, `discovery 200 olmalı; got ${r.status}`);
     assert.ok(Array.isArray(r.json.sellers), "sellers array olmalı");
     // Kendi şirket id'si listede olmamalı
     assert.ok(!r.json.sellers.some((s) => s.id === 1), "kendi şirketin (PROSAN id=1) discovery'de olmamalı");
-    // NIHAT (id=2) olmalı
+    // NIHAT (id=2) olmalı (PG ilike Turkish-aware)
     const nihat = r.json.sellers.find((s) => s.id === 2);
     assert.ok(nihat, "NIHAT TURIZM (id=2) discovery'de görünmeli");
     assert.match(nihat.name, /NIHAT|NİHAT/i);

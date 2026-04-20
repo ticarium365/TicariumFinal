@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
+import { BrandMark } from "@/components/BrandMark";
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -55,11 +56,9 @@ export default function LoginScreen() {
     >
       <View style={[styles.container, { paddingTop: topPad + 24, paddingBottom: btmPad + 24 }]}>
         <View style={styles.header}>
-          <View style={[styles.iconBox, { backgroundColor: colors.primary }]}>
-            <Feather name="package" size={32} color="#fff" />
-          </View>
-          <Text style={[styles.title, { color: colors.foreground }]}>Ticarium365</Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Stok & Barkod Yönetimi</Text>
+          <BrandMark size={64} />
+          <Text style={[styles.title, { color: colors.foreground, marginTop: 16 }]}>Ticarium365</Text>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>365 gün işinizin yanında</Text>
         </View>
 
         <View style={styles.form}>
