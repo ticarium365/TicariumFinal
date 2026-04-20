@@ -97,6 +97,32 @@ The backend is developed with Express 5, utilizing PostgreSQL as the database, D
 - E2E PASS: admin (both) login → tüm 5 satinalma item görünür; Discovery → "Teklif İste" → /satinalma/rfqs/new?sellerId=X; NewRfq submit → /satinalma/rfqs/:id (404 yok).
 - Eski buyer-portal artifact bozulmadı (geçiş sürecinde yedek olarak duruyor).
 - **C1 — Buyer-portal decommission (2026-04-20)**: Geçiş tamamlandığı için yedek artifact `artifacts/buyer-portal` tamamen kaldırıldı. Workflow + artifact registration + dizin silindi (`pnpm-workspace.yaml` `artifacts/*` glob, otomatik). Backend `routes/buyer-portal.js` (buyer/seller routes) PROSAN tarafından kullanıldığı için DOKUNULMADI. Re-test: **488/488 PASS, exit=0, ~67s**. Aktif artifacts: api-server, prosan, smsystems-mobile, mockup-sandbox.
+- **C2 — smsystems-mobile audit (2026-04-20)**: Expo tabanlı, gerçek aktif mobil ürün (app/_layout.tsx, app/(tabs), app/login.tsx, @workspace/api-client-react bağımlılığı). Workflow `artifacts/smsystems-mobile: expo` aktif. Decommission KAPSAM DIŞI — canlı ürün olarak korunuyor. Sprint 70 mobil push entegrasyonunun konsumeri.
+
+## Sprint B (Test Hardening) — Per-suite isolated fixtures + plan-coupling kırma + clean-bootstrap re-validation (TAMAM, 2026-04-20)
+
+**B1 + B2 (per-suite isolated plan fixtures + talha cross-suite plan-coupling refactor)**:
+- `tests/integration.test.mjs` üst seviyede yeni helper: `ensureTenantPlan(tenant, slug, cycle)` — idempotent, sadece mismatch varsa superadmin set-plan çağırır. `_saJarCache` ile süperadmin login bir kere yapılır.
+- Cross-suite plan-coupling kıran defansif `before()` injection — Sprint 11 STRICT after()'a load-bearing bağımlılık kalktı:
+  - Sprint 12 (Dosya/Evrak) — mevcut before() içine ensure (PROSAN→pkg_growth/yearly).
+  - Sprint 21 (Akıllı Bildirim) — yeni before() eklendi.
+  - Sprint 22 (Personel Yönetimi) — yeni before().
+  - Sprint 23 (Kampanya & İndirim) — yeni before().
+  - Sprint 73.6 (Reklam Bütçesi) — mevcut before()'a inject.
+  - Sprint 73.7 (Ticarium Pazar) — mevcut before()'a inject.
+- Sprint 11 after() restore-mantığı korundu (belt-and-suspenders) ama artık tek savunma hattı değil.
+
+**B3 (clean-DB bootstrap re-validation)**:
+- API server workflow restart edildi (cold start ~5s + seedDefaultUsers idempotent rehash). Restart sonrası **488/488 PASS, exit=0, ~64s, concurrency=8** — bootstrap akışı stable.
+
+**B4 (bootstrap docs)** — Geliştirici için 1-page özet:
+1. **Seed**: API server cold-start'ında `seedDefaultUsers()` 8 kullanıcı yaratır/refresh eder (admin, talha, nihat, nihat_admin, cenan, superadmin, personel, goruntule). Production'da `SEED_DEFAULT_USERS=1` env override gerekir (deterministik default-credential expose riski kapatıldı).
+2. **Plan seeding**: `pkg_inventory/pkg_trade/pkg_business/pkg_growth/pkg_enterprise_v2` v2 paketleri seed; legacy `free/starter/pro/enterprise` deactivate. PROSAN baseline = pkg_growth/yearly; NİHAT bootstrap'ta plansız (testler kendi plan zeminini ensure'lar).
+3. **Test fixture (tek-seferlik dev/test)**: Tek runner host (localhost:8080), tek `integration.test.mjs` (488 test, 63 suite). Her plan-sensitive suite `ensureTenantPlan(...)` ile kendi zeminini garantiler (cross-suite coupling yok).
+4. **Sprint H (CAS)**: Concurrent set-plan'ler için per-company advisory lock + FOR UPDATE row lock + opsiyonel `expectedSubscriptionId` precondition. Test helper `__test_cancel_active` (NODE_ENV !== "production" guard) no-row baseline için.
+5. **Komutlar**: `pnpm install` (root) → `pnpm --filter @workspace/api-server dev` → `cd artifacts/api-server && node --test --test-concurrency=8 tests/integration.test.mjs`.
+
+Final: **488/488 PASS, restart-stable, plan-coupling kırılmış**.
 
 ## Master Backlog (mimari odaklı sıra)
 | # | Sprint | Açıklama | Durum |

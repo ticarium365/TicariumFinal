@@ -4,6 +4,14 @@
  *
  * Gerçek çalışan sunucuya (localhost:8080) HTTP istekleri atar.
  * Testler birbirinden bağımsızdır — her test kendi session'ını yönetir.
+ *
+ * KONKURRENSİ NOTU (Sprint B, 2026-04-20):
+ * Mevcut çalıştırma modeli `--test-concurrency=8` test-level paralel; suite'ler
+ * dosyada beyan sırasında ardışık ele alınır. Eğer ileride suite-level concurrency
+ * etkinleştirilirse, plan-mutating suite'ler (Sprint 11, Sprint A re-validation,
+ * Sprint H CAS describe) seri sıraya zorlanmalı veya her birinin before/after'ı
+ * ensureTenantPlan ile baseline restore etmelidir — aksi halde aynı şirketin
+ * (companyId 1/2) plan state'i çakışır.
  */
 
 import { test, describe, before, after } from "node:test";
@@ -74,6 +82,65 @@ async function login(username, password, tenant = "prosan") {
     jar,
   });
   return { status, json, jar };
+}
+
+// ---------------------------------------------------------------------------
+// B1 + B2 — Per-suite plan-fixture izolasyonu (cross-suite plan-coupling kırma)
+//
+// PROSAN (companyId 1) ve NİHAT (companyId 2) için "kanonik plan zemini" sağlar.
+// Idempotent: mevcut plan slug + cycle hedefle uyuşuyorsa NO-OP. Aksi halde
+// superadmin set-plan çağrısı yapar (Sprint H CAS olmadan, basit upsert).
+// Bu sayede her suite'in before()'unda kendi plan zemini garanti altına alınır
+// ve bir önceki suite'in after() restore başarısı load-bearing olmaktan çıkar.
+//
+// Kullanım: await ensureTenantPlan("prosan", "pkg_growth", "yearly");
+// ---------------------------------------------------------------------------
+const TENANT_TO_COMPANY_ID = { prosan: 1, nihatturizm: 2, nihat: 2 };
+const TENANT_ADMIN_CREDS = {
+  prosan: { user: "talha", pass: "talha123" },
+  nihatturizm: { user: "nihat_admin", pass: "nihat123" },
+  nihat: { user: "nihat_admin", pass: "nihat123" },
+};
+let _saJarCache = null;
+async function _getSuperadminJar() {
+  if (_saJarCache) return _saJarCache;
+  const r = await login("superadmin", "superadmin123");
+  if (r.status === 200) _saJarCache = r.jar;
+  return r.jar;
+}
+async function ensureTenantPlan(tenant, targetSlug, targetCycle = "monthly") {
+  const companyId = TENANT_TO_COMPANY_ID[tenant];
+  if (!companyId) throw new Error(`ensureTenantPlan: bilinmeyen tenant ${tenant}`);
+  const creds = TENANT_ADMIN_CREDS[tenant];
+  // Önce tenant-admin ile current-state oku
+  const adminLogin = await login(creds.user, creds.pass, tenant);
+  // Sprint B fail-fast (architect): admin login fail = test fixture bozuk → erken hata fırlat
+  // (önceki sessiz "skipped" davranışı suite başlangıcı sapmasını gizliyordu).
+  assert.equal(adminLogin.status, 200,
+    `ensureTenantPlan(${tenant}): admin login başarısız (status=${adminLogin.status}). ` +
+    `Seed/credentials kontrol et: ${creds.user}.`);
+  const cur = await api("GET", "/subscriptions/current", { jar: adminLogin.jar });
+  if (cur.status === 200 && cur.json?.plan?.slug === targetSlug
+      && (cur.json?.subscription?.billingCycle ?? "monthly") === targetCycle) {
+    return { skipped: true, reason: "already_target", currentSlug: targetSlug };
+  }
+  // Mismatch → superadmin set-plan
+  const saJar = await _getSuperadminJar();
+  assert.ok(saJar, `ensureTenantPlan(${tenant}): superadmin login jar yok (seed/credentials bozuk olabilir).`);
+  const set = await api("POST", "/subscriptions/admin/billing/set-plan", {
+    jar: saJar,
+    body: { companyId, planSlug: targetSlug, billingCycle: targetCycle, note: `ensureTenantPlan ${tenant}→${targetSlug}/${targetCycle}` },
+  });
+  // Sprint B fail-fast (architect): set-plan 201 dönmeli — aksi halde fixture bozuk.
+  assert.equal(set.status, 201,
+    `ensureTenantPlan(${tenant}→${targetSlug}/${targetCycle}): set-plan 201 dönmeli, ` +
+    `alındı: ${set.status} ${JSON.stringify(set.json)}`);
+  return {
+    skipped: false,
+    previous: cur.json?.plan?.slug ?? null,
+    target: targetSlug,
+    setStatus: set.status,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -2944,6 +3011,8 @@ describe("Sprint 12 — Dosya/Evrak Yönetimi", () => {
   let docId;
 
   before(async () => {
+    // B1+B2: PROSAN baseline plan zemini garantile (Sprint 11 after() bağımlılığı kırma)
+    await ensureTenantPlan("prosan", "pkg_growth", "yearly");
     const a = await login("admin", "admin123");
     adminJar = a.jar;
     const s = await login("personel", "staff123");
@@ -3125,6 +3194,7 @@ describe("Sprint 12 — Dosya/Evrak Yönetimi", () => {
 // Sprint 21 — Akıllı Bildirim Sistemi
 // ═══════════════════════════════════════════════════════════════════════════════
 describe("Sprint 21 — Akıllı Bildirim Sistemi", () => {
+  before(async () => { await ensureTenantPlan("prosan", "pkg_growth", "yearly"); });
   let ruleId;
 
   test("Desteklenen bildirim tipleri listelenir", async () => {
@@ -3277,6 +3347,7 @@ describe("Sprint 21 — Akıllı Bildirim Sistemi", () => {
 // Sprint 22 — Personel Yönetimi
 // ═══════════════════════════════════════════════════════════════════════════════
 describe("Sprint 22 — Personel Yönetimi", () => {
+  before(async () => { await ensureTenantPlan("prosan", "pkg_growth", "yearly"); });
   let deptId;
   let personnelId;
   let leaveId;
@@ -3462,6 +3533,7 @@ describe("Sprint 22 — Personel Yönetimi", () => {
 // Sprint 23 — Kampanya & İndirim Yönetimi
 // ═══════════════════════════════════════════════════════════════════════════════
 describe("Sprint 23 — Kampanya & İndirim Yönetimi", () => {
+  before(async () => { await ensureTenantPlan("prosan", "pkg_growth", "yearly"); });
   let campaignId;
   let fixedCampaignId;
 
@@ -4316,6 +4388,8 @@ describe("Sprint 73.6 — Reklam Bütçesi", () => {
   let jar;
   let channelId;
   before(async () => {
+    // B1+B2: PROSAN baseline plan zemini garantile (Sprint 11 after() bağımlılığı kırma)
+    await ensureTenantPlan("prosan", "pkg_growth", "yearly");
     ({ jar } = await login("talha", "talha123"));
     const create = await api("POST", "/ad-budgets/channels", {
       jar,
@@ -4359,6 +4433,8 @@ describe("Sprint 73.6 — Reklam Bütçesi", () => {
 describe("Sprint 73.7 — Ticarium Pazar (Aggregator)", () => {
   let jar;
   before(async () => {
+    // B1+B2: PROSAN baseline plan zemini garantile (Sprint 11 after() bağımlılığı kırma)
+    await ensureTenantPlan("prosan", "pkg_growth", "yearly");
     ({ jar } = await login("talha", "talha123"));
   });
 
