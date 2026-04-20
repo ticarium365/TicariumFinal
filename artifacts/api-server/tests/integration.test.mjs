@@ -6728,3 +6728,52 @@ describe("Sprint J — Membership + Verification", () => {
     assert.ok(saw429, "5 hatalı denemeden sonra 429 bekleniyordu");
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sprint M+ — Sales Type (Toptan / Perakende)
+// ─────────────────────────────────────────────────────────────────────────────
+describe("Sprint M+ — Sales Type (wholesale/retail)", () => {
+  const _st = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  async function _ensureSaleTypeProduct(jar) {
+    const code = `STYPE-${_st()}`;
+    const create = await api("POST", "/products", { jar, body: {
+      productCode: code, name: `SaleType Test ${code}`, barcode: code,
+      stock: 100, minStock: 0, purchasePrice: 10, salePrice: 25,
+    } });
+    assert.equal(create.status, 201, `product create ${create.status}`);
+    return create.json.product || create.json;
+  }
+
+  test("M+1 — POST /sales explicit saleType='wholesale' kabul edilir", async () => {
+    const { jar } = await login("talha", "talha123", "prosan");
+    const p = await _ensureSaleTypeProduct(jar);
+    const r = await api("POST", "/sales", { jar, body: {
+      productId: p.id, quantity: 1, unitPrice: 25, saleType: "wholesale",
+    } });
+    assert.equal(r.status, 201);
+    assert.equal(r.json.saleType, "wholesale");
+  });
+
+  test("M+2 — POST /sales POS default → retail", async () => {
+    const { jar } = await login("talha", "talha123", "prosan");
+    const p = await _ensureSaleTypeProduct(jar);
+    const r = await api("POST", "/sales", { jar, body: {
+      productId: p.id, quantity: 1, unitPrice: 25, channelKey: "pos",
+    } });
+    assert.equal(r.status, 201);
+    assert.equal(r.json.saleType, "retail");
+  });
+
+  test("M+3 — GET /sales?saleType=wholesale yalnız wholesale döner", async () => {
+    const { jar } = await login("talha", "talha123", "prosan");
+    const p = await _ensureSaleTypeProduct(jar);
+    // 1 wholesale + 1 retail oluştur
+    await api("POST", "/sales", { jar, body: { productId: p.id, quantity: 1, unitPrice: 25, saleType: "wholesale" } });
+    await api("POST", "/sales", { jar, body: { productId: p.id, quantity: 1, unitPrice: 25, saleType: "retail" } });
+    const r = await api("GET", "/sales?saleType=wholesale&limit=200", { jar });
+    assert.equal(r.status, 200);
+    assert.ok(Array.isArray(r.json.sales), "sales[] beklenir");
+    assert.ok(r.json.sales.length >= 1, "en az 1 wholesale satır beklenir");
+    for (const s of r.json.sales) assert.equal(s.saleType, "wholesale", `kayıt ${s.id} wholesale değil`);
+  });
+});

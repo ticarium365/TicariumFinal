@@ -83,7 +83,7 @@ router.get("/today", requireAuth, async (req: Request, res: Response) => {
 router.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const { startDate, endDate, productId, page = 1, limit = 50 } = req.query;
+    const { startDate, endDate, productId, saleType, page = 1, limit = 50 } = req.query;
     const pageNum = parseInt(String(page));
     const limitNum = Math.min(parseInt(String(limit)), 200);
     const offset = (pageNum - 1) * limitNum;
@@ -97,6 +97,9 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
       conditions.push(lte(salesTable.createdAt, end));
     }
     if (productId) conditions.push(eq(salesTable.productId, parseInt(String(productId))));
+    if (saleType === "wholesale" || saleType === "retail") {
+      conditions.push(eq(salesTable.saleType, String(saleType)));
+    }
 
     const whereClause = and(...conditions);
 
@@ -121,7 +124,7 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 router.post("/", requireAuth, idempotencyMiddleware, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const { productId, quantity, unitPrice, paymentMethod, customerId } = req.body;
+    const { productId, quantity, unitPrice, paymentMethod, customerId, saleType: saleTypeRaw, channelKey } = req.body;
     if (!productId || !quantity || !unitPrice) {
       res.status(400).json({ error: "Bad Request", message: "Zorunlu alanlar eksik" });
       return;
@@ -162,6 +165,18 @@ router.post("/", requireAuth, idempotencyMiddleware, async (req: Request, res: R
     const totalPrice = parseFloat(unitPrice) * qty;
     const profit = (parseFloat(unitPrice) - product.purchasePrice) * qty;
 
+    // saleType: kullanıcı açıkça gönderdiyse onu kullan;
+    // yoksa akıllı default — POS / hızlı satış (channel=pos veya kanal yok ve müşteri yok) → retail,
+    // diğerleri (cari müşteriye satış / marketplace / B2B) → wholesale.
+    let saleType: "wholesale" | "retail";
+    if (saleTypeRaw === "wholesale" || saleTypeRaw === "retail") {
+      saleType = saleTypeRaw;
+    } else {
+      const ch = String(channelKey ?? "").toLowerCase();
+      if (ch === "pos" || (!ch && !customer)) saleType = "retail";
+      else saleType = customer ? "wholesale" : "retail";
+    }
+
     const [sale] = await db.insert(salesTable).values({
       companyId: cid,
       productId: product.id,
@@ -177,6 +192,8 @@ router.post("/", requireAuth, idempotencyMiddleware, async (req: Request, res: R
       soldBy: req.session.user?.fullName,
       paymentMethod: pm,
       customerId: customer ? customer.id : null,
+      channelKey: channelKey ? String(channelKey) : null,
+      saleType,
     }).returning();
 
     await db.update(productsTable)

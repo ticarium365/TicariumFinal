@@ -17,5 +17,9 @@ export interface DashboardStats {
   todayNetRevenue: number;
   todayProfit: number;
   todayProfitPercent: number;
+  todayWholesaleRevenue?: number;
+  todayWholesaleCount?: number;
+  todayRetailRevenue?: number;
+  todayRetailCount?: number;
   criticalStockCount: number;
 }

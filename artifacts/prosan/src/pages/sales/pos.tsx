@@ -39,6 +39,7 @@ export default function POSPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerId, setCustomerId] = useState<string>("0");
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [saleType, setSaleType] = useState<"retail" | "wholesale">("retail");
   const [discount, setDiscount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState<{ count: number; total: number } | null>(null);
@@ -150,6 +151,8 @@ export default function POSPage() {
             unitPrice: adjustedPrice,
             paymentMethod,
             customerId: customerId !== "0" ? Number(customerId) : null,
+            saleType,
+            channelKey: "pos",
           }),
         });
         if (!r.ok) {
@@ -282,6 +285,23 @@ export default function POSPage() {
                     {customers.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Satış Tipi</Label>
+                <div className="grid grid-cols-2 gap-1 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setSaleType("retail")}
+                    className={`p-2 border rounded text-xs font-medium transition-colors ${saleType === "retail" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}
+                    data-testid="saletype-retail"
+                  >Perakende</button>
+                  <button
+                    type="button"
+                    onClick={() => setSaleType("wholesale")}
+                    className={`p-2 border rounded text-xs font-medium transition-colors ${saleType === "wholesale" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}
+                    data-testid="saletype-wholesale"
+                  >Toptan</button>
+                </div>
               </div>
               <div>
                 <Label className="text-xs">Ödeme Yöntemi</Label>

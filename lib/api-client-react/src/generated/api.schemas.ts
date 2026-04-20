@@ -148,6 +148,13 @@ export interface BarcodeResponse {
   barcode: string;
 }
 
+export type SaleSaleType = (typeof SaleSaleType)[keyof typeof SaleSaleType];
+
+export const SaleSaleType = {
+  retail: "retail",
+  wholesale: "wholesale",
+} as const;
+
 export interface Sale {
   id: number;
   productId: number;
@@ -160,6 +167,8 @@ export interface Sale {
   purchasePrice: number;
   profit: number;
   soldBy?: string | null;
+  saleType?: SaleSaleType;
+  channelKey?: string | null;
   createdAt: string;
 }
 
@@ -171,10 +180,22 @@ export interface SaleListResponse {
   totalPages: number;
 }
 
+export type CreateSaleBodySaleType =
+  (typeof CreateSaleBodySaleType)[keyof typeof CreateSaleBodySaleType];
+
+export const CreateSaleBodySaleType = {
+  retail: "retail",
+  wholesale: "wholesale",
+} as const;
+
 export interface CreateSaleBody {
   productId: number;
   quantity: number;
   unitPrice: number;
+  saleType?: CreateSaleBodySaleType;
+  channelKey?: string | null;
+  paymentMethod?: string;
+  customerId?: number | null;
 }
 
 export interface TodaySalesSummary {
@@ -198,6 +219,10 @@ export interface DashboardStats {
   todayNetRevenue: number;
   todayProfit: number;
   todayProfitPercent: number;
+  todayWholesaleRevenue?: number;
+  todayWholesaleCount?: number;
+  todayRetailRevenue?: number;
+  todayRetailCount?: number;
   criticalStockCount: number;
 }
 
@@ -316,9 +341,18 @@ export type ListSalesParams = {
   startDate?: string;
   endDate?: string;
   productId?: number;
+  saleType?: ListSalesSaleType;
   page?: number;
   limit?: number;
 };
+
+export type ListSalesSaleType =
+  (typeof ListSalesSaleType)[keyof typeof ListSalesSaleType];
+
+export const ListSalesSaleType = {
+  retail: "retail",
+  wholesale: "wholesale",
+} as const;
 
 export type GetSalesReportParams = {
   startDate: string;

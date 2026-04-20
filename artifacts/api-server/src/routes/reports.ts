@@ -72,6 +72,16 @@ router.get("/sales", requireAuth, async (req: Request, res: Response) => {
       paymentMap[m] = (paymentMap[m] ?? 0) + s.totalPrice;
     }
 
+    // Toptan / Perakende kırılımı
+    const saleTypeBreakdown = { retail: { count: 0, quantity: 0, revenue: 0, profit: 0 }, wholesale: { count: 0, quantity: 0, revenue: 0, profit: 0 } };
+    for (const s of sales.filter(s => !s.returned)) {
+      const k = (s.saleType === "wholesale" ? "wholesale" : "retail") as "retail" | "wholesale";
+      saleTypeBreakdown[k].count += 1;
+      saleTypeBreakdown[k].quantity += s.quantity;
+      saleTypeBreakdown[k].revenue += s.totalPrice;
+      saleTypeBreakdown[k].profit += s.profit;
+    }
+
     res.json({
       startDate: String(req.query.startDate),
       endDate: String(req.query.endDate),
@@ -85,6 +95,7 @@ router.get("/sales", requireAuth, async (req: Request, res: Response) => {
       dailyBreakdown,
       productBreakdown,
       paymentBreakdown: paymentMap,
+      saleTypeBreakdown,
     });
   } catch (err) {
     req.log?.error({ err }, "Sales report error");
@@ -382,7 +393,7 @@ router.get("/export/sales", requireAuth, requireRole(["admin", "viewer"]), async
       .where(and(eq(salesTable.companyId, cid), gte(salesTable.createdAt, range.start), lte(salesTable.createdAt, range.end)))
       .orderBy(desc(salesTable.createdAt));
 
-    const header = ["Tarih", "Ürün Kodu", "Ürün Adı", "Miktar", "Birim Fiyat", "Toplam", "Maliyet", "Kâr", "Ödeme Yöntemi", "İade"];
+    const header = ["Tarih", "Ürün Kodu", "Ürün Adı", "Miktar", "Birim Fiyat", "Toplam", "Maliyet", "Kâr", "Ödeme Yöntemi", "Satış Tipi", "İade"];
     const rows = sales.map(s => [
       s.createdAt.toLocaleDateString("tr-TR"),
       `"${s.productCode}"`,
@@ -393,6 +404,7 @@ router.get("/export/sales", requireAuth, requireRole(["admin", "viewer"]), async
       (s.purchasePrice * s.quantity).toFixed(2),
       s.profit.toFixed(2),
       s.paymentMethod ?? "",
+      s.saleType === "wholesale" ? "Toptan" : "Perakende",
       s.returned ? "Evet" : "Hayır",
     ]);
 

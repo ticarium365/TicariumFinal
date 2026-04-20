@@ -435,6 +435,11 @@ paths:
           in: query
           schema:
             type: integer
+        - name: saleType
+          in: query
+          schema:
+            type: string
+            enum: [retail, wholesale]
         - name: page
           in: query
           schema:
@@ -888,6 +893,12 @@ components:
         soldBy:
           type: string
           nullable: true
+        saleType:
+          type: string
+          enum: [retail, wholesale]
+        channelKey:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -920,6 +931,17 @@ components:
         unitPrice:
           type: number
           format: float
+        saleType:
+          type: string
+          enum: [retail, wholesale]
+        channelKey:
+          type: string
+          nullable: true
+        paymentMethod:
+          type: string
+        customerId:
+          type: integer
+          nullable: true
       required: [productId, quantity, unitPrice]
 
     TodaySalesSummary:
@@ -974,6 +996,16 @@ components:
         todayProfitPercent:
           type: number
           format: float
+        todayWholesaleRevenue:
+          type: number
+          format: float
+        todayWholesaleCount:
+          type: integer
+        todayRetailRevenue:
+          type: number
+          format: float
+        todayRetailCount:
+          type: integer
         criticalStockCount:
           type: integer
       required: [totalProducts, outOfStock, stock1, stock2, stock3, todaySalesCount, todayGrossRevenue, todayNetRevenue, todayProfit, todayProfitPercent, criticalStockCount]

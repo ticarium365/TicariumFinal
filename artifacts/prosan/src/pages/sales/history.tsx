@@ -36,6 +36,7 @@ function useReturnSale() {
 export default function SalesHistory() {
   const [page, setPage] = useState(1);
   const [dateStr, setDateStr] = useState(new Date().toISOString().split('T')[0]);
+  const [saleTypeFilter, setSaleTypeFilter] = useState<"all" | "retail" | "wholesale">("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const returnSale = useReturnSale();
@@ -103,16 +104,18 @@ export default function SalesHistory() {
     ?? previewOutbox?.lastResponse?.body
     ?? null;
 
-  const { data, isLoading } = useListSales({
-    query: {
-      queryKey: getListSalesQueryKey({ startDate: dateStr, endDate: dateStr, page, limit: 50 })
-    }
-  }, {
+  const listParams = {
     startDate: dateStr,
     endDate: dateStr,
     page,
-    limit: 50
-  });
+    limit: 50,
+    ...(saleTypeFilter !== "all" ? { saleType: saleTypeFilter } : {}),
+  } as any;
+  const { data, isLoading } = useListSales({
+    query: {
+      queryKey: getListSalesQueryKey(listParams)
+    }
+  }, listParams);
 
   const handleReturn = async () => {
     if (!returnDialog) return;
@@ -200,6 +203,27 @@ export default function SalesHistory() {
             onChange={e => { setDateStr(e.target.value); setPage(1); }}
             className="w-auto"
           />
+        </div>
+        <div className="flex items-center gap-1 ml-auto" data-testid="saletype-filter">
+          {([
+            { v: "all", label: "Tümü" },
+            { v: "retail", label: "Perakende" },
+            { v: "wholesale", label: "Toptan" },
+          ] as const).map(opt => (
+            <button
+              key={opt.v}
+              type="button"
+              onClick={() => { setSaleTypeFilter(opt.v); setPage(1); }}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+                saleTypeFilter === opt.v
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background hover:bg-accent border-border"
+              }`}
+              data-testid={`saletype-chip-${opt.v}`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       </div>
 

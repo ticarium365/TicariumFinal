@@ -46,6 +46,13 @@ router.get("/stats", requireAuth, async (req: Request, res: Response) => {
     const todayProfit = todayGrossRevenue - todayNetRevenue;
     const todayProfitPercent = todayNetRevenue > 0 ? (todayProfit / todayNetRevenue) * 100 : 0;
 
+    let todayWholesaleRevenue = 0, todayWholesaleCount = 0;
+    let todayRetailRevenue = 0, todayRetailCount = 0;
+    for (const s of todaySalesResult) {
+      if (s.saleType === "wholesale") { todayWholesaleRevenue += s.totalPrice; todayWholesaleCount += 1; }
+      else { todayRetailRevenue += s.totalPrice; todayRetailCount += 1; }
+    }
+
     res.json({
       totalProducts: totalProductsResult[0]?.count ?? 0,
       outOfStock: stockMap[0] ?? 0,
@@ -57,6 +64,10 @@ router.get("/stats", requireAuth, async (req: Request, res: Response) => {
       todayNetRevenue,
       todayProfit,
       todayProfitPercent,
+      todayWholesaleRevenue,
+      todayWholesaleCount,
+      todayRetailRevenue,
+      todayRetailCount,
       criticalStockCount: criticalCountResult[0]?.count ?? 0,
     });
   } catch (err) {

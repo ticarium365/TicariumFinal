@@ -1,0 +1,148 @@
+Yeni bir satış sınıflandırma geliştirmesi yapalım.
+
+AMAÇ:
+Satışlar ve faturalar sisteme işlenirken işlem tipi ayrılsın:
+
+- Toptan Satış
+- Perakende Satış
+
+Bu ayrım hem veri girişinde görünmeli hem de tüm rapor, filtre ve özet ekranlarında kullanılmalı.
+
+==================================================
+GELİŞTİRME İSTEĞİ
+
+1. SATIŞ TİPİ ALANI
+
+Sales ve ilgili invoice/fatura kayıtlarında yeni alan olsun:
+
+saleType:
+
+- wholesale
+- retail
+
+Türkçe karşılığı UI’da:
+
+- Toptan
+- Perakende
+
+Varsayılan mantık:
+
+- POS / hızlı satış ekranı → Perakende
+- teklif / toplu sipariş / cari müşteri bazlı satış → Toptan
+  Ama kullanıcı isterse manuel değiştirebilsin.
+
+==================================================
+2. VERİ GİRİŞ EKRANLARI
+
+Aşağıdaki ekranlarda satış tipi seçilebilir/görünebilir olsun:
+
+- satış oluşturma ekranı
+- POS satış ekranı
+- fatura oluşturma ekranı
+- satış düzenleme ekranı
+
+UI:
+segmented control / dropdown olabilir.
+
+==================================================
+3. LİSTELEME VE FİLTRELER
+
+Aşağıdaki ekranlarda filtre eklensin:
+
+- satış listesi
+- satış geçmişi
+- fatura listesi
+- müşteri hareketleri (gerekli yerlerde)
+- rapor ekranları
+
+Filtre:
+
+- Hepsi
+- Toptan
+- Perakende
+
+Tablolarda ayrıca kolon olarak da gösterilsin:
+Satış Tipi
+
+==================================================
+4. RAPORLAMA
+
+Aşağıdaki raporlar satış tipine göre ayrıştırılabilsin:
+
+- günlük satış özeti
+- aylık satış raporu
+- kanal karlılığı
+- ürün satış raporu
+- müşteri satış raporu
+- ciro özeti
+- fatura raporu
+
+Gösterilecek örnek metrikler:
+
+- Toplam Toptan Satış
+- Toplam Perakende Satış
+- Toptan Ciro
+- Perakende Ciro
+- Toptan Kar
+- Perakende Kar
+
+==================================================
+5. DASHBOARD KARTLARI
+
+Dashboard veya satış dashboard’unda opsiyonel kartlar olsun:
+
+- Bugün Toptan Satış
+- Bugün Perakende Satış
+- Bu Ay Toptan Ciro
+- Bu Ay Perakende Ciro
+
+==================================================
+6. EXPORT
+
+Excel / CSV / PDF export çıktılarında saleType alanı bulunsun.
+Türkçe olarak yazsın:
+
+- Toptan
+- Perakende
+
+==================================================
+7. BACKEND / DB
+
+Gerekli tablo güncellemeleri:
+
+- sales
+- invoices / invoice-equivalent tablo(lar)
+- gerekli rapor sorguları
+
+Alan:
+sale_type enum('wholesale','retail')
+
+Mevcut eski kayıtlar için migration:
+
+- POS kaynaklı veya müşteri olmayan hızlı satışlar → retail
+- diğer satışlar → mantıklı kuralla wholesale/retail default
+- net ayrım yapılamıyorsa retail default + admin review notu
+
+==================================================
+8. API / QUERY PARAMS
+
+API filtreleri:
+saleType=wholesale|retail
+
+Liste endpoint’lerinde desteklensin.
+
+==================================================
+9. KABUL KRİTERLERİ
+
+- satış oluştururken satış tipi seçilebiliyor
+- POS varsayılan perakende geliyor
+- satış listelerinde filtre çalışıyor
+- raporlar toptan/perakende ayrışıyor
+- export dosyalarında satış tipi görünüyor
+- eski kayıtlar mantıklı şekilde migrate ediliyor
+
+==================================================
+10. NOT
+
+Bu ayrım ileride fiyat politikası, müşteri segmentasyonu, karlılık analizi ve B2B satış raporları için temel olacak.
+Bu yüzden sadece görsel değil, veri modeli olarak da doğru işlensin.

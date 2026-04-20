@@ -28,10 +28,14 @@ export const salesTable = pgTable("sales", {
   returned: boolean("returned").default(false).notNull(),
   returnedAt: timestamp("returned_at", { withTimezone: true }),
   returnNote: text("return_note"),
+  // Sprint M+ — Toptan / Perakende sınıflandırması
+  // 'wholesale' | 'retail'
+  saleType: text("sale_type").default("retail").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
   index("sales_company_created_idx").on(t.companyId, t.createdAt),
   index("sales_company_channel_idx").on(t.companyId, t.channelKey),
+  index("sales_company_saletype_idx").on(t.companyId, t.saleType),
 ]);
 
 export const insertSaleSchema = createInsertSchema(salesTable).omit({

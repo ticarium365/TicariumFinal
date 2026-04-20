@@ -5,6 +5,7 @@
  * PROSAN ENDÜSTRİ - Stok, Barkod ve Satış Yönetim Sistemi API
  * OpenAPI spec version: 0.1.0
  */
+import type { SaleSaleType } from "./saleSaleType";
 
 export interface Sale {
   id: number;
@@ -18,5 +19,7 @@ export interface Sale {
   purchasePrice: number;
   profit: number;
   soldBy?: string | null;
+  saleType?: SaleSaleType;
+  channelKey?: string | null;
   createdAt: Date;
 }

@@ -5,9 +5,14 @@
  * PROSAN ENDÜSTRİ - Stok, Barkod ve Satış Yönetim Sistemi API
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateSaleBodySaleType } from "./createSaleBodySaleType";
 
 export interface CreateSaleBody {
   productId: number;
   quantity: number;
   unitPrice: number;
+  saleType?: CreateSaleBodySaleType;
+  channelKey?: string | null;
+  paymentMethod?: string;
+  customerId?: number | null;
 }

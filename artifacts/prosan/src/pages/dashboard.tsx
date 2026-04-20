@@ -238,6 +238,10 @@ export default function Dashboard() {
   const todayRevenue = stats?.todayGrossRevenue ?? 0;
   const todaySales = stats?.todaySalesCount ?? 0;
   const criticalCount = stats?.criticalStockCount ?? 0;
+  const todayWholesaleRevenue = (stats as any)?.todayWholesaleRevenue ?? 0;
+  const todayWholesaleCount = (stats as any)?.todayWholesaleCount ?? 0;
+  const todayRetailRevenue = (stats as any)?.todayRetailRevenue ?? 0;
+  const todayRetailCount = (stats as any)?.todayRetailCount ?? 0;
   const revenue30 = (daily30 ?? []).reduce((s, d) => s + d.revenue, 0);
   const sales30 = (daily30 ?? []).reduce((s, d) => s + d.count, 0);
 
@@ -282,6 +286,28 @@ export default function Dashboard() {
               : "TCMB kurları 15 dakikada bir güncellenir"}
           </p>
         </div>
+      </div>
+
+      {/* Bugün — Toptan / Perakende kırılımı */}
+      <div className="grid gap-3 grid-cols-2">
+        <Card className="border-indigo-500/30">
+          <CardContent className="px-5 py-4">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Bugün — Toptan</p>
+            <p className="text-xl font-bold tracking-tight t365-numeric text-indigo-400 mt-1" data-testid="kpi-wholesale-revenue">
+              {statsLoading ? "—" : fmt(todayWholesaleRevenue)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">{todayWholesaleCount} satış</p>
+          </CardContent>
+        </Card>
+        <Card className="border-amber-500/30">
+          <CardContent className="px-5 py-4">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Bugün — Perakende</p>
+            <p className="text-xl font-bold tracking-tight t365-numeric text-amber-400 mt-1" data-testid="kpi-retail-revenue">
+              {statsLoading ? "—" : fmt(todayRetailRevenue)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">{todayRetailCount} satış</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Stat Kartları: Bugünün Cirosu + Son 30 Gün Cirosu + Kritik Stok */}

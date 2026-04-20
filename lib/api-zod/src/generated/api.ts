@@ -359,6 +359,7 @@ export const ListSalesQueryParams = zod.object({
   startDate: zod.date().optional(),
   endDate: zod.date().optional(),
   productId: zod.coerce.number().optional(),
+  saleType: zod.enum(["retail", "wholesale"]).optional(),
   page: zod.coerce.number().optional(),
   limit: zod.coerce.number().optional(),
 });
@@ -377,6 +378,8 @@ export const ListSalesResponse = zod.object({
       purchasePrice: zod.number(),
       profit: zod.number(),
       soldBy: zod.string().nullish(),
+      saleType: zod.enum(["retail", "wholesale"]).optional(),
+      channelKey: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     }),
   ),
@@ -393,6 +396,10 @@ export const CreateSaleBody = zod.object({
   productId: zod.number(),
   quantity: zod.number(),
   unitPrice: zod.number(),
+  saleType: zod.enum(["retail", "wholesale"]).optional(),
+  channelKey: zod.string().nullish(),
+  paymentMethod: zod.string().optional(),
+  customerId: zod.number().nullish(),
 });
 
 /**
@@ -418,6 +425,8 @@ export const GetTodaySalesResponse = zod.object({
       purchasePrice: zod.number(),
       profit: zod.number(),
       soldBy: zod.string().nullish(),
+      saleType: zod.enum(["retail", "wholesale"]).optional(),
+      channelKey: zod.string().nullish(),
       createdAt: zod.coerce.date(),
     }),
   ),
@@ -437,6 +446,10 @@ export const GetDashboardStatsResponse = zod.object({
   todayNetRevenue: zod.number(),
   todayProfit: zod.number(),
   todayProfitPercent: zod.number(),
+  todayWholesaleRevenue: zod.number().optional(),
+  todayWholesaleCount: zod.number().optional(),
+  todayRetailRevenue: zod.number().optional(),
+  todayRetailCount: zod.number().optional(),
   criticalStockCount: zod.number(),
 });
 

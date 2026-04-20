@@ -5,11 +5,13 @@
  * PROSAN ENDÜSTRİ - Stok, Barkod ve Satış Yönetim Sistemi API
  * OpenAPI spec version: 0.1.0
  */
+import type { ListSalesSaleType } from "./listSalesSaleType";
 
 export type ListSalesParams = {
   startDate?: Date;
   endDate?: Date;
   productId?: number;
+  saleType?: ListSalesSaleType;
   page?: number;
   limit?: number;
 };
