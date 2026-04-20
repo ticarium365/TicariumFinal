@@ -448,6 +448,13 @@ export default function OrderDetailPage() {
               {(order.status === "completed" || order.status === "cancelled") && (
                 <p className="text-xs text-muted-foreground text-center py-2">Bu sipariş kapanmıştır.</p>
               )}
+              {isSeller && (order.status === "delivered" || order.status === "completed") && (
+                <Link href="/einvoice">
+                  <Button className="w-full mt-2" variant="outline" data-testid="cta-b2b-order-invoice">
+                    <FileText className="h-4 w-4 mr-2" /> Fatura Kes
+                  </Button>
+                </Link>
+              )}
             </CardContent>
           </Card>
         </div>

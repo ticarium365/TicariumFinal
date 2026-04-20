@@ -157,6 +157,16 @@ export default function QuoteDetailPage({ id }: Props) {
         body: JSON.stringify({ decision, reason: rejectReason || undefined }),
       });
       if (!res.ok) throw new Error();
+      const data = await res.json().catch(() => ({} as any));
+      const oid = Number(data?.orderId);
+      if (decision === "accepted" && Number.isInteger(oid) && oid > 0) {
+        toast({
+          title: "Teklif kabul edildi",
+          description: data?.orderCode ? `Sipariş oluşturuldu: ${data.orderCode}` : "Sipariş oluşturuldu.",
+        });
+        navigate(`/b2b/orders/${oid}`);
+        return;
+      }
       toast({ title: decision === "accepted" ? "Teklif kabul edildi" : "Teklif reddedildi" });
       fetchData();
       setShowRejectInput(false);
