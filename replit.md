@@ -96,6 +96,7 @@ The backend is developed with Express 5, utilizing PostgreSQL as the database, D
 - layout.tsx + command-palette.tsx: visibleGroups → group-level + item-level accountType filtresi (her iki nav yüzeyinde tutarlı).
 - E2E PASS: admin (both) login → tüm 5 satinalma item görünür; Discovery → "Teklif İste" → /satinalma/rfqs/new?sellerId=X; NewRfq submit → /satinalma/rfqs/:id (404 yok).
 - Eski buyer-portal artifact bozulmadı (geçiş sürecinde yedek olarak duruyor).
+- **C1 — Buyer-portal decommission (2026-04-20)**: Geçiş tamamlandığı için yedek artifact `artifacts/buyer-portal` tamamen kaldırıldı. Workflow + artifact registration + dizin silindi (`pnpm-workspace.yaml` `artifacts/*` glob, otomatik). Backend `routes/buyer-portal.js` (buyer/seller routes) PROSAN tarafından kullanıldığı için DOKUNULMADI. Re-test: **488/488 PASS, exit=0, ~67s**. Aktif artifacts: api-server, prosan, smsystems-mobile, mockup-sandbox.
 
 ## Master Backlog (mimari odaklı sıra)
 | # | Sprint | Açıklama | Durum |
