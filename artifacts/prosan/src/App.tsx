@@ -12,6 +12,7 @@ import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import VerifyPage from "@/pages/verify";
+import EntegrasyonlarPage from "@/pages/entegrasyonlar";
 import ForgotPassword from "@/pages/forgot-password";
 import KarsilastirPage from "@/pages/karsilastir";
 import HakkimizdaPage from "@/pages/hakkimizda";
@@ -196,6 +197,12 @@ function AuthenticatedRouter() {
         <Route path="/kayit/isletme">{() => <RegisterPage />}</Route>
         <Route path="/kayit/satinalmaci">{() => <RegisterPage />}</Route>
         <Route path="/verify" component={VerifyPage} />
+        <Route path="/entegrasyonlar">
+          {() => <ProtectedRoute component={EntegrasyonlarPage} />}
+        </Route>
+        <Route path="/settings/integrations">
+          {() => <ProtectedRoute component={EntegrasyonlarPage} roles={["admin"]} />}
+        </Route>
         <Route path="/sifremi-unuttum" component={ForgotPassword} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/karsilastir" component={KarsilastirPage} />

@@ -225,7 +225,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/firma-profili", label: "Firma Profili", icon: Settings, roles: ["admin"] },
       { href: "/kurulum-skoru", label: "Kurulum Skoru", icon: Target, roles: ["admin"] },
       { href: "/settings", label: "Marka & Logo", icon: Settings, roles: ["admin"] },
-      { href: "/settings/integrations", label: "Entegrasyonlar", icon: Webhook, roles: ["admin"] },
+      { href: "/entegrasyonlar", label: "Entegrasyon Merkezi", icon: Webhook, roles: ["admin", "staff", "viewer"] },
       { href: "/settings/notifications", label: "Bildirim Ayarları", icon: Bell, roles: ["admin"] },
       { href: "/settings/menu", label: "Menü Tercihleri", icon: Settings, roles: ["admin", "staff", "viewer"] },
       { href: "/settings/subscription", label: "Abonelik", icon: CreditCard, roles: ["admin"] },
