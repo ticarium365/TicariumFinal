@@ -41,6 +41,43 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
+async function seedDefaultCompanyIfMissing() {
+  // Production bootstrap: companies tablosu boşsa varsayılan "Prosan" işletmesi oluştur.
+  // Bu, çoklu işletme sisteminin tek-deployment senaryosunda da çalışmasını garanti eder
+  // (custom domain bağlanana kadar default tenant olarak hizmet verir).
+  const { companiesTable: co } = await import("@workspace/db");
+  const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(co);
+  if (count > 0) return;
+  logger.info("No companies found, seeding default 'Prosan' company...");
+  await db.insert(co).values({
+    name: "Prosan Endüstri",
+    subdomain: "prosan",
+    primaryColor: "#2563eb",
+    isActive: true,
+    planType: "active",
+    accountType: "seller",
+  });
+  logger.info("Default company seeded");
+}
+
+async function backfillUserCompanyIds() {
+  // Production fix: companyId=NULL kullanıcıları varsayılan ilk şirkete bağla.
+  // Bu, eski seed'lerde NULL companyId ile yaratılmış kullanıcıları kurtarır
+  // (talha gibi). Idempotent — bağlı kullanıcıları etkilemez.
+  const { eq: eqOp, isNull } = await import("drizzle-orm");
+  const { companiesTable: co } = await import("@workspace/db");
+  const [firstCompany] = await db.select({ id: co.id }).from(co).orderBy(co.id).limit(1);
+  if (!firstCompany) return;
+  const result = await db
+    .update(usersTable)
+    .set({ companyId: firstCompany.id })
+    .where(isNull(usersTable.companyId))
+    .returning({ id: usersTable.id, username: usersTable.username });
+  if (result.length > 0) {
+    logger.info({ count: result.length, companyId: firstCompany.id, usernames: result.map(r => r.username) }, "Backfilled NULL companyId users");
+  }
+}
+
 async function seedDefaultUsers() {
   // PRODUCTION HARDENING: deterministik default credential'lar (admin/admin123, vs.)
   // production'da otomatik seed edilmez. SEED_DEFAULT_USERS=1 explicit set edilirse
@@ -149,9 +186,21 @@ async function seedDefaultProducts() {
 
 async function runSeeds() {
   try {
+    await seedDefaultCompanyIfMissing();
+  } catch (err) {
+    logger.error({ err }, "Failed to seed default company");
+  }
+
+  try {
     await seedDefaultUsers();
   } catch (err) {
     logger.error({ err }, "Failed to seed users");
+  }
+
+  try {
+    await backfillUserCompanyIds();
+  } catch (err) {
+    logger.error({ err }, "Failed to backfill user companyIds");
   }
 
   try {
