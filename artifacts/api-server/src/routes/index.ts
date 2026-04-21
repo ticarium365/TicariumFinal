@@ -28,6 +28,7 @@ import branchesRouter from "./branches.js";
 import integrationsRouter from "./integrations.js";
 import extIntegrationsRouter from "./ext-integrations.js";
 import subscriptionsRouter from "./subscriptions.js";
+import billingRouter from "./billing.js";
 import storageRouter from "./storage.js";
 import documentsRouter from "./documents.js";
 import financeDocumentsRouter from "./finance-documents.js";
@@ -80,6 +81,7 @@ router.use("/branches", branchesRouter);
 router.use("/integrations", integrationsRouter);
 router.use("/ext-integrations", extIntegrationsRouter);
 router.use("/subscriptions", subscriptionsRouter);
+router.use("/billing", billingRouter);
 router.use(storageRouter);
 // documents path-prefix'siz mount → sadece /documents* yollarında "documents" feature gate
 const _documentsGate = requireFeature(FEATURES.DOCUMENTS);

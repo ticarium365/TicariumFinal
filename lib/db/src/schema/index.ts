@@ -50,3 +50,5 @@ export * from "./webhook_inbound";
 export * from "./messaging";
 export * from "./verification_tokens";
 export * from "./usage_counters";
+export * from "./payments";
+export * from "./credit_purchases";

@@ -20,6 +20,7 @@ import {
 } from "@workspace/db";
 import { and, eq, desc, sql, gte, lte, ilike, or, count } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
+import { assertWithinUsageLimit, incrementUsageSafe } from "../services/usage.js";
 import { ObjectStorageService } from "../lib/objectStorage.js";
 import OpenAI from "openai";
 // pdf-parse: tree-shake için lazy import (CJS, runtime)
@@ -861,6 +862,17 @@ router.post("/:id/ocr", async (req: Request, res: Response) => {
   try {
     const companyId = req.companyId!;
     const id = Number(req.params.id);
+    // Dalga 23 — OCR kontör gating
+    try {
+      await assertWithinUsageLimit(companyId, "ocr", 1);
+    } catch (err: any) {
+      if (err?.code === "QUOTA_EXCEEDED") {
+        return res.status(402).json({
+          error: { code: "QUOTA_EXCEEDED", message: "OCR kontörünüz bitti. Ek kontör satın alın.", metric: "ocr", limit: err.limit, current: err.currentCount },
+        });
+      }
+      throw err;
+    }
     const [doc] = await db
       .select()
       .from(financeDocumentsTable)
@@ -951,6 +963,7 @@ router.post("/:id/ocr", async (req: Request, res: Response) => {
       .where(and(eq(financeDocumentsTable.id, id), eq(financeDocumentsTable.companyId, companyId)))
       .returning();
 
+    incrementUsageSafe(companyId, "ocr", 1);
     res.json({ ok: true, ocr: parsed, document: updated });
   } catch (e: any) {
     console.error("[finance-documents/ocr]", e);

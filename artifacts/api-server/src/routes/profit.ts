@@ -8,6 +8,7 @@ import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import OpenAI from "openai";
 import multer from "multer";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { assertWithinUsageLimit, incrementUsageSafe } from "../services/usage.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -46,6 +47,17 @@ router.post("/receipt-ocr", requireWriter, upload.single("file"), async (req: Re
   if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
     return res.status(503).json({ error: "AI servisi yapılandırılmamış" });
   }
+  // Dalga 23 — OCR kontör gating: limit aşıldıysa 402 + ek kontör daveti
+  try {
+    await assertWithinUsageLimit(req.companyId!, "ocr", 1);
+  } catch (err: any) {
+    if (err?.code === "QUOTA_EXCEEDED") {
+      return res.status(402).json({
+        error: { code: "QUOTA_EXCEEDED", message: "OCR kontörünüz bitti. Ek kontör satın alarak devam edebilirsiniz.", metric: "ocr", limit: err.limit, current: err.currentCount },
+      });
+    }
+    throw err;
+  }
   try {
     const mime = req.file.mimetype || "image/jpeg";
     const b64 = req.file.buffer.toString("base64");
@@ -68,6 +80,7 @@ router.post("/receipt-ocr", requireWriter, upload.single("file"), async (req: Re
     } catch {
       parsed = { error: "JSON parse failed", raw };
     }
+    incrementUsageSafe(req.companyId!, "ocr", 1);
     res.json({ ok: true, ocr: parsed });
   } catch (e: any) {
     console.error("[profit/receipt-ocr]", e);

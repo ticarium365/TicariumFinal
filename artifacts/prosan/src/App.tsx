@@ -18,6 +18,7 @@ import KarsilastirPage from "@/pages/karsilastir";
 import HakkimizdaPage from "@/pages/hakkimizda";
 import AmacimizPage from "@/pages/amacimiz";
 import PaketlerPage from "@/pages/paketler";
+import OdemeSonucPage from "@/pages/odeme-sonuc";
 import IletisimPage from "@/pages/iletisim";
 import Catalog from "@/pages/catalog/index";
 import Dashboard from "@/pages/dashboard";
@@ -208,6 +209,7 @@ function AuthenticatedRouter() {
         <Route path="/hakkimizda" component={HakkimizdaPage} />
         <Route path="/amacimiz" component={AmacimizPage} />
         <Route path="/paketler" component={PaketlerPage} />
+        <Route path="/odeme/sonuc" component={OdemeSonucPage} />
         <Route path="/iletisim" component={IletisimPage} />
         <Route path="/kvkk" component={KvkkPage} />
 

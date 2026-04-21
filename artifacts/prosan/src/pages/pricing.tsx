@@ -70,17 +70,19 @@ export default function PricingPage() {
   }
 
   async function subscribe(plan: Plan) {
-    const r = await fetch("/api/subscriptions/subscribe", {
+    // Dalga 22 — Iyzico (mock-first) ödeme akışı: checkout oturumu aç →
+    // paymentPageUrl'e yönlendir. Mock'ta callback aynı alanda /odeme/sonuc'a düşer.
+    const r = await fetch("/api/billing/checkout", {
       method: "POST", credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ planId: plan.id, billingCycle: yearly ? "yearly" : "monthly" }),
     });
-    if (r.ok) {
-      toast({ title: "Plan değiştirildi", description: `${plan.name} paketine geçtiniz.` });
-      window.location.href = "/dashboard";
+    const j = await r.json();
+    if (r.ok && j.paymentPageUrl) {
+      toast({ title: "Ödeme sayfasına yönlendiriliyorsunuz", description: `${plan.name} — ${j.amount} ${j.currency}` });
+      window.location.href = j.paymentPageUrl;
     } else {
-      const e = await r.json();
-      toast({ title: "Hata", description: e.message ?? e.error?.message ?? "İşlem başarısız", variant: "destructive" });
+      toast({ title: "Hata", description: j?.error?.message ?? j?.message ?? "İşlem başarısız", variant: "destructive" });
     }
   }
 

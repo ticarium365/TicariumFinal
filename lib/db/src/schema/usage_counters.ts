@@ -18,6 +18,13 @@ export const usageCountersTable = pgTable("usage_counters", {
   overageCount: integer("overage_count").notNull().default(0),
   // Aşım birim TL toplamı snapshot'ı (overageCount * einvoiceOverageRate). Faturalama için.
   overageAmount: numeric("overage_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+  /**
+   * Dalga 23 — Top-up: kullanıcının ek kontör paketi satın aldığında bu sayı artar.
+   * Effective limit = planLimit + purchasedCredits. Counter consume sırasında önce
+   * purchasedCredits "tüketilmiş gibi" sayılır (effective limit'e dahil), aşımdan önce
+   * eklenmesi gerek.
+   */
+  purchasedCredits: integer("purchased_credits").notNull().default(0),
   lastIncrementAt: timestamp("last_increment_at", { withTimezone: true }).defaultNow().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

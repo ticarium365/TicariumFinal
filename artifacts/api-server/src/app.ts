@@ -145,7 +145,15 @@ app.use(cors({
 }));
 
 // İstek gövdesi boyut sınırı (Sprint 25)
-app.use(express.json({ limit: "5mb" }));
+app.use(express.json({
+  limit: "5mb",
+  verify: (req: any, _res, buf) => {
+    // Dalga 22 — webhook signature verification için ham body byte'larını sakla.
+    // Iyzico HMAC-SHA256 imzası orijinal byte sırasını gerektirir; JSON.stringify(req.body)
+    // anahtar sırasını koruyamayabilir.
+    if (buf && buf.length) req.rawBody = buf.toString("utf8");
+  },
+}));
 app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 
 // ─── Session — prod kontrolü sıkılaştırılmış ─────────────────────────────────

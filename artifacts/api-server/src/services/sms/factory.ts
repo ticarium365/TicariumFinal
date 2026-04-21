@@ -7,6 +7,7 @@ import { db, smsSettingsTable, smsMessagesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { decryptSecrets } from "../../lib/secret-crypto.js";
 import { logger } from "../../lib/logger.js";
+import { assertWithinUsageLimit, incrementUsageSafe } from "../usage.js";
 import { SmsProvider, SmsAccountConfig, SmsSendInput } from "./types.js";
 import { NetgsmProvider } from "./netgsm-provider.js";
 import { MockSmsProvider } from "./mock-provider.js";
@@ -105,7 +106,27 @@ export async function sendSms(opts: {
   companyId: number;
   toPhone: string;
   body: string;
-}): Promise<{ ok: boolean; messageId?: number; externalId?: string; error?: string }> {
+}): Promise<{ ok: boolean; messageId?: number; externalId?: string; error?: string; quotaExceeded?: boolean }> {
+  // Dalga 23 — SMS kontör gating (companyId=0 → sistem mesajı, gating yok)
+  if (opts.companyId > 0) {
+    try { await assertWithinUsageLimit(opts.companyId, "sms", 1); }
+    catch (err: any) {
+      if (err?.code === "QUOTA_EXCEEDED") {
+        const [msg] = await db.insert(smsMessagesTable).values({
+          companyId: opts.companyId,
+          toPhone: opts.toPhone,
+          body: opts.body,
+          provider: "n/a",
+          status: "quota_exceeded",
+          errorMessage: "SMS kontörü aşıldı — ek kontör satın alın",
+        }).returning();
+        logger.warn({ messageId: msg.id, companyId: opts.companyId }, "sms_quota_exceeded");
+        return { ok: false, messageId: msg.id, error: "SMS kontörü aşıldı", quotaExceeded: true };
+      }
+      throw err;
+    }
+  }
+
   const { provider, source, resolvedKey, reason } = await getSmsProviderForCompany(opts.companyId);
 
   // Tenant kapatmış ya da hiçbir provider yok → DB'ye failed yaz, gönderme.
@@ -140,6 +161,7 @@ export async function sendSms(opts: {
     sentAt: r.ok ? new Date() : null,
   }).where(eq(smsMessagesTable.id, msg.id));
 
+  if (r.ok && opts.companyId > 0) incrementUsageSafe(opts.companyId, "sms", 1);
   return r.ok
     ? { ok: true, messageId: msg.id, externalId: r.externalId || undefined }
     : { ok: false, messageId: msg.id, error: r.message || "send_failed" };
