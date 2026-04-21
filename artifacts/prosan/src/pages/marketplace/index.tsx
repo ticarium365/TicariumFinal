@@ -54,6 +54,8 @@ export default function MarketplacePage() {
   const [openCreate, setOpenCreate] = useState(false);
   const [editAcc, setEditAcc] = useState<Account | null>(null);
   const [tab, setTab] = useState("accounts");
+  const [showTestAccounts, setShowTestAccounts] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const [newProvider, setNewProvider] = useState("mock");
   const [newName, setNewName] = useState("Mock Mağaza");
@@ -144,6 +146,34 @@ export default function MarketplacePage() {
     refresh();
   }
 
+  async function bulkDeleteTestAccounts() {
+    const targets = accounts.filter(isTestAccount);
+    if (targets.length === 0) return;
+    if (!confirm(`${targets.length} test/mock hesabını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) return;
+    setBulkDeleting(true);
+    try {
+      let ok = 0; let fail = 0;
+      for (const a of targets) {
+        try {
+          await api(`/marketplace/accounts/${a.id}`, { method: "DELETE" });
+          ok++;
+        } catch { fail++; }
+      }
+      toast({ title: "Test hesapları temizlendi", description: `${ok} silindi${fail > 0 ? `, ${fail} hata` : ""}` });
+      await refresh();
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
+
+  function isTestAccount(a: Account): boolean {
+    return (a.provider === "mock" && a.sandbox === true) || /^MockAcc-/i.test(a.name);
+  }
+
+  const realAccounts = accounts.filter((a) => !isTestAccount(a));
+  const testAccounts = accounts.filter(isTestAccount);
+  const visibleAccounts = showTestAccounts ? accounts : realAccounts;
+
   return (
     <div className="container mx-auto p-6 space-y-4" data-testid="page-marketplace">
       <div className="flex items-center justify-between">
@@ -193,29 +223,61 @@ export default function MarketplacePage() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="accounts" data-testid="tab-accounts"><SettingsIcon className="h-4 w-4 mr-1" />Mağazalar ({accounts.length})</TabsTrigger>
+          <TabsTrigger value="accounts" data-testid="tab-accounts"><SettingsIcon className="h-4 w-4 mr-1" />Mağazalar ({realAccounts.length})</TabsTrigger>
           <TabsTrigger value="orders" data-testid="tab-orders"><Package className="h-4 w-4 mr-1" />Siparişler ({orders.length})</TabsTrigger>
           <TabsTrigger value="jobs" data-testid="tab-jobs"><ListChecks className="h-4 w-4 mr-1" />İşler ({jobs.length})</TabsTrigger>
           <TabsTrigger value="logs" data-testid="tab-logs"><Activity className="h-4 w-4 mr-1" />Loglar</TabsTrigger>
         </TabsList>
 
         <TabsContent value="accounts" className="space-y-3 mt-4">
-          {accounts.length === 0 && <Card><CardContent className="py-10 text-center text-muted-foreground">Henüz mağaza yok. Sağ üstten yeni mağaza ekleyin.</CardContent></Card>}
-          {accounts.map((a) => (
-            <Card key={a.id} data-testid={`account-${a.id}`}>
+          {testAccounts.length > 0 && (
+            <Card className="border-amber-500/40 bg-amber-500/5">
+              <CardContent className="py-3 px-4 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2 text-sm">
+                  <AlertCircle className="h-4 w-4 text-amber-500" />
+                  <span><strong>{testAccounts.length}</strong> test/mock hesabı gizli.</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setShowTestAccounts((v) => !v)} data-testid="btn-toggle-test-accounts">
+                    {showTestAccounts ? "Gizle" : "Göster"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={bulkDeleteTestAccounts} disabled={bulkDeleting} data-testid="btn-bulk-delete-test">
+                    {bulkDeleting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
+                    Tümünü Sil
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {visibleAccounts.length === 0 && (
+            <Card>
+              <CardContent className="py-10 text-center text-muted-foreground">
+                <Package className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                <p className="font-medium">Henüz gerçek mağaza eklenmemiş</p>
+                <p className="text-sm mt-1">Sağ üstten "Yeni Mağaza" butonuyla Trendyol, Hepsiburada gibi pazaryerlerini bağla.</p>
+              </CardContent>
+            </Card>
+          )}
+          {visibleAccounts.map((a) => {
+            const isTest = isTestAccount(a);
+            return (
+            <Card key={a.id} data-testid={`account-${a.id}`} className={isTest ? "opacity-70" : ""}>
               <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      {a.name}
+                <div className="flex justify-between items-start gap-3 flex-wrap">
+                  <div className="min-w-0">
+                    <CardTitle className="flex items-center gap-2 flex-wrap">
+                      <span className="truncate">{a.name}</span>
                       <Badge variant={a.isActive ? "default" : "secondary"}>{a.provider}</Badge>
                       {a.sandbox && <Badge variant="outline">SANDBOX</Badge>}
+                      {isTest && <Badge variant="outline" className="border-amber-500/50 text-amber-400">TEST</Badge>}
                     </CardTitle>
                     <CardDescription>
-                      {a.lastHealthOk == null ? "Sağlık kontrolü yok" : a.lastHealthOk ? `✓ ${a.lastHealthMessage}` : `✗ ${a.lastHealthMessage}`}
+                      {a.lastHealthOk == null
+                        ? <span className="text-muted-foreground">Henüz sağlık kontrolü çalıştırılmadı — "Sağlık Kontrolü" butonuna bas.</span>
+                        : a.lastHealthOk ? `✓ ${a.lastHealthMessage}` : `✗ ${a.lastHealthMessage}`}
                     </CardDescription>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button size="sm" variant="outline" onClick={() => healthCheck(a.id)} data-testid={`btn-health-${a.id}`}>Sağlık Kontrolü</Button>
                     <Button size="sm" variant="outline" onClick={() => enqueueJob(a.id, "pull_orders")} data-testid={`btn-pull-${a.id}`}>Sipariş Çek</Button>
                     <Button size="sm" variant="ghost" onClick={() => delAccount(a.id)}><Trash2 className="h-4 w-4" /></Button>
@@ -223,7 +285,8 @@ export default function MarketplacePage() {
                 </div>
               </CardHeader>
             </Card>
-          ))}
+            );
+          })}
         </TabsContent>
 
         <TabsContent value="orders" className="mt-4 space-y-3">

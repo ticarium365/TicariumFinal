@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { labelFeature } from "@/lib/feature-labels";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TİPLER
@@ -26,7 +27,7 @@ interface Usage { users: number; products: number; branches: number; monthlySale
 interface Invoice { id: number; invoiceNo: string; amount: string; currency: string; status: string; description?: string; createdAt: string; paidAt?: string; }
 
 function fmt(d: string) { return new Date(d).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" }); }
-function lmt(n: number) { return n === -1 ? "∞" : n.toLocaleString("tr-TR"); }
+function lmt(n: number) { return n === -1 ? "Sınırsız" : n.toLocaleString("tr-TR"); }
 
 function usageBar(current: number, max: number) {
   if (max === -1) return 0;
@@ -284,7 +285,7 @@ export default function SubscriptionPage() {
                       {features.map((f, i) => (
                         <li key={i} className="flex items-start gap-1.5 text-xs">
                           <CheckCircle className="h-3 w-3 text-green-500 mt-0.5 shrink-0" />
-                          <span>{f}</span>
+                          <span>{labelFeature(f)}</span>
                         </li>
                       ))}
                     </ul>

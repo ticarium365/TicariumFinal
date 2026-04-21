@@ -17,8 +17,8 @@ type Pkg = {
 
 const packages: Pkg[] = [
   {
-    slug: "stok",
-    name: "Stok",
+    slug: "envanter",
+    name: "Envanter",
     tagline: "Sayım, barkod ve stok takibi ile başla",
     icon: Boxes,
     highlights: [

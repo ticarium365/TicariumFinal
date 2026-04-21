@@ -1,0 +1,37 @@
+export const FEATURE_LABELS: Record<string, string> = {
+  "inventory.core": "Ürün/Stok Yönetimi",
+  "stock.counts": "Stok Sayımı",
+  "barcode.print": "Barkod/Etiket Yazıcı",
+  "sales.pos": "Hızlı Satış (POS)",
+  "sales.invoices": "Satış & Fatura",
+  "customers.crm": "Müşteri / Cari Hesap",
+  "suppliers": "Tedarikçi & Alış",
+  "einvoice.basic": "e-Arşiv (Temel)",
+  "einvoice.pro": "e-Fatura + e-İrsaliye",
+  "finance.expenses": "Gider Merkezi",
+  "finance.banking": "Banka Yönetimi",
+  "hr.staff": "Personel Kayıtları",
+  "hr.payroll": "Maaş & Bordro",
+  "assets.fixed": "Demirbaş & Amortisman",
+  "ocr.receipts": "Fiş OCR (AI)",
+  "documents": "Belge Merkezi",
+  "profit.dashboard": "Net Kâr Paneli",
+  "profit.holding_cost": "Raf Maliyeti & Tutma Gideri",
+  "profit.true_dashboard": "Gerçek Kâr Dashboard",
+  "profit.ai_advisor": "Akıllı Kâr Önerileri (AI)",
+  "marketplace.basic": "Pazaryeri (Trendyol/Hepsiburada/N11)",
+  "marketplace.pro": "Shopify / WooCommerce",
+  "campaigns": "Kampanya & Kupon Motoru",
+  "loyalty.points": "Sadakat & Puan",
+  "currency.multi": "Çoklu Para Birimi",
+  "reports.advanced": "Gelişmiş Raporlar",
+  "api.public": "Açık API",
+  "integrations.accounting": "Logo / Mikro / Paraşüt",
+  "integrations.webhooks": "Webhook Entegrasyonu",
+  "production.bom": "Üretim & Reçete (BOM)",
+  "accountant.panel": "Mali Müşavir Paneli",
+};
+
+export function labelFeature(code: string): string {
+  return FEATURE_LABELS[code] ?? code;
+}

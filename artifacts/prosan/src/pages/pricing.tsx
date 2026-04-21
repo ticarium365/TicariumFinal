@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Check, Sparkles, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
+import { FEATURE_LABELS as SHARED_FEATURE_LABELS } from "@/lib/feature-labels";
 
 type Plan = {
   id: number;
@@ -23,36 +24,7 @@ type Plan = {
   sortOrder: number;
 };
 
-const FEATURE_LABELS: Record<string, string> = {
-  "inventory.core": "Ürün/Stok Yönetimi",
-  "stock.counts": "Stok Sayımı",
-  "barcode.print": "Barkod/Etiket Yazıcı",
-  "sales.pos": "Hızlı Satış (POS)",
-  "sales.invoices": "Satış & Fatura",
-  "customers.crm": "Müşteri / Cari Hesap",
-  "suppliers": "Tedarikçi & Alış",
-  "einvoice.basic": "E-Arşiv (Temel)",
-  "einvoice.pro": "E-Fatura + E-İrsaliye",
-  "finance.expenses": "Gider Merkezi",
-  "finance.banking": "Banka Yönetimi",
-  "hr.staff": "Personel Kayıtları",
-  "hr.payroll": "Maaş & Bordro",
-  "assets.fixed": "Demirbaş & Amortisman",
-  "ocr.receipts": "Fiş OCR (AI)",
-  "documents": "Belge Merkezi",
-  "profit.dashboard": "Net Kâr Paneli",
-  "marketplace.basic": "Pazaryeri (Trendyol/Hepsi/N11)",
-  "marketplace.pro": "Shopify / WooCommerce",
-  "campaigns": "Kampanya & Kupon Motoru",
-  "loyalty.points": "Sadakat & Puan",
-  "currency.multi": "Çoklu Para Birimi",
-  "reports.advanced": "Gelişmiş Raporlar",
-  "api.public": "Açık API",
-  "integrations.accounting": "Logo / Mikro / Paraşüt",
-  "production.bom": "Üretim & Reçete (BOM)",
-  "accountant.panel": "Mali Müşavir Paneli",
-  "integrations.webhooks": "Webhook Entegrasyonu",
-};
+const FEATURE_LABELS = SHARED_FEATURE_LABELS;
 
 const HIGHLIGHTED = "pkg_trade";
 
@@ -130,7 +102,7 @@ export default function PricingPage() {
             )}
             {featData.status === "active" && (
               <Badge variant="default" className="text-base px-3 py-1">
-                Aktif Plan: {featData.planSlug}
+                Aktif Plan: {plans.find((p) => p.slug === featData.planSlug)?.name ?? featData.planSlug}
               </Badge>
             )}
             {featData.status === "expired" && (
