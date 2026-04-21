@@ -634,7 +634,7 @@ function validateRegisterInput(b: any): { ok: true; data: RegisterCommonInput } 
 
 /**
  * Public business registration — 21 günlük tam sürüm trial başlatır.
- * Subdomain otomatik slug + collision suffix; pkg_growth/yearly seedlenir.
+ * Subdomain otomatik slug + collision suffix; pkg_trial_enterprise/yearly seedlenir.
  */
 router.post("/register/business", async (req: Request, res: Response) => {
   try {
@@ -656,14 +656,16 @@ router.post("/register/business", async (req: Request, res: Response) => {
 
     const subdomain = await generateUniqueSubdomain(data.companyName);
     // Yetki Şeması v2 (Dalga 16): yeni kayıtlar gizli `pkg_trial_enterprise` planına atanır
-    // (21 gün boyunca tüm enterprise feature'ları açık). pkg_growth'a least-privilege fallback.
+    // (30 gün boyunca tüm enterprise feature'ları açık).
+    // Dalga 25 — Yetki temizliği: eski `pkg_growth` fallback kaldırıldı; deprecated slug'tı.
+    // Yerine `pkg_starter` (mevcut public katalogda en düşük) least-privilege fallback'i.
     let planId = await findOrCreatePlanId("pkg_trial_enterprise");
     if (!planId) {
-      logger.warn({ slug: "pkg_trial_enterprise" }, "REGISTER_BUSINESS — gizli plan eksik, pkg_growth'a düşülüyor");
-      planId = await findOrCreatePlanId("pkg_growth");
+      logger.warn({ slug: "pkg_trial_enterprise" }, "REGISTER_BUSINESS — gizli plan eksik, pkg_starter'a düşülüyor");
+      planId = await findOrCreatePlanId("pkg_starter");
     }
     if (!planId) {
-      res.status(500).json(Errors.internal("Varsayılan plan tanımlı değil (pkg_trial_enterprise/pkg_growth bulunamadı)"));
+      res.status(500).json(Errors.internal("Varsayılan plan tanımlı değil (pkg_trial_enterprise/pkg_starter bulunamadı)"));
       return;
     }
     const passwordHash = await bcrypt.hash(data.password, 10);
@@ -774,7 +776,7 @@ router.post("/register/business", async (req: Request, res: Response) => {
 
 /**
  * Public buyer (procurement) registration — Satınalmacı portalı için sade kayıt.
- * Trial yok; pkg_trade/monthly minimum plana bağlanır; accountType=purchasing.
+ * Trial yok; pkg_procurement/monthly minimum plana bağlanır; accountType=purchasing.
  */
 router.post("/register/buyer", async (req: Request, res: Response) => {
   try {
@@ -796,8 +798,8 @@ router.post("/register/buyer", async (req: Request, res: Response) => {
     const subdomain = await generateUniqueSubdomain(data.companyName);
     // Yetki Şeması v2 (Dalga 16): satınalmacı (purchasing) kayıtları gizli
     // `pkg_procurement` planına atanır (sadece keşif/teklif/karşılaştırma).
-    // Fail-closed: pkg_procurement yoksa fallback YOK (pkg_trade satış yetkilerini
-    // de açar — least-privilege ihlali). Sistem yanlış seedlenmiş demektir → 500.
+    // Fail-closed: pkg_procurement yoksa fallback YOK — fallback satış yetkilerini
+    // açabilir (least-privilege ihlali). Sistem yanlış seedlenmiş demektir → 500.
     const planId = await findOrCreatePlanId("pkg_procurement");
     if (!planId) {
       logger.error("REGISTER_BUYER — pkg_procurement seed eksik, kayıt reddedildi");

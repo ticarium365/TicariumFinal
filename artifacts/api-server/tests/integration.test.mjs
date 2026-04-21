@@ -93,7 +93,7 @@ async function login(username, password, tenant = "prosan") {
 // Bu sayede her suite'in before()'unda kendi plan zemini garanti altına alınır
 // ve bir önceki suite'in after() restore başarısı load-bearing olmaktan çıkar.
 //
-// Kullanım: await ensureTenantPlan("prosan", "pkg_growth", "yearly");
+// Kullanım: await ensureTenantPlan("prosan", "pkg_pro", "yearly");
 // ---------------------------------------------------------------------------
 const TENANT_TO_COMPANY_ID = { prosan: 1, nihatturizm: 2, nihat: 2 };
 const TENANT_ADMIN_CREDS = {
@@ -1919,7 +1919,7 @@ describe("Sprint 10 — Finans: Özet & Rapor", () => {
   let nihatPrePlan = null;       // { slug, cycle } captured at before
   let nihatUpgraded = false;
   let nihatUpgradeSubId = null;  // Sprint H — CAS expected version after our upgrade
-  const UPGRADE_TARGET = "pkg_growth";
+  const UPGRADE_TARGET = "pkg_pro";
   before(async () => {
     const { jar: nihat } = await login("nihat_admin", "nihat123", "nihatturizm");
     // Feature-based guard — Architect 4. round residual: fail-CLOSED.
@@ -2825,10 +2825,10 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
     assert.ok(Array.isArray(json.plans), "plans dizisi bekleniyor");
     assert.ok(json.plans.length >= 4, "En az 4 plan olmalı");
     const slugs = json.plans.map(p => p.slug);
-    assert.ok(slugs.includes("pkg_inventory"), "pkg_inventory planı olmalı");
-    assert.ok(slugs.includes("pkg_trade"), "pkg_trade planı olmalı");
-    assert.ok(slugs.includes("pkg_growth"), "pkg_growth planı olmalı");
-    assert.ok(slugs.includes("pkg_enterprise_v2"), "pkg_enterprise_v2 planı olmalı");
+    assert.ok(slugs.includes("pkg_starter"), "pkg_starter planı olmalı");
+    assert.ok(slugs.includes("pkg_starter"), "pkg_starter planı olmalı");
+    assert.ok(slugs.includes("pkg_pro"), "pkg_pro planı olmalı");
+    assert.ok(slugs.includes("pkg_enterprise_v3"), "pkg_enterprise_v3 planı olmalı");
   });
 
   test("Mevcut abonelik bilgisi alınabilir", async () => {
@@ -2852,8 +2852,8 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
     const { jar } = await login("admin", "admin123");
     // Pro planın id'sini bul
     const { json: plansJson } = await api("GET", "/subscriptions/plans", { jar });
-    const proPlan = plansJson.plans.find(p => p.slug === "pkg_growth");
-    assert.ok(proPlan, "pkg_growth plan bulunmalı");
+    const proPlan = plansJson.plans.find(p => p.slug === "pkg_pro");
+    assert.ok(proPlan, "pkg_pro plan bulunmalı");
 
     const { status, json } = await api("POST", "/subscriptions/subscribe", {
       jar, body: { planId: proPlan.id, billingCycle: "monthly" },
@@ -2870,13 +2870,13 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
     const { status, json } = await api("GET", "/subscriptions/current", { jar });
     assert.equal(status, 200);
     assert.ok(json.subscription?.status === "active", "Abonelik aktif olmalı");
-    assert.equal(json.plan.slug, "pkg_growth", "pkg_growth plan aktif olmalı");
+    assert.equal(json.plan.slug, "pkg_pro", "pkg_pro plan aktif olmalı");
   });
 
   test("Aynı plana tekrar abone olunabilir (yenileme)", async () => {
     const { jar } = await login("admin", "admin123");
     const { json: plansJson } = await api("GET", "/subscriptions/plans", { jar });
-    const starterPlan = plansJson.plans.find(p => p.slug === "pkg_trade");
+    const starterPlan = plansJson.plans.find(p => p.slug === "pkg_starter");
     const { status } = await api("POST", "/subscriptions/subscribe", {
       jar, body: { planId: starterPlan.id, billingCycle: "yearly" },
     });
@@ -2895,7 +2895,7 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
   test("Geçersiz billingCycle reddedilir", async () => {
     const { jar } = await login("admin", "admin123");
     const { json: plansJson } = await api("GET", "/subscriptions/plans", { jar });
-    const proPlan = plansJson.plans.find(p => p.slug === "pkg_growth");
+    const proPlan = plansJson.plans.find(p => p.slug === "pkg_pro");
     const { status } = await api("POST", "/subscriptions/subscribe", {
       jar, body: { planId: proPlan.id, billingCycle: "weekly" },
     });
@@ -2980,23 +2980,23 @@ describe("Sprint 11 — Abonelik Sistemi v2", () => {
     assert.equal(status, 403);
   });
 
-  // Cleanup (STRICT): PROSAN'i tekrar pkg_growth/active'e döndür — aksi halde
+  // Cleanup (STRICT): PROSAN'i tekrar pkg_pro/active'e döndür — aksi halde
   // sonraki suite'ler (Sprint 12/22/23/73) FEATURE_LOCKED 403 alir.
   // Silent catch yok: cleanup hata verirse test suite'ini fail et.
   after(async () => {
     const { jar } = await login("admin", "admin123");
     const { status: pStatus, json: plansJson } = await api("GET", "/subscriptions/plans", { jar });
     assert.equal(pStatus, 200, `cleanup: plans listesi 200 olmali — ${JSON.stringify(plansJson)}`);
-    const growthPlan = plansJson.plans?.find(p => p.slug === "pkg_growth");
-    assert.ok(growthPlan, "cleanup: pkg_growth plani bulunamadi (seed bozuk olabilir)");
+    const growthPlan = plansJson.plans?.find(p => p.slug === "pkg_pro");
+    assert.ok(growthPlan, "cleanup: pkg_pro plani bulunamadi (seed bozuk olabilir)");
     const { status: sStatus, json: sJson } = await api("POST", "/subscriptions/subscribe", {
       jar, body: { planId: growthPlan.id, billingCycle: "yearly" },
     });
-    assert.equal(sStatus, 201, `cleanup: pkg_growth aboneligine donus 201 olmali — ${JSON.stringify(sJson)}`);
+    assert.equal(sStatus, 201, `cleanup: pkg_pro aboneligine donus 201 olmali — ${JSON.stringify(sJson)}`);
     const { status: cStatus, json: cJson } = await api("GET", "/subscriptions/current", { jar });
     assert.equal(cStatus, 200, "cleanup: current 200 olmali");
     assert.equal(cJson.subscription?.status, "active", `cleanup: aktif olmali — ${JSON.stringify(cJson.subscription)}`);
-    assert.equal(cJson.plan?.slug, "pkg_growth", `cleanup: pkg_growth aktif olmali — ${JSON.stringify(cJson.plan)}`);
+    assert.equal(cJson.plan?.slug, "pkg_pro", `cleanup: pkg_pro aktif olmali — ${JSON.stringify(cJson.plan)}`);
   });
 });
 
@@ -3012,7 +3012,7 @@ describe("Sprint 12 — Dosya/Evrak Yönetimi", () => {
 
   before(async () => {
     // B1+B2: PROSAN baseline plan zemini garantile (Sprint 11 after() bağımlılığı kırma)
-    await ensureTenantPlan("prosan", "pkg_growth", "yearly");
+    await ensureTenantPlan("prosan", "pkg_pro", "yearly");
     const a = await login("admin", "admin123");
     adminJar = a.jar;
     const s = await login("personel", "staff123");
@@ -3194,7 +3194,7 @@ describe("Sprint 12 — Dosya/Evrak Yönetimi", () => {
 // Sprint 21 — Akıllı Bildirim Sistemi
 // ═══════════════════════════════════════════════════════════════════════════════
 describe("Sprint 21 — Akıllı Bildirim Sistemi", () => {
-  before(async () => { await ensureTenantPlan("prosan", "pkg_growth", "yearly"); });
+  before(async () => { await ensureTenantPlan("prosan", "pkg_pro", "yearly"); });
   let ruleId;
 
   test("Desteklenen bildirim tipleri listelenir", async () => {
@@ -3347,7 +3347,7 @@ describe("Sprint 21 — Akıllı Bildirim Sistemi", () => {
 // Sprint 22 — Personel Yönetimi
 // ═══════════════════════════════════════════════════════════════════════════════
 describe("Sprint 22 — Personel Yönetimi", () => {
-  before(async () => { await ensureTenantPlan("prosan", "pkg_growth", "yearly"); });
+  before(async () => { await ensureTenantPlan("prosan", "pkg_pro", "yearly"); });
   let deptId;
   let personnelId;
   let leaveId;
@@ -3533,7 +3533,7 @@ describe("Sprint 22 — Personel Yönetimi", () => {
 // Sprint 23 — Kampanya & İndirim Yönetimi
 // ═══════════════════════════════════════════════════════════════════════════════
 describe("Sprint 23 — Kampanya & İndirim Yönetimi", () => {
-  before(async () => { await ensureTenantPlan("prosan", "pkg_growth", "yearly"); });
+  before(async () => { await ensureTenantPlan("prosan", "pkg_pro", "yearly"); });
   let campaignId;
   let fixedCampaignId;
 
@@ -4389,7 +4389,7 @@ describe("Sprint 73.6 — Reklam Bütçesi", () => {
   let channelId;
   before(async () => {
     // B1+B2: PROSAN baseline plan zemini garantile (Sprint 11 after() bağımlılığı kırma)
-    await ensureTenantPlan("prosan", "pkg_growth", "yearly");
+    await ensureTenantPlan("prosan", "pkg_pro", "yearly");
     ({ jar } = await login("talha", "talha123"));
     const create = await api("POST", "/ad-budgets/channels", {
       jar,
@@ -4434,7 +4434,7 @@ describe("Sprint 73.7 — Ticarium Pazar (Aggregator)", () => {
   let jar;
   before(async () => {
     // B1+B2: PROSAN baseline plan zemini garantile (Sprint 11 after() bağımlılığı kırma)
-    await ensureTenantPlan("prosan", "pkg_growth", "yearly");
+    await ensureTenantPlan("prosan", "pkg_pro", "yearly");
     ({ jar } = await login("talha", "talha123"));
   });
 
@@ -5684,8 +5684,8 @@ describe("Sprint H — set-plan CAS (compare-and-set, lost-update precondition)"
       assert.fail("Sprint H test için pre-state okunmalıydı (nihatturizm /subscriptions/current 200 + subscription.id)");
     }
 
-    // 1) CAS doğru: pkg_growth/monthly hedefine eşit-veya-değişik geçiş.
-    const target1 = { slug: "pkg_growth", cycle: "monthly" };
+    // 1) CAS doğru: pkg_pro/monthly hedefine eşit-veya-değişik geçiş.
+    const target1 = { slug: "pkg_pro", cycle: "monthly" };
     const r1 = await api("POST", "/subscriptions/admin/billing/set-plan", {
       jar: saJar,
       body: {
@@ -5703,7 +5703,7 @@ describe("Sprint H — set-plan CAS (compare-and-set, lost-update precondition)"
     const r2 = await api("POST", "/subscriptions/admin/billing/set-plan", {
       jar: saJar,
       body: {
-        companyId: 2, planSlug: "pkg_business", billingCycle: "monthly",
+        companyId: 2, planSlug: "pkg_business_v3", billingCycle: "monthly",
         note: "Sprint H CAS test step 2 (stale id)",
         expectedSubscriptionId: preSubId, // KASITLI stale: artık sub1 aktif
       },
@@ -5724,7 +5724,7 @@ describe("Sprint H — set-plan CAS (compare-and-set, lost-update precondition)"
     const r3 = await api("POST", "/subscriptions/admin/billing/set-plan", {
       jar: saJar,
       body: {
-        companyId: 2, planSlug: "pkg_business", billingCycle: "monthly",
+        companyId: 2, planSlug: "pkg_business_v3", billingCycle: "monthly",
         note: "Sprint H CAS test step 3 (refreshed id)",
         expectedSubscriptionId: sub1,
       },
@@ -5740,7 +5740,7 @@ describe("Sprint H — set-plan CAS (compare-and-set, lost-update precondition)"
     const setup = await api("POST", "/subscriptions/admin/billing/set-plan", {
       jar: saJar,
       body: {
-        companyId: 2, planSlug: "pkg_growth", billingCycle: "monthly",
+        companyId: 2, planSlug: "pkg_pro", billingCycle: "monthly",
         note: "Sprint H race test baseline",
       },
     });
@@ -5754,7 +5754,7 @@ describe("Sprint H — set-plan CAS (compare-and-set, lost-update precondition)"
     // sonrakiler tx alır, CAS check yapar, currentId artık baselineSubId değil → 409 conflict döner.
     // 23505 unique violation oluşursa o da 409'a map edilir (yine deterministik).
     const cycle = "monthly";
-    const targets = ["pkg_business", "pkg_growth", "pkg_business", "pkg_growth", "pkg_business"];
+    const targets = ["pkg_business_v3", "pkg_pro", "pkg_business_v3", "pkg_pro", "pkg_business_v3"];
     const results = await Promise.all(targets.map((slug, idx) =>
       api("POST", "/subscriptions/admin/billing/set-plan", {
         jar: saJar,
@@ -5803,14 +5803,14 @@ describe("Sprint H — set-plan CAS (compare-and-set, lost-update precondition)"
       api("POST", "/subscriptions/admin/billing/set-plan", {
         jar: saJar,
         body: {
-          companyId: 2, planSlug: "pkg_business", billingCycle: "monthly",
+          companyId: 2, planSlug: "pkg_business_v3", billingCycle: "monthly",
           note: "Sprint H null-race A", expectedSubscriptionId: null,
         },
       }),
       api("POST", "/subscriptions/admin/billing/set-plan", {
         jar: saJar,
         body: {
-          companyId: 2, planSlug: "pkg_growth", billingCycle: "monthly",
+          companyId: 2, planSlug: "pkg_pro", billingCycle: "monthly",
           note: "Sprint H null-race B", expectedSubscriptionId: null,
         },
       }),
@@ -5842,7 +5842,7 @@ describe("Sprint H — set-plan CAS (compare-and-set, lost-update precondition)"
     const r = await api("POST", "/subscriptions/admin/billing/set-plan", {
       jar: saJar,
       body: {
-        companyId: 2, planSlug: "pkg_growth", billingCycle: "monthly",
+        companyId: 2, planSlug: "pkg_pro", billingCycle: "monthly",
         note: "Sprint H backward-compat (no expectedSubscriptionId)",
       },
     });
@@ -6635,7 +6635,7 @@ describe("Sprint J — Membership + Verification", () => {
     // Sonraki istekleri yeni şirkete yönlendir (X-Tenant header)
     jar.tenant = r.json.subdomain;
 
-    // Oturum açık olmalı — /auth/me 200 ve plan pkg_growth/yearly
+    // Oturum açık olmalı — /auth/me 200 ve plan pkg_pro/yearly
     const me = await api("GET", "/auth/me", { jar });
     assert.equal(me.status, 200);
     assert.equal(me.json?.companyId, r.json.companyId);
@@ -6902,11 +6902,11 @@ describe("Dalga 16 — Yetki Şeması v2 (gizli sistem planları)", () => {
     assert.ok(!slugs.includes("pkg_procurement"),
       `pkg_procurement public listede görünmemeli, slugs=${slugs.join(",")}`);
     // 5 satılan plan public listede OLMALI
-    assert.ok(slugs.includes("pkg_inventory"));
-    assert.ok(slugs.includes("pkg_trade"));
-    assert.ok(slugs.includes("pkg_business"));
-    assert.ok(slugs.includes("pkg_growth"));
-    assert.ok(slugs.includes("pkg_enterprise_v2"));
+    assert.ok(slugs.includes("pkg_starter"));
+    assert.ok(slugs.includes("pkg_starter"));
+    assert.ok(slugs.includes("pkg_business_v3"));
+    assert.ok(slugs.includes("pkg_pro"));
+    assert.ok(slugs.includes("pkg_enterprise_v3"));
     // Tüm public planlar isPublic=true
     for (const p of plans) {
       assert.equal(p.isPublic, true, `${p.slug} public listede ama isPublic=${p.isPublic}`);

@@ -323,89 +323,13 @@ export async function seedSubscriptionPlansV2() {
   console.info(`Subscription plans v2 seeded (${publicCount} public + ${hiddenCount} hidden = ${PLAN_DEFS.length} total)`);
 }
 
-// Eski seed (artık çağrılmamalı, geriye dönük uyumluluk için kalıyor)
+// Eski isim — geriye dönük uyumluluk için ince shim. Tüm tanımlar v2'de.
+// Dalga 25 — Yetki temizliği: ölü inline seed (free/starter/pro/enterprise)
+// kaldırıldı; eski v1 plan slug'ları artık hiçbir yerde tanımlı değil.
 export async function seedSubscriptionPlans() {
-  // Yeni v2 seed'i çalıştır
   await seedSubscriptionPlansV2();
-  return;
-
-  // ÖLÜ KOD — eski örnek planlar
-  const existing = await db.select({ id: subscriptionPlansTable.id }).from(subscriptionPlansTable).limit(1);
-  if (existing.length > 0) return;
-
-  await db.insert(subscriptionPlansTable).values([
-    {
-      name: "Ücretsiz",
-      slug: "free",
-      description: "Küçük işletmeler için temel özellikler",
-      priceMonthly: "0",
-      priceYearly: "0",
-      maxUsers: 2,
-      maxProducts: 100,
-      maxBranches: 1,
-      maxMonthlySales: 100,
-      storageMb: 100,
-      features: JSON.stringify(["Ürün yönetimi", "Temel satış", "PDF rapor"]),
-      sortOrder: 0,
-    },
-    {
-      name: "Başlangıç",
-      slug: "starter",
-      description: "Büyüyen işletmeler için ideal",
-      priceMonthly: "299",
-      priceYearly: "2990",
-      maxUsers: 5,
-      maxProducts: 1000,
-      maxBranches: 2,
-      maxMonthlySales: 500,
-      storageMb: 1000,
-      features: JSON.stringify([
-        "Ürün yönetimi", "Satış & iade", "Tedarikçi/alış",
-        "Raporlama", "Barkod/etiket", "Çoklu şube (2)",
-      ]),
-      sortOrder: 1,
-    },
-    {
-      name: "Profesyonel",
-      slug: "pro",
-      description: "Orta ölçekli işletmeler için",
-      priceMonthly: "699",
-      priceYearly: "6990",
-      maxUsers: 20,
-      maxProducts: 10000,
-      maxBranches: 10,
-      maxMonthlySales: 5000,
-      storageMb: 5000,
-      features: JSON.stringify([
-        "Tüm Başlangıç özellikleri",
-        "Çoklu şube (10)", "Webhook entegrasyonu",
-        "API erişimi", "Muhasebe entegrasyonu",
-        "E-ticaret entegrasyonu", "CSV export",
-      ]),
-      sortOrder: 2,
-    },
-    {
-      name: "Kurumsal",
-      slug: "enterprise",
-      description: "Büyük işletmeler ve zincirler için sınırsız",
-      priceMonthly: "1499",
-      priceYearly: "14990",
-      maxUsers: -1,
-      maxProducts: -1,
-      maxBranches: -1,
-      maxMonthlySales: -1,
-      storageMb: 50000,
-      features: JSON.stringify([
-        "Tüm Pro özellikleri",
-        "Sınırsız kullanıcı", "Sınırsız ürün",
-        "Sınırsız şube", "Özel API entegrasyonu",
-        "Öncelikli destek", "SLA garantisi",
-      ]),
-      sortOrder: 3,
-    },
-  ]);
-  console.info("Subscription plans seeded");
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // KULLANIM HESAPLAMA

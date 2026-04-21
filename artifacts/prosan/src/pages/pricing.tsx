@@ -26,7 +26,9 @@ type Plan = {
 
 const FEATURE_LABELS = SHARED_FEATURE_LABELS;
 
-const HIGHLIGHTED = "pkg_trade";
+// Dalga 25 — Yetki temizliği: eski `pkg_trade` slug'ı katalogdan kalktı.
+// HIGHLIGHTED orta-üst paket olarak `pkg_business_v3` (mevcut katalogda 3.).
+const HIGHLIGHTED = "pkg_business_v3";
 
 export default function PricingPage() {
   const { toast } = useToast();

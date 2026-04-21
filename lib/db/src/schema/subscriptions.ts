@@ -10,8 +10,8 @@ import { usersTable } from "./users";
 // ─────────────────────────────────────────────────────────────────────────────
 export const subscriptionPlansTable = pgTable("subscription_plans", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),                      // Starter | Pro | Enterprise
-  slug: text("slug").notNull().unique(),              // starter | pro | enterprise
+  name: text("name").notNull(),                      // Başlangıç | Pro | Business | Kurumsal
+  slug: text("slug").notNull().unique(),              // pkg_starter | pkg_pro | pkg_business_v3 | pkg_enterprise_v3
   description: text("description"),
   priceMonthly: numeric("price_monthly", { precision: 10, scale: 2 }).notNull().default("0"),
   priceYearly: numeric("price_yearly", { precision: 10, scale: 2 }).notNull().default("0"),

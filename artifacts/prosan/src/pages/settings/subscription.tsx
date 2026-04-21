@@ -34,18 +34,23 @@ function usageBar(current: number, max: number) {
   return Math.min(100, Math.round((current / max) * 100));
 }
 
+// Dalga 25 — Yetki temizliği: eski `free`/`starter`/`pro` slug eşleşmeleri
+// (pkg_ önekli olmayan v1 isimleri) güncel katalog (pkg_starter/pkg_pro/
+// pkg_business_v3/pkg_enterprise_v3) ile değiştirildi.
 function planIcon(slug: string) {
-  if (slug === "free") return <Zap className="h-5 w-5 text-muted-foreground" />;
-  if (slug === "starter") return <Star className="h-5 w-5 text-blue-500" />;
-  if (slug === "pro") return <TrendingUp className="h-5 w-5 text-teal-500" />;
-  return <Crown className="h-5 w-5 text-blue-600" />;
+  if (slug === "pkg_starter") return <Star className="h-5 w-5 text-blue-500" />;
+  if (slug === "pkg_pro") return <TrendingUp className="h-5 w-5 text-teal-500" />;
+  if (slug === "pkg_business_v3") return <Building2 className="h-5 w-5 text-indigo-500" />;
+  if (slug === "pkg_enterprise_v3") return <Crown className="h-5 w-5 text-amber-500" />;
+  return <Zap className="h-5 w-5 text-muted-foreground" />;
 }
 
 function planColor(slug: string) {
-  if (slug === "free") return "bg-slate-50 border-slate-200";
-  if (slug === "starter") return "bg-blue-50 border-blue-200";
-  if (slug === "pro") return "bg-teal-50 border-teal-200 ring-2 ring-teal-200";
-  return "bg-gradient-to-br from-blue-50 to-teal-50 border-blue-200";
+  if (slug === "pkg_starter") return "bg-blue-50 border-blue-200";
+  if (slug === "pkg_pro") return "bg-teal-50 border-teal-200 ring-2 ring-teal-200";
+  if (slug === "pkg_business_v3") return "bg-indigo-50 border-indigo-200";
+  if (slug === "pkg_enterprise_v3") return "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200";
+  return "bg-slate-50 border-slate-200";
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
