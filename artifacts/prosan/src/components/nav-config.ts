@@ -245,6 +245,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/super-admin/audit-logs", label: "Denetim Kayıtları", icon: ShieldCheck, roles: ["super_admin"] },
       { href: "/admin/payments", label: "Ödeme Bildirimleri", icon: CreditCard, roles: ["super_admin"] },
       { href: "/admin/billing", label: "Abonelik Yönetimi", icon: CreditCard, roles: ["super_admin"] },
+      { href: "/admin/planlar", label: "Paket Yönetimi", icon: CreditCard, roles: ["super_admin"] },
       { href: "/admin/runtime-flags", label: "Runtime Flags", icon: ShieldCheck, roles: ["super_admin"] },
       { href: "/super-admin/sistem-saglik", label: "Sistem Sağlığı", icon: Activity, roles: ["super_admin"] },
       { href: "/super-admin/pazaryeri-saglik", label: "Pazaryeri Sağlık", icon: Activity, roles: ["super_admin"] },

@@ -449,12 +449,13 @@ router.get("/plans", async (_req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
 });
 
-// Süper admin için TÜM planlar (gizli sistem planları dahil) — billing yönetimi
+// Süper admin için TÜM planlar (gizli + pasif sistem planları dahil) — billing
+// yönetimi. Dalga 24 fix: artık isActive filtrelemez, çünkü panel soft-delete
+// edilen planları da göstermeli (re-activate akışı + recovery için).
 router.get("/plans/all", requireAuth, requireSuperAdmin, async (_req, res) => {
   try {
     const plans = await db.select().from(subscriptionPlansTable)
-      .where(eq(subscriptionPlansTable.isActive, true))
-      .orderBy(subscriptionPlansTable.sortOrder);
+      .orderBy(subscriptionPlansTable.sortOrder, subscriptionPlansTable.id);
     res.json({ plans });
   } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
 });
@@ -725,30 +726,185 @@ router.get("/admin/all", requireAuth, requireRole(["super_admin"]), async (_req,
   } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
 });
 
-// Super admin plan yönetimi
-router.put("/plans/:id", requireAuth, requireRole(["super_admin"]), async (req: Request, res: Response) => {
+// ─── Dalga 24 — SÜPER ADMIN PLAN YÖNETİM PANELİ ─────────────────────────
+//
+// Plan tanımlarının (subscription_plans) tam CRUD'u: liste/oluştur/güncelle/
+// soft-delete. PUT artık tüm düzenlenebilir alanları destekler (önceki 5 alan
+// dar kapsamlıydı). Tüm mutasyonlar audit log'a yazılır + tüm tenant'ların
+// feature cache'i invalidate edilir (plan değişimi feature listesini etkiler).
+//
+// Yetkilendirme: yalnızca super_admin (requireSuperAdmin middleware).
+// Schema doğrulama: prices >= 0, limits integer (-1=sınırsız), features JSON
+// array string. Slug değişikliği YASAK (subscription kayıtları slug bazlı
+// referans tutmaz ama feature-codes mapping'i slug bazlı; karışıklığı önler).
+// ────────────────────────────────────────────────────────────────────────
+
+const PLAN_EDITABLE_FIELDS = [
+  "name", "description", "priceMonthly", "priceYearly",
+  "maxUsers", "maxProducts", "maxBranches", "maxMonthlySales", "storageMb",
+  "maxEinvoiceMonthly", "einvoiceOverageRate",
+  "maxOcrMonthly", "maxApiCallsMonthly",
+  "maxCustomers", "maxMarketplaceChannels",
+  "features", "isActive", "isPublic", "requiredAccountType", "sortOrder",
+] as const;
+
+function buildPlanUpdate(body: Record<string, unknown>): { data: Record<string, unknown>; error?: string } {
+  const data: Record<string, unknown> = {};
+  for (const k of PLAN_EDITABLE_FIELDS) {
+    if (!(k in body)) continue;
+    const v = body[k];
+    if (v === undefined) continue;
+
+    // Numeric string fields (drizzle numeric → string)
+    if (k === "priceMonthly" || k === "priceYearly" || k === "einvoiceOverageRate") {
+      const n = typeof v === "number" ? v : Number(v);
+      if (!Number.isFinite(n) || n < 0) return { data, error: `${k} >= 0 olmalı` };
+      data[k] = String(n);
+      continue;
+    }
+    // Integer limit fields (-1 = sınırsız)
+    const intFields = new Set([
+      "maxUsers", "maxProducts", "maxBranches", "maxMonthlySales", "storageMb",
+      "maxEinvoiceMonthly", "maxOcrMonthly", "maxApiCallsMonthly",
+      "maxCustomers", "maxMarketplaceChannels", "sortOrder",
+    ]);
+    if (intFields.has(k)) {
+      const n = typeof v === "number" ? v : Number(v);
+      if (!Number.isInteger(n) || n < -1) return { data, error: `${k} integer (>= -1) olmalı` };
+      data[k] = n;
+      continue;
+    }
+    // Boolean fields
+    if (k === "isActive" || k === "isPublic") {
+      if (typeof v !== "boolean") return { data, error: `${k} boolean olmalı` };
+      data[k] = v;
+      continue;
+    }
+    // features → JSON string of array
+    if (k === "features") {
+      let arr: unknown = v;
+      if (typeof v === "string") {
+        try { arr = JSON.parse(v); } catch { return { data, error: "features JSON array olmalı" }; }
+      }
+      if (!Array.isArray(arr) || !arr.every(x => typeof x === "string")) {
+        return { data, error: "features string[] olmalı" };
+      }
+      data[k] = JSON.stringify(arr);
+      continue;
+    }
+    // Text fields (name, description, requiredAccountType)
+    if (v === null) { data[k] = null; continue; }
+    if (typeof v !== "string") return { data, error: `${k} string olmalı` };
+    data[k] = v;
+  }
+  return { data };
+}
+
+// Tüm tenant'ların feature cache'ini topluca invalidate et — plan tanımı
+// değiştikten sonra her firma yeni feature setine geçmeli.
+async function invalidateAllFeatureCaches(): Promise<void> {
+  const ids = await db.select({ id: companiesTable.id }).from(companiesTable);
+  for (const c of ids) invalidateFeaturesCache(c.id);
+}
+
+// CREATE — yeni plan tanımı
+router.post("/plans", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const slug = typeof body.slug === "string" ? body.slug.trim() : "";
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (!/^[a-z0-9_]+$/i.test(slug) || slug.length < 3 || slug.length > 64) {
+      return void res.status(400).json(Errors.badRequest("slug: 3-64 karakter, [a-zA-Z0-9_]"));
+    }
+    if (!name) return void res.status(400).json(Errors.badRequest("name gerekli"));
+
+    const [exists] = await db.select({ id: subscriptionPlansTable.id })
+      .from(subscriptionPlansTable).where(eq(subscriptionPlansTable.slug, slug)).limit(1);
+    if (exists) return void res.status(409).json(Errors.conflict(`slug '${slug}' zaten kullanılıyor`));
+
+    const { data, error } = buildPlanUpdate({ ...body, name });
+    if (error) return void res.status(400).json(Errors.badRequest(error));
+
+    const insertVals: Record<string, unknown> = { slug, name, ...data };
+    const [created] = await db.insert(subscriptionPlansTable).values(insertVals as any).returning();
+
+    await audit({
+      req,
+      action: "PLAN_CREATE",
+      entity: "subscription_plans",
+      entityId: created.id,
+      details: { slug: created.slug, name: created.name },
+    });
+    // Dalga 24 fix — mutation contract: create de cache invalidate eder
+    // (consistency; yeni plan henüz abone yokken impact düşük ama future-proof).
+    await invalidateAllFeatureCaches();
+    res.status(201).json({ plan: created });
+  } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
+});
+
+// UPDATE — tüm düzenlenebilir alanlar
+router.put("/plans/:id", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    if (isNaN(id)) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
+    if (!Number.isInteger(id) || id <= 0) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
 
-    const { priceMonthly, priceYearly, maxUsers, maxProducts, isActive } = req.body as {
-      priceMonthly?: string; priceYearly?: string; maxUsers?: number; maxProducts?: number; isActive?: boolean;
-    };
-
-    const updateData: Record<string, unknown> = {};
-    if (priceMonthly !== undefined) updateData.priceMonthly = priceMonthly;
-    if (priceYearly !== undefined) updateData.priceYearly = priceYearly;
-    if (maxUsers !== undefined) updateData.maxUsers = maxUsers;
-    if (maxProducts !== undefined) updateData.maxProducts = maxProducts;
-    if (isActive !== undefined) updateData.isActive = isActive;
+    const { data, error } = buildPlanUpdate((req.body ?? {}) as Record<string, unknown>);
+    if (error) return void res.status(400).json(Errors.badRequest(error));
+    if (Object.keys(data).length === 0) return void res.status(400).json(Errors.badRequest("Güncellenecek alan yok"));
 
     const [updated] = await db.update(subscriptionPlansTable)
-      .set(updateData)
+      .set(data as any)
       .where(eq(subscriptionPlansTable.id, id))
       .returning();
     if (!updated) return void res.status(404).json(Errors.notFound("Plan"));
 
+    await audit({
+      req,
+      action: "PLAN_UPDATE",
+      entity: "subscription_plans",
+      entityId: id,
+      details: { fields: Object.keys(data), slug: updated.slug },
+    });
+    await invalidateAllFeatureCaches();
     res.json({ plan: updated });
+  } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
+});
+
+// SOFT-DELETE — isActive=false. Aktif abone varsa engelle (veri tutarlılığı).
+router.delete("/plans/:id", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
+
+    const [plan] = await db.select().from(subscriptionPlansTable).where(eq(subscriptionPlansTable.id, id)).limit(1);
+    if (!plan) return void res.status(404).json(Errors.notFound("Plan"));
+
+    const [{ activeCount }] = await db.select({
+      activeCount: sql<number>`COUNT(*)::int`,
+    }).from(companySubscriptionsTable).where(and(
+      eq(companySubscriptionsTable.planId, id),
+      inArray(companySubscriptionsTable.status, ["active", "grace_period"]),
+    ));
+    if (Number(activeCount) > 0) {
+      return void res.status(409).json(Errors.conflict(
+        `${activeCount} aktif abone var; önce başka plana taşıyın veya iptal edin.`
+      ));
+    }
+
+    const [updated] = await db.update(subscriptionPlansTable)
+      .set({ isActive: false })
+      .where(eq(subscriptionPlansTable.id, id))
+      .returning();
+
+    await audit({
+      req,
+      action: "PLAN_DELETE",
+      entity: "subscription_plans",
+      entityId: id,
+      details: { slug: plan.slug, name: plan.name, soft: true },
+    });
+    await invalidateAllFeatureCaches();
+    res.json({ ok: true, plan: updated });
   } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
 });
 

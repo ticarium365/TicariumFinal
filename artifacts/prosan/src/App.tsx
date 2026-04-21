@@ -109,6 +109,7 @@ import { UpgradeModal, installFeatureLockInterceptor } from "@/components/upgrad
 import CookieConsentBanner from "@/components/cookie-consent-banner";
 import KvkkPage from "@/pages/kvkk";
 import RuntimeFlagsAdminPage from "@/pages/admin/runtime-flags";
+import AdminPlanlarPage from "@/pages/admin/planlar";
 import PazaryeriSaglikPage from "@/pages/super-admin/pazaryeri-saglik";
 import SistemSaglikPage from "@/pages/super-admin/sistem-saglik";
 // Sprint H — Satınalma (eski buyer-portal entegrasyonu)
@@ -531,6 +532,10 @@ function AuthenticatedRouter() {
 
         <Route path="/admin/runtime-flags">
           {() => <ProtectedRoute component={RuntimeFlagsAdminPage} roles={["super_admin"]} />}
+        </Route>
+
+        <Route path="/admin/planlar">
+          {() => <ProtectedRoute component={AdminPlanlarPage} roles={["super_admin"]} />}
         </Route>
 
         <Route path="/super-admin/sistem-saglik">
