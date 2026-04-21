@@ -281,7 +281,7 @@ export default function MagazaListesi() {
             <div>
               <Label>Mağaza Adı *</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                     placeholder="Örn: PROSAN Online" />
+                     placeholder="Örn: ABC Online Mağaza" />
             </div>
             <div>
               <Label>Tip</Label>

@@ -7,8 +7,8 @@ export default function KvkkPage() {
       <h2>1. Veri Sorumlusu</h2>
       <p>
         Ticarium365 SaaS platformu kapsamında işlenen kişisel veriler için veri sorumlusu,
-        platformu kullandığınız tenant şirkettir. Ticarium365 (PROSAN ENDÜSTRİ) yalnızca
-        veri işleyen sıfatıyla teknik altyapıyı sağlar.
+        platformu kullandığınız tenant şirkettir. Ticarium365 yalnızca veri işleyen
+        sıfatıyla teknik altyapıyı sağlar.
       </p>
 
       <h2>2. İşlenen Kişisel Veriler</h2>

@@ -309,8 +309,9 @@ export default function CatalogPage() {
               </div>
             </div>
           </div>
-          <div className="border-t border-slate-700 mt-6 pt-4 text-xs text-muted-foreground text-center">
-            © {new Date().getFullYear()} PROSAN ENDÜSTRİ — Tüm fiyatlar KDV hariçtir. Stok ve fiyat değişiklik hakkı saklıdır.
+          <div className="border-t border-slate-700 mt-6 pt-4 text-xs text-muted-foreground text-center space-y-1">
+            <div>© {new Date().getFullYear()} PROSAN ENDÜSTRİ — Tüm fiyatlar KDV hariçtir. Stok ve fiyat değişiklik hakkı saklıdır.</div>
+            <div className="text-[11px] text-muted-foreground/70">Powered by <span className="font-semibold text-slate-300">Ticarium365</span></div>
           </div>
         </div>
       </footer>

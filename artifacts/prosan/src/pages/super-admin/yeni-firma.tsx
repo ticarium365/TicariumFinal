@@ -117,7 +117,7 @@ export default function NewTenantWizard() {
                     set("subdomain", autoSubdomain(e.target.value));
                   }
                 }}
-                placeholder="Örn: PROSAN ENDÜSTRİ"
+                placeholder="Örn: ABC Ticaret A.Ş."
               />
             </div>
             <div>

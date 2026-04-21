@@ -243,7 +243,7 @@ export default function OnboardingPage() {
                     <Label htmlFor="companyName">Firma Adı *</Label>
                     <Input
                       id="companyName"
-                      placeholder="Örn: PROSAN ENDÜSTRİ"
+                      placeholder="Örn: ABC Ticaret A.Ş."
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
                       className="mt-1"
