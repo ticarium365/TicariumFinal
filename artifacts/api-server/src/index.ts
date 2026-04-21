@@ -209,6 +209,74 @@ async function seedDefaultProducts() {
   logger.info("Products seeded successfully");
 }
 
+async function backfillSubscriptionsForCompanies() {
+  // ─── Dalga 18: Subscription'sız şirketlere otomatik 30 günlük Kurumsal trial ata ──
+  // Onboarding sırasında subscription oluşturulur, ama eski/seed company'lerde yok olabilir.
+  const { eq: eqOp, inArray, and: andOp } = await import("drizzle-orm");
+  const { companiesTable: co, companySubscriptionsTable: cs, subscriptionPlansTable: sp } = await import("@workspace/db");
+
+  const companies = await db.select({ id: co.id, name: co.name, accountType: co.accountType }).from(co);
+  if (companies.length === 0) return;
+
+  // Mevcut aktif/trial subscriptionları olan companyId'leri bul
+  const existing = await db
+    .select({ companyId: cs.companyId })
+    .from(cs)
+    .where(inArray(cs.status, ["active", "trial", "grace_period"]));
+  const haveSub = new Set(existing.map(r => r.companyId));
+
+  const missing = companies.filter(c => !haveSub.has(c.id));
+  if (missing.length === 0) return;
+
+  // Trial planı bul (purchasing → satınalmacı, diğerleri → kurumsal trial)
+  const [trialPlan] = await db.select().from(sp).where(eqOp(sp.slug, "pkg_trial_enterprise"));
+  const [procPlan]  = await db.select().from(sp).where(eqOp(sp.slug, "pkg_procurement"));
+  if (!trialPlan) {
+    logger.warn("Trial enterprise plan not found — cannot backfill subscriptions");
+    return;
+  }
+
+  const now = new Date();
+  const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  let inserted = 0;
+  for (const c of missing) {
+    const isPurchasing = c.accountType === "purchasing";
+    const planId = isPurchasing && procPlan ? procPlan.id : trialPlan.id;
+    // Per-company advisory lock + recheck inside transaction → idempotent under concurrent
+    // onboarding flow (architect FAIL #4 fix). Same key seed as Sprint H billing CAS path.
+    try {
+      await db.transaction(async (tx) => {
+        await tx.execute(
+          // eslint-disable-next-line drizzle/enforce-update-with-where
+          sql`SELECT pg_advisory_xact_lock(${0x53455450}::bigint, ${c.id}::int)`,
+        );
+        const stillMissing = await tx
+          .select({ id: cs.id })
+          .from(cs)
+          .where(andOp(
+            eqOp(cs.companyId, c.id),
+            inArray(cs.status, ["active", "trial", "grace_period"]),
+          ))
+          .limit(1);
+        if (stillMissing.length > 0) return; // başka bir process eklemiş, idempotent atla
+        await tx.insert(cs).values({
+          companyId: c.id,
+          planId,
+          status: "trial",
+          billingCycle: "monthly",
+          startedAt: now,
+          trialEndsAt,
+          notes: "Auto-backfill: 30-day enterprise trial",
+        } as any);
+        inserted++;
+      });
+    } catch (err) {
+      logger.warn({ err, companyId: c.id }, "subscription_backfill_skipped");
+    }
+  }
+  logger.info({ inserted, considered: missing.length }, "Backfilled missing subscriptions with 30-day trial");
+}
+
 async function runSeeds() {
   try {
     await seedDefaultCompanyIfMissing();
@@ -244,6 +312,12 @@ async function runSeeds() {
     await seedSubscriptionPlans();
   } catch (err) {
     logger.error({ err }, "Failed to seed subscription plans");
+  }
+
+  try {
+    await backfillSubscriptionsForCompanies();
+  } catch (err) {
+    logger.error({ err }, "Failed to backfill subscriptions for companies");
   }
 }
 

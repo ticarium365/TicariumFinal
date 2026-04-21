@@ -26,6 +26,7 @@ import { getProviderForCompany, PROVIDER_META, PROVIDER_REGISTRY, logEvent } fro
 import { dispatchEinvoiceEvent } from "../services/notifications/dispatch.js";
 import type { EInvoiceCreatePayload } from "../services/einvoice/types.js";
 import { __mockCreateInvoiceCounter, __mockFailController } from "../services/einvoice/mock-provider.js";
+import { incrementUsageSafe } from "../services/usage.js";
 
 const router = Router();
 
@@ -596,6 +597,8 @@ router.post("/from-sales", requireWriter, async (req: Request, res: Response) =>
       outboxId: row.id,
       message: `Outbox #${row.id} satış #${ids.join(",")} köprüsünden üretildi (ETTN ${result.externalId})`,
     });
+    // Dalga 19 — kontör artır (her başarılı yeni e-fatura için)
+    incrementUsageSafe(companyId, "einvoice", 1);
     res.status(201).json(row);
   } catch (e: any) {
     console.error("[einvoice/from-sales] create_failed:", e);

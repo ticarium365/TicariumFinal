@@ -5,11 +5,45 @@ import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetMeQueryKey } from "@workspace/api-client-react";
 
+// ─── Dalga 18B: Aktif plan + limit + isTrial bilgileri ─────────────────────
+export interface PlanLimits {
+  maxUsers: number;
+  maxProducts: number;
+  maxBranches: number;
+  maxCustomers: number;
+  maxEinvoiceMonthly: number;
+  einvoiceOverageRate: string;
+  maxOcrMonthly: number;
+  maxApiCallsMonthly: number;
+  maxMarketplaceChannels: number;
+  storageMb: number;
+}
+export interface PlanInfo {
+  slug: string;
+  name: string;
+  status: string;          // active | trial | grace_period | cancelled | suspended
+  isTrial: boolean;
+  trialEndsAt: string | null;
+  limits: PlanLimits;
+}
+
+// Dalga 19 — aylık kontör kullanımı
+export interface UsageMetricSnapshot { count: number; overage: number; }
+export interface UsageInfo {
+  period: string; // 'YYYY-MM' UTC
+  einvoice: UsageMetricSnapshot;
+  ocr: UsageMetricSnapshot;
+  apiCalls: UsageMetricSnapshot;
+  sms: UsageMetricSnapshot;
+}
+
 interface AuthContextType {
-  user: (User & { onboardingCompleted?: boolean | null }) | null;
+  user: (User & { onboardingCompleted?: boolean | null; plan?: PlanInfo | null; usage?: UsageInfo | null }) | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   needsOnboarding: boolean;
+  plan: PlanInfo | null;
+  usage: UsageInfo | null;
   checkAuth: () => Promise<void>;
 }
 
@@ -18,6 +52,8 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   isAuthenticated: false,
   needsOnboarding: false,
+  plan: null,
+  usage: null,
   checkAuth: async () => {},
 });
 
@@ -64,6 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         needsOnboarding,
+        plan: ((user as any)?.plan as PlanInfo | null) ?? null,
+        usage: ((user as any)?.usage as UsageInfo | null) ?? null,
         checkAuth,
       }}
     >

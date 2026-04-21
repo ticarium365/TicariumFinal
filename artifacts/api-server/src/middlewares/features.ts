@@ -50,7 +50,9 @@ export async function getCompanyFeatureContext(companyId: number): Promise<Featu
       .innerJoin(subscriptionPlansTable, eq(companySubscriptionsTable.planId, subscriptionPlansTable.id))
       .where(and(
         eq(companySubscriptionsTable.companyId, companyId),
-        inArray(companySubscriptionsTable.status, ["active", "grace_period"]),
+        // Dalga 18A: backfill ve register/business artık status="trial" yazıyor →
+        // trial subscription'lar da feature seti verebilmeli
+        inArray(companySubscriptionsTable.status, ["active", "trial", "grace_period"]),
       ))
       .orderBy(desc(companySubscriptionsTable.createdAt))
       .limit(1);
@@ -65,6 +67,8 @@ export async function getCompanyFeatureContext(companyId: number): Promise<Featu
         } else {
           status = "grace";
         }
+      } else if (sub.subStatus === "trial") {
+        status = "trial";
       } else {
         status = "active";
       }

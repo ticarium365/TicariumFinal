@@ -21,6 +21,19 @@ export const subscriptionPlansTable = pgTable("subscription_plans", {
   maxBranches: integer("max_branches").notNull().default(1),
   maxMonthlySales: integer("max_monthly_sales").notNull().default(500),
   storageMb: integer("storage_mb").notNull().default(500),          // MB
+  // ─── Dalga 18: Kontör/limit alanları (-1 = sınırsız) ────────────────
+  /** Aylık e-Belge (e-Fatura/e-Arşiv/e-İrsaliye) kontörü */
+  maxEinvoiceMonthly: integer("max_einvoice_monthly").notNull().default(0),
+  /** Aşan kontör birim ücreti (TRY) — string numeric */
+  einvoiceOverageRate: numeric("einvoice_overage_rate", { precision: 6, scale: 2 }).notNull().default("0.90"),
+  /** Aylık akıllı fiş okuma (OCR) çağrı kotası */
+  maxOcrMonthly: integer("max_ocr_monthly").notNull().default(0),
+  /** Aylık API çağrı kotası (public API + webhook) */
+  maxApiCallsMonthly: integer("max_api_calls_monthly").notNull().default(0),
+  /** Cari kart (müşteri+tedarikçi) sınırı */
+  maxCustomers: integer("max_customers").notNull().default(500),
+  /** Pazaryeri kanal sayısı (0 = yok, -1 = tümü) */
+  maxMarketplaceChannels: integer("max_marketplace_channels").notNull().default(0),
   // Özellikler (JSON array)
   features: text("features").notNull().default("[]"),
   isActive: boolean("is_active").notNull().default(true),
@@ -46,6 +59,8 @@ export const companySubscriptionsTable = pgTable("company_subscriptions", {
   status: text("status").notNull().default("active"),  // active | cancelled | suspended | grace_period
   startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
   expiresAt: timestamp("expires_at", { withTimezone: true }),
+  /** Dalga 18: Trial bitiş tarihi — status='trial' iken kullanılır */
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
   cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
   gracePeriodEndsAt: timestamp("grace_period_ends_at", { withTimezone: true }),
   autoRenew: boolean("auto_renew").notNull().default(true),

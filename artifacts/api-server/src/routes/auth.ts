@@ -158,6 +158,95 @@ router.get("/me", requireAuth, async (req: Request, res: Response) => {
     } catch { /* hata durumunda null bırak */ }
   }
 
+  // ─── Dalga 18B: Aktif plan + limit bilgileri (frontend gating için) ──────
+  let plan: {
+    slug: string;
+    name: string;
+    status: string;
+    isTrial: boolean;
+    trialEndsAt: string | null;
+    limits: {
+      maxUsers: number;
+      maxProducts: number;
+      maxBranches: number;
+      maxCustomers: number;
+      maxEinvoiceMonthly: number;
+      einvoiceOverageRate: string;
+      maxOcrMonthly: number;
+      maxApiCallsMonthly: number;
+      maxMarketplaceChannels: number;
+      storageMb: number;
+    };
+  } | null = null;
+
+  if (user.companyId) {
+    try {
+      const [row] = await db
+        .select({
+          subStatus: companySubscriptionsTable.status,
+          trialEndsAt: companySubscriptionsTable.trialEndsAt,
+          slug: subscriptionPlansTable.slug,
+          name: subscriptionPlansTable.name,
+          maxUsers: subscriptionPlansTable.maxUsers,
+          maxProducts: subscriptionPlansTable.maxProducts,
+          maxBranches: subscriptionPlansTable.maxBranches,
+          maxCustomers: subscriptionPlansTable.maxCustomers,
+          maxEinvoiceMonthly: subscriptionPlansTable.maxEinvoiceMonthly,
+          einvoiceOverageRate: subscriptionPlansTable.einvoiceOverageRate,
+          maxOcrMonthly: subscriptionPlansTable.maxOcrMonthly,
+          maxApiCallsMonthly: subscriptionPlansTable.maxApiCallsMonthly,
+          maxMarketplaceChannels: subscriptionPlansTable.maxMarketplaceChannels,
+          storageMb: subscriptionPlansTable.storageMb,
+        })
+        .from(companySubscriptionsTable)
+        .innerJoin(
+          subscriptionPlansTable,
+          eq(companySubscriptionsTable.planId, subscriptionPlansTable.id),
+        )
+        .where(and(
+          eq(companySubscriptionsTable.companyId, user.companyId),
+          // Dalga 18B fix: cancelled/suspended satırları gösterme — sadece geçerli olanlardan en yenisi
+          sql`${companySubscriptionsTable.status} IN ('active','trial','grace_period')`,
+        ))
+        .orderBy(sql`${companySubscriptionsTable.createdAt} DESC`)
+        .limit(1);
+      if (row) {
+        plan = {
+          slug: row.slug,
+          name: row.name,
+          status: row.subStatus,
+          isTrial: row.subStatus === "trial" || row.slug === "pkg_trial_enterprise",
+          trialEndsAt: row.trialEndsAt ? new Date(row.trialEndsAt).toISOString() : null,
+          limits: {
+            maxUsers: row.maxUsers,
+            maxProducts: row.maxProducts,
+            maxBranches: row.maxBranches,
+            maxCustomers: row.maxCustomers,
+            maxEinvoiceMonthly: row.maxEinvoiceMonthly,
+            einvoiceOverageRate: row.einvoiceOverageRate,
+            maxOcrMonthly: row.maxOcrMonthly,
+            maxApiCallsMonthly: row.maxApiCallsMonthly,
+            maxMarketplaceChannels: row.maxMarketplaceChannels,
+            storageMb: row.storageMb,
+          },
+        };
+      }
+    } catch (err) {
+      logger.warn({ err, companyId: user.companyId }, "ME_PLAN_FETCH_FAILED");
+    }
+  }
+
+  // Dalga 19 — aylık kontör kullanımı (sadece companyId varsa)
+  let usage: any = null;
+  if (user.companyId) {
+    try {
+      const { getUsageForCurrentPeriod } = await import("../services/usage.js");
+      usage = await getUsageForCurrentPeriod(user.companyId);
+    } catch (err) {
+      logger.warn({ err, companyId: user.companyId }, "ME_USAGE_FETCH_FAILED");
+    }
+  }
+
   res.json({
     id: user.id,
     username: user.username,
@@ -169,6 +258,8 @@ router.get("/me", requireAuth, async (req: Request, res: Response) => {
     accountType: user.accountType ?? "seller",
     createdAt: new Date(),
     onboardingCompleted,
+    plan,
+    usage,
   });
 });
 
@@ -426,7 +517,7 @@ router.post("/reset-password", async (req: Request, res: Response) => {
 const VERIFY_CODE_TTL_MIN = 10;
 const VERIFY_RESEND_COOLDOWN_SEC = 60;
 const MAX_VERIFY_ATTEMPTS = 5;
-const TRIAL_DAYS = 21;
+const TRIAL_DAYS = 30;
 
 /** Per-IP basit rate-limit (in-memory, burst koruması).
  *  Test ortamında devre dışı (NODE_ENV !== "production" + DISABLE_REGISTER_RATE_LIMIT=1). */
