@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "PROSAN ENDÜSTRİ"
+title = "Ticarium365"
 version = "1.0.0"
 id = "artifacts/prosan"
 router = "path"
