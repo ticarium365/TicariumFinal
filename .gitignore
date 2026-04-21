@@ -51,3 +51,14 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+.config/
+.upm/
+.breakpoints
+attached_assets/
+
+# Environment / secrets — ASLA commit etme
+.env
+.env.*
+!.env.example
+*.pem
+*.key
