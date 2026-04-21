@@ -1,9 +1,10 @@
+import { Fragment } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PublicNav, PublicFooter } from "@/components/public-nav";
-import { Check, ArrowRight, Boxes, ShoppingCart, Briefcase, TrendingUp, Building2 } from "lucide-react";
+import { Check, Minus, ArrowRight, Boxes, ShoppingCart, Briefcase, TrendingUp, Building2 } from "lucide-react";
 
 type Pkg = {
   slug: string;
@@ -86,6 +87,147 @@ const packages: Pkg[] = [
   },
 ];
 
+type FeatureRow = {
+  group: string;
+  label: string;
+  values: [boolean | string, boolean | string, boolean | string, boolean | string, boolean | string];
+};
+
+const featureMatrix: FeatureRow[] = [
+  { group: "Stok & Ürün", label: "Ürün, kategori, varyant yönetimi", values: [true, true, true, true, true] },
+  { group: "Stok & Ürün", label: "Barkod okuma + etiket basımı", values: [true, true, true, true, true] },
+  { group: "Stok & Ürün", label: "Çok şubeli stok hareketleri", values: [true, true, true, true, true] },
+  { group: "Stok & Ürün", label: "Sayım ve düzeltme", values: [true, true, true, true, true] },
+  { group: "Stok & Ürün", label: "Düşük stok uyarıları", values: [true, true, true, true, true] },
+
+  { group: "Satış & Cari", label: "Hızlı satış / POS akışı", values: [false, true, true, true, true] },
+  { group: "Satış & Cari", label: "Müşteri / tedarikçi cari hesapları", values: [false, true, true, true, true] },
+  { group: "Satış & Cari", label: "Tahsilat ve ödeme takibi", values: [false, true, true, true, true] },
+  { group: "Satış & Cari", label: "Satış geçmişi ve raporları", values: [false, true, true, true, true] },
+
+  { group: "Finans & Resmi", label: "e-Fatura / e-Arşiv (sağlayıcı seçilebilir)", values: [false, false, true, true, true] },
+  { group: "Finans & Resmi", label: "Banka entegrasyonu, çek/senet", values: [false, false, true, true, true] },
+  { group: "Finans & Resmi", label: "Personel + maaş + SGK gider takibi", values: [false, false, true, true, true] },
+  { group: "Finans & Resmi", label: "Demirbaş ve amortisman", values: [false, false, true, true, true] },
+  { group: "Finans & Resmi", label: "Finans dashboard + nakit akışı", values: [false, false, true, true, true] },
+
+  { group: "Büyüme & Pazaryeri", label: "11 pazaryeri yerleşik (Trendyol, HB, N11...)", values: [false, false, false, true, true] },
+  { group: "Büyüme & Pazaryeri", label: "B2B ağ + RFQ teklif sistemi", values: [false, false, false, true, true] },
+  { group: "Büyüme & Pazaryeri", label: "Gerçek Kâr Motoru (anlık kâr)", values: [false, false, false, true, true] },
+  { group: "Büyüme & Pazaryeri", label: "Fiş OCR + akıllı kategorizasyon", values: [false, false, false, true, true] },
+  { group: "Büyüme & Pazaryeri", label: "Sadakat ve kampanya yönetimi", values: [false, false, false, true, true] },
+
+  { group: "Kurumsal", label: "Çoklu firma (subdomain) yönetimi", values: [false, false, false, false, true] },
+  { group: "Kurumsal", label: "Açık API + webhook erişimi", values: [false, false, false, false, true] },
+  { group: "Kurumsal", label: "Özel entegrasyon desteği", values: [false, false, false, false, true] },
+  { group: "Kurumsal", label: "Önceliklendirilmiş destek hattı", values: [false, false, false, false, true] },
+  { group: "Kurumsal", label: "Detaylı resmi raporlar", values: [false, false, false, false, true] },
+
+  { group: "Limitler", label: "Kullanıcı sayısı", values: ["2", "5", "10", "25", "Sınırsız"] },
+  { group: "Limitler", label: "Şube sayısı", values: ["1", "2", "5", "10", "Sınırsız"] },
+  { group: "Limitler", label: "Aylık fatura sayısı", values: ["—", "500", "2.500", "10.000", "Sınırsız"] },
+  { group: "Limitler", label: "Destek", values: ["E-posta", "E-posta", "E-posta + Sohbet", "Telefon + Sohbet", "Özel hesap yöneticisi"] },
+];
+
+function Cell({ value }: { value: boolean | string }) {
+  if (value === true) {
+    return (
+      <div className="flex justify-center" aria-label="Var">
+        <Check className="h-4 w-4 text-emerald-600" />
+      </div>
+    );
+  }
+  if (value === false) {
+    return (
+      <div className="flex justify-center text-muted-foreground/40" aria-label="Yok">
+        <Minus className="h-4 w-4" />
+      </div>
+    );
+  }
+  return <div className="text-center text-sm font-medium">{value}</div>;
+}
+
+function ComparisonSection() {
+  let lastGroup = "";
+  return (
+    <section className="container mx-auto px-4 pb-20" data-testid="paket-karsilastirma">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-3" style={{ fontFamily: "var(--font-display)" }}>
+            Paket Karşılaştırma
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Hangi paket sana uyuyor? Tüm özellikleri yan yana koyduk. Her üst paket, alttakinin tümünü kapsar.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-border overflow-hidden bg-card">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[760px]">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="text-left px-4 py-3 font-semibold w-[34%]">Özellik</th>
+                  {packages.map((p) => (
+                    <th
+                      key={p.slug}
+                      className={`text-center px-3 py-3 font-semibold ${p.best ? "text-primary bg-primary/5" : ""}`}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <span>{p.name}</span>
+                        {p.best && <span className="text-[10px] font-medium uppercase tracking-wide">Önerilen</span>}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {featureMatrix.map((row, idx) => {
+                  const showGroup = row.group !== lastGroup;
+                  lastGroup = row.group;
+                  return (
+                    <Fragment key={idx}>
+                      {showGroup && (
+                        <tr className="bg-muted/30">
+                          <td colSpan={6} className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            {row.group}
+                          </td>
+                        </tr>
+                      )}
+                      <tr className="border-t border-border/50 hover:bg-muted/20 transition">
+                        <td className="px-4 py-3 text-foreground">{row.label}</td>
+                        {row.values.map((v, i) => (
+                          <td
+                            key={i}
+                            className={`px-3 py-3 ${packages[i].best ? "bg-primary/5" : ""}`}
+                          >
+                            <Cell value={v} />
+                          </td>
+                        ))}
+                      </tr>
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <Check className="h-3.5 w-3.5 text-emerald-600" />
+            <span>Pakete dahil</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Minus className="h-3.5 w-3.5" />
+            <span>Pakete dahil değil</span>
+          </div>
+          <div>Sayısal değerler kullanım/aylık limittir.</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function PaketlerPage() {
   return (
     <div className="min-h-screen bg-background" data-testid="page-paketler">
@@ -146,6 +288,8 @@ export default function PaketlerPage() {
           Tüm paketler 21 gün ücretsiz başlatılır. Kredi kartı istemiyoruz. Beğenmezsen veriler 30 gün saklanır.
         </p>
       </section>
+
+      <ComparisonSection />
 
       <PublicFooter />
     </div>
