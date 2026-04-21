@@ -40,6 +40,7 @@ import CompaniesAdmin from "@/pages/admin/companies";
 import AdminPayments from "@/pages/admin/payments";
 import PlatformSettings from "@/pages/admin/platform-settings";
 import Onboarding from "@/pages/onboarding/index";
+import HomePage from "@/pages/home";
 import CustomersList from "@/pages/customers/index";
 import CustomerDetail from "@/pages/customers/detail";
 import SuppliersList from "@/pages/suppliers/index";
@@ -129,9 +130,9 @@ const queryClient = new QueryClient();
 function HomeRedirect() {
   const { user, isAuthenticated, isLoading } = useAuth();
   if (isLoading) return null;
+  // Public landing page — giriş yapmamış kullanıcı için
   if (!isAuthenticated) {
-    window.location.href = "/login";
-    return null;
+    return <HomePage />;
   }
   const at = ((user as any)?.accountType ?? "seller") as string;
   window.location.href = at === "purchasing" ? "/satinalma-merkezi" : "/dashboard";
