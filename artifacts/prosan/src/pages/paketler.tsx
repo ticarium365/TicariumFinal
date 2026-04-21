@@ -1,153 +1,221 @@
-import { Fragment } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PublicNav, PublicFooter } from "@/components/public-nav";
-import { Check, Minus, ArrowRight, Boxes, ShoppingCart, Briefcase, TrendingUp, Building2 } from "lucide-react";
+import { Check, Minus, ArrowRight, Sparkles, Wand2, Users, Receipt, Store, Building2 } from "lucide-react";
+import { FEATURE_LABELS } from "@/lib/feature-labels";
 
-type Pkg = {
+type Plan = {
+  id: number;
   slug: string;
   name: string;
-  tagline: string;
-  icon: typeof Boxes;
-  highlights: string[];
-  best?: boolean;
+  description: string;
+  priceMonthly: string;
+  priceYearly: string;
+  maxUsers: number;
+  maxBranches: number;
+  maxProducts: number;
+  storageMb: number;
+  maxEinvoiceMonthly: number;
+  einvoiceOverageRate: string;
+  maxOcrMonthly: number;
+  maxApiCallsMonthly: number;
+  maxCustomers: number;
+  maxMarketplaceChannels: number;
+  features: string;
+  isPublic: boolean;
+  sortOrder: number;
 };
 
-const packages: Pkg[] = [
-  {
-    slug: "envanter",
-    name: "Envanter",
-    tagline: "Sayım, barkod ve stok takibi ile başla",
-    icon: Boxes,
-    highlights: [
-      "Ürün, kategori, varyant yönetimi",
-      "Barkod okuma + etiket basımı",
-      "Çok şubeli stok hareketleri",
-      "Sayım ve düzeltme",
-      "Düşük stok uyarıları",
-    ],
-  },
-  {
-    slug: "ticaret",
-    name: "Ticaret",
-    tagline: "Stok + satış + müşteri/cari yönetimi",
-    icon: ShoppingCart,
-    highlights: [
-      "Stok paketinin tüm özellikleri",
-      "Hızlı satış ekranı + POS akışı",
-      "Müşteri / tedarikçi cari hesapları",
-      "Tahsilat ve ödeme takibi",
-      "Satış geçmişi ve raporları",
-    ],
-    best: true,
-  },
-  {
-    slug: "isletme",
-    name: "İşletme",
-    tagline: "Tam KOBİ paketi: e-fatura, finans, personel",
-    icon: Briefcase,
-    highlights: [
-      "Ticaret paketinin tüm özellikleri",
-      "e-Fatura / e-Arşiv (sağlayıcı seçilebilir)",
-      "Banka entegrasyonu, çek/senet",
-      "Personel + maaş + SGK gider takibi",
-      "Demirbaş ve amortisman",
-      "Finans dashboard + nakit akışı",
-    ],
-  },
-  {
-    slug: "buyume",
-    name: "Büyüme",
-    tagline: "Pazaryerleri, B2B ağı, gerçek kâr motoru",
-    icon: TrendingUp,
-    highlights: [
-      "İşletme paketinin tüm özellikleri",
-      "11 pazaryeri yerleşik (Trendyol, HB, N11...)",
-      "B2B ağ + RFQ teklif sistemi",
-      "Gerçek Kâr Motoru (anlık kâr)",
-      "Fiş OCR + akıllı kategorizasyon",
-      "Sadakat ve kampanya yönetimi",
-    ],
-  },
-  {
-    slug: "kurumsal",
-    name: "Kurumsal",
-    tagline: "Çoklu firma, açık API, özel destek",
-    icon: Building2,
-    highlights: [
-      "Büyüme paketinin tüm özellikleri",
-      "Çoklu firma (subdomain) yönetimi",
-      "Açık API + webhook erişimi",
-      "Özel entegrasyon desteği",
-      "Önceliklendirilmiş destek hattı",
-      "Detaylı resmi raporlar",
-    ],
-  },
-];
+type PlansResponse = { plans: Plan[] };
 
+const fmtLimit = (n: number): string => (n === -1 ? "Sınırsız" : n === 0 ? "—" : n.toLocaleString("tr-TR"));
+const fmtStorage = (mb: number): string => (mb >= 1000 ? `${(mb / 1000).toFixed(0)} GB` : `${mb} MB`);
+const parseFeatures = (raw: string | string[]): string[] => {
+  if (Array.isArray(raw)) return raw;
+  try { const v = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch { return []; }
+};
+
+/* ---------- AI Öneri ---------- */
+type WizardAnswers = {
+  users: number;
+  einvoicePerMonth: number;
+  marketplace: "yes" | "no" | "";
+  multiCompany: "yes" | "no" | "";
+};
+
+function recommendPlanSlug(a: WizardAnswers): string {
+  if (a.multiCompany === "yes") return "pkg_enterprise_v3";
+  if (a.users >= 15 || a.einvoicePerMonth >= 1000) return "pkg_enterprise_v3";
+  if (a.users >= 6 || a.einvoicePerMonth >= 400 || a.marketplace === "yes") {
+    if (a.users >= 10 || a.einvoicePerMonth >= 1500) return "pkg_business_v3";
+    return "pkg_pro";
+  }
+  if (a.users <= 2 && a.einvoicePerMonth <= 80 && a.marketplace !== "yes") return "pkg_starter";
+  return "pkg_pro";
+}
+
+function AdvisorWizard({ plans, onPick }: { plans: Plan[]; onPick: (slug: string) => void }) {
+  const [a, setA] = useState<WizardAnswers>({ users: 3, einvoicePerMonth: 100, marketplace: "", multiCompany: "" });
+  const [recommended, setRecommended] = useState<string | null>(null);
+
+  const recPlan = useMemo(
+    () => (recommended ? plans.find((p) => p.slug === recommended) : null),
+    [recommended, plans],
+  );
+  const canSubmit = a.users > 0 && a.einvoicePerMonth >= 0 && a.marketplace && a.multiCompany;
+
+  function submit() {
+    const want = recommendPlanSlug(a);
+    // Defensive fallback: önerilen slug satılan plan listesinde yoksa pkg_pro,
+    // o da yoksa ilk plan — kullanıcıya her zaman concrete bir öneri gösterilir.
+    const exists = plans.find((p) => p.slug === want);
+    const slug = exists?.slug ?? plans.find((p) => p.slug === "pkg_pro")?.slug ?? plans[0]?.slug ?? want;
+    setRecommended(slug);
+    onPick(slug);
+  }
+
+  return (
+    <Card className="border-2 border-primary/30 shadow-md" data-testid="advisor-wizard">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+            <Wand2 className="h-4 w-4" />
+          </div>
+          <div>
+            <CardTitle className="text-lg" style={{ fontFamily: "var(--font-display)" }}>
+              Sana Uygun Paketi Bulalım
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">4 kısa soru — saniyeler içinde öneri</p>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid md:grid-cols-2 gap-5">
+          <div>
+            <Label className="text-sm flex items-center gap-1.5 mb-2"><Users className="h-3.5 w-3.5" /> Kaç kullanıcı sistemi kullanacak?</Label>
+            <Input
+              type="number" min={1} max={500}
+              value={a.users}
+              onChange={(e) => setA({ ...a, users: Math.max(1, Number(e.target.value) || 1) })}
+              data-testid="wizard-users"
+            />
+          </div>
+          <div>
+            <Label className="text-sm flex items-center gap-1.5 mb-2"><Receipt className="h-3.5 w-3.5" /> Aylık tahmini e-belge sayısı?</Label>
+            <Input
+              type="number" min={0} max={100000}
+              value={a.einvoicePerMonth}
+              onChange={(e) => setA({ ...a, einvoicePerMonth: Math.max(0, Number(e.target.value) || 0) })}
+              data-testid="wizard-einvoice"
+            />
+          </div>
+          <div>
+            <Label className="text-sm flex items-center gap-1.5 mb-2"><Store className="h-3.5 w-3.5" /> Pazaryerlerinde (Trendyol/HB/N11) satış yapıyor musun?</Label>
+            <RadioGroup
+              value={a.marketplace}
+              onValueChange={(v) => setA({ ...a, marketplace: v as WizardAnswers["marketplace"] })}
+              className="flex gap-4"
+            >
+              <div className="flex items-center gap-1.5"><RadioGroupItem value="yes" id="mp-yes" data-testid="wizard-marketplace-yes" /><Label htmlFor="mp-yes" className="text-sm cursor-pointer">Evet</Label></div>
+              <div className="flex items-center gap-1.5"><RadioGroupItem value="no" id="mp-no" /><Label htmlFor="mp-no" className="text-sm cursor-pointer">Hayır</Label></div>
+            </RadioGroup>
+          </div>
+          <div>
+            <Label className="text-sm flex items-center gap-1.5 mb-2"><Building2 className="h-3.5 w-3.5" /> Birden fazla firma/şirket yönetiyor musun?</Label>
+            <RadioGroup
+              value={a.multiCompany}
+              onValueChange={(v) => setA({ ...a, multiCompany: v as WizardAnswers["multiCompany"] })}
+              className="flex gap-4"
+            >
+              <div className="flex items-center gap-1.5"><RadioGroupItem value="yes" id="mc-yes" data-testid="wizard-multi-yes" /><Label htmlFor="mc-yes" className="text-sm cursor-pointer">Evet</Label></div>
+              <div className="flex items-center gap-1.5"><RadioGroupItem value="no" id="mc-no" /><Label htmlFor="mc-no" className="text-sm cursor-pointer">Hayır</Label></div>
+            </RadioGroup>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <Button onClick={submit} disabled={!canSubmit} className="gap-2" data-testid="btn-wizard-submit">
+            <Sparkles className="h-4 w-4" /> Önerimi Göster
+          </Button>
+          {recPlan && (
+            <div className="text-sm" data-testid="wizard-result">
+              Senin için en uygun paket: <span className="font-semibold text-primary">{recPlan.name}</span>{" "}
+              <span className="text-muted-foreground">— aşağıda işaretlendi</span>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ---------- Karşılaştırma tablosu (real data) ---------- */
 type FeatureRow = {
   group: string;
   label: string;
-  values: [boolean | string, boolean | string, boolean | string, boolean | string, boolean | string];
+  values: (boolean | string)[];
 };
 
-const featureMatrix: FeatureRow[] = [
-  { group: "Stok & Ürün", label: "Ürün, kategori, varyant yönetimi", values: [true, true, true, true, true] },
-  { group: "Stok & Ürün", label: "Barkod okuma + etiket basımı", values: [true, true, true, true, true] },
-  { group: "Stok & Ürün", label: "Çok şubeli stok hareketleri", values: [true, true, true, true, true] },
-  { group: "Stok & Ürün", label: "Sayım ve düzeltme", values: [true, true, true, true, true] },
-  { group: "Stok & Ürün", label: "Düşük stok uyarıları", values: [true, true, true, true, true] },
+function buildFeatureMatrix(plans: Plan[]): FeatureRow[] {
+  // Tüm planlardaki feature kodlarını topla, önce ortak olanlar üstte
+  const allFeatures = new Set<string>();
+  plans.forEach((p) => parseFeatures(p.features).forEach((f) => allFeatures.add(f)));
+  const featureCodes = Array.from(allFeatures);
 
-  { group: "Satış & Cari", label: "Hızlı satış / POS akışı", values: [false, true, true, true, true] },
-  { group: "Satış & Cari", label: "Müşteri / tedarikçi cari hesapları", values: [false, true, true, true, true] },
-  { group: "Satış & Cari", label: "Tahsilat ve ödeme takibi", values: [false, true, true, true, true] },
-  { group: "Satış & Cari", label: "Satış geçmişi ve raporları", values: [false, true, true, true, true] },
+  const groupOf = (code: string): string => {
+    if (code.startsWith("inventory") || code.startsWith("stock") || code.startsWith("barcode")) return "Stok & Ürün";
+    if (code.startsWith("sales") || code.startsWith("customers") || code.startsWith("suppliers")) return "Satış & Cari";
+    if (code.startsWith("einvoice") || code.startsWith("finance") || code.startsWith("hr") || code.startsWith("assets") || code.startsWith("documents") || code.startsWith("ocr")) return "Finans & Resmi";
+    if (code.startsWith("profit") || code.startsWith("marketplace") || code.startsWith("campaigns") || code.startsWith("b2b") || code.startsWith("pricing")) return "Büyüme & Pazaryeri";
+    if (code.startsWith("multi") || code.startsWith("api") || code.startsWith("webhooks") || code.startsWith("support")) return "Kurumsal";
+    return "Diğer";
+  };
 
-  { group: "Finans & Resmi", label: "e-Fatura / e-Arşiv (sağlayıcı seçilebilir)", values: [false, false, true, true, true] },
-  { group: "Finans & Resmi", label: "Banka entegrasyonu, çek/senet", values: [false, false, true, true, true] },
-  { group: "Finans & Resmi", label: "Personel + maaş + SGK gider takibi", values: [false, false, true, true, true] },
-  { group: "Finans & Resmi", label: "Demirbaş ve amortisman", values: [false, false, true, true, true] },
-  { group: "Finans & Resmi", label: "Finans dashboard + nakit akışı", values: [false, false, true, true, true] },
+  const featureRows: FeatureRow[] = featureCodes
+    .map((code) => ({
+      group: groupOf(code),
+      label: FEATURE_LABELS[code] ?? code,
+      values: plans.map((p) => parseFeatures(p.features).includes(code)) as (boolean | string)[],
+      _code: code,
+    }))
+    .sort((a, b) => {
+      const order = ["Stok & Ürün", "Satış & Cari", "Finans & Resmi", "Büyüme & Pazaryeri", "Kurumsal", "Diğer"];
+      const dg = order.indexOf(a.group) - order.indexOf(b.group);
+      return dg !== 0 ? dg : a.label.localeCompare(b.label, "tr");
+    });
 
-  { group: "Büyüme & Pazaryeri", label: "11 pazaryeri yerleşik (Trendyol, HB, N11...)", values: [false, false, false, true, true] },
-  { group: "Büyüme & Pazaryeri", label: "B2B ağ + RFQ teklif sistemi", values: [false, false, false, true, true] },
-  { group: "Büyüme & Pazaryeri", label: "Gerçek Kâr Motoru (anlık kâr)", values: [false, false, false, true, true] },
-  { group: "Büyüme & Pazaryeri", label: "Fiş OCR + akıllı kategorizasyon", values: [false, false, false, true, true] },
-  { group: "Büyüme & Pazaryeri", label: "Sadakat ve kampanya yönetimi", values: [false, false, false, true, true] },
+  const limitRows: FeatureRow[] = [
+    { group: "Limitler", label: "Kullanıcı sayısı", values: plans.map((p) => fmtLimit(p.maxUsers)) },
+    { group: "Limitler", label: "Şube sayısı", values: plans.map((p) => fmtLimit(p.maxBranches)) },
+    { group: "Limitler", label: "Ürün sayısı", values: plans.map((p) => fmtLimit(p.maxProducts)) },
+    { group: "Limitler", label: "Aylık e-belge", values: plans.map((p) => fmtLimit(p.maxEinvoiceMonthly)) },
+    { group: "Limitler", label: "Aylık fiş OCR", values: plans.map((p) => fmtLimit(p.maxOcrMonthly)) },
+    { group: "Limitler", label: "Aylık API çağrısı", values: plans.map((p) => fmtLimit(p.maxApiCallsMonthly)) },
+    { group: "Limitler", label: "Pazaryeri kanalı", values: plans.map((p) => fmtLimit(p.maxMarketplaceChannels)) },
+    { group: "Limitler", label: "Müşteri kaydı", values: plans.map((p) => fmtLimit(p.maxCustomers)) },
+    { group: "Limitler", label: "Depolama", values: plans.map((p) => fmtStorage(p.storageMb)) },
+    { group: "Limitler", label: "Aşan e-belge ücreti", values: plans.map((p) => `₺${Number(p.einvoiceOverageRate).toFixed(2)}/adet`) },
+  ];
 
-  { group: "Kurumsal", label: "Çoklu firma (subdomain) yönetimi", values: [false, false, false, false, true] },
-  { group: "Kurumsal", label: "Açık API + webhook erişimi", values: [false, false, false, false, true] },
-  { group: "Kurumsal", label: "Özel entegrasyon desteği", values: [false, false, false, false, true] },
-  { group: "Kurumsal", label: "Önceliklendirilmiş destek hattı", values: [false, false, false, false, true] },
-  { group: "Kurumsal", label: "Detaylı resmi raporlar", values: [false, false, false, false, true] },
-
-  { group: "Limitler", label: "Kullanıcı sayısı", values: ["2", "5", "10", "25", "Sınırsız"] },
-  { group: "Limitler", label: "Şube sayısı", values: ["1", "2", "5", "10", "Sınırsız"] },
-  { group: "Limitler", label: "Aylık fatura sayısı", values: ["—", "500", "2.500", "10.000", "Sınırsız"] },
-  { group: "Limitler", label: "Destek", values: ["E-posta", "E-posta", "E-posta + Sohbet", "Telefon + Sohbet", "Özel hesap yöneticisi"] },
-];
+  return [...featureRows, ...limitRows];
+}
 
 function Cell({ value }: { value: boolean | string }) {
-  if (value === true) {
-    return (
-      <div className="flex justify-center" aria-label="Var">
-        <Check className="h-4 w-4 text-emerald-600" />
-      </div>
-    );
-  }
-  if (value === false) {
-    return (
-      <div className="flex justify-center text-muted-foreground/40" aria-label="Yok">
-        <Minus className="h-4 w-4" />
-      </div>
-    );
-  }
+  if (value === true) return <div className="flex justify-center"><Check className="h-4 w-4 text-emerald-600" /></div>;
+  if (value === false) return <div className="flex justify-center text-muted-foreground/40"><Minus className="h-4 w-4" /></div>;
   return <div className="text-center text-sm font-medium">{value}</div>;
 }
 
-function ComparisonSection() {
+function ComparisonSection({ plans, recommendedSlug }: { plans: Plan[]; recommendedSlug: string | null }) {
+  const matrix = useMemo(() => buildFeatureMatrix(plans), [plans]);
   let lastGroup = "";
   return (
     <section className="container mx-auto px-4 pb-20" data-testid="paket-karsilastirma">
@@ -157,7 +225,7 @@ function ComparisonSection() {
             Paket Karşılaştırma
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Hangi paket sana uyuyor? Tüm özellikleri yan yana koyduk. Her üst paket, alttakinin tümünü kapsar.
+            Tüm özellikler ve limitler yan yana. Her üst paket, alttakinin tümünü kapsar.
           </p>
         </div>
 
@@ -166,43 +234,46 @@ function ComparisonSection() {
             <table className="w-full text-sm min-w-[760px]">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="text-left px-4 py-3 font-semibold w-[34%]">Özellik</th>
-                  {packages.map((p) => (
-                    <th
-                      key={p.slug}
-                      className={`text-center px-3 py-3 font-semibold ${p.best ? "text-primary bg-primary/5" : ""}`}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <span>{p.name}</span>
-                        {p.best && <span className="text-[10px] font-medium uppercase tracking-wide">Önerilen</span>}
-                      </div>
-                    </th>
-                  ))}
+                  <th className="text-left px-4 py-3 font-semibold w-[34%]">Özellik / Limit</th>
+                  {plans.map((p) => {
+                    const isRec = recommendedSlug === p.slug;
+                    return (
+                      <th
+                        key={p.slug}
+                        className={`text-center px-3 py-3 font-semibold ${isRec ? "text-primary bg-primary/5" : ""}`}
+                      >
+                        <div className="flex flex-col items-center gap-1">
+                          <span>{p.name}</span>
+                          {isRec && <span className="text-[10px] font-medium uppercase tracking-wide">Senin için önerilen</span>}
+                        </div>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
-                {featureMatrix.map((row, idx) => {
+                {matrix.map((row, idx) => {
                   const showGroup = row.group !== lastGroup;
                   lastGroup = row.group;
                   return (
                     <Fragment key={idx}>
                       {showGroup && (
                         <tr className="bg-muted/30">
-                          <td colSpan={6} className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                          <td colSpan={1 + plans.length} className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                             {row.group}
                           </td>
                         </tr>
                       )}
                       <tr className="border-t border-border/50 hover:bg-muted/20 transition">
                         <td className="px-4 py-3 text-foreground">{row.label}</td>
-                        {row.values.map((v, i) => (
-                          <td
-                            key={i}
-                            className={`px-3 py-3 ${packages[i].best ? "bg-primary/5" : ""}`}
-                          >
-                            <Cell value={v} />
-                          </td>
-                        ))}
+                        {row.values.map((v, i) => {
+                          const isRec = recommendedSlug === plans[i]?.slug;
+                          return (
+                            <td key={i} className={`px-3 py-3 ${isRec ? "bg-primary/5" : ""}`}>
+                              <Cell value={v} />
+                            </td>
+                          );
+                        })}
                       </tr>
                     </Fragment>
                   );
@@ -213,83 +284,174 @@ function ComparisonSection() {
         </div>
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <Check className="h-3.5 w-3.5 text-emerald-600" />
-            <span>Pakete dahil</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Minus className="h-3.5 w-3.5" />
-            <span>Pakete dahil değil</span>
-          </div>
-          <div>Sayısal değerler kullanım/aylık limittir.</div>
+          <div className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-emerald-600" /><span>Pakete dahil</span></div>
+          <div className="flex items-center gap-1.5"><Minus className="h-3.5 w-3.5" /><span>Pakete dahil değil</span></div>
+          <div>Sayısal değerler aylık limittir; "Sınırsız" tek elden büyüme planı.</div>
         </div>
       </div>
     </section>
   );
 }
 
+/* ---------- Plan kartı ---------- */
+function PlanCard({ plan, yearly, recommended, popular }: { plan: Plan; yearly: boolean; recommended: boolean; popular: boolean }) {
+  const features = useMemo(() => parseFeatures(plan.features), [plan.features]);
+  const monthly = Number(plan.priceMonthly);
+  const yearlyP = Number(plan.priceYearly);
+  const display = yearly ? yearlyP : monthly;
+  const monthlyEquiv = yearly ? Math.round(yearlyP / 12) : monthly;
+
+  const ringClass = recommended
+    ? "border-primary border-2 shadow-xl ring-2 ring-primary/30"
+    : popular
+      ? "border-primary/60 border-2 shadow-lg"
+      : "border-border hover:border-primary/40 transition";
+
+  const topHighlights = features.slice(0, 6);
+
+  return (
+    <Card className={`flex flex-col relative ${ringClass}`} data-testid={`pkg-${plan.slug}`}>
+      {recommended && (
+        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 gap-1 bg-primary">
+          <Sparkles className="h-3 w-3" /> Sana önerilen
+        </Badge>
+      )}
+      {!recommended && popular && (
+        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">En çok tercih edilen</Badge>
+      )}
+      <CardHeader className="pb-3">
+        <CardTitle className="text-xl" style={{ fontFamily: "var(--font-display)" }}>{plan.name}</CardTitle>
+        <p className="text-sm text-muted-foreground min-h-[40px]">{plan.description}</p>
+        <div className="pt-2">
+          <div className="text-3xl font-extrabold">
+            ₺{display.toLocaleString("tr-TR")}
+            <span className="text-sm font-normal text-muted-foreground">/{yearly ? "yıl" : "ay"}</span>
+          </div>
+          {yearly ? (
+            <div className="text-xs text-emerald-600 mt-1">Aylık ≈ ₺{monthlyEquiv.toLocaleString("tr-TR")} · 2 ay hediye</div>
+          ) : (
+            <div className="text-xs text-muted-foreground mt-1">Yıllık ödemede 2 ay hediye</div>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col">
+        <div className="text-xs text-muted-foreground mb-3 grid grid-cols-2 gap-y-1 gap-x-2">
+          <div>👤 {fmtLimit(plan.maxUsers)} kullanıcı</div>
+          <div>🏢 {fmtLimit(plan.maxBranches)} şube</div>
+          <div>📦 {fmtLimit(plan.maxProducts)} ürün</div>
+          <div>🧾 {fmtLimit(plan.maxEinvoiceMonthly)} e-belge/ay</div>
+          <div>🛒 {fmtLimit(plan.maxMarketplaceChannels)} pazaryeri</div>
+          <div>💾 {fmtStorage(plan.storageMb)}</div>
+        </div>
+        <ul className="space-y-2 text-sm flex-1">
+          {topHighlights.map((f) => (
+            <li key={f} className="flex gap-2">
+              <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+              <span>{FEATURE_LABELS[f] ?? f}</span>
+            </li>
+          ))}
+          {features.length > topHighlights.length && (
+            <li className="text-xs text-muted-foreground">+{features.length - topHighlights.length} özellik daha</li>
+          )}
+        </ul>
+        <Link href="/iletisim">
+          <Button className="w-full mt-5" variant={recommended || popular ? "default" : "outline"} data-testid={`btn-pkg-${plan.slug}`}>
+            Detay iste <ArrowRight className="h-4 w-4 ml-1" />
+          </Button>
+        </Link>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ---------- Sayfa ---------- */
 export default function PaketlerPage() {
+  const [yearly, setYearly] = useState(false);
+  const [recommendedSlug, setRecommendedSlug] = useState<string | null>(null);
+
+  const { data, isLoading, isError, refetch } = useQuery<PlansResponse>({
+    queryKey: ["/api/subscriptions/plans"],
+    queryFn: async () => {
+      const r = await fetch("/api/subscriptions/plans");
+      if (!r.ok) throw new Error("Plans fetch failed");
+      return r.json();
+    },
+  });
+
+  const plans = useMemo(
+    () => (data?.plans || []).filter((p) => p.isPublic !== false).sort((a, b) => a.sortOrder - b.sortOrder),
+    [data],
+  );
+
+  // En çok tercih edilen — sortOrder ortasında olan veya pkg_pro
+  const popularSlug = useMemo(() => {
+    if (plans.find((p) => p.slug === "pkg_pro")) return "pkg_pro";
+    return plans[Math.floor(plans.length / 2)]?.slug ?? null;
+  }, [plans]);
+
   return (
     <div className="min-h-screen bg-background" data-testid="page-paketler">
       <PublicNav />
-      <section className="t365-page-hero container mx-auto px-4 py-20 md:py-24 text-center">
+      <section className="t365-page-hero container mx-auto px-4 py-16 md:py-20 text-center">
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-5" style={{ fontFamily: "var(--font-display)" }}>
           <span className="t365-brand-gradient">Sana uygun bir paket var.</span>
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          5 paket, küçük bir dükkândan çoklu şubeli işletmeye kadar. İhtiyacın değiştikçe yukarı geç,
+          4 paket, küçük bir dükkândan çoklu firmalı holdinge kadar. İhtiyacın değiştikçe yukarı geç,
           veriler ve ekibin aynen kalsın.
         </p>
-        <div className="mt-6">
-          <Link href="/iletisim">
-            <Button size="lg" className="gap-2" data-testid="btn-paket-call">
-              Sana uygun paketi konuşalım
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+
+        <div className="flex items-center justify-center gap-3 mt-8">
+          <span className={!yearly ? "font-semibold" : "text-muted-foreground"}>Aylık</span>
+          <Switch checked={yearly} onCheckedChange={setYearly} data-testid="toggle-yearly" />
+          <span className={yearly ? "font-semibold" : "text-muted-foreground"}>
+            Yıllık <Badge variant="secondary" className="ml-1">2 ay hediye</Badge>
+          </span>
         </div>
       </section>
+
+      {/* AI Öneri */}
+      {plans.length > 0 && (
+        <section className="container mx-auto px-4 pb-12 max-w-4xl">
+          <AdvisorWizard plans={plans} onPick={setRecommendedSlug} />
+        </section>
+      )}
 
       <section className="container mx-auto px-4 pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 max-w-7xl mx-auto">
-          {packages.map((p) => (
-            <Card
-              key={p.slug}
-              className={`flex flex-col border-2 ${p.best ? "border-primary shadow-lg" : "hover:border-primary/40"} transition`}
-              data-testid={`pkg-${p.slug}`}
-            >
-              <CardHeader className="pb-3">
-                {p.best && <Badge className="w-fit mb-2">En çok tercih edilen</Badge>}
-                <div className="h-11 w-11 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-2">
-                  <p.icon className="h-5 w-5" />
-                </div>
-                <CardTitle className="text-xl" style={{ fontFamily: "var(--font-display)" }}>{p.name}</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">{p.tagline}</p>
-              </CardHeader>
-              <CardContent className="flex-1 flex flex-col">
-                <ul className="space-y-2 text-sm flex-1">
-                  {p.highlights.map((h, i) => (
-                    <li key={i} className="flex gap-2">
-                      <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                      <span>{h}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/iletisim">
-                  <Button className="w-full mt-5" variant={p.best ? "default" : "outline"} data-testid={`btn-pkg-${p.slug}`}>
-                    Detay iste
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <p className="text-center text-sm text-muted-foreground mt-8 max-w-2xl mx-auto">
-          Tüm paketler 21 gün ücretsiz başlatılır. Kredi kartı istemiyoruz. Beğenmezsen veriler 30 gün saklanır.
-        </p>
+        {isLoading && (
+          <div className="text-center py-12 text-muted-foreground" data-testid="paketler-loading">Paketler yükleniyor…</div>
+        )}
+        {isError && (
+          <div className="text-center py-12">
+            <p className="text-destructive mb-3">Paketler yüklenemedi.</p>
+            <Button variant="outline" onClick={() => refetch()}>Tekrar Dene</Button>
+          </div>
+        )}
+        {!isLoading && !isError && plans.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">Şu anda gösterilebilecek paket bulunmuyor.</div>
+        )}
+        {plans.length > 0 && (
+          <>
+            <div className={`grid grid-cols-1 md:grid-cols-2 ${plans.length >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-5 max-w-7xl mx-auto`}>
+              {plans.map((p) => (
+                <PlanCard
+                  key={p.id}
+                  plan={p}
+                  yearly={yearly}
+                  recommended={recommendedSlug === p.slug}
+                  popular={p.slug === popularSlug}
+                />
+              ))}
+            </div>
+            <p className="text-center text-sm text-muted-foreground mt-8 max-w-2xl mx-auto">
+              Tüm paketler 30 gün ücretsiz başlatılır (Kurumsal feature seti). Kredi kartı gerekmez.
+              Beğenmezsen veriler 30 gün saklanır.
+            </p>
+          </>
+        )}
       </section>
 
-      <ComparisonSection />
+      {plans.length > 0 && <ComparisonSection plans={plans} recommendedSlug={recommendedSlug} />}
 
       <PublicFooter />
     </div>
