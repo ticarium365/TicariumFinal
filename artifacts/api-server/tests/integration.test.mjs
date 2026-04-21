@@ -6614,7 +6614,7 @@ describe("Sprint J — Membership + Verification", () => {
 
   const stamp = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
-  test("J1 — register/business 201, oturum açık, plan pkg_growth/yearly, trial ~21d", async () => {
+  test("J1 — register/business 201, oturum açık, plan pkg_trial_enterprise (Dalga 16), trial ~21d", async () => {
     const jar = new CookieJar("prosan");
     const s = stamp();
     const body = {
@@ -6642,7 +6642,9 @@ describe("Sprint J — Membership + Verification", () => {
 
     const sub = await api("GET", "/subscriptions/current", { jar });
     assert.equal(sub.status, 200);
-    assert.equal(sub.json?.plan?.slug, "pkg_growth");
+    // Dalga 16: yeni kayıtlar gizli pkg_trial_enterprise planına atanır
+    // (21 gün boyunca tüm enterprise feature'ları açık).
+    assert.equal(sub.json?.plan?.slug, "pkg_trial_enterprise");
   });
 
   test("J2 — register/business duplicate email 409", async () => {
@@ -6681,6 +6683,10 @@ describe("Sprint J — Membership + Verification", () => {
     const me = await api("GET", "/auth/me", { jar });
     assert.equal(me.status, 200);
     assert.equal(me.json?.accountType, "purchasing");
+    // Dalga 16: satınalmacı kayıtları gizli pkg_procurement planına atanır.
+    const sub = await api("GET", "/subscriptions/current", { jar });
+    assert.equal(sub.status, 200);
+    assert.equal(sub.json?.plan?.slug, "pkg_procurement");
   });
 
   test("J4 — verify/check happy path → emailVerifiedAt set", async () => {
@@ -6732,6 +6738,134 @@ describe("Sprint J — Membership + Verification", () => {
       assert.equal(r.status, 400);
     }
     assert.ok(saw429, "5 hatalı denemeden sonra 429 bekleniyordu");
+  });
+});
+
+// ===========================================================================
+// Dalga 16 — Yetki Şeması v2 Foundation (gizli sistem planları)
+// Public afişlerde sadece satılan planlar; trial_enterprise + procurement gizli.
+// ===========================================================================
+describe("Dalga 16 — Yetki Şeması v2 (gizli sistem planları)", () => {
+  test("D16-1 — GET /subscriptions/plans (public afiş) gizli planları DÖNDÜRMEZ", async () => {
+    const r = await api("GET", "/subscriptions/plans");
+    assert.equal(r.status, 200);
+    const plans = r.json?.plans ?? [];
+    assert.ok(plans.length >= 5, `en az 5 public plan bekleniyordu, görüldü: ${plans.length}`);
+    const slugs = plans.map((p) => p.slug);
+    // Gizli sistem planları PUBLIC listede OLMAMALI
+    assert.ok(!slugs.includes("pkg_trial_enterprise"),
+      `pkg_trial_enterprise public listede görünmemeli, slugs=${slugs.join(",")}`);
+    assert.ok(!slugs.includes("pkg_procurement"),
+      `pkg_procurement public listede görünmemeli, slugs=${slugs.join(",")}`);
+    // 5 satılan plan public listede OLMALI
+    assert.ok(slugs.includes("pkg_inventory"));
+    assert.ok(slugs.includes("pkg_trade"));
+    assert.ok(slugs.includes("pkg_business"));
+    assert.ok(slugs.includes("pkg_growth"));
+    assert.ok(slugs.includes("pkg_enterprise_v2"));
+    // Tüm public planlar isPublic=true
+    for (const p of plans) {
+      assert.equal(p.isPublic, true, `${p.slug} public listede ama isPublic=${p.isPublic}`);
+    }
+  });
+
+  test("D16-2 — GET /subscriptions/plans/all (super_admin) gizli planları DÖNDÜRÜR", async () => {
+    const jar = new CookieJar("prosan");
+    // super_admin login (mevcut seed: admin@prosan.com / Admin123 platform-level)
+    const login = await api("POST", "/auth/login", {
+      jar,
+      body: { username: "platformadmin", password: "Admin123!" },
+    });
+    if (login.status !== 200) {
+      // super_admin seed yoksa testi skip — yine de endpoint var olduğunu kontrol et
+      const unauth = await api("GET", "/subscriptions/plans/all");
+      assert.ok(unauth.status === 401 || unauth.status === 403,
+        `auth gerekli (got ${unauth.status})`);
+      return;
+    }
+    const r = await api("GET", "/subscriptions/plans/all", { jar });
+    assert.equal(r.status, 200);
+    const slugs = (r.json?.plans ?? []).map((p) => p.slug);
+    assert.ok(slugs.includes("pkg_trial_enterprise"),
+      `super_admin tüm planları görmeli, slugs=${slugs.join(",")}`);
+    assert.ok(slugs.includes("pkg_procurement"));
+  });
+
+  test("D16-4 — tenant admin /subscribe ile gizli planı SEÇEMEZ (security guard)", async () => {
+    // Önce normal bir business kayıt et (admin yetkisiyle), sonra gizli plan
+    // ID'sini super_admin'den öğren ve admin olarak /subscribe ile dene → 403.
+    const jar = new CookieJar("prosan");
+    const s = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const reg = await api("POST", "/auth/register/business", {
+      jar,
+      body: {
+        firstName: "D16", lastName: "Four", phone: "5550003164",
+        email: `d16-4-${s}@regtest.local`, password: "Strong1234",
+        companyName: `D164Co ${s}`, city: "İstanbul",
+        verificationMethod: "email", kvkkConsent: true,
+      },
+    });
+    assert.equal(reg.status, 201);
+    jar.tenant = reg.json.subdomain;
+
+    // Public planları çek — burada gizli plan ID'si BULUNMAMALI
+    const publicPlans = await api("GET", "/subscriptions/plans", { jar });
+    assert.equal(publicPlans.status, 200);
+    const hidden = (publicPlans.json?.plans ?? [])
+      .find((p) => p.slug === "pkg_trial_enterprise" || p.slug === "pkg_procurement");
+    assert.equal(hidden, undefined, "gizli plan public listede çıkmamalı (D16-1 doğrulaması)");
+
+    // Saldırı senaryosu: API'yi doğrudan çağırarak gizli plan ID denenir.
+    // ID'yi tahmin etmek yerine pratik test: olası planId'leri enumerate et.
+    // 1..50 aralığında her aktif planı dene; pkg_trial_enterprise/procurement → 403.
+    let attemptedHidden = 0;
+    let confirmedRejected = 0;
+    for (let pid = 1; pid <= 50; pid++) {
+      const r = await api("POST", "/subscriptions/subscribe", {
+        jar,
+        body: { planId: pid, billingCycle: "monthly" },
+      });
+      // Plan yoksa 404 (normal); public planı 201 olur (saldırı dışı); gizli olan 403 olmalı.
+      if (r.status === 403 && /kullanıcı seçimine kapalıdır|hesap tipine uygundur/i.test(JSON.stringify(r.json))) {
+        attemptedHidden++;
+        confirmedRejected++;
+      }
+      // Devam — tüm 50 ID'yi tara; en az bir gizli planın 403 verdiğini kanıtlamak yeterli.
+    }
+    assert.ok(attemptedHidden >= 1,
+      `en az 1 gizli plan ID'sinin 403 ile reddedilmesi bekleniyordu (taranan: 50, reddedilen: ${attemptedHidden})`);
+    assert.equal(confirmedRejected, attemptedHidden);
+  });
+
+  test("D16-3 — pkg_procurement requiredAccountType='purchasing' DB'de seedlenmiş", async () => {
+    const jar = new CookieJar("prosan");
+    // Bu testi public endpoint'le yapamayız (gizli plan); register/buyer akışından
+    // elde edilen plan atamasını J3 doğruluyor zaten. Burada feature setini doğrula:
+    const s = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const reg = await api("POST", "/auth/register/buyer", {
+      jar,
+      body: {
+        firstName: "D16", lastName: "Three", phone: "5550003163",
+        email: `d16-3-${s}@regtest.local`, password: "Strong1234",
+        companyName: `D163Co ${s}`,
+        verificationMethod: "email", kvkkConsent: true,
+      },
+    });
+    assert.equal(reg.status, 201);
+    jar.tenant = reg.json.subdomain;
+
+    const feat = await api("GET", "/subscriptions/features", { jar });
+    assert.equal(feat.status, 200);
+    const features = feat.json?.features ?? [];
+    // Procurement plan: sadece keşif/teklif modülleri açık olmalı
+    assert.ok(features.includes("customers.crm"),
+      `procurement customers.crm açık olmalı, features=${features.join(",")}`);
+    assert.ok(features.includes("suppliers"));
+    // Sales/POS/Marketplace KAPALI olmalı (procurement satış yapmaz)
+    assert.ok(!features.includes("sales.pos"),
+      `procurement'ta sales.pos olmamalı, features=${features.join(",")}`);
+    assert.ok(!features.includes("marketplace.basic"));
+    assert.ok(!features.includes("einvoice.pro"));
   });
 });
 

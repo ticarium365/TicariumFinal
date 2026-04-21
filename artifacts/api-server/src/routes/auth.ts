@@ -479,8 +479,13 @@ function isValidEmail(s: string): boolean {
 }
 
 async function findOrCreatePlanId(slug: string): Promise<number | null> {
+  // Sadece aktif planlar atanabilir (Dalga 16 — fail-closed plan lookup)
   const [p] = await db.select({ id: subscriptionPlansTable.id })
-    .from(subscriptionPlansTable).where(eq(subscriptionPlansTable.slug, slug)).limit(1);
+    .from(subscriptionPlansTable)
+    .where(and(
+      eq(subscriptionPlansTable.slug, slug),
+      eq(subscriptionPlansTable.isActive, true),
+    )).limit(1);
   return p?.id ?? null;
 }
 
@@ -559,9 +564,15 @@ router.post("/register/business", async (req: Request, res: Response) => {
     }
 
     const subdomain = await generateUniqueSubdomain(data.companyName);
-    const planId = await findOrCreatePlanId("pkg_growth");
+    // Yetki Şeması v2 (Dalga 16): yeni kayıtlar gizli `pkg_trial_enterprise` planına atanır
+    // (21 gün boyunca tüm enterprise feature'ları açık). pkg_growth'a least-privilege fallback.
+    let planId = await findOrCreatePlanId("pkg_trial_enterprise");
     if (!planId) {
-      res.status(500).json(Errors.internal("Varsayılan plan tanımlı değil (pkg_growth bulunamadı)"));
+      logger.warn({ slug: "pkg_trial_enterprise" }, "REGISTER_BUSINESS — gizli plan eksik, pkg_growth'a düşülüyor");
+      planId = await findOrCreatePlanId("pkg_growth");
+    }
+    if (!planId) {
+      res.status(500).json(Errors.internal("Varsayılan plan tanımlı değil (pkg_trial_enterprise/pkg_growth bulunamadı)"));
       return;
     }
     const passwordHash = await bcrypt.hash(data.password, 10);
@@ -692,9 +703,14 @@ router.post("/register/buyer", async (req: Request, res: Response) => {
     }
 
     const subdomain = await generateUniqueSubdomain(data.companyName);
-    const planId = await findOrCreatePlanId("pkg_trade");
+    // Yetki Şeması v2 (Dalga 16): satınalmacı (purchasing) kayıtları gizli
+    // `pkg_procurement` planına atanır (sadece keşif/teklif/karşılaştırma).
+    // Fail-closed: pkg_procurement yoksa fallback YOK (pkg_trade satış yetkilerini
+    // de açar — least-privilege ihlali). Sistem yanlış seedlenmiş demektir → 500.
+    const planId = await findOrCreatePlanId("pkg_procurement");
     if (!planId) {
-      res.status(500).json(Errors.internal("Varsayılan plan tanımlı değil (pkg_trade bulunamadı)"));
+      logger.error("REGISTER_BUYER — pkg_procurement seed eksik, kayıt reddedildi");
+      res.status(500).json(Errors.internal("Satınalmacı planı (pkg_procurement) sistemde tanımlı değil"));
       return;
     }
     const passwordHash = await bcrypt.hash(data.password, 10);

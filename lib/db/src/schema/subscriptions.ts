@@ -24,6 +24,13 @@ export const subscriptionPlansTable = pgTable("subscription_plans", {
   // Özellikler (JSON array)
   features: text("features").notNull().default("[]"),
   isActive: boolean("is_active").notNull().default(true),
+  // Yetki Şeması v2 (Dalga 16):
+  // isPublic=false → afişlerde (pricing/paketler/onboarding) gösterilmez,
+  //   sadece sistem tarafından otomatik atanır (trial_enterprise, procurement gibi).
+  isPublic: boolean("is_public").notNull().default(true),
+  // requiredAccountType: doluysa, sadece bu accountType'taki firmalara atanabilir
+  //   (örn. "purchasing" → sadece satınalmacı hesaplarına procurement planı verilir).
+  requiredAccountType: text("required_account_type"),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });

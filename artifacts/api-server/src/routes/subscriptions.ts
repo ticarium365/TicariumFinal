@@ -154,6 +154,8 @@ const PLAN_DEFS = [
     maxMonthlySales: -1,
     storageMb: 100000,
     sortOrder: 5,
+    isPublic: true,
+    requiredAccountType: null as string | null,
     features: [
       FEATURES.inventory_core, FEATURES.stock_counts, FEATURES.barcode_print,
       FEATURES.sales_pos, FEATURES.sales_invoices, FEATURES.customers_crm,
@@ -167,6 +169,60 @@ const PLAN_DEFS = [
       FEATURES.reports_advanced,
       FEATURES.api_public, FEATURES.integrations_accounting,
       FEATURES.production_bom, FEATURES.accountant_panel, FEATURES.webhooks,
+    ],
+  },
+  // ─── Yetki Şeması v2 (Dalga 16) — gizli sistem planları ────────────────────
+  // Bu planlar afişte/pricing/onboarding sayfalarında GÖSTERİLMEZ. Sadece
+  // kayıt/onboarding sırasında otomatik atanır. Kullanıcı seçemez.
+  {
+    slug: "pkg_trial_enterprise",
+    name: "Deneme (Kurumsal)",
+    description: "21 günlük tam yetki deneme süresi — kayıt sırasında otomatik atanır",
+    priceMonthly: "0",
+    priceYearly: "0",
+    maxUsers: -1,
+    maxBranches: -1,
+    maxProducts: -1,
+    maxMonthlySales: -1,
+    storageMb: 100000,
+    sortOrder: 100, // afişte gösterilmez ama listenin sonunda kalır
+    isPublic: false,
+    requiredAccountType: null as string | null,
+    features: [
+      // Tüm enterprise feature seti — trial 21 gün boyunca her yeri açar
+      FEATURES.inventory_core, FEATURES.stock_counts, FEATURES.barcode_print,
+      FEATURES.sales_pos, FEATURES.sales_invoices, FEATURES.customers_crm,
+      FEATURES.suppliers, FEATURES.einvoice_basic, FEATURES.einvoice_pro,
+      FEATURES.finance_expenses, FEATURES.finance_banking, FEATURES.hr_staff,
+      FEATURES.hr_payroll, FEATURES.assets_fixed, FEATURES.ocr_receipts,
+      FEATURES.documents, FEATURES.profit_dashboard,
+      FEATURES.profit_holding_cost, FEATURES.profit_true_dashboard, FEATURES.profit_ai_advisor,
+      FEATURES.marketplace_basic, FEATURES.marketplace_pro,
+      FEATURES.campaigns, FEATURES.loyalty_points, FEATURES.currency_multi,
+      FEATURES.reports_advanced,
+      FEATURES.api_public, FEATURES.integrations_accounting,
+      FEATURES.production_bom, FEATURES.accountant_panel, FEATURES.webhooks,
+    ],
+  },
+  {
+    slug: "pkg_procurement",
+    name: "Satınalmacı",
+    description: "Satınalmacı portalı — sadece tedarikçi keşfi, teklif, karşılaştırma",
+    priceMonthly: "0",
+    priceYearly: "0",
+    maxUsers: 5,
+    maxBranches: 1,
+    maxProducts: 0,
+    maxMonthlySales: 0,
+    storageMb: 500,
+    sortOrder: 101,
+    isPublic: false,
+    requiredAccountType: "purchasing", // sadece satınalmacı hesaplara
+    features: [
+      // Satınalmacı sadece görüntüler/teklif ister, satış/POS/finans/marketplace YOK
+      FEATURES.customers_crm,
+      FEATURES.suppliers,
+      FEATURES.documents,
     ],
   },
 ];
@@ -193,6 +249,8 @@ export async function seedSubscriptionPlansV2() {
       features: JSON.stringify(def.features),
       sortOrder: def.sortOrder,
       isActive: true,
+      isPublic: def.isPublic ?? true,
+      requiredAccountType: def.requiredAccountType ?? null,
     };
     if (existing) {
       await db.update(subscriptionPlansTable).set(data).where(eq(subscriptionPlansTable.id, existing.id));
@@ -228,7 +286,9 @@ export async function seedSubscriptionPlansV2() {
       if (migrated.length > 0) console.info(`Migrated ${migrated.length} subscriptions to Kurumsal v2`);
     }
   }
-  console.info("Subscription plans v2 seeded (5 packages)");
+  const publicCount = PLAN_DEFS.filter(d => d.isPublic !== false).length;
+  const hiddenCount = PLAN_DEFS.length - publicCount;
+  console.info(`Subscription plans v2 seeded (${publicCount} public + ${hiddenCount} hidden = ${PLAN_DEFS.length} total)`);
 }
 
 // Eski seed (artık çağrılmamalı, geriye dönük uyumluluk için kalıyor)
@@ -342,8 +402,23 @@ async function calcUsage(companyId: number) {
 // ROTALAR
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Planları listele (herkese açık)
+// Planları listele (herkese açık afiş — pricing/paketler/onboarding sayfaları)
+// Yetki Şeması v2 (Dalga 16): isPublic=false planlar (trial_enterprise, procurement)
+//   sadece sistem tarafından otomatik atanır, kullanıcıya gösterilmez.
 router.get("/plans", async (_req, res) => {
+  try {
+    const plans = await db.select().from(subscriptionPlansTable)
+      .where(and(
+        eq(subscriptionPlansTable.isActive, true),
+        eq(subscriptionPlansTable.isPublic, true),
+      ))
+      .orderBy(subscriptionPlansTable.sortOrder);
+    res.json({ plans });
+  } catch (e) { console.error(e); res.status(500).json({ message: "Sunucu hatası" }); }
+});
+
+// Süper admin için TÜM planlar (gizli sistem planları dahil) — billing yönetimi
+router.get("/plans/all", requireAuth, requireSuperAdmin, async (_req, res) => {
   try {
     const plans = await db.select().from(subscriptionPlansTable)
       .where(eq(subscriptionPlansTable.isActive, true))
@@ -424,6 +499,26 @@ router.post("/subscribe", requireAuth, requireRole(["admin"]), async (req: Reque
     const [plan] = await db.select().from(subscriptionPlansTable)
       .where(and(eq(subscriptionPlansTable.id, planId), eq(subscriptionPlansTable.isActive, true)));
     if (!plan) return void res.status(404).json(Errors.notFound("Plan"));
+
+    // Yetki Şeması v2 (Dalga 16) — gizli sistem planı koruması:
+    // isPublic=false planlar (pkg_trial_enterprise, pkg_procurement) tenant admin
+    // tarafından self-serve subscribe ile seçilemez. Sadece sistem otomatik atar
+    // (register flow) veya super_admin /admin/billing/set-plan ile atayabilir.
+    if (plan.isPublic === false) {
+      return void res.status(403).json(Errors.forbidden(
+        "Bu plan kullanıcı seçimine kapalıdır. Lütfen geçerli bir paket seçin."
+      ));
+    }
+    // Hesap tipi kısıtlaması — örn. pkg_procurement sadece "purchasing" hesaplara
+    if (plan.requiredAccountType) {
+      const [company] = await db.select({ accountType: companiesTable.accountType })
+        .from(companiesTable).where(eq(companiesTable.id, cid)).limit(1);
+      if (!company || company.accountType !== plan.requiredAccountType) {
+        return void res.status(403).json(Errors.forbidden(
+          `Bu plan yalnızca '${plan.requiredAccountType}' hesap tipine uygundur.`
+        ));
+      }
+    }
 
     // Bitiş tarihini hesapla
     const expiresAt = new Date();
