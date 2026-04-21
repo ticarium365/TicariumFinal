@@ -6783,3 +6783,52 @@ describe("Sprint M+ — Sales Type (wholesale/retail)", () => {
     for (const s of r.json.sales) assert.equal(s.saleType, "wholesale", `kayıt ${s.id} wholesale değil`);
   });
 });
+
+
+// =============================================================================
+// Dalga 13 — Mobile Theme Token Drift Prevention
+// Architect non-blocking öneri (D11/D12): mobile constants/colors.ts brand
+// commitment'ları (primary/tint/accent/success) drift'e karşı assert et.
+// Test cross-package okuma: api-server suite ⇄ smsystems-mobile constants.
+// =============================================================================
+import { readFileSync as _drift_read } from "node:fs";
+import { resolve as _drift_resolve, dirname as _drift_dirname } from "node:path";
+import { fileURLToPath as _drift_fileURLToPath } from "node:url";
+
+const _DRIFT_HERE = _drift_dirname(_drift_fileURLToPath(import.meta.url));
+const _DRIFT_COLORS_PATH = _drift_resolve(_DRIFT_HERE, "../../smsystems-mobile/constants/colors.ts");
+
+function _driftExtractToken(src, scope, key) {
+  // scope: "light" | "dark"; src: full file. Çok basit regex parse, JSDoc'lara
+  // uymaz — sadece object literal field'ı yakalar.
+  const scopeRe = new RegExp(`${scope}\\s*:\\s*\\{([\\s\\S]*?)\\}`, "m");
+  const m = src.match(scopeRe);
+  if (!m) throw new Error(`scope ${scope} bulunamadı`);
+  const fieldRe = new RegExp(`${key}\\s*:\\s*"(#[0-9A-Fa-f]{3,8})"`);
+  const fm = m[1].match(fieldRe);
+  if (!fm) throw new Error(`${scope}.${key} bulunamadı`);
+  return fm[1].toUpperCase();
+}
+
+describe("Dalga 13 — Mobile theme token drift prevention", () => {
+  test("BRAND COMMITMENT — light primary/tint/accent/success Ticarium365 brand'iyle hizalı", () => {
+    const src = _drift_read(_DRIFT_COLORS_PATH, "utf-8");
+    assert.equal(_driftExtractToken(src, "light", "primary"), "#4F46E5", "light.primary mor brand drift");
+    assert.equal(_driftExtractToken(src, "light", "tint"), "#4F46E5", "light.tint primary ile aynı olmalı");
+    assert.equal(_driftExtractToken(src, "light", "accent"), "#5EEAD4", "light.accent teal brand drift");
+    assert.equal(_driftExtractToken(src, "light", "success"), "#5EEAD4", "light.success accent ile aynı olmalı");
+  });
+
+  test("BRAND COMMITMENT — dark primary/tint mor varyant (Indigo-400)", () => {
+    const src = _drift_read(_DRIFT_COLORS_PATH, "utf-8");
+    assert.equal(_driftExtractToken(src, "dark", "primary"), "#818CF8", "dark.primary Indigo-400 drift");
+    assert.equal(_driftExtractToken(src, "dark", "tint"), "#818CF8", "dark.tint primary ile aynı olmalı");
+    assert.equal(_driftExtractToken(src, "dark", "accent"), "#5EEAD4", "dark.accent light ile aynı (brand teal)");
+  });
+
+  test("BRAND COMMITMENT — JSDoc başlığı dosyada yer alır", () => {
+    const src = _drift_read(_DRIFT_COLORS_PATH, "utf-8");
+    assert.ok(src.includes("BRAND COMMITMENT"), "BRAND COMMITMENT JSDoc kayıp — drift signal silinmiş");
+    assert.ok(src.includes("Ticarium365"), "Ticarium365 brand referansı kayıp");
+  });
+});

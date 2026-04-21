@@ -166,14 +166,14 @@ export default function DashboardScreen() {
         ) : (
           <>
             <StatCard icon="package" label="Toplam Ürün" value={String(stats?.totalProducts ?? 0)} color={colors.primary} bg={colors.primary + "22"} />
-            <StatCard icon="alert-triangle" label="Kritik Stok" value={String(stats?.criticalStockCount ?? 0)} color={colors.destructive} bg={colors.destructive + "22"} />
+            <StatCard icon="alert-triangle" label="Kritik Stok" value={String(stats?.criticalStockCount ?? 0)} color={colors.warning} bg={colors.warning + "22"} />
             <StatCard icon="shopping-bag" label="Bugün Satış" value={String(stats?.todaySalesCount ?? 0)} color={colors.accent} bg={colors.accent + "22"} />
             <StatCard
               icon="x-circle"
               label="Stok Yok"
               value={String(stats?.outOfStock ?? 0)}
-              color={colors.warning}
-              bg={colors.warning + "22"}
+              color={colors.destructive}
+              bg={colors.destructive + "22"}
             />
           </>
         )}
