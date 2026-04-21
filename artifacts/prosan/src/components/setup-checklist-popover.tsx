@@ -30,7 +30,8 @@ export function SetupChecklistPopover() {
       .then((r) => r.json())
       .then((d: Resp) => {
         setData(d);
-        if (!d.dismissedAt && d.scorePercent < 100) {
+        // dismissedAt göz ardı — kurulum %100 olana dek her oturumda dürt
+        if (d.scorePercent < 100) {
           setOpen(true);
         }
       })
@@ -38,11 +39,6 @@ export function SetupChecklistPopover() {
   }, [user]);
 
   function close() {
-    setOpen(false);
-  }
-
-  function dismissForever() {
-    fetch("/api/kurulum-skoru/dismiss", { method: "POST", credentials: "include" }).catch(() => {});
     setOpen(false);
   }
 
@@ -128,13 +124,7 @@ export function SetupChecklistPopover() {
           )}
         </div>
 
-        <div className="bg-slate-50 p-3 flex items-center justify-between gap-2 border-t">
-          <button
-            onClick={dismissForever}
-            className="text-xs text-slate-500 hover:text-slate-700 underline"
-          >
-            Bir daha gösterme
-          </button>
+        <div className="bg-slate-50 p-3 flex items-center justify-end gap-2 border-t">
           <Link href="/kurulum-skoru">
             <Button size="sm" onClick={close}>
               Tüm listeyi gör
