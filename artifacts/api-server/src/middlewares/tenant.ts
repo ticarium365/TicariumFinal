@@ -78,9 +78,15 @@ export async function tenantMiddleware(req: Request, res: Response, next: NextFu
       }
     }
 
-    // Dev fallback: subdomain yoksa ilk aktif şirketi döndür — ASLA production'da kullanılmaz
+    // Fallback davranışı:
+    // - Dev: her zaman ilk aktif şirket
+    // - Prod + Replit deployment domain (.replit.app): single-deployment fallback
+    //   (henüz custom domain bağlanmadığı için, .ticarium365.com aktif olunca kalkar)
+    // - Prod + diğer domain: 400 (geçerli subdomain gerekli)
     if (!company) {
-      if (IS_PRODUCTION) {
+      const hostOnly = host.split(":")[0] ?? "";
+      const isReplitDeployHost = hostOnly.endsWith(".replit.app");
+      if (IS_PRODUCTION && !isReplitDeployHost) {
         res.status(400).json({
           error: "Bad Request",
           message: "Tenant belirlenemedi. Geçerli bir subdomain ile erişin.",
