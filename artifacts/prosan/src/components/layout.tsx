@@ -360,7 +360,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </Button>
             </SheetTrigger>
 
-            <SheetContent side="left" className="w-72 p-0 bg-slate-50">
+            <SheetContent side="left" className="w-72 p-0 bg-slate-50 flex flex-col h-full">
               <SheetHeader className="p-5 border-b border-slate-200 text-left bg-white">
                 <SheetTitle
                   className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5"
