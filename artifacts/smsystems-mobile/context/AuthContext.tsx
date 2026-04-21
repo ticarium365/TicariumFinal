@@ -23,6 +23,7 @@ interface AuthContextValue {
   apiGet: <T>(path: string) => Promise<T>;
   apiPost: <T>(path: string, body: unknown) => Promise<T>;
   apiPatch: <T>(path: string, body: unknown) => Promise<T>;
+  apiPut: <T>(path: string, body: unknown) => Promise<T>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -106,6 +107,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return res.json();
   }, [getHeaders]);
 
+  const apiPut = useCallback(async <T>(path: string, body: unknown): Promise<T> => {
+    const headers = await getHeaders();
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify(body),
+    });
+    const cookies = parseCookies(res.headers);
+    if (cookies.length > 0) await saveCookies(cookies);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Hata" }));
+      throw new Error(err.message ?? String(res.status));
+    }
+    return res.json();
+  }, [getHeaders]);
+
   useEffect(() => {
     (async () => {
       try {
@@ -161,7 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [apiPost]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, apiGet, apiPost, apiPatch }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, apiGet, apiPost, apiPatch, apiPut }}>
       {children}
     </AuthContext.Provider>
   );

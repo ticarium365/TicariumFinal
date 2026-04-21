@@ -19,6 +19,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { TrialBanner } from "@/components/TrialBanner";
 import { BrandMark } from "@/components/BrandMark";
+import { NotificationBell } from "@/components/NotificationBell";
 
 interface DashboardStats {
   totalProducts: number;
@@ -131,12 +132,15 @@ export default function DashboardScreen() {
             <Text style={[styles.username, { color: colors.foreground }]} numberOfLines={1}>{user?.fullName ?? user?.username}</Text>
           </View>
         </View>
-        <Pressable
-          onPress={() => { Haptics.selectionAsync(); logout(); }}
-          style={[styles.logoutBtn, { backgroundColor: colors.secondary }]}
-        >
-          <Feather name="log-out" size={18} color={colors.mutedForeground} />
-        </Pressable>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <NotificationBell />
+          <Pressable
+            onPress={() => { Haptics.selectionAsync(); logout(); }}
+            style={[styles.logoutBtn, { backgroundColor: colors.secondary }]}
+          >
+            <Feather name="log-out" size={18} color={colors.mutedForeground} />
+          </Pressable>
+        </View>
       </View>
 
       <TrialBanner />
