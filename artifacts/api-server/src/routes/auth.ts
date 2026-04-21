@@ -1036,6 +1036,21 @@ router.post("/verify/check", requireAuth, async (req: Request, res: Response) =>
 });
 
 // Mevcut tenant bilgisini döndür (auth olmadan, login sayfası için)
+// Dalga 20 — Trial otomasyonu manuel tetikleme (super_admin only, test/operations)
+router.post("/admin/trial-watcher/run", requireAuth, async (req: Request, res: Response) => {
+  if (req.session?.user?.role !== "super_admin") {
+    return res.status(403).json({ error: { code: "FORBIDDEN", message: "Super admin gerekli" } });
+  }
+  try {
+    const { runTrialWatcherTick } = await import("../services/trialWatcher.js");
+    const report = await runTrialWatcherTick();
+    res.json({ ok: true, report });
+  } catch (err: any) {
+    logger.warn({ err }, "trial_watcher_manual_failed");
+    res.status(500).json({ error: { code: "INTERNAL", message: err?.message || "trial_watcher_failed" } });
+  }
+});
+
 router.get("/tenant", (req: Request, res: Response) => {
   const { company } = req;
   res.json({

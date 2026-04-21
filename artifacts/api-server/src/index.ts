@@ -342,4 +342,6 @@ app.listen(port, (err?: Error) => {
   setInterval(() => { fetchAndStoreTcmbRates().catch(() => {}); }, 4 * 60 * 60 * 1000);
   // Sprint 80 — Idempotency key TTL temizliği (saatte bir)
   setInterval(() => { cleanupExpiredIdempotencyKeys().catch(() => {}); }, 60 * 60 * 1000);
+  // Dalga 20 — Trial otomasyonu (saatlik tarama: 7g/3g/1g uyarı + 0g'de status transition)
+  import("./services/trialWatcher.js").then(m => m.startTrialWatcher()).catch(e => logger.error({ err: e }, "Trial watcher failed to start"));
 });
