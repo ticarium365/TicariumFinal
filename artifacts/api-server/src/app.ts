@@ -119,6 +119,7 @@ app.use(
 const CORS_PROD_ALLOW = [
   /^https:\/\/ticarium365\.com$/,
   /^https:\/\/[a-z0-9-]+\.ticarium365\.com$/,    // wildcard tenant
+  /^https:\/\/[a-z0-9-]+\.replit\.app$/,         // Replit deployment domain (production fallback)
 ];
 const CORS_DEV_ALLOW = [
   /^http:\/\/localhost(:\d+)?$/,
