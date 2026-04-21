@@ -1,0 +1,152 @@
+Yeni yetki ve paket şemasını kurmak istiyoruz.
+
+Amaç:
+Paket bazlı ürün erişimi + rol bazlı kullanıcı yetkisi + hesap tipi ayrımı.
+
+TEMEL MANTIK:
+
+1. Paket = firmanın satın aldığı plan
+2. Feature set = paketin açtığı modüller
+3. Rol = kullanıcı bazlı yetki seviyesi
+4. Account type = işletme hesabı mı, satınalmacı hesabı mı
+
+HESAP TİPLERİ:
+
+- business
+- procurement
+
+PAKETLER:
+
+- inventory
+- commerce
+- business
+- growth
+- enterprise
+- trial_enterprise
+- procurement
+
+NOT:
+trial_enterprise gerçek satış paketi değil, 21 günlük tüm kurumsal yetkileri açan trial plan olsun.
+
+TABLOLAR:
+
+- plans
+- features
+- plan_features
+- companies
+- roles
+- role_permissions
+- users
+
+ÖRNEK FEATURE KODLARI:
+
+- dashboard.view
+- products.view
+- products.manage
+- stock.view
+- stock.manage
+- barcode.use
+- labels.print
+- sales.view
+- sales.manage
+- pos.use
+- customers.view
+- customers.manage
+- suppliers.view
+- suppliers.manage
+- purchases.view
+- purchases.manage
+- finance.view
+- finance.manage
+- reports.view
+- reports.advanced
+- einvoice.view
+- einvoice.manage
+- banking.view
+- banking.manage
+- marketplace.view
+- marketplace.manage
+- storefront.view
+- storefront.manage
+- b2b.view
+- b2b.manage
+- procurement.portal
+- procurement.rfq
+- staff.view
+- staff.manage
+- settings.view
+- settings.manage
+- integrations.view
+- integrations.manage
+- api.access
+- multi_branch
+- advanced_pricing
+- ai.insights
+
+PAKET MANTIĞI:
+inventory:
+stok + ürün + barkod + etiket + temel rapor
+
+commerce:
+inventory + satış + pos + müşteri + alış/satış hareketleri
+
+business:
+commerce + finans + banka + tedarikçi + gelişmiş rapor
+
+growth:
+business + pazaryeri + storefront + büyüme araçları + gelişmiş fiyatlama
+
+enterprise:
+growth + e-fatura + entegrasyonlar + api + multi-branch + personel + b2b
+
+trial_enterprise:
+21 gün boyunca enterprise feature set açsın
+
+procurement:
+satınalmacıya özel; ürün görüntüleme, firma görüntüleme, teklif isteme, karşılaştırma, export basic, favoriler, kullanıcı yönetimi basic
+ama satış/pos/finans/e-fatura/marketplace/storefront yönetimi olmasın
+
+ROL MANTIĞI:
+Paket üst sınırı belirlesin.
+Rol o paket içinde kullanıcının erişim seviyesini belirlesin.
+
+Örnek roller:
+
+- owner
+- admin
+- manager
+- staff
+- accountant
+- cashier
+- procurement_admin
+- procurement_user
+
+MENÜ DAVRANIŞI:
+Yetkisi olmayan modüller menüde kilitli görünsün.
+Ancak kilit sebebi sistemde ayrışsın:
+
+1. Paket yok
+2. Rol yetkisi yok
+3. Hesap tipi uygun değil
+
+UI metinleri farklı olsun:
+
+- paket kilidi -> plan yükselt
+- rol kilidi -> yetki iste
+- hesap tipi kilidi -> bu modül bu hesap tipine uygun değil
+
+İSTEK:
+Önce bunun veri modeli / şema tasarımını çıkar.
+Henüz tüm ekranları yapma.
+Önce:
+
+1. tablo yapıları
+2. enum/code yapıları
+3. ilişkiler
+4. seed plan-feature map
+5. örnek role permission set
+6. nasıl migrate edileceği
+7. mevcut kullanıcıları nasıl etkileyeceği
+
+Amacımız:
+ileride temiz, ölçeklenebilir, 10.000 kullanıcıya uygun yetki sistemi kurmak.
