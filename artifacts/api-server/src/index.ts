@@ -65,15 +65,24 @@ async function seedDefaultCompanyIfMissing() {
 }
 
 async function backfillOnboardingForDefaultCompany() {
-  // Production fix: ilk şirket onboardingCompletedAt=NULL ise otomatik tamamla
-  // (auto-seed senaryosu — wizard'a takılı kalmasın)
-  const { eq: eqOp, and, isNull } = await import("drizzle-orm");
-  const { companiesTable: co } = await import("@workspace/db");
-  const [first] = await db.select({ id: co.id, onboardingCompletedAt: co.onboardingCompletedAt })
-    .from(co).orderBy(co.id).limit(1);
-  if (!first || first.onboardingCompletedAt) return;
-  await db.update(co).set({ onboardingCompletedAt: new Date() }).where(eqOp(co.id, first.id));
-  logger.info({ companyId: first.id }, "Default company onboarding marked complete");
+  // Production fix: tüm şirketler için onboarding'i tamamlanmış işaretle
+  // (auto-seed senaryosu — wizard'a takılı kalmasın). Hem companies.onboardingCompletedAt
+  // hem de company_settings.onboardingCompleted güncellenir, çünkü /me ikincisini okur.
+  const { eq: eqOp } = await import("drizzle-orm");
+  const { companiesTable: co, companySettingsTable: cs } = await import("@workspace/db");
+  const companies = await db.select({ id: co.id, name: co.name, onboardingCompletedAt: co.onboardingCompletedAt }).from(co);
+  for (const c of companies) {
+    if (!c.onboardingCompletedAt) {
+      await db.update(co).set({ onboardingCompletedAt: new Date() }).where(eqOp(co.id, c.id));
+    }
+    const [existing] = await db.select().from(cs).where(eqOp(cs.companyId, c.id));
+    if (!existing) {
+      await db.insert(cs).values({ companyId: c.id, companyName: c.name, onboardingCompleted: true });
+    } else if (!existing.onboardingCompleted) {
+      await db.update(cs).set({ onboardingCompleted: true, updatedAt: new Date() }).where(eqOp(cs.id, existing.id));
+    }
+  }
+  logger.info({ count: companies.length }, "Onboarding backfill complete");
 }
 
 async function backfillUserCompanyIds() {
