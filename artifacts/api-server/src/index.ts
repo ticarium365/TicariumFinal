@@ -49,6 +49,7 @@ async function seedDefaultCompanyIfMissing() {
   const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(co);
   if (count > 0) return;
   logger.info("No companies found, seeding default 'Prosan' company...");
+  const now = new Date();
   await db.insert(co).values({
     name: "Prosan Endüstri",
     subdomain: "prosan",
@@ -56,8 +57,23 @@ async function seedDefaultCompanyIfMissing() {
     isActive: true,
     planType: "active",
     accountType: "seller",
+    sector: "industrial",
+    // Default tenant'ta wizard'ı atla — Ticarium365 ana paneline doğrudan girilebilsin
+    onboardingCompletedAt: now,
   });
   logger.info("Default company seeded");
+}
+
+async function backfillOnboardingForDefaultCompany() {
+  // Production fix: ilk şirket onboardingCompletedAt=NULL ise otomatik tamamla
+  // (auto-seed senaryosu — wizard'a takılı kalmasın)
+  const { eq: eqOp, and, isNull } = await import("drizzle-orm");
+  const { companiesTable: co } = await import("@workspace/db");
+  const [first] = await db.select({ id: co.id, onboardingCompletedAt: co.onboardingCompletedAt })
+    .from(co).orderBy(co.id).limit(1);
+  if (!first || first.onboardingCompletedAt) return;
+  await db.update(co).set({ onboardingCompletedAt: new Date() }).where(eqOp(co.id, first.id));
+  logger.info({ companyId: first.id }, "Default company onboarding marked complete");
 }
 
 async function backfillUserCompanyIds() {
@@ -201,6 +217,12 @@ async function runSeeds() {
     await backfillUserCompanyIds();
   } catch (err) {
     logger.error({ err }, "Failed to backfill user companyIds");
+  }
+
+  try {
+    await backfillOnboardingForDefaultCompany();
+  } catch (err) {
+    logger.error({ err }, "Failed to backfill onboarding completion");
   }
 
   try {
