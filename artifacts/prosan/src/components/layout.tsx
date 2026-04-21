@@ -59,6 +59,9 @@ import {
   Activity,
 } from "lucide-react";
 import { useFeatures } from "@/components/use-features";
+import { getNavLockReason, lockUiText, filterVisibleNavGroups, type AccountType, type LockReason } from "@/lib/nav-lock";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ShieldOff, Building2 as BuildingLock } from "lucide-react";
 import { useMenuPrefs } from "@/components/use-menu-prefs";
 import { FeatureGate } from "@/components/feature-gate";
 import { navItemId, navIdToTestSlug } from "@/components/nav-config";
@@ -164,20 +167,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const accountType = ((user as any)?.accountType ?? "seller") as "buyer" | "seller" | "both" | "purchasing";
   const isPurchasing = accountType === "purchasing";
 
-  // Rol filtresi + kullanıcı menü tercihi (hidden) uygulanmış gruplar
+  // Rol + accountType filtresi + kullanıcı menü tercihi (hidden) uygulanmış gruplar.
+  // Dalga 17: tek doğruluk kaynağı `filterVisibleNavGroups` saf helper'ı; aynı mantık
+  // node:test ile (D17-8/9/10/11) garantili.
   const visibleGroups = useMemo(() => {
     if (!user) return [];
-    return NAV_GROUPS
-      .filter((g) => isVisibleForAccount(g.accountTypes, accountType))
-      .map((g) => ({
-        ...g,
-        items: g.items.filter((i) =>
-          i.roles.includes(user.role) &&
-          isVisibleForAccount(i.accountTypes, accountType) &&
-          !isItemHidden(navItemId(i))
-        ),
-      }))
-      .filter((g) => g.items.length > 0);
+    return filterVisibleNavGroups(NAV_GROUPS, {
+      role: user.role,
+      accountType,
+      isItemHidden,
+      navItemId,
+    });
   }, [user, isItemHidden, accountType]);
 
   // Aktif rotanın feature gereksinimi (en uzun href eşleşmesi — nested route güvenliği)
@@ -314,28 +314,73 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <div className="ml-2 mt-0.5 mb-1 border-l border-slate-200 pl-2">
                 {group.items.map((item) => {
                   const active = isItemActive(item.href);
-                  const locked = item.feature ? !hasFeature(item.feature) : false;
+                  // Dalga 17 — Lock reason ayrımı (package/role/accountType).
+                  // Mevcut behavior'da role/accountType zaten visibleGroups filter'ında
+                  // gizleniyor; burada gelen item'ların lock'u öncelikli olarak "package"
+                  // olur. Yine de helper genel — ileride "tüm modülleri göster" toggle'ı
+                  // eklenirse direkt çalışacak.
+                  const reason: LockReason = user
+                    ? getNavLockReason(
+                        { roles: item.roles, accountTypes: item.accountTypes, feature: item.feature },
+                        { role: user.role, accountType, hasFeature },
+                      )
+                    : null;
+                  const locked = reason !== null;
+                  const ui = lockUiText(reason);
                   const itemId = navItemId(item);
                   const slug = navIdToTestSlug(itemId);
+                  // Lock ikonu ve renk varyantları
+                  const LockIcon = reason === "role" ? ShieldOff
+                    : reason === "accountType" ? BuildingLock
+                    : Lock;
+                  const lockColor = reason === "role" ? "text-rose-500"
+                    : reason === "accountType" ? "text-amber-500"
+                    : "text-slate-400";
+                  const linkContent = (
+                    <div
+                      className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer text-sm ${
+                        active
+                          ? "bg-blue-50 text-blue-700 font-semibold shadow-sm shadow-blue-500/10"
+                          : locked
+                            ? "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                      }`}
+                      onClick={() => setIsOpen(false)}
+                      data-testid={`nav-link-${slug}`}
+                      data-lock-reason={reason ?? undefined}
+                    >
+                      <item.icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate flex-1">{item.label}</span>
+                      {locked && (
+                        <LockIcon
+                          className={`h-3 w-3 shrink-0 opacity-80 ${lockColor}`}
+                          data-testid={`nav-lock-${slug}`}
+                          data-lock-reason={reason ?? undefined}
+                        />
+                      )}
+                    </div>
+                  );
+                  // Locked item'ın href'ini lock CTA'sına yönlendir (Yükselt → /pricing vb.)
+                  const finalHref = locked && ui.href ? ui.href : item.href;
+                  if (!locked) {
+                    return (
+                      <Link key={itemId} href={item.href}>
+                        {linkContent}
+                      </Link>
+                    );
+                  }
                   return (
-                    <Link key={itemId} href={item.href}>
-                      <div
-                        title={locked ? "Bu modül paketinizde yok — tıklayarak yükseltme ekranını görebilirsiniz" : undefined}
-                        className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer text-sm ${
-                          active
-                            ? "bg-blue-50 text-blue-700 font-semibold shadow-sm shadow-blue-500/10"
-                            : locked
-                              ? "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
-                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                        }`}
-                        onClick={() => setIsOpen(false)}
-                        data-testid={`nav-link-${slug}`}
-                      >
-                        <item.icon className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate flex-1">{item.label}</span>
-                        {locked && <Lock className="h-3 w-3 shrink-0 opacity-70" data-testid={`nav-lock-${slug}`} />}
-                      </div>
-                    </Link>
+                    <TooltipProvider key={itemId} delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link href={finalHref}>{linkContent}</Link>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs text-xs">
+                          <div className="font-semibold mb-1">{ui.tooltip}</div>
+                          <div className="text-[11px] opacity-80">→ {ui.cta}</div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   );
                 })}
               </div>

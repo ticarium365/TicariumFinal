@@ -6742,6 +6742,150 @@ describe("Sprint J — Membership + Verification", () => {
 });
 
 // ===========================================================================
+// Dalga 17 — Lock reason ayrımı (package / role / accountType)
+// nav-lock.mjs saf helper testleri — UI tooltip + CTA mesajları için temel.
+// ===========================================================================
+import {
+  getNavLockReason as _navLockFn,
+  lockUiText as _lockUiTextFn,
+  filterVisibleNavGroups as _filterGroupsFn,
+} from "../../prosan/src/lib/nav-lock.mjs";
+
+describe("Dalga 17 — getNavLockReason + lockUiText", () => {
+  const allowAll = () => true;
+  const denyAll = () => false;
+  const allow = (codes) => (c) => codes.includes(c);
+
+  test("D17-1 — açık item null döner", () => {
+    const r = _navLockFn(
+      { roles: ["admin"], feature: "sales.invoices" },
+      { role: "admin", accountType: "seller", hasFeature: allowAll },
+    );
+    assert.equal(r, null);
+  });
+
+  test("D17-2 — rol yetersiz → 'role' (en yüksek öncelik)", () => {
+    const r = _navLockFn(
+      { roles: ["admin"], feature: "sales.invoices" },
+      { role: "staff", accountType: "seller", hasFeature: denyAll },
+    );
+    assert.equal(r, "role"); // feature de eksik ama 'role' önce gelir
+  });
+
+  test("D17-3 — accountType uyumsuz → 'accountType'", () => {
+    const r = _navLockFn(
+      { roles: ["admin"], accountTypes: ["buyer", "both"], feature: "x" },
+      { role: "admin", accountType: "seller", hasFeature: denyAll },
+    );
+    assert.equal(r, "accountType");
+  });
+
+  test("D17-4 — purchasing whitelist semantiği (xs yoksa kapalı)", () => {
+    const r = _navLockFn(
+      { roles: ["admin"] },
+      { role: "admin", accountType: "purchasing", hasFeature: allowAll },
+    );
+    assert.equal(r, "accountType", "purchasing item explicit listelenmediyse kapalı olmalı");
+    const r2 = _navLockFn(
+      { roles: ["admin"], accountTypes: ["purchasing"] },
+      { role: "admin", accountType: "purchasing", hasFeature: allowAll },
+    );
+    assert.equal(r2, null);
+  });
+
+  test("D17-5 — paket yetersiz → 'package'", () => {
+    const r = _navLockFn(
+      { roles: ["admin"], feature: "marketplace.pro" },
+      { role: "admin", accountType: "seller", hasFeature: allow(["sales.pos"]) },
+    );
+    assert.equal(r, "package");
+  });
+
+  test("D17-6 — feature undefined → paket kontrolü skip", () => {
+    const r = _navLockFn(
+      { roles: ["admin"] },
+      { role: "admin", accountType: "seller", hasFeature: denyAll },
+    );
+    assert.equal(r, null);
+  });
+
+  test("D17-8 — filterVisibleNavGroups: rol uyumsuz item GİZLENİR", () => {
+    const groups = [{
+      id: "g1",
+      items: [
+        { href: "/a", roles: ["admin"] },
+        { href: "/b", roles: ["staff"] },
+      ],
+    }];
+    const r = _filterGroupsFn(groups, { role: "staff", accountType: "seller" });
+    assert.equal(r.length, 1);
+    assert.equal(r[0].items.length, 1);
+    assert.equal(r[0].items[0].href, "/b");
+  });
+
+  test("D17-9 — filterVisibleNavGroups: accountType=purchasing whitelist", () => {
+    const groups = [
+      { id: "satis", items: [{ href: "/sales", roles: ["admin"] }] },
+      { id: "satinalma-merkezi", accountTypes: ["purchasing"], items: [
+        { href: "/satinalma-merkezi", roles: ["admin"], accountTypes: ["purchasing"] },
+      ]},
+    ];
+    const purchasing = _filterGroupsFn(groups, { role: "admin", accountType: "purchasing" });
+    assert.equal(purchasing.length, 1, "purchasing sadece whitelisted grubu görmeli");
+    assert.equal(purchasing[0].id, "satinalma-merkezi");
+
+    const seller = _filterGroupsFn(groups, { role: "admin", accountType: "seller" });
+    assert.equal(seller.length, 1);
+    assert.equal(seller[0].id, "satis", "seller satinalma-merkezi'ni görmemeli");
+  });
+
+  test("D17-10 — filterVisibleNavGroups: tüm item gizlenirse grup atılır", () => {
+    const groups = [
+      { id: "empty", items: [{ href: "/x", roles: ["super_admin"] }] },
+      { id: "ok", items: [{ href: "/y", roles: ["admin"] }] },
+    ];
+    const r = _filterGroupsFn(groups, { role: "admin", accountType: "seller" });
+    assert.equal(r.length, 1);
+    assert.equal(r[0].id, "ok");
+  });
+
+  test("D17-11 — filterVisibleNavGroups: isItemHidden tercihi uygulanır", () => {
+    const groups = [{
+      id: "g1",
+      items: [
+        { href: "/a", roles: ["admin"] },
+        { href: "/b", roles: ["admin"] },
+      ],
+    }];
+    const r = _filterGroupsFn(groups, {
+      role: "admin", accountType: "seller",
+      isItemHidden: (id) => id === "nav:/a",
+    });
+    assert.equal(r[0].items.length, 1);
+    assert.equal(r[0].items[0].href, "/b");
+  });
+
+  test("D17-7 — lockUiText her reason için TR string + CTA href döner", () => {
+    const pkg = _lockUiTextFn("package");
+    assert.match(pkg.tooltip, /paketinizde yok/i);
+    assert.equal(pkg.href, "/pricing");
+    assert.equal(pkg.cta, "Paketi Yükselt");
+
+    const role = _lockUiTextFn("role");
+    assert.match(role.tooltip, /rolünüze kapalı/i);
+    assert.equal(role.href, "/users");
+
+    const at = _lockUiTextFn("accountType");
+    assert.match(at.tooltip, /hesap tipinize uygun/i);
+    assert.equal(at.href, "/firma-profili");
+
+    const none = _lockUiTextFn(null);
+    assert.equal(none.href, null);
+    assert.equal(none.tooltip, "");
+  });
+});
+
+// ===========================================================================
 // Dalga 16 — Yetki Şeması v2 Foundation (gizli sistem planları)
 // Public afişlerde sadece satılan planlar; trial_enterprise + procurement gizli.
 // ===========================================================================
