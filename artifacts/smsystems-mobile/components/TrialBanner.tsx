@@ -1,31 +1,17 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useQuery } from "@tanstack/react-query";
+import { Pressable, StyleSheet, Text } from "react-native";
 
 import { useAuth } from "@/context/AuthContext";
-import { useColors } from "@/hooks/useColors";
-
-interface PaymentStatus {
-  planType: "trial" | "active" | "suspended";
-  trialEndsAt: string | null;
-  trialDaysLeft: number | null;
-  isTrialExpired: boolean;
-  isActive: boolean;
-}
+import { usePaymentStatus } from "@/hooks/usePaymentStatus";
 
 export function TrialBanner() {
-  const { apiGet, user } = useAuth();
-  const colors = useColors();
+  const { user } = useAuth();
+  const { data: status } = usePaymentStatus();
 
-  const { data: status } = useQuery<PaymentStatus>({
-    queryKey: ["payment-status"],
-    queryFn: () => apiGet<PaymentStatus>("/payment/status"),
-    enabled: !!user && user.role !== "super_admin",
-    staleTime: 60 * 1000,
-  });
-
+  // Belt-and-suspenders role guard: hook enabled=false super_admin için ama React Query
+  // cache global; logout sonrası cache invalidate edilmiyorsa stale `status` kalabilir.
   if (!user || user.role === "super_admin") return null;
   if (!status || status.planType !== "trial" || status.trialDaysLeft === null) return null;
   if (status.isTrialExpired) return null;
