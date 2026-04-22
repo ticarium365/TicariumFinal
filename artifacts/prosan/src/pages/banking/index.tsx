@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { useToast } from "@/hooks/use-toast";
 import {
   Banknote, Plus, Upload, Search, Loader2, Link2, Eye, CheckCircle2, X, RefreshCw,
+  Wallet, AlertTriangle, TrendingUp, ChevronRight as ChevronRightIcon,
 } from "lucide-react";
 const API = "/api/banking";
 
@@ -94,6 +95,28 @@ export default function BankingPage() {
   useEffect(() => { fetchAccounts(); }, [fetchAccounts]);
   useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
 
+  // ─── Dalga 30 — KPI + Pending Match Widget (independent global fetch) ──
+  const [globalUnmatched, setGlobalUnmatched] = useState<Tx[]>([]);
+  const [monthlyTx, setMonthlyTx] = useState<Tx[]>([]);
+  const [kpiLoading, setKpiLoading] = useState(true);
+  const fetchKpiData = useCallback(async () => {
+    setKpiLoading(true);
+    try {
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      const dateFrom = monthStart.toISOString().slice(0, 10);
+      const dateTo = monthEnd.toISOString().slice(0, 10);
+      const [unmRes, monRes] = await Promise.all([
+        fetch(`${API}/transactions?status=unmatched&limit=500`, { credentials: "include" }),
+        fetch(`${API}/transactions?dateFrom=${dateFrom}&dateTo=${dateTo}&limit=500`, { credentials: "include" }),
+      ]);
+      if (unmRes.ok) setGlobalUnmatched(await unmRes.json());
+      if (monRes.ok) setMonthlyTx(await monRes.json());
+    } finally { setKpiLoading(false); }
+  }, []);
+  useEffect(() => { fetchKpiData(); }, [fetchKpiData]);
+
   const createAccount = async () => {
     if (!newAccount.bankName.trim() || !newAccount.accountName.trim()) {
       { toast({ title: "Banka ve hesap adı gerekli", variant: "destructive" }); return; }
@@ -159,6 +182,7 @@ export default function BankingPage() {
       toast({ title: "Eşleştirildi" });
       setMatchTx(null);
       fetchTransactions();
+      fetchKpiData();
     } finally { setMatchBusy(false); }
   };
 
@@ -167,11 +191,27 @@ export default function BankingPage() {
     if (res.ok) {
       toast({ title: "Hareket yok sayıldı" });
       fetchTransactions();
+      fetchKpiData();
     }
   };
 
   const totalBalance = accounts.reduce((s, a) => s + Number(a.currentBalance || 0), 0);
   const unmatchedCount = transactions.filter(t => t.status === "unmatched").length;
+
+  // ─── Dalga 30 — KPI hesaplamaları (independent, filter-bağımsız) ──────
+  const tryActiveBalance = accounts
+    .filter(a => a.isActive && a.currency === "TRY")
+    .reduce((s, a) => s + Number(a.currentBalance || 0), 0);
+  const activeAccountsCount = accounts.filter(a => a.isActive).length;
+  const globalUnmatchedCount = globalUnmatched.length;
+  const monthlyNet = monthlyTx.reduce((s, t) => {
+    const amt = Number(t.amount || 0);
+    return s + (t.txType === "credit" ? amt : -amt);
+  }, 0);
+  const pendingTop5 = [...globalUnmatched]
+    .sort((a, b) => new Date(b.txDate).getTime() - new Date(a.txDate).getTime())
+    .slice(0, 5);
+  const accountById = (id: number) => accounts.find(a => a.id === id);
 
   return (
     <>
@@ -192,6 +232,80 @@ export default function BankingPage() {
             </Button>
           </div>
         </div>
+
+        {/* ─── Dalga 30 — KPI Strip (independent global) ─────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" data-testid="banking-kpi-strip">
+          <Card data-testid="kpi-try-balance">
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1.5"><Wallet className="h-4 w-4" /> TRY Bakiye</CardTitle></CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{kpiLoading ? "—" : fmtTL(tryActiveBalance)}</div>
+              <div className="text-xs text-muted-foreground">{accounts.filter(a => a.isActive && a.currency === "TRY").length} aktif TRY hesap</div>
+            </CardContent>
+          </Card>
+          <Card data-testid="kpi-active-accounts">
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1.5"><Banknote className="h-4 w-4" /> Aktif Hesap</CardTitle></CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{activeAccountsCount}</div>
+              <div className="text-xs text-muted-foreground">/ {accounts.length} toplam</div>
+            </CardContent>
+          </Card>
+          <Card data-testid="kpi-unmatched-global">
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1.5"><AlertTriangle className="h-4 w-4 text-amber-600" /> Eşleşme Bekleyen</CardTitle></CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-amber-600">{kpiLoading ? "—" : globalUnmatchedCount}{globalUnmatchedCount >= 500 && <span className="text-xs ml-1 text-muted-foreground">(500+)</span>}</div>
+              <div className="text-xs text-muted-foreground">tüm hesaplar</div>
+            </CardContent>
+          </Card>
+          <Card data-testid="kpi-monthly-net">
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1.5"><TrendingUp className="h-4 w-4" /> Bu Ay Net</CardTitle></CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${monthlyNet >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                {kpiLoading ? "—" : fmtTL(monthlyNet)}
+              </div>
+              <div className="text-xs text-muted-foreground">{monthlyTx.length} hareket</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ─── Dalga 30 — Eşleşme Bekleyen 5 İşlem widget ─────────────────── */}
+        {pendingTop5.length > 0 && (
+          <Card className="border-amber-200 dark:border-amber-900 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30" data-testid="pending-matches-widget">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2 text-amber-900 dark:text-amber-200">
+                <AlertTriangle className="h-5 w-5" /> Eşleşme Bekleyen Son İşlemler
+                <Badge variant="outline" className="ml-auto text-xs">ilk 5 / {globalUnmatchedCount}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
+                {pendingTop5.map((tx, idx) => {
+                  const acc = accountById(tx.accountId);
+                  const rankColors = ["bg-orange-500", "bg-amber-500", "bg-yellow-500", "bg-slate-400", "bg-slate-400"];
+                  return (
+                    <div
+                      key={tx.id}
+                      onClick={() => openMatch(tx)}
+                      className="bg-card border rounded-lg p-3 cursor-pointer hover:shadow-md hover:border-amber-400 transition-all"
+                      data-testid={`pending-match-${tx.id}`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Badge className={`${rankColors[idx]} text-white text-xs px-1.5 py-0`}>{idx + 1}</Badge>
+                        <ChevronRightIcon className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                      <div className={`text-sm font-bold ${tx.txType === "credit" ? "text-emerald-600" : "text-red-600"}`}>
+                        {tx.txType === "credit" ? "+" : "−"}{fmtTL(Math.abs(Number(tx.amount)))}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate" title={tx.description}>{tx.description || "—"}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        {new Date(tx.txDate).toLocaleDateString("tr-TR")} · {acc?.bankName ?? "—"}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Account cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
