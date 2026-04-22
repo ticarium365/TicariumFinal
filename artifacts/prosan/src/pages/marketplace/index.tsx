@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, RefreshCw, Activity, Trash2, ShoppingCart, ListChecks, Settings as SettingsIcon, Package, CheckCircle2, AlertCircle, Clock, AlertOctagon, Hourglass, Loader2 } from "lucide-react";
+import { Plus, RefreshCw, Activity, Trash2, ShoppingCart, ListChecks, Settings as SettingsIcon, Package, CheckCircle2, AlertCircle, Clock, AlertOctagon, Hourglass, Loader2, Store, WifiOff, PackageOpen, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type Provider = { key: string; label: string; needs: string[] };
@@ -56,6 +56,10 @@ export default function MarketplacePage() {
   const [tab, setTab] = useState("accounts");
   const [showTestAccounts, setShowTestAccounts] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  // Dalga 31 — KPI strip + pending orders widget (sadece ekleme)
+  const [globalPendingCount, setGlobalPendingCount] = useState(0);
+  const [globalPendingOrders, setGlobalPendingOrders] = useState<MOrder[]>([]);
+  const [publishedProductsCount, setPublishedProductsCount] = useState(0);
 
   const [newProvider, setNewProvider] = useState("mock");
   const [newName, setNewName] = useState("Mock Mağaza");
@@ -71,6 +75,7 @@ export default function MarketplacePage() {
     ]);
     setProviders(p); setAccounts(a); setJobs(j); setLogs(l);
     await loadOrders();
+    fetchKpiData().catch(() => {});
   }
 
   async function loadOrders() {
@@ -100,6 +105,7 @@ export default function MarketplacePage() {
           toast({ title: "Satışa dönüştürüldü", description: `${data.sales.length} satış oluşturuldu${skipMsg}` });
         }
         await loadOrders();
+        fetchKpiData().catch(() => {});
       } else if (r.status === 422) {
         const reasons = (data.skipped || []).map((s: any) => s.reason).join(", ");
         toast({ title: "Dönüştürme başarısız", description: `Sebep: ${reasons || "bilinmiyor"}`, variant: "destructive" });
@@ -112,8 +118,24 @@ export default function MarketplacePage() {
       setConvertingId(null);
     }
   }
+  // Dalga 31 — KPI/widget verileri (filter-bağımsız global)
+  async function fetchKpiData() {
+    try {
+      const [pending, stats] = await Promise.all([
+        api<MOrder[]>("/marketplace/orders?converted=false&limit=500"),
+        api<{ publishedMappings: { count: number }[] }>("/marketplace/stats"),
+      ]);
+      setGlobalPendingOrders(pending);
+      setGlobalPendingCount(pending.length);
+      setPublishedProductsCount(Number(stats.publishedMappings?.[0]?.count || 0));
+    } catch {
+      // sessizce yut
+    }
+  }
+
   useEffect(() => { refresh().catch(console.error); }, []);
   useEffect(() => { loadOrders().catch(() => {}); }, [orderFilter]);
+  useEffect(() => { fetchKpiData().catch(() => {}); }, []);
   useEffect(() => {
     const t = setInterval(() => { api<Job[]>("/marketplace/jobs").then(setJobs).catch(() => {}); }, 5000);
     return () => clearInterval(t);
@@ -220,6 +242,121 @@ export default function MarketplacePage() {
           </Dialog>
         </div>
       </div>
+
+      {/* Dalga 31 — KPI Strip (sadece ekleme) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" data-testid="marketplace-kpi-strip">
+        {(() => {
+          const activeAccounts = accounts.filter((a) => a.isActive);
+          const healthyCount = activeAccounts.filter((a) => a.lastHealthOk === true).length;
+          const unhealthyCount = activeAccounts.filter((a) => a.lastHealthOk === false).length;
+          const pendingDisplay = globalPendingCount >= 500 ? "500+" : String(globalPendingCount);
+          return (
+            <>
+              <Card data-testid="kpi-active-stores">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-muted-foreground">Aktif Mağaza</div>
+                      <div className="text-2xl font-bold mt-1">{activeAccounts.length}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{healthyCount} sağlıklı</div>
+                    </div>
+                    <Store className="h-7 w-7 text-blue-500 opacity-70" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card data-testid="kpi-unhealthy-stores" className={unhealthyCount > 0 ? "border-red-200" : ""}>
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-muted-foreground">Sağlıksız Mağaza</div>
+                      <div className={`text-2xl font-bold mt-1 ${unhealthyCount > 0 ? "text-red-600" : ""}`}>{unhealthyCount}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">son sağlık kontrolü</div>
+                    </div>
+                    <WifiOff className={`h-7 w-7 opacity-70 ${unhealthyCount > 0 ? "text-red-500" : "text-slate-400"}`} />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card data-testid="kpi-published-products">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-muted-foreground">Yayında Ürün</div>
+                      <div className="text-2xl font-bold mt-1">{publishedProductsCount}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">eşleştirilmiş kanal</div>
+                    </div>
+                    <PackageOpen className="h-7 w-7 text-emerald-500 opacity-70" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card data-testid="kpi-pending-orders" className={globalPendingCount > 0 ? "border-amber-200" : ""}>
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-muted-foreground">Bekleyen Sipariş</div>
+                      <div className={`text-2xl font-bold mt-1 ${globalPendingCount > 0 ? "text-amber-600" : ""}`}>{pendingDisplay}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">satışa dönüştürülmemiş</div>
+                    </div>
+                    <ShoppingCart className={`h-7 w-7 opacity-70 ${globalPendingCount > 0 ? "text-amber-500" : "text-slate-400"}`} />
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          );
+        })()}
+      </div>
+
+      {/* Dalga 31 — Bekleyen Sipariş widget (sadece ekleme) */}
+      {globalPendingOrders.length > 0 && (
+        <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20" data-testid="pending-orders-widget">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-amber-600" />
+                <CardTitle className="text-sm">Bekleyen Sipariş — Son İşlemler</CardTitle>
+              </div>
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setOrderFilter("pending"); setTab("orders"); }} data-testid="btn-goto-pending-orders">
+                Tümü <ChevronRight className="h-3 w-3 ml-0.5" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
+              {globalPendingOrders.slice(0, 5).map((o, i) => {
+                const rankColor = i === 0 ? "bg-orange-100 text-orange-700 border-orange-200"
+                  : i === 1 ? "bg-amber-100 text-amber-700 border-amber-200"
+                  : i === 2 ? "bg-yellow-100 text-yellow-700 border-yellow-200"
+                  : "bg-slate-100 text-slate-600 border-slate-200";
+                const acc = accounts.find((a) => a.id === o.accountId);
+                const isConverting = convertingId === o.id;
+                return (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => convertOrder(o.id)}
+                    disabled={isConverting}
+                    className="text-left p-3 rounded-lg border bg-card hover:shadow-md transition-shadow disabled:opacity-60 disabled:cursor-wait"
+                    data-testid={`pending-order-${o.id}`}
+                  >
+                    <div className="flex items-start justify-between mb-1.5">
+                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${rankColor}`}>#{i + 1}</Badge>
+                      {isConverting ? <Loader2 className="h-3 w-3 animate-spin text-amber-600" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                    </div>
+                    <div className="text-sm font-medium truncate">{o.customerName || `Sipariş #${o.externalOrderId}`}</div>
+                    <div className="text-xs text-muted-foreground truncate mt-0.5">
+                      {new Date(o.pulledAt).toLocaleDateString("tr-TR")} · {acc?.name || o.channelKey}
+                    </div>
+                    {o.totalAmount != null && (
+                      <div className="text-sm font-semibold text-emerald-700 mt-1">
+                        {Number(o.totalAmount).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {o.currency || "TRY"}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>

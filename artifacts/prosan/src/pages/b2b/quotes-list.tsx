@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Inbox, Send, FileText, Clock, CheckCircle2, XCircle, Search, ChevronRight, Plus, Hourglass } from "lucide-react";
+import { Inbox, Send, FileText, Clock, CheckCircle2, XCircle, Search, ChevronRight, Plus, Hourglass, Target, TrendingUp, AlertCircle, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -178,6 +178,119 @@ export default function QuotesListPage() {
             <StatChip label="Red" value={currentStats.rejected} color="bg-rose-500/10 text-rose-300 border-rose-500/20" />
           </div>
         )}
+
+        {/* Dalga 33 — KPI Performans Strip (sadece ekleme, mevcut stats'tan türetilmiş) */}
+        {currentStats && (() => {
+          const total = currentStats.pending + currentStats.quoted + currentStats.accepted + currentStats.rejected;
+          const responded = currentStats.quoted + currentStats.accepted + currentStats.rejected;
+          const decided = currentStats.accepted + currentStats.rejected;
+          const responseRate = total > 0 ? (responded / total) * 100 : 0;
+          const acceptanceRate = decided > 0 ? (currentStats.accepted / decided) * 100 : 0;
+          // Acil: en yaşlı pending (data filtrelenmiş — current tab pending varsa hesapla)
+          const oldestPending = data
+            .filter((q) => q.status === "pending")
+            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0];
+          const oldestPendingDays = oldestPending
+            ? Math.floor((Date.now() - new Date(oldestPending.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+            : 0;
+          return (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4" data-testid="b2b-kpi-strip">
+              <Card data-testid="kpi-total-quotes">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-muted-foreground">Toplam Teklif</div>
+                      <div className="text-2xl font-bold mt-1">{total}</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">{tab === "inbox" ? "gelen kutusu" : "giden kutusu"}</div>
+                    </div>
+                    <Activity className="h-7 w-7 text-blue-500 opacity-70" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card data-testid="kpi-response-rate">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-muted-foreground">{tab === "inbox" ? "Yanıt Oranımız" : "Karşı Yanıt Oranı"}</div>
+                      <div className={`text-2xl font-bold mt-1 ${responseRate >= 80 ? "text-emerald-600" : responseRate >= 50 ? "text-amber-600" : "text-red-600"}`}>%{responseRate.toFixed(0)}</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">{responded} / {total}</div>
+                    </div>
+                    <TrendingUp className={`h-7 w-7 opacity-70 ${responseRate >= 80 ? "text-emerald-500" : responseRate >= 50 ? "text-amber-500" : "text-red-500"}`} />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card data-testid="kpi-acceptance-rate">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-muted-foreground">Kabul Oranı</div>
+                      <div className={`text-2xl font-bold mt-1 ${acceptanceRate >= 60 ? "text-emerald-600" : acceptanceRate >= 30 ? "text-amber-600" : "text-slate-500"}`}>{decided > 0 ? `%${acceptanceRate.toFixed(0)}` : "—"}</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">{currentStats.accepted} / {decided} karar</div>
+                    </div>
+                    <Target className={`h-7 w-7 opacity-70 ${acceptanceRate >= 60 ? "text-emerald-500" : "text-slate-400"}`} />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className={oldestPendingDays >= 3 ? "border-red-200" : oldestPendingDays >= 1 ? "border-amber-200" : ""} data-testid="kpi-oldest-pending">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-muted-foreground">En Eski Bekleyen</div>
+                      <div className={`text-2xl font-bold mt-1 ${oldestPendingDays >= 3 ? "text-red-600" : oldestPendingDays >= 1 ? "text-amber-600" : "text-slate-500"}`}>
+                        {oldestPending ? `${oldestPendingDays}g` : "—"}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5 truncate" title={oldestPending?.subject}>
+                        {oldestPending ? oldestPending.code : "yok"}
+                      </div>
+                    </div>
+                    <AlertCircle className={`h-7 w-7 opacity-70 ${oldestPendingDays >= 3 ? "text-red-500" : oldestPendingDays >= 1 ? "text-amber-500" : "text-slate-400"}`} />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          );
+        })()}
+
+        {/* Dalga 33 — "Yanıt Bekleyen — En Acil 3 Teklif" widget (sadece ekleme, inbox tab) */}
+        {tab === "inbox" && (() => {
+          const urgent = data
+            .filter((q) => q.status === "pending")
+            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+            .slice(0, 3);
+          if (urgent.length === 0) return null;
+          return (
+            <Card className="mt-4 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20" data-testid="urgent-quotes-widget">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Hourglass className="h-4 w-4 text-amber-600" />
+                  <span className="text-sm font-semibold">Yanıt Bekleyen — En Acil Teklifler</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  {urgent.map((q, i) => {
+                    const daysAgo = Math.floor((Date.now() - new Date(q.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+                    const rankColor = i === 0 ? "bg-red-100 text-red-700 border-red-200"
+                      : i === 1 ? "bg-orange-100 text-orange-700 border-orange-200"
+                      : "bg-amber-100 text-amber-700 border-amber-200";
+                    return (
+                      <Link key={q.id} href={`/b2b/quotes/${q.id}`}>
+                        <div className="p-3 rounded-lg border bg-card hover:shadow-md transition-shadow cursor-pointer" data-testid={`urgent-quote-${q.id}`}>
+                          <div className="flex items-start justify-between mb-1.5">
+                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${rankColor}`}>#{i + 1}</Badge>
+                            <span className={`text-[10px] font-semibold ${daysAgo >= 3 ? "text-red-600" : "text-amber-600"}`}>{daysAgo}g önce</span>
+                          </div>
+                          <div className="text-sm font-medium truncate" title={q.subject}>{q.subject}</div>
+                          <div className="text-[11px] text-muted-foreground truncate mt-0.5">
+                            <code className="font-mono">{q.code}</code> · {q.fromCompany?.name ?? "—"}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         <div className="flex flex-col sm:flex-row gap-3 mt-4">
           <div className="relative flex-1">

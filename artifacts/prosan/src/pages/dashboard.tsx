@@ -7,7 +7,7 @@ import {
   Package, AlertTriangle, TrendingUp, ScanBarcode,
   ShoppingCart, BarChart2, CircleDollarSign, Bell, Inbox,
   Banknote, ArrowRight, AlertCircle, PackageX, PackageMinus,
-  Mail, Sparkles,
+  Mail, Sparkles, Wallet, FileText, TrendingDown, ListChecks,
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -81,6 +81,43 @@ function useMiniList(path: string, key: string) {
       const res = await fetch(path, { credentials: "include" });
       if (!res.ok) throw new Error("fetch error");
       return res.json();
+    },
+    staleTime: 60_000,
+  });
+}
+
+// Dalga 34 — Cross-modül "Bugün Yapılacaklar" özet (sadece ekleme, mevcut endpoint'ler)
+// 403 → unavailable (yetki/plan yok); ok → veri; diğer hatalar → unavailable
+type CrossModuleCount = number | "unavailable";
+function useCrossModuleActions() {
+  return useQuery<{
+    bankingUnmatched: CrossModuleCount;
+    marketplacePending: CrossModuleCount;
+    b2bInboxPending: CrossModuleCount;
+    profitLosing: CrossModuleCount;
+  }>({
+    queryKey: ["dashboard", "cross-module-actions"],
+    queryFn: async () => {
+      const safeFetch = async (url: string): Promise<any | "unavailable"> => {
+        try {
+          const r = await fetch(url, { credentials: "include" });
+          if (!r.ok) return "unavailable";
+          return await r.json();
+        } catch { return "unavailable"; }
+      };
+      const [banking, marketplace, b2b, profit] = await Promise.all([
+        safeFetch("/api/banking/transactions?status=unmatched&limit=500"),
+        safeFetch("/api/marketplace/orders?converted=false&limit=500"),
+        safeFetch("/api/b2b/quotes/stats"),
+        safeFetch("/api/profit-engine/dashboard"),
+      ]);
+      const lenOr = (v: any): CrossModuleCount => v === "unavailable" ? "unavailable" : (Array.isArray(v) ? v.length : 0);
+      return {
+        bankingUnmatched: lenOr(banking),
+        marketplacePending: lenOr(marketplace),
+        b2bInboxPending: b2b === "unavailable" ? "unavailable" : Number(b2b?.inbox?.pending || 0),
+        profitLosing: profit === "unavailable" ? "unavailable" : (Array.isArray(profit?.losing) ? profit.losing.length : 0),
+      };
     },
     staleTime: 60_000,
   });
@@ -226,6 +263,7 @@ export default function Dashboard() {
   const { data: costWarnings } = useMiniList("/api/dashboard/cost-warnings", "cost-warnings");
   const { data: notifData } = useNotifications();
   const { data: tcmb } = useTcmbRates();
+  const { data: crossActions } = useCrossModuleActions();
 
   const chartData30 = daily30?.map(d => ({
     ...d,
@@ -287,6 +325,66 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
+
+      {/* Dalga 34 — Cross-modül "Bugün Yapılacaklar" özet (sadece ekleme) */}
+      {crossActions && (() => {
+        const items = [
+          { key: "banking", label: "Eşleşme Bekleyen Hareket", count: crossActions.bankingUnmatched, href: "/banking", icon: Wallet, accent: "amber" },
+          { key: "marketplace", label: "Bekleyen Pazaryeri Sipariş", count: crossActions.marketplacePending, href: "/marketplace", icon: ShoppingCart, accent: "orange" },
+          { key: "b2b", label: "Yanıt Bekleyen B2B Teklif", count: crossActions.b2bInboxPending, href: "/b2b/quotes", icon: FileText, accent: "blue" },
+          { key: "profit", label: "Zarar Yazan Ürün", count: crossActions.profitLosing, href: "/gercek-kar/dashboard", icon: TrendingDown, accent: "red" },
+        ];
+        // 403/unavailable modülleri toplama dahil etme; sadece sayısal modüllerin pending'leri toplanır
+        const totalPending = items.reduce((a, i) => a + (typeof i.count === "number" ? i.count : 0), 0);
+        const accentMap: Record<string, { bg: string; text: string; border: string }> = {
+          amber: { bg: "bg-amber-500/10", text: "text-amber-600", border: "border-amber-500/30" },
+          orange: { bg: "bg-orange-500/10", text: "text-orange-600", border: "border-orange-500/30" },
+          blue: { bg: "bg-blue-500/10", text: "text-blue-600", border: "border-blue-500/30" },
+          red: { bg: "bg-red-500/10", text: "text-red-600", border: "border-red-500/30" },
+        };
+        return (
+          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent" data-testid="cross-module-actions">
+            <CardHeader className="pb-2 pt-3">
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <ListChecks className="h-4 w-4 text-primary" />
+                  Bugün Yapılacaklar — Tüm Modüller
+                </span>
+                <Badge variant={totalPending > 0 ? "default" : "secondary"} className="text-[10px] h-5">
+                  {totalPending > 0 ? `${totalPending} aksiyon` : "tümü temiz ✓"}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                {items.map((it) => {
+                  const Icon = it.icon;
+                  const a = accentMap[it.accent]!;
+                  const isUnavailable = it.count === "unavailable";
+                  const numCount = typeof it.count === "number" ? it.count : 0;
+                  const display = isUnavailable ? "🔒" : (numCount >= 500 ? "500+" : String(numCount));
+                  const titleAttr = isUnavailable ? "Bu modül planınızda mevcut değil veya erişim izniniz yok" : it.label;
+                  return (
+                    <Link key={it.key} href={it.href}>
+                      <div
+                        className={`p-3 rounded-lg border ${isUnavailable ? "bg-muted/40 border-dashed border-muted-foreground/20 opacity-70" : (numCount > 0 ? `${a.bg} ${a.border}` : "bg-card border-border")} hover:shadow-md transition-shadow cursor-pointer`}
+                        data-testid={`cross-action-${it.key}`}
+                        title={titleAttr}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <Icon className={`h-4 w-4 ${isUnavailable ? "text-muted-foreground" : (numCount > 0 ? a.text : "text-muted-foreground")}`} />
+                          <span className={`text-2xl font-bold t365-numeric ${isUnavailable ? "text-muted-foreground" : (numCount > 0 ? a.text : "text-muted-foreground")}`}>{display}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground leading-tight">{it.label}{isUnavailable && <span className="block text-[10px] italic mt-0.5">erişim yok</span>}</p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Bugün — Toptan / Perakende kırılımı */}
       <div className="grid gap-3 grid-cols-2">

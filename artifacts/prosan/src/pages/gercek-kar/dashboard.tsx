@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, AlertTriangle, Star, Clock, Wallet, RefreshCw, Lightbulb } from "lucide-react";
+import { TrendingUp, TrendingDown, AlertTriangle, Star, Clock, Wallet, RefreshCw, Lightbulb, Activity, Zap, AlertOctagon, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 
 const fmt = (n: number) =>
@@ -184,6 +184,115 @@ export default function GercekKarDashboard() {
           <CardContent><div className="text-xl font-bold">{fmt(t.dailyCapitalTotal)}</div></CardContent>
         </Card>
       </div>
+
+      {/* Dalga 32 — Ek Insight Strip (sadece ekleme, mevcut data'dan türetilmiş) */}
+      {(() => {
+        const annualBleed = t.todayBleed * 365;
+        const criticalCount = data!.losing.length + data!.stagnant.length;
+        const losingCapital = data!.losing.reduce((a, s) => a + (s.purchasePrice * s.stockQty), 0);
+        const losingCapitalPct = t.stockValue > 0 ? (losingCapital / t.stockValue) * 100 : 0;
+        return (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-testid="profit-insights-strip">
+            <Card data-testid="insight-product-mix">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Ürün Karması</div>
+                    <div className="text-2xl font-bold mt-1">{data!.productCount}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5 flex gap-1.5 flex-wrap">
+                      <span className="text-yellow-600">★ {data!.stars.length}</span>
+                      <span className="text-red-600">⚠ {data!.losing.length}</span>
+                      <span className="text-orange-600">◷ {data!.stagnant.length}</span>
+                    </div>
+                  </div>
+                  <Activity className="h-7 w-7 text-blue-500 opacity-70" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-red-200" data-testid="insight-annual-bleed">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Yıllık Yansıma</div>
+                    <div className="text-xl font-bold mt-1 text-red-600">{fmt(annualBleed)}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">bugünkü hız × 365 gün</div>
+                  </div>
+                  <Zap className="h-7 w-7 text-red-500 opacity-70" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className={criticalCount > 0 ? "border-amber-200" : ""} data-testid="insight-critical-count">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Müdahale Bekleyen</div>
+                    <div className={`text-2xl font-bold mt-1 ${criticalCount > 0 ? "text-amber-600" : "text-emerald-600"}`}>{criticalCount}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">zarar + atıl ürün</div>
+                  </div>
+                  <AlertOctagon className={`h-7 w-7 opacity-70 ${criticalCount > 0 ? "text-amber-500" : "text-emerald-500"}`} />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className={losingCapitalPct > 10 ? "border-red-200" : ""} data-testid="insight-losing-capital">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Zararlı Sermaye Oranı</div>
+                    <div className={`text-2xl font-bold mt-1 ${losingCapitalPct > 10 ? "text-red-600" : losingCapitalPct > 0 ? "text-amber-600" : "text-emerald-600"}`}>%{fmtN(losingCapitalPct)}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">{fmt(losingCapital)} kilitli</div>
+                  </div>
+                  <Wallet className={`h-7 w-7 opacity-70 ${losingCapitalPct > 10 ? "text-red-500" : "text-slate-400"}`} />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      })()}
+
+      {/* Dalga 32 — "Acil Müdahale Gereken" widget (en kötü 5 zarar) */}
+      {data!.losing.length > 0 && (
+        <Card className="border-red-200 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20" data-testid="critical-losers-widget">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertOctagon className="h-4 w-4 text-red-600" />
+                <CardTitle className="text-sm">Acil Müdahale — En Kötü 5 Zarar</CardTitle>
+              </div>
+              <Link href="/gercek-kar/oneriler">
+                <Button variant="ghost" size="sm" className="h-7 text-xs" data-testid="btn-goto-advisor">
+                  Akıllı Öneriler <ChevronRight className="h-3 w-3 ml-0.5" />
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
+              {[...data!.losing].sort((a, b) => a.trueProfit - b.trueProfit).slice(0, 5).map((s, i) => {
+                const rankColor = i === 0 ? "bg-red-100 text-red-700 border-red-200"
+                  : i === 1 ? "bg-orange-100 text-orange-700 border-orange-200"
+                  : i === 2 ? "bg-amber-100 text-amber-700 border-amber-200"
+                  : "bg-slate-100 text-slate-600 border-slate-200";
+                return (
+                  <div
+                    key={s.productId}
+                    className="p-3 rounded-lg border bg-card"
+                    data-testid={`critical-loser-${s.productId}`}
+                  >
+                    <div className="flex items-start justify-between mb-1.5">
+                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${rankColor}`}>#{i + 1}</Badge>
+                      <span className="text-[10px] text-muted-foreground">{s.daysOnShelf}g rafta</span>
+                    </div>
+                    <div className="text-sm font-medium truncate" title={s.name}>{s.name}</div>
+                    <div className="text-[11px] text-muted-foreground truncate mt-0.5">{s.code || `#${s.productId}`}</div>
+                    <div className="text-sm font-bold text-red-600 mt-1">{fmt(s.trueProfit)}</div>
+                    <div className="text-[11px] text-muted-foreground">marj: <span className="text-red-600">%{fmtN(s.trueMarginPct)}</span> · stok: {fmtN(s.stockQty)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="losing">
         <TabsList>
