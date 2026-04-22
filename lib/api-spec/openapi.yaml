@@ -673,7 +673,7 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, staff, viewer]
+          enum: [admin, staff, viewer, super_admin]
         isActive:
           type: boolean
         createdAt:
@@ -694,7 +694,7 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, staff, viewer]
+          enum: [admin, staff, viewer, super_admin]
       required: [username, password, fullName, role]
 
     UpdateUserBody:
@@ -706,7 +706,7 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, staff, viewer]
+          enum: [admin, staff, viewer, super_admin]
         isActive:
           type: boolean
         password:

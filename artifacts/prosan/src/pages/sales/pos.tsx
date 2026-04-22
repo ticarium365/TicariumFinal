@@ -130,9 +130,9 @@ export default function POSPage() {
   const total = Math.max(0, subtotal - discount);
 
   async function checkout() {
-    if (cart.length === 0) return toast({ title: "Sepet boş", variant: "destructive" });
+    if (cart.length === 0) { toast({ title: "Sepet boş", variant: "destructive" }); return; }
     if (paymentMethod === "credit" && customerId === "0") {
-      return toast({ title: "Veresiye için müşteri seç", variant: "destructive" });
+      { toast({ title: "Veresiye için müşteri seç", variant: "destructive" }); return; }
     }
     setBusy(true);
     const errors: string[] = [];

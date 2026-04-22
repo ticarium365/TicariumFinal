@@ -50,7 +50,8 @@ function mimeIcon(mime: string) {
 export default function DocumentsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const { tenant } = useCompany();
+  const { company } = useCompany();
+  const tenant = company?.subdomain ?? "";
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [uploadModal, setUploadModal] = useState(false);

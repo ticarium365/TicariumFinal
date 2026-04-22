@@ -13,4 +13,5 @@ export const UpdateUserBodyRole = {
   admin: "admin",
   staff: "staff",
   viewer: "viewer",
+  super_admin: "super_admin",
 } as const;

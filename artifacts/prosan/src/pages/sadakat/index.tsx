@@ -180,7 +180,7 @@ function AdjustDialog({ open, setOpen, customers, onDone }: any) {
   }
 
   async function save() {
-    if (!customerId || !points) return toast({ title: "Müşteri ve puan zorunlu", variant: "destructive" });
+    if (!customerId || !points) { toast({ title: "Müşteri ve puan zorunlu", variant: "destructive" }); return; }
     const signedPoints = type === "redeem" ? -Math.abs(points) : Math.abs(points);
     const r = await fetch(`/api/loyalty/customers/${customerId}/adjust`, {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
@@ -188,7 +188,7 @@ function AdjustDialog({ open, setOpen, customers, onDone }: any) {
     });
     if (!r.ok) {
       const e = await r.json();
-      return toast({ title: "Hata", description: e.error, variant: "destructive" });
+      { toast({ title: "Hata", description: e.error, variant: "destructive" }); return; }
     }
     toast({ title: "Puan işlemi kaydedildi" });
     setNote(""); loadHist(customerId); onDone();

@@ -128,7 +128,7 @@ export default function CompanyProfilePage({ subdomain }: Props) {
   }, [subdomain]);
 
   async function submitReview() {
-    if (!rating) return toast({ title: "Puan seçin", variant: "destructive" });
+    if (!rating) { toast({ title: "Puan seçin", variant: "destructive" }); return; }
     setSubmitting(true);
     try {
       const res = await fetch(`${apiBase}/network/companies/${subdomain}/reviews`, {

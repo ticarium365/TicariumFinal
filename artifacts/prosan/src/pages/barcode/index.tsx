@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { BrowserMultiFormatReader as ZXingBrowserReader } from "@zxing/browser";
-import { useGetProductByBarcode } from "@workspace/api-client-react";
+import { useGetProductByBarcode, getGetProductByBarcodeQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -17,7 +17,7 @@ export default function BarcodeScanner() {
 
   const { data: product, isLoading, isError } = useGetProductByBarcode(
     scannedCode,
-    { query: { enabled: !!scannedCode, retry: false } }
+    { query: { queryKey: getGetProductByBarcodeQueryKey(scannedCode), enabled: !!scannedCode, retry: false } }
   );
 
   useEffect(() => {

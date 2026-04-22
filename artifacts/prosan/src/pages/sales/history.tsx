@@ -111,11 +111,11 @@ export default function SalesHistory() {
     limit: 50,
     ...(saleTypeFilter !== "all" ? { saleType: saleTypeFilter } : {}),
   } as any;
-  const { data, isLoading } = useListSales({
+  const { data, isLoading } = useListSales(listParams, {
     query: {
       queryKey: getListSalesQueryKey(listParams)
     }
-  }, listParams);
+  });
 
   // Dalga 27 — Aggregate-only fetch (page-bağımsız, tüm günü temsil eden widget'lar için)
   const aggregateParams = {
@@ -125,11 +125,11 @@ export default function SalesHistory() {
     limit: 500,
     ...(saleTypeFilter !== "all" ? { saleType: saleTypeFilter } : {}),
   } as any;
-  const { data: aggregateData } = useListSales({
+  const { data: aggregateData } = useListSales(aggregateParams, {
     query: {
       queryKey: getListSalesQueryKey(aggregateParams)
     }
-  }, aggregateParams);
+  });
   const aggregateSales = aggregateData?.sales ?? [];
   const aggregateTruncated = (aggregateData?.total ?? 0) > 500;
 

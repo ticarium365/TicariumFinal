@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { BrowserMultiFormatReader as ZXingBrowserReader } from "@zxing/browser";
-import { useListProducts, useCreateSale, useGetTodaySales, useGetProductByBarcode, getGetTodaySalesQueryKey } from "@workspace/api-client-react";
+import { useListProducts, useCreateSale, useGetTodaySales, useGetProductByBarcode, getGetTodaySalesQueryKey, getListProductsQueryKey, getGetProductByBarcodeQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,15 +40,15 @@ export default function SalesScreen() {
   const scanLockRef = useRef(false);
 
   const { data: searchResults, isLoading: searching } = useListProducts(
-    { query: { enabled: !!debouncedSearch } },
-    { search: debouncedSearch, limit: 5 }
+    { search: debouncedSearch, limit: 5 },
+    { query: { queryKey: getListProductsQueryKey({ search: debouncedSearch, limit: 5 }), enabled: !!debouncedSearch } }
   );
 
   const { data: todaySales } = useGetTodaySales();
 
   const { data: scannedProduct, isLoading: scanLoading } = useGetProductByBarcode(
     scannedCode ?? "",
-    { query: { enabled: !!scannedCode, retry: false } }
+    { query: { queryKey: getGetProductByBarcodeQueryKey(scannedCode ?? ""), enabled: !!scannedCode, retry: false } }
   );
 
   // Kamerayı başlat
@@ -90,6 +90,7 @@ export default function SalesScreen() {
     } else {
       stopCamera();
       setScannedCode(null);
+      return undefined;
     }
   }, [cameraOpen, facingMode, startCamera, stopCamera]);
 

@@ -223,9 +223,9 @@ function RecipeDialog({ open, setOpen, products, onCreated }: any) {
   function updRow(i: number, patch: any) { setComponents(components.map((c, idx) => idx === i ? { ...c, ...patch } : c)); }
 
   async function save() {
-    if (!productId || !name) return toast({ title: "Mamul ürün ve reçete adı zorunlu", variant: "destructive" });
+    if (!productId || !name) { toast({ title: "Mamul ürün ve reçete adı zorunlu", variant: "destructive" }); return; }
     const validComps = components.filter((c) => c.componentProductId && c.quantity > 0);
-    if (validComps.length === 0) return toast({ title: "En az bir bileşen ekle", variant: "destructive" });
+    if (validComps.length === 0) { toast({ title: "En az bir bileşen ekle", variant: "destructive" }); return; }
     setBusy(true);
     const r = await fetch("/api/production/recipes", {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
@@ -237,7 +237,7 @@ function RecipeDialog({ open, setOpen, products, onCreated }: any) {
     setBusy(false);
     if (!r.ok) {
       const e = await r.json();
-      return toast({ title: "Hata", description: e.error, variant: "destructive" });
+      { toast({ title: "Hata", description: e.error, variant: "destructive" }); return; }
     }
     toast({ title: "Reçete oluşturuldu" });
     setOpen(false); setProductId(""); setName("Standart"); setOutput(1);
@@ -315,14 +315,14 @@ function OrderDialog({ open, setOpen, recipes, onCreated }: any) {
   const [qty, setQty] = useState(1);
   const [busy, setBusy] = useState(false);
   async function save() {
-    if (!recipeId || qty <= 0) return toast({ title: "Reçete ve miktar zorunlu", variant: "destructive" });
+    if (!recipeId || qty <= 0) { toast({ title: "Reçete ve miktar zorunlu", variant: "destructive" }); return; }
     setBusy(true);
     const r = await fetch("/api/production/orders", {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ recipeId: Number(recipeId), plannedQuantity: qty }),
     });
     setBusy(false);
-    if (!r.ok) return toast({ title: "Hata", description: (await r.json()).error, variant: "destructive" });
+    if (!r.ok) { toast({ title: "Hata", description: (await r.json()).error, variant: "destructive" }); return; }
     toast({ title: "Üretim emri oluşturuldu" });
     setOpen(false); setRecipeId(""); setQty(1); onCreated();
   }
@@ -362,7 +362,7 @@ function CompleteDialog({ order, setOrder, onCompleted }: { order: Order | null;
   useEffect(() => { if (order) { setProduced(order.plannedQuantity); setScrap(0); } }, [order]);
   async function complete() {
     if (!order) return;
-    if (produced <= 0) return toast({ title: "Üretilen miktar > 0 olmalı", variant: "destructive" });
+    if (produced <= 0) { toast({ title: "Üretilen miktar > 0 olmalı", variant: "destructive" }); return; }
     setBusy(true);
     const r = await fetch(`/api/production/orders/${order.id}/complete`, {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
@@ -371,7 +371,7 @@ function CompleteDialog({ order, setOrder, onCompleted }: { order: Order | null;
     setBusy(false);
     if (!r.ok) {
       const e = await r.json();
-      return toast({ title: "Hata", description: e.error, variant: "destructive" });
+      { toast({ title: "Hata", description: e.error, variant: "destructive" }); return; }
     }
     toast({ title: "Üretim tamamlandı, stoklar güncellendi" });
     setOrder(null); onCompleted();

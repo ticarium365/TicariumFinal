@@ -58,7 +58,7 @@ function recommendPlanSlug(a: WizardAnswers): string {
     if (a.users >= 10 || a.einvoicePerMonth >= 1500) return "pkg_business_v3";
     return "pkg_pro";
   }
-  if (a.users <= 2 && a.einvoicePerMonth <= 80 && a.marketplace !== "yes") return "pkg_starter";
+  if (a.users <= 2 && a.einvoicePerMonth <= 80) return "pkg_starter";
   return "pkg_pro";
 }
 

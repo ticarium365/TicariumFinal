@@ -21,7 +21,7 @@ export function SetupChecklistPopover() {
 
   useEffect(() => {
     if (!user || user.role !== "admin") return;
-    const sessionKey = `tcrm_checklist_seen_${user.companyId}_${user.id}`;
+    const sessionKey = `tcrm_checklist_seen_${(user as any).companyId}_${user.id}`;
     if (sessionStorage.getItem(sessionKey)) return;
     // Bu sekme oturumunda bir daha gösterme (reload edilse bile)
     sessionStorage.setItem(sessionKey, "1");

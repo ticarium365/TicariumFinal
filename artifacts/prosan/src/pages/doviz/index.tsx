@@ -37,7 +37,7 @@ export default function CurrencyPage() {
     });
     if (!r.ok) {
       const e = await r.json();
-      return toast({ title: "Hata", description: e.error, variant: "destructive" });
+      { toast({ title: "Hata", description: e.error, variant: "destructive" }); return; }
     }
     toast({ title: `${newCurrency} kuru güncellendi` });
     setNewRate(""); qc.invalidateQueries({ queryKey: ["/api/currency/rates"] });
@@ -49,7 +49,7 @@ export default function CurrencyPage() {
     if (!r.ok) {
       const e = await r.json();
       setConvResult(null);
-      return toast({ title: "Hata", description: e.error, variant: "destructive" });
+      { toast({ title: "Hata", description: e.error, variant: "destructive" }); return; }
     }
     setConvResult(await r.json());
   }

@@ -29,6 +29,7 @@ export const UserRole = {
   admin: "admin",
   staff: "staff",
   viewer: "viewer",
+  super_admin: "super_admin",
 } as const;
 
 export interface User {
@@ -53,6 +54,7 @@ export const CreateUserBodyRole = {
   admin: "admin",
   staff: "staff",
   viewer: "viewer",
+  super_admin: "super_admin",
 } as const;
 
 export interface CreateUserBody {
@@ -70,6 +72,7 @@ export const UpdateUserBodyRole = {
   admin: "admin",
   staff: "staff",
   viewer: "viewer",
+  super_admin: "super_admin",
 } as const;
 
 export interface UpdateUserBody {

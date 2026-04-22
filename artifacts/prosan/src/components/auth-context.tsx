@@ -60,7 +60,7 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const { data: user, isLoading, error } = useGetMe({
-    query: { retry: false },
+    query: { queryKey: getGetMeQueryKey(), retry: false },
   });
 
   const [, setLocation] = useLocation();

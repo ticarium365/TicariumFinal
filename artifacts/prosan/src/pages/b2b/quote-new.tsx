@@ -95,9 +95,9 @@ export default function QuoteNewPage() {
   function removeItem(idx: number) { setItems((p) => p.length > 1 ? p.filter((_, i) => i !== idx) : p); }
 
   async function submit() {
-    if (!subject.trim()) return toast({ title: "Konu zorunlu", variant: "destructive" });
+    if (!subject.trim()) { toast({ title: "Konu zorunlu", variant: "destructive" }); return; }
     const validItems = items.filter((it) => it.productName.trim() && Number(it.quantity) > 0);
-    if (validItems.length === 0) return toast({ title: "En az bir ürün ekleyin", variant: "destructive" });
+    if (validItems.length === 0) { toast({ title: "En az bir ürün ekleyin", variant: "destructive" }); return; }
 
     setSubmitting(true);
     try {

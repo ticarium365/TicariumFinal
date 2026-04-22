@@ -59,7 +59,7 @@ export default function VerifyPage() {
         setDone(true);
         toast({ title: "Hesabınız doğrulandı", description: "Yönlendiriliyorsunuz…" });
         // accountType'a göre yönlendir — Sprint I HomeRedirect davranışıyla uyumlu.
-        const dest = user?.accountType === "purchasing" ? "/satinalma-merkezi" : "/dashboard";
+        const dest = (user as any)?.accountType === "purchasing" ? "/satinalma-merkezi" : "/dashboard";
         setTimeout(() => window.location.replace(dest), 1200);
       }
     } finally { setBusy(false); }

@@ -35,7 +35,7 @@ export default function OnboardingPage() {
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [companyName, setCompanyName] = useState(user?.companyName || "");
+  const [companyName, setCompanyName] = useState((user as any)?.companyName || "");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");

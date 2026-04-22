@@ -96,7 +96,7 @@ export default function AdBudgetPage() {
   }
 
   async function saveSpend() {
-    if (!spChannel) return toast({ variant: "destructive", title: "Kanal seç" });
+    if (!spChannel) { toast({ variant: "destructive", title: "Kanal seç" }); return; }
     try {
       await api("/ad-budgets/spends", { method: "POST", body: JSON.stringify({
         channelId: Number(spChannel), period,

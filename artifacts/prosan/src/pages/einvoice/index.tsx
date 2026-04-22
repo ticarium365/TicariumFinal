@@ -119,7 +119,7 @@ export default function EInvoicePage() {
 
   // Outbox listesi yüklendikten sonra hedef satıra scroll + highlight pulse
   useEffect(() => {
-    if (highlightOutboxId == null || outbox.length === 0) return;
+    if (highlightOutboxId == null || outbox.length === 0) return undefined;
     const el = document.getElementById(`outbox-row-${highlightOutboxId}`);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -130,6 +130,7 @@ export default function EInvoicePage() {
       }, 3500);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, [highlightOutboxId, outbox.length]);
 
   const loadAll = useCallback(async () => {

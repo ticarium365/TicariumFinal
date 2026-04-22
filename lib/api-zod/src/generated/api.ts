@@ -28,7 +28,7 @@ export const LoginResponse = zod.object({
     username: zod.string(),
     fullName: zod.string(),
     email: zod.string().optional(),
-    role: zod.enum(["admin", "staff", "viewer"]),
+    role: zod.enum(["admin", "staff", "viewer", "super_admin"]),
     isActive: zod.boolean(),
     createdAt: zod.coerce.date().optional(),
   }),
@@ -50,7 +50,7 @@ export const GetMeResponse = zod.object({
   username: zod.string(),
   fullName: zod.string(),
   email: zod.string().optional(),
-  role: zod.enum(["admin", "staff", "viewer"]),
+  role: zod.enum(["admin", "staff", "viewer", "super_admin"]),
   isActive: zod.boolean(),
   createdAt: zod.coerce.date().optional(),
 });
@@ -63,7 +63,7 @@ export const ListUsersResponseItem = zod.object({
   username: zod.string(),
   fullName: zod.string(),
   email: zod.string().optional(),
-  role: zod.enum(["admin", "staff", "viewer"]),
+  role: zod.enum(["admin", "staff", "viewer", "super_admin"]),
   isActive: zod.boolean(),
   createdAt: zod.coerce.date().optional(),
 });
@@ -77,7 +77,7 @@ export const CreateUserBody = zod.object({
   password: zod.string(),
   fullName: zod.string(),
   email: zod.string().optional(),
-  role: zod.enum(["admin", "staff", "viewer"]),
+  role: zod.enum(["admin", "staff", "viewer", "super_admin"]),
 });
 
 /**
@@ -92,7 +92,7 @@ export const GetUserResponse = zod.object({
   username: zod.string(),
   fullName: zod.string(),
   email: zod.string().optional(),
-  role: zod.enum(["admin", "staff", "viewer"]),
+  role: zod.enum(["admin", "staff", "viewer", "super_admin"]),
   isActive: zod.boolean(),
   createdAt: zod.coerce.date().optional(),
 });
@@ -107,7 +107,7 @@ export const UpdateUserParams = zod.object({
 export const UpdateUserBody = zod.object({
   fullName: zod.string().optional(),
   email: zod.string().optional(),
-  role: zod.enum(["admin", "staff", "viewer"]).optional(),
+  role: zod.enum(["admin", "staff", "viewer", "super_admin"]).optional(),
   isActive: zod.boolean().optional(),
   password: zod.string().optional(),
 });
@@ -117,7 +117,7 @@ export const UpdateUserResponse = zod.object({
   username: zod.string(),
   fullName: zod.string(),
   email: zod.string().optional(),
-  role: zod.enum(["admin", "staff", "viewer"]),
+  role: zod.enum(["admin", "staff", "viewer", "super_admin"]),
   isActive: zod.boolean(),
   createdAt: zod.coerce.date().optional(),
 });

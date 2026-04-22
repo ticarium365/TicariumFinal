@@ -96,7 +96,7 @@ export default function BankingPage() {
 
   const createAccount = async () => {
     if (!newAccount.bankName.trim() || !newAccount.accountName.trim()) {
-      return toast({ title: "Banka ve hesap adı gerekli", variant: "destructive" });
+      { toast({ title: "Banka ve hesap adı gerekli", variant: "destructive" }); return; }
     }
     const res = await fetch(`${API}/accounts`, {
       method: "POST", credentials: "include",
@@ -113,7 +113,7 @@ export default function BankingPage() {
 
   const importCsv = async () => {
     if (!csvAccountId || !csvText.trim()) {
-      return toast({ title: "Hesap ve CSV içeriği gerekli", variant: "destructive" });
+      { toast({ title: "Hesap ve CSV içeriği gerekli", variant: "destructive" }); return; }
     }
     setCsvBusy(true);
     try {

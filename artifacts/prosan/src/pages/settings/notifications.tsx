@@ -41,7 +41,8 @@ function typeIcon(type: string) {
 export default function NotificationSettingsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const { tenant } = useCompany();
+  const { company } = useCompany();
+  const tenant = company?.subdomain ?? "";
   const [tab, setTab] = useState<"rules" | "preferences">("rules");
   const [ruleModal, setRuleModal] = useState(false);
   const [editRule, setEditRule] = useState<NotificationRule | null>(null);

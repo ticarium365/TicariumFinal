@@ -64,7 +64,7 @@ export default function ImportPage() {
   const [busy, setBusy] = useState(false);
 
   async function handlePreview() {
-    if (!file) return toast({ title: "Önce dosya seç", variant: "destructive" });
+    if (!file) { toast({ title: "Önce dosya seç", variant: "destructive" }); return; }
     setBusy(true);
     try {
       const fd = new FormData(); fd.append("kind", kind); fd.append("file", file);

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useListProducts, useGetProductByBarcode } from "@workspace/api-client-react";
+import { useListProducts, useGetProductByBarcode, getListProductsQueryKey, getGetProductByBarcodeQueryKey } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -80,13 +80,13 @@ export default function StockEntryPage() {
   const scanLockRef = useRef(false);
 
   const { data: searchResults } = useListProducts(
-    { query: { enabled: !!debouncedSearch } },
-    { search: debouncedSearch, limit: 5 }
+    { search: debouncedSearch, limit: 5 },
+    { query: { queryKey: getListProductsQueryKey({ search: debouncedSearch, limit: 5 }), enabled: !!debouncedSearch } }
   );
 
   const { data: scannedProduct } = useGetProductByBarcode(
     scannedCode ?? "",
-    { query: { enabled: !!scannedCode, retry: false } }
+    { query: { queryKey: getGetProductByBarcodeQueryKey(scannedCode ?? ""), enabled: !!scannedCode, retry: false } }
   );
 
   const startCamera = useCallback(async () => {
@@ -117,7 +117,7 @@ export default function StockEntryPage() {
 
   useEffect(() => {
     if (cameraOpen) { stopCamera(); const t = setTimeout(() => startCamera(), 100); return () => clearTimeout(t); }
-    else { stopCamera(); setScannedCode(null); }
+    else { stopCamera(); setScannedCode(null); return undefined; }
   }, [cameraOpen, facingMode, startCamera, stopCamera]);
 
   useEffect(() => {
