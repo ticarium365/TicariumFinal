@@ -4,7 +4,7 @@ import { Link, useLocation } from "wouter";
 import {
   Plus, Search, UserCircle, Phone, MapPin,
   ChevronLeft, ChevronRight, Pencil, Trash2, RotateCcw,
-  TrendingUp, TrendingDown, Minus,
+  TrendingUp, TrendingDown, Minus, AlertCircle, ChevronRight as ChevronRightIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,6 +112,29 @@ export default function CustomersList() {
     staleTime: 10_000,
   });
 
+  // Dalga 28 — Sadece aktif müşteri toplam sayısı (KPI strip için)
+  const { data: activeCountData } = useQuery({
+    queryKey: ["customers", "count", "active"],
+    queryFn: () => apiFetch("GET", `/customers?page=1&limit=1&active=true`),
+    staleTime: 30_000,
+  });
+
+  // Dalga 28 — Tüm müşteri toplam sayısı (aktif + pasif)
+  const { data: allCountData } = useQuery({
+    queryKey: ["customers", "count", "all"],
+    queryFn: () => apiFetch("GET", `/customers?page=1&limit=1`),
+    staleTime: 30_000,
+  });
+
+  // Dalga 28 — Top 5 borçlu müşteri (admin-only endpoint)
+  const isAdminUser = user?.role === "admin";
+  const { data: topDebtorsData } = useQuery({
+    queryKey: ["customers", "top-debtors"],
+    queryFn: () => apiFetch("GET", `/customers/top-debtors`),
+    enabled: isAdminUser,
+    staleTime: 30_000,
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: number) => apiFetch("DELETE", `/customers/${id}`),
     onSuccess: () => {
@@ -152,6 +175,121 @@ export default function CustomersList() {
           </Button>
         )}
       </div>
+
+      {/* Dalga 28 — KPI strip (Toplam · Aktif · Pasif · Borçlu) */}
+      {(() => {
+        const totalAll = allCountData?.total;
+        const totalActive = activeCountData?.total;
+        const totalPassive = (typeof totalAll === "number" && typeof totalActive === "number")
+          ? Math.max(0, totalAll - totalActive) : undefined;
+        const debtors = topDebtorsData?.customers ?? [];
+        return (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+            <div className="bg-card border rounded-xl p-3 shadow-sm flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 text-white flex items-center justify-center shrink-0">
+                <UserCircle className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground font-medium">Toplam Müşteri</p>
+                <p className="text-lg font-bold tabular-nums leading-tight">{totalAll ?? "—"}</p>
+              </div>
+            </div>
+            <div className="bg-card border rounded-xl p-3 shadow-sm flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white flex items-center justify-center shrink-0">
+                <UserCircle className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground font-medium">Aktif</p>
+                <p className="text-lg font-bold tabular-nums leading-tight text-emerald-600">{totalActive ?? "—"}</p>
+              </div>
+            </div>
+            <div className="bg-card border rounded-xl p-3 shadow-sm flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-slate-400 to-slate-600 text-white flex items-center justify-center shrink-0">
+                <Minus className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground font-medium">Pasif</p>
+                <p className="text-lg font-bold tabular-nums leading-tight text-slate-500">{totalPassive ?? "—"}</p>
+              </div>
+            </div>
+            {isAdminUser ? (
+              <div className="bg-card border rounded-xl p-3 shadow-sm flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-rose-500 to-red-500 text-white flex items-center justify-center shrink-0">
+                  <AlertCircle className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground font-medium">
+                    Borçlu {debtors.length === 10 ? "(ilk 10)" : ""}
+                  </p>
+                  <p className="text-lg font-bold tabular-nums leading-tight text-rose-600">
+                    {debtors.length}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-card border rounded-xl p-3 shadow-sm flex items-center gap-3 opacity-50">
+                <div className="h-9 w-9 rounded-lg bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">
+                  <AlertCircle className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground font-medium">Borçlu</p>
+                  <p className="text-xs text-muted-foreground">Yetki gerekli</p>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Dalga 28 — Top 5 Borçlu Müşteri Widget (admin-only, mevcut /top-debtors endpoint) */}
+      {isAdminUser && (topDebtorsData?.customers?.length ?? 0) > 0 && (
+        <div
+          className="rounded-xl border border-rose-200/60 shadow-sm p-4 mb-4"
+          style={{
+            background: "linear-gradient(135deg, rgba(254,226,226,0.45) 0%, rgba(255,237,213,0.40) 100%)",
+          }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-rose-900 flex items-center gap-1.5">
+              <AlertCircle className="h-4 w-4 text-rose-600" />
+              En Yüksek Bakiyeli 5 Müşteri
+            </p>
+            <span className="text-[10px] text-rose-700/70">tahsilat öncelik listesi</span>
+          </div>
+          <ul className="space-y-1.5">
+            {(topDebtorsData?.customers ?? []).slice(0, 5).map((c: Customer, idx: number) => (
+              <li key={c.id}>
+                <Link href={`/customers/${c.id}`}>
+                  <div
+                    className="group flex items-center gap-2 bg-white/70 hover:bg-white rounded-lg px-3 py-2 cursor-pointer transition-colors border border-transparent hover:border-rose-200"
+                    data-testid={`top-debtor-${c.id}`}
+                  >
+                    <span className={`shrink-0 h-6 w-6 rounded-full text-[11px] font-bold flex items-center justify-center ${
+                      idx === 0 ? "bg-rose-100 text-rose-700" :
+                      idx === 1 ? "bg-orange-100 text-orange-700" :
+                      idx === 2 ? "bg-amber-100 text-amber-700" :
+                      "bg-slate-100 text-slate-600"
+                    }`}>{idx + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate text-slate-800 group-hover:text-rose-700">{c.name}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono truncate">{c.code}{c.phone ? ` · ${c.phone}` : ""}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-bold tabular-nums text-rose-600">
+                        {c.currentBalance.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
+                      </p>
+                      {c.creditLimit > 0 && c.currentBalance > c.creditLimit && (
+                        <p className="text-[10px] text-rose-700 font-semibold">limit aşıldı</p>
+                      )}
+                    </div>
+                    <ChevronRightIcon className="h-4 w-4 text-rose-400 group-hover:text-rose-700 shrink-0" />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Filtreler */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
