@@ -16,7 +16,8 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Calendar, Save, AlertTriangle, BarChart3, Bell, RefreshCw } from "lucide-react";
+import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Calendar, Save, AlertTriangle, BarChart3, Bell, RefreshCw, Sparkles } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 
 const fmt = (n: number | null | undefined) =>
   new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(Number(n || 0));
@@ -39,6 +40,209 @@ async function api(path: string, opts?: RequestInit) {
   });
   if (!r.ok) throw new Error((await r.text()) || `${r.status}`);
   return r.json();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ScenarioSimulator — Sprint 65 zenginleştirme (sadece-ekleme, sıfır endpoint)
+// Mevcut forecast verisini multiplier'larla transform eder; 3 senaryoyu (Kötümser /
+// Kullanıcı / İyimser) yan yana karşılaştırır. UI tamamen client-side hesap.
+// ─────────────────────────────────────────────────────────────────────────────
+function ScenarioSimulator(props: {
+  revenueForecast: number;
+  expenseForecast: number;
+  cashflowWeeks: any[];
+  weeklyAvgIn: number;
+  weeklyAvgOut: number;
+  targetPeriod: string;
+}) {
+  const { revenueForecast, expenseForecast, cashflowWeeks, weeklyAvgIn, weeklyAvgOut, targetPeriod } = props;
+  const [salesDelta, setSalesDelta] = useState(0); // -50 .. +50 (%)
+  const [expenseDelta, setExpenseDelta] = useState(0); // -30 .. +30 (%)
+  const [collectionDelta, setCollectionDelta] = useState(0); // -2 .. +2 hafta (vade hızlanma/yavaşlama)
+
+  const baselineMonthly = useMemo(() => ({
+    revenue: revenueForecast,
+    expense: expenseForecast,
+    net: revenueForecast - expenseForecast,
+  }), [revenueForecast, expenseForecast]);
+
+  const compute = (sd: number, ed: number, cd: number) => {
+    const rev = revenueForecast * (1 + sd / 100);
+    const exp = expenseForecast * (1 + ed / 100);
+    const net = rev - exp;
+    // Cashflow shift: collection delta pozitifse vade uzar (giriş gecikir → kümülatif geç pozitife döner)
+    // negatifse hızlanır (giriş öne çekilir)
+    const adjWeeklyIn = weeklyAvgIn * (1 + sd / 100);
+    const adjWeeklyOut = weeklyAvgOut * (1 + ed / 100);
+    const weeklyNet = adjWeeklyIn - adjWeeklyOut;
+    // 8 hafta projeksiyon: collection delta'ya göre giriş kayması simüle edilir
+    const weeks = (cashflowWeeks.length > 0 ? cashflowWeeks : Array.from({ length: 8 }, () => null)).map((w: any, i: number) => {
+      const baseIn = (w?.expectedIn ?? adjWeeklyIn);
+      const baseOut = (w?.expectedOut ?? adjWeeklyOut);
+      // Collection shift: pozitifse i+cd haftaya kaydırma yerine geçen haftaların ağırlığını düşür
+      const shiftFactor = cd === 0 ? 1 : (cd > 0 ? Math.max(0.6, 1 - cd * 0.15) : Math.min(1.4, 1 - cd * 0.15));
+      const expectedIn = baseIn * (1 + sd / 100) * shiftFactor;
+      const expectedOut = baseOut * (1 + ed / 100);
+      return { week: i + 1, in: expectedIn, out: expectedOut, net: expectedIn - expectedOut };
+    });
+    const cumulativeNet = weeks.reduce((a, w) => a + w.net, 0);
+    const negativeWeeks = weeks.filter(w => w.net < 0).length;
+    return { rev, exp, net, weeklyNet, weeks, cumulativeNet, negativeWeeks };
+  };
+
+  const pessimistic = useMemo(() => compute(-20, +10, +1), [revenueForecast, expenseForecast, weeklyAvgIn, weeklyAvgOut, cashflowWeeks]);
+  const userScenario = useMemo(() => compute(salesDelta, expenseDelta, collectionDelta), [salesDelta, expenseDelta, collectionDelta, revenueForecast, expenseForecast, weeklyAvgIn, weeklyAvgOut, cashflowWeeks]);
+  const optimistic = useMemo(() => compute(+10, -5, -1), [revenueForecast, expenseForecast, weeklyAvgIn, weeklyAvgOut, cashflowWeeks]);
+
+  const hasData = revenueForecast > 0 || expenseForecast > 0;
+
+  if (!hasData) {
+    return (
+      <Card>
+        <CardContent className="pt-6 text-center text-muted-foreground space-y-2">
+          <Sparkles className="h-12 w-12 mx-auto opacity-30" />
+          <p className="text-sm">Senaryo simülatörü için önce <strong>Ciro Tahmini</strong> ve <strong>Gider Tahmini</strong> sekmelerini açıp veri yükleyin.</p>
+          <p className="text-xs">Bu simülatör mevcut tahmin verilerinizi temel alır; satış/gider/tahsilat değişkenleriyle "Ya şöyle olursa?" senaryolarını karşılaştırır.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Slider kontrolleri */}
+      <Card data-testid="scenario-controls">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-purple-500" />
+            What-If Senaryo Simülatörü — {targetPeriod}
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">Mevcut tahminleriniz üzerine değişkenler uygulayıp 3 senaryoyu yan yana görün. Backend tahminleriniz değişmez; bu sadece simülasyondur.</p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm">Satış Değişimi</Label>
+              <Badge variant={salesDelta >= 0 ? "default" : "destructive"} className="font-mono" data-testid="badge-sales-delta">{pct(salesDelta)}</Badge>
+            </div>
+            <Slider value={[salesDelta]} onValueChange={(v) => setSalesDelta(v[0]!)} min={-50} max={50} step={5} data-testid="slider-sales" />
+            <div className="flex justify-between text-[10px] text-muted-foreground mt-1"><span>-50%</span><span>0</span><span>+50%</span></div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm">Gider Değişimi</Label>
+              <Badge variant={expenseDelta <= 0 ? "default" : "destructive"} className="font-mono" data-testid="badge-expense-delta">{pct(expenseDelta)}</Badge>
+            </div>
+            <Slider value={[expenseDelta]} onValueChange={(v) => setExpenseDelta(v[0]!)} min={-30} max={30} step={5} data-testid="slider-expense" />
+            <div className="flex justify-between text-[10px] text-muted-foreground mt-1"><span>-30%</span><span>0</span><span>+30%</span></div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm">Tahsilat Hızı (vade)</Label>
+              <Badge variant={collectionDelta <= 0 ? "default" : "destructive"} className="font-mono" data-testid="badge-collection-delta">
+                {collectionDelta === 0 ? "değişiklik yok" : `${collectionDelta > 0 ? "+" : ""}${collectionDelta} hafta ${collectionDelta > 0 ? "gecikme" : "hızlanma"}`}
+              </Badge>
+            </div>
+            <Slider value={[collectionDelta]} onValueChange={(v) => setCollectionDelta(v[0]!)} min={-2} max={2} step={1} data-testid="slider-collection" />
+            <div className="flex justify-between text-[10px] text-muted-foreground mt-1"><span>-2 hf hız</span><span>0</span><span>+2 hf gecik</span></div>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => { setSalesDelta(0); setExpenseDelta(0); setCollectionDelta(0); }} data-testid="btn-reset-scenario">
+            <RefreshCw className="h-3 w-3 mr-1" /> Sıfırla
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* 3 senaryo karşılaştırma */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <ScenarioCard title="Kötümser" subtitle="-20% satış / +10% gider / +1 hf gecikme" tone="red" data={pessimistic} baseline={baselineMonthly} />
+        <ScenarioCard title="Sizin Senaryonuz" subtitle={`${pct(salesDelta)} satış / ${pct(expenseDelta)} gider / ${collectionDelta >= 0 ? "+" : ""}${collectionDelta} hf`} tone="primary" data={userScenario} baseline={baselineMonthly} highlighted />
+        <ScenarioCard title="İyimser" subtitle="+10% satış / -5% gider / -1 hf hızlanma" tone="emerald" data={optimistic} baseline={baselineMonthly} />
+      </div>
+
+      {/* 8-hafta projeksiyon - sizin senaryo */}
+      <Card data-testid="scenario-projection">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2"><Calendar className="h-4 w-4" />Sizin Senaryonuz: 8-Hafta Nakit Projeksiyonu</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader><TableRow><TableHead>Hf</TableHead><TableHead className="text-right">Giriş</TableHead><TableHead className="text-right">Çıkış</TableHead><TableHead className="text-right">Net</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {userScenario.weeks.map((w, i) => (
+                <TableRow key={i} data-testid={`scenario-week-${i}`}>
+                  <TableCell className="font-mono">{w.week}</TableCell>
+                  <TableCell className="text-right text-emerald-600">{fmt(w.in)}</TableCell>
+                  <TableCell className="text-right text-red-600">{fmt(w.out)}</TableCell>
+                  <TableCell className={`text-right font-bold ${w.net < 0 ? "text-red-600" : "text-emerald-600"}`}>{fmt(w.net)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <div className="mt-3 flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">8 haftalık kümülatif net:</span>
+            <Badge variant={userScenario.cumulativeNet >= 0 ? "default" : "destructive"} className="font-mono" data-testid="scenario-cumulative">{fmt(userScenario.cumulativeNet)}</Badge>
+          </div>
+          {userScenario.negativeWeeks > 0 && (
+            <div className="mt-2 text-xs text-red-600 flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" /> {userScenario.negativeWeeks} hafta negatif net — nakit sıkıntısı riski
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ScenarioCard({ title, subtitle, tone, data, baseline, highlighted }: {
+  title: string;
+  subtitle: string;
+  tone: "red" | "emerald" | "primary";
+  data: { rev: number; exp: number; net: number; cumulativeNet: number; negativeWeeks: number };
+  baseline: { revenue: number; expense: number; net: number };
+  highlighted?: boolean;
+}) {
+  const toneClasses = {
+    red: { border: "border-red-500/30", bg: "bg-red-500/5", text: "text-red-600" },
+    emerald: { border: "border-emerald-500/30", bg: "bg-emerald-500/5", text: "text-emerald-600" },
+    primary: { border: "border-primary/40", bg: "bg-primary/5", text: "text-primary" },
+  }[tone];
+  const netDelta = baseline.net !== 0 ? ((data.net - baseline.net) / Math.abs(baseline.net)) * 100 : 0;
+  return (
+    <Card className={`${toneClasses.border} ${toneClasses.bg} ${highlighted ? "ring-2 ring-primary/30" : ""}`} data-testid={`scenario-card-${tone}`}>
+      <CardHeader className="pb-2">
+        <CardTitle className={`text-sm ${toneClasses.text}`}>{title}</CardTitle>
+        <p className="text-[10px] text-muted-foreground leading-tight">{subtitle}</p>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <div className="flex justify-between text-xs">
+          <span className="text-muted-foreground">Aylık Ciro</span>
+          <span className="font-mono font-medium">{fmt(data.rev)}</span>
+        </div>
+        <div className="flex justify-between text-xs">
+          <span className="text-muted-foreground">Aylık Gider</span>
+          <span className="font-mono font-medium">{fmt(data.exp)}</span>
+        </div>
+        <div className="border-t pt-2 flex justify-between">
+          <span className="text-xs font-semibold">Aylık Net</span>
+          <span className={`text-base font-bold t365-numeric ${data.net >= 0 ? "text-emerald-600" : "text-red-600"}`}>{fmt(data.net)}</span>
+        </div>
+        {Math.abs(netDelta) > 0.1 && (
+          <div className="text-[10px] text-muted-foreground text-right">
+            baseline'a göre <span className={netDelta >= 0 ? "text-emerald-600" : "text-red-600"}>{pct(netDelta)}</span>
+          </div>
+        )}
+        <div className="border-t pt-2 flex justify-between text-xs">
+          <span className="text-muted-foreground">8-hf Kümülatif</span>
+          <span className={`font-mono ${data.cumulativeNet >= 0 ? "text-emerald-600" : "text-red-600"}`}>{fmt(data.cumulativeNet)}</span>
+        </div>
+        {data.negativeWeeks > 0 && (
+          <div className="text-[10px] text-red-600 flex items-center gap-1">
+            <AlertTriangle className="h-2.5 w-2.5" /> {data.negativeWeeks} negatif hf
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function BudgetsPage() {
@@ -167,7 +371,7 @@ export default function BudgetsPage() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid w-full grid-cols-3 md:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-4 md:grid-cols-7">
           <TabsTrigger value="plan">Bütçe Planı</TabsTrigger>
           <TabsTrigger value="karsilastir">Plan vs Gerçekleşen</TabsTrigger>
           <TabsTrigger value="uyari" data-testid="tab-uyari">
@@ -181,6 +385,9 @@ export default function BudgetsPage() {
             <BarChart3 className="h-3 w-3 mr-1" />Gider Tahmini
           </TabsTrigger>
           <TabsTrigger value="nakit">Nakit Akışı</TabsTrigger>
+          <TabsTrigger value="senaryo" data-testid="tab-senaryo">
+            <Sparkles className="h-3 w-3 mr-1" />Senaryo
+          </TabsTrigger>
         </TabsList>
 
         {/* ─── PLAN ─── */}
@@ -551,6 +758,19 @@ export default function BudgetsPage() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ─── SENARYO (What-If Simulator) — Sprint 65 zenginleştirme, sadece-ekleme ─── */}
+        {/* Sıfır yeni endpoint: mevcut forecast + expenseForecast + cashflow verisini multiplier ile transform eder. */}
+        <TabsContent value="senaryo" className="mt-6 space-y-4" data-testid="tab-content-senaryo">
+          <ScenarioSimulator
+            revenueForecast={Number(forecast?.forecast || forecast?.forecastWithTrend || 0)}
+            expenseForecast={Number(expenseForecast?.totalForecast || 0)}
+            cashflowWeeks={cashflow?.weeks || []}
+            weeklyAvgIn={Number(cashflow?.weeklyAvgIn || 0)}
+            weeklyAvgOut={Number(cashflow?.weeklyAvgOut || 0)}
+            targetPeriod={forecastTarget}
+          />
         </TabsContent>
       </Tabs>
     </div>

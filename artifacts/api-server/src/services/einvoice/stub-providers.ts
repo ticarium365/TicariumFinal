@@ -154,8 +154,9 @@ abstract class BaseHttpStubProvider implements EInvoiceProvider {
 
   // CRUD operasyonları:
   //   createInvoice → UBL-TR 1.2 XML üretir + draft döner (transport API key gerektirir).
-  //   sendInvoice/cancelInvoice → API key gelene kadar transport throw.
-  //   getIncomingInvoices → boş (gerçek polling'i provider override eder).
+  //   sendInvoice/cancelInvoice/getIncomingInvoices → SANDBOX modunda mock-success
+  //     yanıt verir (UI/E2E akışını API key beklemeden test edebilmek için);
+  //     PRODUCTION modunda throw — üretime yanlışlıkla mock yanıt sızmaz.
   async createInvoice(payload: EInvoiceCreatePayload): Promise<EInvoiceCreateResult> {
     const built = buildInvoiceXml(payload);
     return {
@@ -165,14 +166,81 @@ abstract class BaseHttpStubProvider implements EInvoiceProvider {
       raw: { xml: built.xml, totals: built.totals, generatedBy: "ubl-tr-builder", note: `${this.displayName} draft — transport API key bekliyor.` },
     };
   }
-  async sendInvoice(_id: string): Promise<EInvoiceSendResult> {
-    throw new Error(`${this.displayName} sendInvoice transport'u henüz uygulanmadı (UBL-TR XML hazır; gerçek API key bekleniyor).`);
+
+  // ── SANDBOX simülasyon yardımcıları (Sprint 62 zenginleştirme) ─────────────
+  protected requireProductionTransport(op: string): never {
+    throw new Error(
+      `${this.displayName} ${op} transport'u PRODUCTION için henüz uygulanmadı (UBL-TR XML hazır; gerçek API key gerekli). ` +
+      `Test için Ayarlar → "Sandbox modu"nu açın — tüm akış mock yanıtla çalışır.`
+    );
   }
-  async cancelInvoice(_id: string): Promise<EInvoiceCancelResult> {
-    throw new Error(`${this.displayName} cancelInvoice transport'u henüz uygulanmadı.`);
+
+  async sendInvoice(externalId: string): Promise<EInvoiceSendResult> {
+    if (!this.cfg.sandbox) this.requireProductionTransport("sendInvoice");
+    return {
+      externalId,
+      status: "accepted",
+      message: `${this.displayName} (sandbox): mock kabul yanıtı.`,
+      raw: {
+        provider: this.key,
+        sandbox: true,
+        simulated: true,
+        baseUrl: this.baseUrl(),
+        timestamp: new Date().toISOString(),
+        gibAcceptanceId: `MOCK-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
+      },
+    };
   }
-  async getIncomingInvoices(): Promise<IncomingInvoice[]> {
-    return [];
+
+  async cancelInvoice(externalId: string, reason?: string): Promise<EInvoiceCancelResult> {
+    if (!this.cfg.sandbox) this.requireProductionTransport("cancelInvoice");
+    return {
+      externalId,
+      status: "cancelled",
+      message: `${this.displayName} (sandbox): mock iptal yanıtı.${reason ? ` Sebep: ${reason}` : ""}`,
+      raw: {
+        provider: this.key,
+        sandbox: true,
+        simulated: true,
+        cancelledAt: new Date().toISOString(),
+        reason: reason || null,
+      },
+    };
+  }
+
+  async getIncomingInvoices(opts?: { since?: Date; limit?: number }): Promise<IncomingInvoice[]> {
+    if (!this.cfg.sandbox) return [];
+    const limit = Math.min(opts?.limit ?? 2, 5);
+    const now = Date.now();
+    const samples: IncomingInvoice[] = [];
+    const sandboxSenders = [
+      { name: `Demo Tedarikçi A.Ş. (${this.displayName} sandbox)`, vkn: "1234567890", alias: "urn:mail:demo@sandbox.local" },
+      { name: `Test Toptan Ltd. (${this.displayName} sandbox)`, vkn: "9876543210", alias: "urn:mail:test@sandbox.local" },
+      { name: `Örnek Lojistik (${this.displayName} sandbox)`, vkn: "5556667778", alias: "urn:mail:lojistik@sandbox.local" },
+    ];
+    for (let i = 0; i < limit; i++) {
+      const s = sandboxSenders[i % sandboxSenders.length]!;
+      const total = Math.round((1000 + Math.random() * 9000) * 100) / 100;
+      const tax = Math.round(total * 0.20 * 100) / 100;
+      const date = new Date(now - i * 86_400_000);
+      samples.push({
+        externalId: `SANDBOX-${this.key}-${date.toISOString().slice(0, 10)}-${i + 1}`,
+        invoiceNo: `${this.key.toUpperCase().slice(0, 3)}2026${String(100000 + i).padStart(6, "0")}`,
+        invoiceDate: date,
+        receivedAt: date,
+        senderVkn: s.vkn,
+        senderName: s.name,
+        senderAlias: s.alias,
+        totalAmount: total,
+        taxAmount: tax,
+        currency: "TRY",
+        profile: "TEMELFATURA",
+        rawXml: null,
+        raw: { provider: this.key, sandbox: true, simulated: true },
+      });
+    }
+    if (opts?.since) return samples.filter(s => s.invoiceDate >= opts.since!);
+    return samples;
   }
   async getInvoiceXml(_externalId: string): Promise<{ xml: string } | null> {
     // Cache'lemiyoruz — DB'de saklanan raw.xml frontend tarafından okunabilir.

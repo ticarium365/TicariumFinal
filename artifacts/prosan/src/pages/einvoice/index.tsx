@@ -412,7 +412,7 @@ export default function EInvoicePage() {
 
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2">
-                    <Switch checked={settings.sandbox} onCheckedChange={(v) => setSettings({ ...settings, sandbox: v })} />
+                    <Switch checked={settings.sandbox} onCheckedChange={(v) => setSettings({ ...settings, sandbox: v })} data-testid="switch-sandbox" />
                     <Label>Sandbox / Test Modu</Label>
                   </div>
                   <div className="flex items-center gap-2">
@@ -420,6 +420,20 @@ export default function EInvoicePage() {
                     <Label>Bu sağlayıcıyı aktif et</Label>
                   </div>
                 </div>
+
+                {/* Sprint 62 — Sandbox bilgilendirme banner (sadece-ekleme) */}
+                {settings.sandbox && settings.provider !== "mock" && (
+                  <div className="border border-amber-500/40 bg-amber-500/10 rounded-lg p-3 text-xs space-y-1" data-testid="sandbox-info-banner">
+                    <div className="font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                      <Activity className="h-3.5 w-3.5" /> Sandbox modu aktif
+                    </div>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Bu modda <strong>UBL-TR XML üretimi gerçek</strong>; ancak <strong>gönderme/iptal/gelen çekme</strong> sağlayıcının
+                      gerçek API'sine değil, mock kabul yanıtına gider. API anahtarınızı doldurmadan tüm akışı uçtan uca test
+                      edebilirsiniz. Üretime almadan önce sandbox kapatıldığında transport gerçek sağlayıcıya bağlanır.
+                    </p>
+                  </div>
+                )}
 
                 {currentProvider && currentProvider.needs.length > 0 && (
                   <div className="border rounded-lg p-4 space-y-3">
