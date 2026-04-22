@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import {
   Plus, Search, Truck, Phone, MapPin,
   ChevronLeft, ChevronRight, Pencil, Trash2, RotateCcw,
-  TrendingUp, Minus,
+  TrendingUp, Minus, AlertCircle, ChevronRight as ChevronRightIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,6 +82,25 @@ export default function SuppliersList() {
     staleTime: 10_000,
   });
 
+  // Dalga 29 — KPI count fetches + top creditors (admin-only)
+  const isAdminUser = user?.role === "admin";
+  const { data: activeCountData } = useQuery({
+    queryKey: ["suppliers", "count", "active"],
+    queryFn: () => apiFetch("GET", `/suppliers?page=1&limit=1&active=true`),
+    staleTime: 30_000,
+  });
+  const { data: allCountData } = useQuery({
+    queryKey: ["suppliers", "count", "all"],
+    queryFn: () => apiFetch("GET", `/suppliers?page=1&limit=1`),
+    staleTime: 30_000,
+  });
+  const { data: topCreditorsData } = useQuery({
+    queryKey: ["suppliers", "top-creditors"],
+    queryFn: () => apiFetch("GET", `/suppliers/top-creditors`),
+    enabled: isAdminUser,
+    staleTime: 30_000,
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: number) => apiFetch("DELETE", `/suppliers/${id}`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["suppliers"] }); toast({ title: "Tedarikçi silindi" }); },
@@ -121,6 +140,120 @@ export default function SuppliersList() {
           )}
         </div>
       </div>
+
+      {/* Dalga 29 — KPI strip (Toplam · Aktif · Pasif · Borçlu Tedarikçi) */}
+      {(() => {
+        const totalAll = allCountData?.total;
+        const totalActive = activeCountData?.total;
+        const totalPassive = (typeof totalAll === "number" && typeof totalActive === "number")
+          ? Math.max(0, totalAll - totalActive) : undefined;
+        const creditors = topCreditorsData?.suppliers ?? [];
+        return (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+            <div className="bg-card border rounded-xl p-3 shadow-sm flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 text-white flex items-center justify-center shrink-0">
+                <Truck className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground font-medium">Toplam Tedarikçi</p>
+                <p className="text-lg font-bold tabular-nums leading-tight">{totalAll ?? "—"}</p>
+              </div>
+            </div>
+            <div className="bg-card border rounded-xl p-3 shadow-sm flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white flex items-center justify-center shrink-0">
+                <Truck className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground font-medium">Aktif</p>
+                <p className="text-lg font-bold tabular-nums leading-tight text-emerald-600">{totalActive ?? "—"}</p>
+              </div>
+            </div>
+            <div className="bg-card border rounded-xl p-3 shadow-sm flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-slate-400 to-slate-600 text-white flex items-center justify-center shrink-0">
+                <Minus className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground font-medium">Pasif</p>
+                <p className="text-lg font-bold tabular-nums leading-tight text-slate-500">{totalPassive ?? "—"}</p>
+              </div>
+            </div>
+            {isAdminUser ? (
+              <div className="bg-card border rounded-xl p-3 shadow-sm flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 text-white flex items-center justify-center shrink-0">
+                  <AlertCircle className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground font-medium">
+                    Borç Verilen {creditors.length === 10 ? "(ilk 10)" : ""}
+                  </p>
+                  <p className="text-lg font-bold tabular-nums leading-tight text-orange-600">
+                    {creditors.length}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-card border rounded-xl p-3 shadow-sm flex items-center gap-3 opacity-50">
+                <div className="h-9 w-9 rounded-lg bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">
+                  <AlertCircle className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground font-medium">Borç Verilen</p>
+                  <p className="text-xs text-muted-foreground">Yetki gerekli</p>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Dalga 29 — En Yüksek Borçlu 5 Tedarikçi (admin-only) */}
+      {isAdminUser && (topCreditorsData?.suppliers?.length ?? 0) > 0 && (
+        <div
+          className="rounded-xl border border-orange-200/60 shadow-sm p-4 mb-4"
+          style={{
+            background: "linear-gradient(135deg, rgba(255,237,213,0.50) 0%, rgba(254,226,226,0.40) 100%)",
+          }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-orange-900 flex items-center gap-1.5">
+              <AlertCircle className="h-4 w-4 text-orange-600" />
+              En Yüksek Borç Bakiyesi (Tedarikçi)
+            </p>
+            <span className="text-[10px] text-orange-700/70">öncelikli ödeme listesi</span>
+          </div>
+          <ul className="space-y-1.5">
+            {(topCreditorsData?.suppliers ?? []).slice(0, 5).map((s: Supplier, idx: number) => (
+              <li key={s.id}>
+                <Link href={`/suppliers/${s.id}`}>
+                  <div
+                    className="group flex items-center gap-2 bg-white/70 hover:bg-white rounded-lg px-3 py-2 cursor-pointer transition-colors border border-transparent hover:border-orange-200"
+                    data-testid={`top-creditor-${s.id}`}
+                  >
+                    <span className={`shrink-0 h-6 w-6 rounded-full text-[11px] font-bold flex items-center justify-center ${
+                      idx === 0 ? "bg-orange-100 text-orange-700" :
+                      idx === 1 ? "bg-amber-100 text-amber-700" :
+                      idx === 2 ? "bg-yellow-100 text-yellow-700" :
+                      "bg-slate-100 text-slate-600"
+                    }`}>{idx + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate text-slate-800 group-hover:text-orange-700">{s.name}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono truncate">
+                        {s.code}{s.contactPerson ? ` · ${s.contactPerson}` : (s.phone ? ` · ${s.phone}` : "")}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-bold tabular-nums text-orange-600">
+                        {s.currentBalance.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
+                      </p>
+                    </div>
+                    <ChevronRightIcon className="h-4 w-4 text-orange-400 group-hover:text-orange-700 shrink-0" />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1 max-w-sm">
