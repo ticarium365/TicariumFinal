@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from "@/components/ui/dialog";
-import { History, RotateCcw, Loader2, FileText, Send, Eye } from "lucide-react";
+import { History, RotateCcw, Loader2, FileText, Send, Eye, Receipt, Trophy, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 
@@ -117,6 +117,22 @@ export default function SalesHistory() {
     }
   }, listParams);
 
+  // Dalga 27 — Aggregate-only fetch (page-bağımsız, tüm günü temsil eden widget'lar için)
+  const aggregateParams = {
+    startDate: dateStr,
+    endDate: dateStr,
+    page: 1,
+    limit: 500,
+    ...(saleTypeFilter !== "all" ? { saleType: saleTypeFilter } : {}),
+  } as any;
+  const { data: aggregateData } = useListSales({
+    query: {
+      queryKey: getListSalesQueryKey(aggregateParams)
+    }
+  }, aggregateParams);
+  const aggregateSales = aggregateData?.sales ?? [];
+  const aggregateTruncated = (aggregateData?.total ?? 0) > 500;
+
   const handleReturn = async () => {
     if (!returnDialog) return;
     try {
@@ -124,7 +140,8 @@ export default function SalesHistory() {
       toast({ title: "İade kaydedildi", description: `${returnDialog.name} — ${returnDialog.qty} adet iade edildi, stok güncellendi.` });
       setReturnDialog(null);
       setReturnNote("");
-      queryClient.invalidateQueries({ queryKey: getListSalesQueryKey({ startDate: dateStr, endDate: dateStr, page, limit: 50 }) });
+      // Dalga 27 — Hem sayfa hem aggregate sorgusunu geçersiz kıl (prefix-based)
+      queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
     } catch (err: any) {
       toast({ title: "Hata", description: err.message, variant: "destructive" });
     }
@@ -132,6 +149,58 @@ export default function SalesHistory() {
 
   const totalRevenue = data?.sales?.filter(s => !(s as any).returned).reduce((s, r) => s + r.totalPrice, 0) ?? 0;
   const totalProfit = data?.sales?.filter(s => !(s as any).returned).reduce((s, r) => s + r.profit, 0) ?? 0;
+
+  // Dalga 27 — Ek özet hesaplamaları
+  // Sayfa-bağımlı (sadece görünen sayfanın özeti — KPI strip için):
+  const validSales = useMemo(
+    () => (data?.sales ?? []).filter(s => !(s as any).returned),
+    [data?.sales]
+  );
+  const validCount = validSales.length;
+  const avgTicket = validCount > 0 ? totalRevenue / validCount : 0;
+
+  // Aggregate (tüm gün — Top 5 ve Saat dağılımı için):
+  const aggregateValid = useMemo(
+    () => aggregateSales.filter(s => !(s as any).returned),
+    [aggregateSales]
+  );
+  const aggregateValidCount = aggregateValid.length;
+
+  // En çok satan 5 ürün — TÜM gün
+  const topProducts = useMemo(() => {
+    const map = new Map<string, { name: string; qty: number; revenue: number }>();
+    for (const s of aggregateValid) {
+      const key = s.productName ?? `#${s.id}`;
+      const cur = map.get(key) ?? { name: key, qty: 0, revenue: 0 };
+      cur.qty += s.quantity ?? 0;
+      cur.revenue += s.totalPrice ?? 0;
+      map.set(key, cur);
+    }
+    return Array.from(map.values()).sort((a, b) => b.qty - a.qty).slice(0, 5);
+  }, [aggregateValid]);
+
+  // Saat bazlı dağılım (0-23 → adet) — TÜM gün, TR saat dilimine sabitlenmiş
+  const trHourFmt = useMemo(
+    () => new Intl.DateTimeFormat("tr-TR", {
+      timeZone: "Europe/Istanbul",
+      hour: "2-digit",
+      hour12: false,
+    }),
+    []
+  );
+  const hourBuckets = useMemo(() => {
+    const buckets = Array.from({ length: 24 }, () => 0);
+    for (const s of aggregateValid) {
+      const h = parseInt(trHourFmt.format(new Date(s.createdAt)), 10);
+      if (!Number.isNaN(h) && h >= 0 && h < 24) buckets[h] += 1;
+    }
+    return buckets;
+  }, [aggregateValid, trHourFmt]);
+  const peakHour = useMemo(() => {
+    const maxIdx = hourBuckets.reduce((mi, v, i, arr) => v > arr[mi] ? i : mi, 0);
+    return hourBuckets[maxIdx] > 0 ? maxIdx : null;
+  }, [hourBuckets]);
+  const maxBucket = Math.max(1, ...hourBuckets);
 
   // ─── Toplu Faturalama (Sprint 62 köprüsü) ───
   const invoiceableSales = useMemo(
@@ -227,20 +296,116 @@ export default function SalesHistory() {
         </div>
       </div>
 
-      {/* Özet kartlar */}
+      {/* Özet kartlar — Dalga 27: 4. kart "Ortalama Sepet" eklendi */}
       {data?.sales && data.sales.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="bg-card border rounded-lg p-3">
             <p className="text-xs text-muted-foreground">Satış Adedi</p>
-            <p className="text-xl font-bold">{data.sales.filter(s => !(s as any).returned).length}</p>
+            <p className="text-xl font-bold tabular-nums">{validCount}</p>
           </div>
           <div className="bg-card border rounded-lg p-3">
             <p className="text-xs text-muted-foreground">Toplam Ciro</p>
-            <p className="text-xl font-bold text-primary">{totalRevenue.toFixed(2)} TL</p>
+            <p className="text-xl font-bold text-primary tabular-nums">{totalRevenue.toFixed(2)} TL</p>
           </div>
           <div className="bg-card border rounded-lg p-3">
             <p className="text-xs text-muted-foreground">Toplam Kâr</p>
-            <p className="text-xl font-bold text-emerald-600">{totalProfit.toFixed(2)} TL</p>
+            <p className="text-xl font-bold text-emerald-600 tabular-nums">{totalProfit.toFixed(2)} TL</p>
+          </div>
+          <div className="bg-card border rounded-lg p-3">
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Receipt className="h-3 w-3" /> Ortalama Sepet
+            </p>
+            <p className="text-xl font-bold text-indigo-600 tabular-nums">{avgTicket.toFixed(2)} TL</p>
+          </div>
+        </div>
+      )}
+
+      {/* Dalga 27 — Top 5 ürün + saat dağılımı (tüm günün aggregate datasından) */}
+      {aggregateValidCount > 0 && (
+        <div className="grid lg:grid-cols-2 gap-3">
+          {/* En çok satan 5 ürün */}
+          <div className="bg-card border rounded-lg p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold flex items-center gap-1.5 text-slate-700">
+                <Trophy className="h-4 w-4 text-amber-500" /> En Çok Satan 5 Ürün
+              </p>
+              <span className="text-[10px] text-muted-foreground">
+                {aggregateTruncated ? "ilk 500 satıştan" : `${aggregateValidCount} satıştan`}
+              </span>
+            </div>
+            {topProducts.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Veri yok</p>
+            ) : (
+              <ul className="space-y-2">
+                {topProducts.map((p, idx) => {
+                  const maxQty = topProducts[0].qty || 1;
+                  const widthPct = (p.qty / maxQty) * 100;
+                  return (
+                    <li key={p.name} className="flex items-center gap-2">
+                      <span className={`shrink-0 h-5 w-5 rounded-full text-[10px] font-bold flex items-center justify-center ${
+                        idx === 0 ? "bg-amber-100 text-amber-700" :
+                        idx === 1 ? "bg-slate-200 text-slate-700" :
+                        idx === 2 ? "bg-orange-100 text-orange-700" :
+                        "bg-slate-100 text-slate-500"
+                      }`}>{idx + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <span className="text-xs font-medium truncate">{p.name}</span>
+                          <span className="text-[11px] font-bold tabular-nums text-slate-700 whitespace-nowrap">
+                            {p.qty} ad · {p.revenue.toFixed(0)}₺
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all"
+                            style={{ width: `${widthPct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+          {/* Saat bazlı yoğunluk */}
+          <div className="bg-card border rounded-lg p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold flex items-center gap-1.5 text-slate-700">
+                <Clock className="h-4 w-4 text-indigo-500" /> Saat Bazlı Yoğunluk
+              </p>
+              {peakHour !== null && (
+                <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                  Pik saat {String(peakHour).padStart(2, "0")}:00
+                </span>
+              )}
+            </div>
+            <div className="flex items-end gap-[2px] h-24">
+              {hourBuckets.map((cnt, h) => {
+                const heightPct = (cnt / maxBucket) * 100;
+                const isPeak = peakHour === h;
+                return (
+                  <div
+                    key={h}
+                    title={`${String(h).padStart(2, "0")}:00 — ${cnt} satış`}
+                    className="flex-1 flex flex-col items-center justify-end h-full"
+                  >
+                    <div
+                      className={`w-full rounded-t-sm transition-all ${
+                        cnt === 0 ? "bg-slate-100" :
+                        isPeak ? "bg-gradient-to-t from-indigo-600 to-indigo-400" :
+                        "bg-gradient-to-t from-indigo-300 to-indigo-200"
+                      }`}
+                      style={{ height: cnt === 0 ? "3px" : `${Math.max(heightPct, 6)}%` }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-between text-[9px] text-muted-foreground mt-1.5 font-mono">
+              <span>00</span><span>06</span><span>12</span><span>18</span><span>23</span>
+            </div>
           </div>
         </div>
       )}
