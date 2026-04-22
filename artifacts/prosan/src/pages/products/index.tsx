@@ -42,15 +42,24 @@ import {
   Check,
   X,
   Package,
+  PackageX,
+  AlertTriangle,
+  Bell,
+  Flame,
+  Sparkles,
+  Snail,
+  ChevronRight as ChevronRightIcon,
   FileDown,
   FileUp,
   Loader2,
 } from "lucide-react";
 import { ImportProductsModal } from "@/components/import-products-modal";
+import { EmptyState } from "@/components/empty-state";
 import { Link } from "wouter";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLowStockAlerts } from "@/hooks/use-low-stock-alerts";
 
 interface EditState {
   productId: number;
@@ -62,6 +71,56 @@ function StockBadge({ stock, minStock }: { stock: number; minStock: number }) {
   if (stock === 0) return <Badge variant="destructive" className="text-xs font-mono">{stock}</Badge>;
   if (stock <= minStock) return <Badge className="bg-amber-500 hover:bg-amber-600 text-xs font-mono">{stock}</Badge>;
   return <Badge variant="secondary" className="text-xs font-mono">{stock}</Badge>;
+}
+
+// E4 — Hızlı mover / yavaş mover / yeni ürün rozetleri
+function MoverBadges({
+  sales30Days,
+  createdAt,
+  stock,
+}: {
+  sales30Days?: number;
+  createdAt?: string | null;
+  stock: number;
+}) {
+  const sales = sales30Days ?? 0;
+  const createdMs = createdAt ? new Date(createdAt).getTime() : 0;
+  const ageDays = createdMs ? (Date.now() - createdMs) / 86_400_000 : Infinity;
+
+  const isHot = sales >= 5;
+  const isNew = ageDays <= 14 && createdMs > 0;
+  const isSlow = !isHot && !isNew && sales === 0 && stock > 0 && ageDays > 60;
+
+  if (!isHot && !isNew && !isSlow) return null;
+
+  return (
+    <span className="inline-flex items-center gap-1 ml-1.5 align-middle">
+      {isHot && (
+        <span
+          title={`Son 30 günde ${sales} adet satıldı`}
+          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-200"
+        >
+          <Flame className="h-2.5 w-2.5" /> Çok satıyor
+        </span>
+      )}
+      {isNew && (
+        <span
+          title="Son 14 gün içinde eklendi"
+          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200"
+        >
+          <Sparkles className="h-2.5 w-2.5" /> Yeni
+        </span>
+      )}
+      {isSlow && (
+        <span
+          title="60+ gündür hareketsiz"
+          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200"
+        >
+          <Snail className="h-2.5 w-2.5" /> Yavaş
+        </span>
+      )}
+    </span>
+  );
 }
 
 function InlineEdit({
@@ -286,6 +345,13 @@ export default function ProductsList() {
 
   const resetPage = () => setPage(1);
 
+  // E1 + E5 — Kritik stok özeti (mevcut hook'tan)
+  const { data: lowStockData } = useLowStockAlerts();
+  const criticalCount = lowStockData?.critical ?? 0;
+  const lowCount = lowStockData?.low ?? 0;
+  const totalAlerts = lowStockData?.count ?? 0;
+  const previewLowProducts = (lowStockData?.products ?? []).slice(0, 4);
+
   return (
     <div className="space-y-4">
       {/* Başlık */}
@@ -330,6 +396,99 @@ export default function ProductsList() {
           )}
         </div>
       </div>
+
+      {/* E5 — KPI Kartları */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-card border rounded-xl p-4 shadow-sm flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 text-white flex items-center justify-center shrink-0">
+            <Package className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground font-medium">Toplam Ürün</p>
+            <p className="text-xl font-bold tabular-nums leading-tight">{total}</p>
+          </div>
+        </div>
+
+        <div className="bg-card border rounded-xl p-4 shadow-sm flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-rose-500 to-red-500 text-white flex items-center justify-center shrink-0">
+            <PackageX className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground font-medium">Tükenen</p>
+            <p className="text-xl font-bold tabular-nums leading-tight text-rose-600">{criticalCount}</p>
+          </div>
+        </div>
+
+        <div className="bg-card border rounded-xl p-4 shadow-sm flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white flex items-center justify-center shrink-0">
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground font-medium">Kritik Düşük</p>
+            <p className="text-xl font-bold tabular-nums leading-tight text-amber-600">{lowCount}</p>
+          </div>
+        </div>
+
+        <div className="bg-card border rounded-xl p-4 shadow-sm flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-slate-500 to-slate-700 text-white flex items-center justify-center shrink-0">
+            <Bell className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground font-medium">Toplam Uyarı</p>
+            <p className="text-xl font-bold tabular-nums leading-tight">{totalAlerts}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* E1 — Kritik stok uyarı şeridi (sadece kritik ürün varsa görünür) */}
+      {totalAlerts > 0 && (
+        <div
+          className="rounded-xl border border-amber-300/60 shadow-sm p-3 sm:p-4"
+          style={{
+            background: "linear-gradient(135deg, rgba(255,237,213,0.55) 0%, rgba(254,226,226,0.45) 100%)",
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <div className="h-9 w-9 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <AlertTriangle className="h-4.5 w-4.5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <p className="text-sm font-semibold text-amber-900">
+                  {totalAlerts} ürün dikkat istiyor
+                  <span className="text-xs font-normal text-amber-800/80 ml-1.5">
+                    ({criticalCount} tükendi · {lowCount} kritik seviyede)
+                  </span>
+                </p>
+                <button
+                  onClick={() => { setLowStock(true); resetPage(); }}
+                  className="text-xs font-semibold text-amber-900 hover:text-amber-700 inline-flex items-center gap-0.5 whitespace-nowrap"
+                  data-testid="btn-show-critical"
+                >
+                  Tümünü göster
+                  <ChevronRightIcon className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              {previewLowProducts.length > 0 && (
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  {previewLowProducts.map((p) => (
+                    <Link
+                      key={p.id}
+                      href={`/products/${p.id}`}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium bg-white/70 hover:bg-white px-2.5 py-1 rounded-full border border-amber-200/60 text-amber-900 transition-colors"
+                    >
+                      <span className="truncate max-w-[140px]">{p.name}</span>
+                      <span className={`tabular-nums font-bold ${p.stock === 0 ? "text-rose-600" : "text-amber-600"}`}>
+                        {p.stock}/{p.minStock}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Arama + Filtreler */}
       <div className="bg-card border rounded-xl p-3 shadow-sm space-y-3">
@@ -450,11 +609,18 @@ export default function ProductsList() {
                     {/* Ad */}
                     <td className="px-3 py-2.5">
                       <div>
-                        <InlineEdit
-                          value={p.name}
-                          onSave={(v) => handleQuickUpdate(p.id, "name", v)}
-                          className="font-medium"
-                        />
+                        <span className="inline-flex items-center flex-wrap gap-y-0.5">
+                          <InlineEdit
+                            value={p.name}
+                            onSave={(v) => handleQuickUpdate(p.id, "name", v)}
+                            className="font-medium"
+                          />
+                          <MoverBadges
+                            sales30Days={(p as any).sales30Days}
+                            createdAt={(p as any).createdAt}
+                            stock={p.stock}
+                          />
+                        </span>
                         {p.barcode && (
                           <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{p.barcode}</p>
                         )}

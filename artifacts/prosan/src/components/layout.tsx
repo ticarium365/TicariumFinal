@@ -73,6 +73,7 @@ import { TrialBadge } from "./trial-badge";
 import { DemoDataBanner } from "./demo-data-banner";
 import { CommandPalette } from "./command-palette";
 import { SetupChecklistPopover } from "./setup-checklist-popover";
+import { QuickBarcodeFab } from "./quick-barcode-fab";
 import { NAV_GROUPS, type NavItem, isVisibleForAccount } from "./nav-config";
 import { BrandLogo } from "./brand-logo";
 import {
@@ -554,6 +555,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <WelcomeTour />
       <CommandPalette />
       <SetupChecklistPopover />
+      <QuickBarcodeFab />
     </div>
   );
 }
