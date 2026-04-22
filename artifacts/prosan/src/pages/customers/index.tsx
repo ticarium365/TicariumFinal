@@ -25,20 +25,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { CustomerModal } from "./customer-modal";
-
-interface Customer {
-  id: number;
-  code: string;
-  name: string;
-  type: string;
-  phone: string | null;
-  email: string | null;
-  city: string | null;
-  creditLimit: number;
-  currentBalance: number;
-  isActive: boolean;
-  notes: string | null;
-}
+import type { Customer } from "./types";
 
 async function apiFetch(method: string, path: string, body?: unknown) {
   const res = await fetch(`/api${path}`, {

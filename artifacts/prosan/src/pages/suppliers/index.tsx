@@ -19,12 +19,7 @@ import {
   AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { SupplierModal } from "./supplier-modal";
-
-interface Supplier {
-  id: number; code: string; name: string;
-  phone: string | null; email: string | null; city: string | null;
-  contactPerson: string | null; currentBalance: number; isActive: boolean;
-}
+import type { Supplier } from "./types";
 
 async function apiFetch(method: string, path: string, body?: unknown) {
   const res = await fetch(`/api${path}`, {

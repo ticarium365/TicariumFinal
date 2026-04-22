@@ -19,24 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-
-interface Customer {
-  id: number;
-  code: string;
-  name: string;
-  type: string;
-  phone: string | null;
-  email: string | null;
-  city: string | null;
-  district: string | null;
-  address: string | null;
-  contactPerson: string | null;
-  taxOffice: string | null;
-  taxNumber: string | null;
-  creditLimit: number;
-  openingBalance: number;
-  notes: string | null;
-}
+import type { Customer } from "./types";
 
 async function apiFetch(method: string, path: string, body?: unknown) {
   const res = await fetch(`/api${path}`, {

@@ -8,13 +8,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-
-interface Supplier {
-  id: number; code: string; name: string; phone: string | null; email: string | null;
-  city: string | null; district: string | null; address: string | null;
-  contactPerson: string | null; taxOffice: string | null; taxNumber: string | null;
-  openingBalance: number; notes: string | null;
-}
+import type { Supplier } from "./types";
 
 interface Props { open: boolean; onClose: () => void; supplier: Supplier | null; onSuccess: () => void; }
 
