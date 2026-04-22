@@ -146,16 +146,46 @@ export function PublicNav() {
           </Button>
         </div>
 
-        {/* Mobile burger */}
-        <button
-          className="md:hidden p-2 rounded-md"
-          style={{ color: "#334155" }}
-          onClick={() => setOpen((v) => !v)}
-          aria-label="Menüyü aç"
-          data-testid="nav-burger"
-        >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        {/* Mobile right cluster: Giriş + Kayıt + burger */}
+        <div className="md:hidden flex items-center gap-1.5">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setLocation("/login")}
+            data-testid="nav-cta-login-mobile"
+            className="h-8 px-3 text-xs font-semibold"
+            style={{
+              background: "rgba(255,255,255,0.85)",
+              borderColor: "rgba(99,102,241,0.25)",
+              color: "#334155",
+            }}
+          >
+            Giriş
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setLocation("/kayit")}
+            data-testid="nav-cta-register-mobile"
+            className="h-8 px-3 text-xs font-semibold"
+            style={{
+              background: "linear-gradient(135deg,#2563eb 0%,#0EA5A4 100%)",
+              color: "#FFFFFF",
+              border: 0,
+              boxShadow: "0 4px 14px -4px rgba(79,70,229,0.45)",
+            }}
+          >
+            Kayıt Ol
+          </Button>
+          <button
+            className="p-2 rounded-md"
+            style={{ color: "#334155" }}
+            onClick={() => setOpen((v) => !v)}
+            aria-label="Menüyü aç"
+            data-testid="nav-burger"
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile dropdown */}
