@@ -465,6 +465,25 @@ type BillingMetrics = {
     docIndex: { path: string; title: string; oneLiner: string }[];
     mirroredBoardPlaybooks: { title: string; steps: string[] }[];
   };
+  /** payments tablosu: abonelik vs kontör top-up (bu takvim ayı, succeeded). */
+  billingPaymentsRevenueV1?: {
+    subscriptionPaymentsTryThisMonth: number;
+    subscriptionPaymentCountThisMonth: number;
+    topupPaymentsTryThisMonth: number;
+    topupPaymentCountThisMonth: number;
+    topupRepeaters90d: number;
+    topupAmongActivePlanCompanies90d: number;
+  };
+  /** Founder otomasyonu: 7g spike + top-up provider hata kodları (30g). */
+  billingReliabilityAutomationV1?: {
+    returnRedirectLast7d: number;
+    returnRedirectPrev7d: number;
+    returnRedirectSpike7d: boolean;
+    topupFailFunnelLast7d: number;
+    topupFailFunnelPrev7d: number;
+    topupFailFunnelSpike7d: boolean;
+    topupProviderFailedByCode30d: { code: string; count: number }[];
+  };
 };
 
 type ReminderActionRow = {
@@ -2125,6 +2144,79 @@ export default function SuperAdminHubPage() {
                   </ul>
                 </div>
               </div>
+              {(metrics.billingPaymentsRevenueV1 || metrics.billingReliabilityAutomationV1) && (
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 text-[11px] mt-2">
+                  {metrics.billingPaymentsRevenueV1 && (
+                    <div className="rounded-md border bg-muted/30 px-2 py-2 sm:col-span-1">
+                      <p className="text-muted-foreground font-medium mb-1">Gelir ayrımı (payments, bu ay succeeded)</p>
+                      <p className="font-mono text-foreground">
+                        Abonelik: {fmtTRY(metrics.billingPaymentsRevenueV1.subscriptionPaymentsTryThisMonth)}
+                        <span className="text-muted-foreground"> ({metrics.billingPaymentsRevenueV1.subscriptionPaymentCountThisMonth} işlem)</span>
+                      </p>
+                      <p className="font-mono text-foreground mt-0.5">
+                        Kontör top-up: {fmtTRY(metrics.billingPaymentsRevenueV1.topupPaymentsTryThisMonth)}
+                        <span className="text-muted-foreground"> ({metrics.billingPaymentsRevenueV1.topupPaymentCountThisMonth} işlem)</span>
+                      </p>
+                      <p className="text-muted-foreground mt-1.5 leading-snug">
+                        90g top-up tekrarı (≥2 başarılı / firma):{" "}
+                        <span className="font-mono text-foreground">{metrics.billingPaymentsRevenueV1.topupRepeaters90d}</span>
+                        {" · "}aktif planda top-up yapan firma:{" "}
+                        <span className="font-mono text-foreground">{metrics.billingPaymentsRevenueV1.topupAmongActivePlanCompanies90d}</span>
+                      </p>
+                    </div>
+                  )}
+                  {metrics.billingReliabilityAutomationV1 && (
+                    <>
+                      <div
+                        className={`rounded-md border px-2 py-2 ${
+                          metrics.billingReliabilityAutomationV1.returnRedirectSpike7d
+                            ? "border-destructive/40 bg-destructive/5"
+                            : "bg-muted/30"
+                        }`}
+                      >
+                        <p className="text-muted-foreground font-medium mb-1">Return redirect (7g vs önceki 7g)</p>
+                        <p className="font-mono">
+                          {metrics.billingReliabilityAutomationV1.returnRedirectLast7d} / {metrics.billingReliabilityAutomationV1.returnRedirectPrev7d}
+                          {metrics.billingReliabilityAutomationV1.returnRedirectSpike7d ? (
+                            <span className="text-destructive font-semibold ml-1">SPIKE</span>
+                          ) : null}
+                        </p>
+                        <p className="text-muted-foreground mt-1 leading-snug">
+                          İnceleme: <code className="text-[10px]">/api/billing/return</code>, imza başlığı, üretim host ↔ callbackUrl, <code className="text-[10px]">/odeme/sonuc</code>.
+                        </p>
+                      </div>
+                      <div
+                        className={`rounded-md border px-2 py-2 ${
+                          metrics.billingReliabilityAutomationV1.topupFailFunnelSpike7d
+                            ? "border-destructive/40 bg-destructive/5"
+                            : "bg-muted/30"
+                        }`}
+                      >
+                        <p className="text-muted-foreground font-medium mb-1">Top-up funnel hatası (7g vs önceki 7g)</p>
+                        <p className="font-mono">
+                          {metrics.billingReliabilityAutomationV1.topupFailFunnelLast7d} / {metrics.billingReliabilityAutomationV1.topupFailFunnelPrev7d}
+                          {metrics.billingReliabilityAutomationV1.topupFailFunnelSpike7d ? (
+                            <span className="text-destructive font-semibold ml-1">SPIKE</span>
+                          ) : null}
+                        </p>
+                        <p className="text-muted-foreground mt-1 leading-snug">
+                          <code className="text-[10px]">billing_topup_failed</code> + payments <code className="text-[10px]">billing_cycle=topup</code> failed kümesi.
+                        </p>
+                      </div>
+                      <div className="rounded-md border bg-muted/30 px-2 py-2 sm:col-span-2 lg:col-span-3">
+                        <p className="text-muted-foreground font-medium mb-1">Top-up provider başarısız (30g, error_code)</p>
+                        <ul className="font-mono flex flex-wrap gap-x-3 gap-y-0.5">
+                          {(metrics.billingReliabilityAutomationV1.topupProviderFailedByCode30d ?? []).length === 0
+                            ? <li className="text-muted-foreground">—</li>
+                            : (metrics.billingReliabilityAutomationV1.topupProviderFailedByCode30d ?? []).map((x) => (
+                              <li key={x.code}>{x.code}: {x.count}</li>
+                            ))}
+                        </ul>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
               <div className="grid gap-2 sm:grid-cols-2 text-[11px]">
                 <div>
                   <p className="text-muted-foreground mb-0.5">Ödeme başarısı UTM (30g)</p>

@@ -1727,6 +1727,24 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
     const in7 = new Date(now);
     in7.setDate(in7.getDate() + 7);
 
+    let billingPaymentsRevenueV1 = {
+      subscriptionPaymentsTryThisMonth: 0,
+      subscriptionPaymentCountThisMonth: 0,
+      topupPaymentsTryThisMonth: 0,
+      topupPaymentCountThisMonth: 0,
+      topupRepeaters90d: 0,
+      topupAmongActivePlanCompanies90d: 0,
+    };
+    let billingReliabilityAutomationV1 = {
+      returnRedirectLast7d: 0,
+      returnRedirectPrev7d: 0,
+      returnRedirectSpike7d: false,
+      topupFailFunnelLast7d: 0,
+      topupFailFunnelPrev7d: 0,
+      topupFailFunnelSpike7d: false,
+      topupProviderFailedByCode30d: [] as { code: string; count: number }[],
+    };
+
     const [
       trialsEndingSoonRow,
       churn30Row,
@@ -3019,6 +3037,9 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
       const ago90sla = new Date(now.getTime() - 90 * 86400000);
       const ago60 = new Date(now.getTime() - 60 * 86400000);
       const ago120 = new Date(now.getTime() - 120 * 86400000);
+      const ago14sp = new Date(now.getTime() - 14 * 86400000);
+      const monthEndSp = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
+      const ago90sp = new Date(now.getTime() - 90 * 86400000);
 
       const [
         stuckMergedSql,
@@ -3046,6 +3067,10 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
         timeToPaidByPlanSql,
         trialByMonthSql,
         pricingViewToPaid7dSql,
+        spikeReturnRedirect7Sql,
+        spikeTopupFailFunnel7Sql,
+        billingRevenueAndReliabilitySql,
+        topupPayFailCodes30dSql,
       ] = await Promise.all([
         db.execute(sql`
           SELECT
@@ -3082,6 +3107,7 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
               'billing_checkout_failed',
               'billing_topup_failed',
               'billing_topup_checkout_started',
+              'billing_topup_succeeded',
               'billing_return_redirect_error',
               'plan_upgraded',
               'grace_period_reactivate_success'
@@ -3094,7 +3120,7 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
             coalesce(sum((amount)::numeric) FILTER (WHERE status = 'succeeded'), 0)::numeric AS paid_try
           FROM payments
           WHERE paid_at >= ${monthStart}
-            AND paid_at < ${monthEnd}
+            AND paid_at < ${monthEndSp}
         `),
         db.execute(sql`
           SELECT
@@ -3329,6 +3355,52 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
                 AND p2.created_at <= p1.created_at + interval '7 days'
             )
         `),
+        db.execute(sql`
+          SELECT
+            count(*) FILTER (WHERE created_at >= ${ago7st})::int AS last7,
+            count(*) FILTER (WHERE created_at >= ${ago14sp} AND created_at < ${ago7st})::int AS prev7
+          FROM product_funnel_events
+          WHERE event_key = 'billing_return_redirect_error'
+        `),
+        db.execute(sql`
+          SELECT
+            count(*) FILTER (WHERE created_at >= ${ago7st})::int AS last7,
+            count(*) FILTER (WHERE created_at >= ${ago14sp} AND created_at < ${ago7st})::int AS prev7
+          FROM product_funnel_events
+          WHERE event_key = 'billing_topup_failed'
+        `),
+        db.execute(sql`
+          SELECT
+            (SELECT coalesce(sum((amount)::numeric), 0) FROM payments
+              WHERE status = 'succeeded' AND billing_cycle = 'topup'
+                AND paid_at >= ${monthStart} AND paid_at < ${monthEndSp})::numeric AS topup_try_month,
+            (SELECT count(*)::int FROM payments
+              WHERE status = 'succeeded' AND billing_cycle = 'topup'
+                AND paid_at >= ${monthStart} AND paid_at < ${monthEndSp}) AS topup_n_month,
+            (SELECT coalesce(sum((amount)::numeric), 0) FROM payments
+              WHERE status = 'succeeded' AND billing_cycle IN ('monthly', 'yearly')
+                AND paid_at >= ${monthStart} AND paid_at < ${monthEndSp})::numeric AS sub_try_month,
+            (SELECT count(*)::int FROM payments
+              WHERE status = 'succeeded' AND billing_cycle IN ('monthly', 'yearly')
+                AND paid_at >= ${monthStart} AND paid_at < ${monthEndSp}) AS sub_n_month,
+            (SELECT count(*)::int FROM (
+                SELECT company_id FROM payments
+                WHERE status = 'succeeded' AND billing_cycle = 'topup' AND paid_at >= ${ago90sp}
+                GROUP BY company_id HAVING count(*) >= 2
+              ) r) AS topup_repeaters_90d,
+            (SELECT count(DISTINCT p.company_id)::int FROM payments p
+              INNER JOIN companies c ON c.id = p.company_id AND c.plan_type = 'active'
+              WHERE p.status = 'succeeded' AND p.billing_cycle = 'topup' AND p.paid_at >= ${ago90sp}
+            ) AS topup_among_active_90d
+        `),
+        db.execute(sql`
+          SELECT coalesce(nullif(trim(error_code), ''), 'unknown') AS code, count(*)::int AS c
+          FROM payments
+          WHERE billing_cycle = 'topup' AND status = 'failed' AND created_at >= ${ago30}
+          GROUP BY 1
+          ORDER BY 2 DESC
+          LIMIT 10
+        `),
       ]);
 
       const stuckBr = (stuckMergedSql.rows?.[0] ?? {}) as { c3?: number | string; c7?: number | string };
@@ -3378,6 +3450,40 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
       const checkoutFailedMo = fm.get("billing_checkout_failed") ?? 0;
       const returnRedirectErrMo = fm.get("billing_return_redirect_error") ?? 0;
       const topupFailedMo = fm.get("billing_topup_failed") ?? 0;
+
+      const rrSp = (spikeReturnRedirect7Sql.rows?.[0] ?? {}) as { last7?: number | string; prev7?: number | string };
+      const tfSp = (spikeTopupFailFunnel7Sql.rows?.[0] ?? {}) as { last7?: number | string; prev7?: number | string };
+      const returnRedirectLast7d = Number(rrSp.last7 ?? 0);
+      const returnRedirectPrev7d = Number(rrSp.prev7 ?? 0);
+      const returnRedirectSpike7d = returnRedirectLast7d >= Math.max(3, returnRedirectPrev7d * 2) && returnRedirectLast7d >= 2;
+      const topupFailFunnelLast7d = Number(tfSp.last7 ?? 0);
+      const topupFailFunnelPrev7d = Number(tfSp.prev7 ?? 0);
+      const topupFailFunnelSpike7d = topupFailFunnelLast7d >= Math.max(2, topupFailFunnelPrev7d * 2) && topupFailFunnelLast7d >= 2;
+
+      const brMar = (billingRevenueAndReliabilitySql.rows?.[0] ?? {}) as Record<string, unknown>;
+      const topupPayFailRows = (topupPayFailCodes30dSql.rows ?? []) as { code: string; c: number | string }[];
+      const topupProviderFailedByCode30d = topupPayFailRows.map((r) => ({
+        code: r.code || "unknown",
+        count: Number(r.c ?? 0),
+      }));
+
+      billingPaymentsRevenueV1 = {
+        subscriptionPaymentsTryThisMonth: Math.round(Number(brMar.sub_try_month ?? 0)),
+        subscriptionPaymentCountThisMonth: Number(brMar.sub_n_month ?? 0),
+        topupPaymentsTryThisMonth: Math.round(Number(brMar.topup_try_month ?? 0)),
+        topupPaymentCountThisMonth: Number(brMar.topup_n_month ?? 0),
+        topupRepeaters90d: Number(brMar.topup_repeaters_90d ?? 0),
+        topupAmongActivePlanCompanies90d: Number(brMar.topup_among_active_90d ?? 0),
+      };
+      billingReliabilityAutomationV1 = {
+        returnRedirectLast7d,
+        returnRedirectPrev7d,
+        returnRedirectSpike7d,
+        topupFailFunnelLast7d,
+        topupFailFunnelPrev7d,
+        topupFailFunnelSpike7d,
+        topupProviderFailedByCode30d,
+      };
 
       const payRow = (paymentsThisMonthSql.rows?.[0] ?? {}) as { paid_n?: number | string; paid_try?: number | string };
       const livePaymentsThisMonth = {
@@ -3581,7 +3687,12 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
           + `Tahsilat aksiyonu 30g: çözüldü ${resolvedN}, kapattı ${dismissedN}, ertelendi ${snoozedN}; `
           + `14+ gün iletişimde kalan: ${staleN}. `
           + `Ödeme hunisi bu ay: checkout ${chkMo}, başarılı dönüş ${paidMo}, plan_upgraded ${planUpgradedMo}. `
-          + `Grace kurtarma: ${founderSignalsV7.churnGraceSavesThisMonth}.`,
+          + `Grace kurtarma: ${founderSignalsV7.churnGraceSavesThisMonth}. `
+          + `Kartlı ödemeler (bu ay, payments): abonelik ₺${billingPaymentsRevenueV1.subscriptionPaymentsTryThisMonth} (${billingPaymentsRevenueV1.subscriptionPaymentCountThisMonth} işlem), `
+          + `kontör top-up ₺${billingPaymentsRevenueV1.topupPaymentsTryThisMonth} (${billingPaymentsRevenueV1.topupPaymentCountThisMonth}). `
+          + `90g top-up tekrarı: ${billingPaymentsRevenueV1.topupRepeaters90d} firma; aktif planda top-up: ${billingPaymentsRevenueV1.topupAmongActivePlanCompanies90d} firma. `
+          + (returnRedirectSpike7d ? `UYARI: return_redirect_error 7g ivmesi (${returnRedirectLast7d} vs ${returnRedirectPrev7d}). ` : "")
+          + (topupFailFunnelSpike7d ? `UYARI: topup_failed funnel 7g ivmesi (${topupFailFunnelLast7d} vs ${topupFailFunnelPrev7d}). ` : ""),
       };
 
       const recommendationsV2: {
@@ -3683,6 +3794,44 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
         });
       }
 
+      if (returnRedirectSpike7d) {
+        const topc = topupProviderFailedByCode30d[0];
+        recommendationsV2.push({
+          id: "billing:return_redirect_spike",
+          kind: "billing_reliability",
+          roiScore: 91,
+          headline: "ACİL: billing_return_redirect_error 7 günde anormal artış",
+          rationale:
+            `Son 7 gün ${returnRedirectLast7d} olay, önceki 7 gün ${returnRedirectPrev7d}. Iyzico /api/billing/return, x-billing-return-sig, /odeme/sonuc ve üretim host eşleşmesini kontrol edin.`
+            + (topc ? ` Paralel: top-up provider hatası lideri ${topc.code} ×${topc.count} (30g).` : ""),
+          badges: ["ödeme", "spike"],
+        });
+      }
+      if (topupFailFunnelSpike7d) {
+        recommendationsV2.push({
+          id: "billing:topup_fail_spike",
+          kind: "billing_reliability",
+          roiScore: 88,
+          headline: "Kontör top-up funnel hatası 7 günde sıçrama",
+          rationale:
+            `billing_topup_failed (ürün funnel) son 7 gün ${topupFailFunnelLast7d}, önceki 7 gün ${topupFailFunnelPrev7d}. Iyzico init, limit ve anahtarları inceleyin;`
+            + ` payments tablosunda billing_cycle=topup ve status=failed kümesine bakın.`,
+          badges: ["ödeme", "spike"],
+        });
+      }
+      if (topupProviderFailedByCode30d.length >= 1 && topupProviderFailedByCode30d[0].count >= 2) {
+        const t = topupProviderFailedByCode30d[0];
+        recommendationsV2.push({
+          id: "billing:topup_pay_fail_cluster",
+          kind: "billing_reliability",
+          roiScore: Math.min(86, 58 + t.count * 5),
+          headline: `Top-up ödeme satırı: ${t.code} (${t.count}×, 30g)`,
+          rationale:
+            "payments tablosunda başarısız top-up kayıtlarını firma bazında gruplayın; PROVIDER_INIT_FAILED ise anahtar/sandbox, diğer kodlarda kart/3DS tarafını doğrulayın.",
+          badges: ["ödeme", "kontör"],
+        });
+      }
+
       recommendationsV2.sort((a, b) => b.roiScore - a.roiScore);
       const topRecs = recommendationsV2.slice(0, 8);
 
@@ -3719,6 +3868,8 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
           s3 >= 4 ? `B2B: ${s3} teklif 3+ gün bekliyor.` : "",
           returnRedirectErrMo >= 2 ? `Ödeme return-path: ${returnRedirectErrMo} billing_return_redirect_error (bu ay).` : "",
           topupFailedMo >= 2 ? `Kontör top-up hatası: ${topupFailedMo} billing_topup_failed (bu ay).` : "",
+          returnRedirectSpike7d ? `Spike: return_redirect 7g ${returnRedirectLast7d} (önceki 7g ${returnRedirectPrev7d}).` : "",
+          topupFailFunnelSpike7d ? `Spike: topup_failed funnel 7g ${topupFailFunnelLast7d} (önceki 7g ${topupFailFunnelPrev7d}).` : "",
         ].filter(Boolean).join(" ") || "Kritik risk sinyali düşük; rutin gözlem yeterli.",
       };
 
@@ -3778,6 +3929,12 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
 
       const openInv7 = Number(pendingInv7Row[0]?.c ?? 0);
       const riskSignals: string[] = [];
+      if (returnRedirectSpike7d) {
+        riskSignals.push(`billing_return_redirect_error 7g spike (${returnRedirectLast7d} vs ${returnRedirectPrev7d})`);
+      }
+      if (topupFailFunnelSpike7d) {
+        riskSignals.push(`billing_topup_failed funnel 7g spike (${topupFailFunnelLast7d} vs ${topupFailFunnelPrev7d})`);
+      }
       if (topDebtCo && topDebtCo.overdueTry >= 25_000) riskSignals.push("Yüksek vadesi geçmiş TRY konsantrasyonu");
       if (s3 >= 5) riskSignals.push("B2B yanıt gecikmesi (çok bekleyen teklif)");
       if (founderSignalsV6.churnRiskMrrTry > 15_000) riskSignals.push("Grace / iptal hattında yüksek MRR");
@@ -4061,6 +4218,8 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
       b2bOpsBundleV1,
       billingMetricsPerformanceBundleV1,
       docsPlaybooksBundleV1,
+      billingPaymentsRevenueV1,
+      billingReliabilityAutomationV1,
     });
   } catch (e) { console.error(e); return res.status(500).json({ message: "Sunucu hatası" }); }
 });

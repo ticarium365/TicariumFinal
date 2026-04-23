@@ -5,6 +5,7 @@
  *   POST /api/billing/checkout            — Auth admin. Yeni ödeme oturumu açar (provider'a göre yönlendirir).
  *   POST /api/billing/webhook             — Provider callback (no-auth, HMAC verify).
  *   GET  /api/billing/payments            — Auth admin. Şirketin ödeme geçmişi.
+ *   GET  /api/billing/topup-summary     — Auth admin. Kontör ödemeleri özeti (tekrar / son işlemler).
  *   POST /api/billing/__simulate-success  — DEV/super_admin only. Mock ödeme başarısı simüle et.
  *
  * Subscription transition: payment 'succeeded' olduğunda
@@ -26,7 +27,7 @@ import {
   creditPurchasesTable,
   productFunnelEventsTable,
 } from "@workspace/db";
-import { and, eq, desc, sql } from "drizzle-orm";
+import { and, eq, desc, sql, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { getBillingProvider, newConversationId } from "../services/billing/iyzico";
 import { CREDIT_PACKS, findCreditPack } from "../services/billing/credit-packs";
@@ -482,6 +483,18 @@ async function handleWebhookEvent(rawBody: string, headers: Record<string, strin
         paidAt: now,
         updatedAt: now,
       }).where(eq(paymentsTable.id, payment.id));
+      const rq = (payment.rawRequest ?? {}) as { packCode?: string; metric?: string; quantity?: number };
+      await tx.insert(productFunnelEventsTable).values({
+        companyId: payment.companyId,
+        eventKey: "billing_topup_succeeded",
+        props: JSON.stringify({
+          pack_code: rq.packCode ?? "",
+          metric: rq.metric ?? "",
+          quantity: rq.quantity ?? 0,
+          amount_try: Number(payment.amount),
+          conversation_id: payment.conversationId,
+        }).slice(0, 4000),
+      }).catch(() => {});
       return {
         status: 200 as const,
         body: { ok: true, paymentId: payment.id, status: "succeeded", topup: true, applied: pendingPacks.length },
@@ -712,6 +725,77 @@ router.get("/payments", requireAuth, async (req: Request, res: Response) => {
     .orderBy(desc(paymentsTable.createdAt))
     .limit(50);
   res.json({ payments: rows });
+});
+
+/** Son kontör satın almaları + basit tekrar / tutar özeti (tenant). */
+router.get("/topup-summary", requireAuth, requireRole(["admin", "super_admin"]), async (req: Request, res: Response) => {
+  try {
+    const companyId = req.session.user!.companyId;
+    const ago90 = new Date(Date.now() - 90 * 86400000);
+    const recent = await db.select({
+      id: paymentsTable.id,
+      amount: paymentsTable.amount,
+      status: paymentsTable.status,
+      paidAt: paymentsTable.paidAt,
+      createdAt: paymentsTable.createdAt,
+      rawRequest: paymentsTable.rawRequest,
+      errorCode: paymentsTable.errorCode,
+    })
+      .from(paymentsTable)
+      .where(and(eq(paymentsTable.companyId, companyId), eq(paymentsTable.billingCycle, "topup")))
+      .orderBy(desc(paymentsTable.createdAt))
+      .limit(12);
+
+    const succeeded90d = await db.select({ c: sql<number>`count(*)::int` })
+      .from(paymentsTable)
+      .where(and(
+        eq(paymentsTable.companyId, companyId),
+        eq(paymentsTable.billingCycle, "topup"),
+        eq(paymentsTable.status, "succeeded"),
+        gte(paymentsTable.paidAt, ago90),
+      ));
+
+    const sumTryRow = await db.select({
+      s: sql<number>`coalesce(sum((${paymentsTable.amount})::numeric) filter (where ${paymentsTable.status} = 'succeeded'), 0)`,
+    })
+      .from(paymentsTable)
+      .where(and(
+        eq(paymentsTable.companyId, companyId),
+        eq(paymentsTable.billingCycle, "topup"),
+        gte(paymentsTable.paidAt, ago90),
+      ));
+
+    const recentOut = recent.map((r) => {
+      const rq = (r.rawRequest ?? {}) as { packCode?: string; label?: string; metric?: string };
+      return {
+        id: r.id,
+        status: r.status,
+        amountTry: Number(r.amount ?? 0),
+        paidAt: r.paidAt,
+        createdAt: r.createdAt,
+        packCode: rq.packCode ?? "",
+        label: rq.label ?? rq.packCode ?? "",
+        metric: rq.metric ?? "",
+        errorCode: r.errorCode,
+      };
+    });
+
+    const succN = Number(succeeded90d[0]?.c ?? 0);
+    const avgTry = succN > 0 ? Math.round(Number(sumTryRow[0]?.s ?? 0) / succN) : 0;
+
+    res.json({
+      recent: recentOut,
+      stats90d: {
+        succeededCount: succN,
+        totalTry: Math.round(Number(sumTryRow[0]?.s ?? 0)),
+        avgTry,
+        isRepeater: succN >= 2,
+      },
+    });
+  } catch (err) {
+    logger.warn({ err }, "billing_topup_summary_failed");
+    res.status(500).json({ error: { code: "INTERNAL", message: "topup_summary_failed" } });
+  }
 });
 
 /* -------------------- POST /__simulate-success (DEV ONLY) -------------------- */

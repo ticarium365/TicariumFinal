@@ -9,10 +9,17 @@
  */
 import { useEffect, useState, useRef } from "react";
 import { trackProductEvent } from "@/lib/product-analytics";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Loader2, ShieldCheck, RefreshCcw, LifeBuoy } from "lucide-react";
+
+type PaymentRow = {
+  conversationId?: string;
+  status?: string;
+  billingCycle?: string;
+  errorMessage?: string;
+};
 
 export default function OdemeSonucPage() {
   const [, setLocation] = useLocation();
@@ -21,13 +28,22 @@ export default function OdemeSonucPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [lastStatus, setLastStatus] = useState<string | null>(null);
   const outcomeTracked = useRef(false);
+  /** Son başarılı ödeme türü — abonelik metni ile kontör metnini ayırmak için. */
+  const successKindRef = useRef<"subscription" | "topup">("subscription");
 
   useEffect(() => {
     if (state !== "success" && state !== "error") return;
     if (outcomeTracked.current) return;
     outcomeTracked.current = true;
-    if (state === "success") trackProductEvent("billing_return_success", {});
-    else trackProductEvent("billing_return_error", {});
+    if (state === "success") {
+      if (successKindRef.current === "topup") {
+        trackProductEvent("billing_topup_return_success_client", { source: "odeme_sonuc" });
+      } else {
+        trackProductEvent("billing_return_success", { source: "odeme_sonuc" });
+      }
+    } else {
+      trackProductEvent("billing_return_error", { kind: successKindRef.current });
+    }
   }, [state]);
 
   useEffect(() => {
@@ -69,11 +85,25 @@ export default function OdemeSonucPage() {
         body: JSON.stringify({ conversationId }),
       })
         .then((r) => r.json().then((j) => ({ ok: r.ok, j })))
-        .then(({ ok, j }) => {
+        .then(async ({ ok, j }) => {
           if (ok) {
+            let kind: "subscription" | "topup" = "subscription";
+            try {
+              const pr = await fetch("/api/billing/payments", { credentials: "include" });
+              const pj = await pr.json();
+              const pay = (pj.payments || []).find((x: PaymentRow) => x.conversationId === conversationId);
+              if (pay?.billingCycle === "topup") kind = "topup";
+            } catch {
+              /* ignore */
+            }
+            successKindRef.current = kind;
             setState("success");
-            setMessage("Ödemeniz başarıyla alındı. Aboneliğiniz aktive edildi.");
-            setTimeout(() => setLocation("/dashboard"), 2200);
+            setMessage(
+              kind === "topup"
+                ? "Kontör ödemeniz onaylandı. Limitleriniz kısa süre içinde güncellenir."
+                : "Ödemeniz başarıyla alındı. Aboneliğiniz aktive edildi.",
+            );
+            setTimeout(() => setLocation("/dashboard"), kind === "topup" ? 2800 : 2200);
           } else {
             setState("error");
             setMessage(j?.error?.message ?? "Ödeme doğrulanamadı.");
@@ -83,10 +113,14 @@ export default function OdemeSonucPage() {
           setState("error");
           setMessage(err?.message ?? "Ağ hatası");
         });
-    } else if (simulate === "fail") {
+      return undefined;
+    }
+    if (simulate === "fail") {
       setState("error");
       setMessage("Ödeme reddedildi. Lütfen tekrar deneyin veya farklı bir kart kullanın.");
-    } else {
+      return undefined;
+    }
+    {
       // Gerçek Iyzico akışı: ödeme /return ile işlense bile UI'da güvenli polling yap.
       let cancelled = false;
       const startedAt = Date.now();
@@ -97,19 +131,29 @@ export default function OdemeSonucPage() {
         try {
           const r = await fetch("/api/billing/payments", { credentials: "include" });
           const j = await r.json();
-          const p = (j.payments || []).find((x: any) => x.conversationId === conversationId);
+          const p = (j.payments || []).find((x: PaymentRow) => x.conversationId === conversationId);
           if (!p) {
             setLastStatus("not_found");
             // ödeme kaydı geç düşebilir; timeout'a kadar bekle
           } else {
             setLastStatus(p.status || null);
             if (p.status === "succeeded") {
+              const isTopup = p.billingCycle === "topup";
+              successKindRef.current = isTopup ? "topup" : "subscription";
               setState("success");
-              setMessage("Ödemeniz başarıyla alındı. Aboneliğiniz aktive edildi.");
-              setTimeout(() => setLocation("/dashboard"), 2200);
+              setMessage(
+                isTopup
+                  ? "Kontör ödemeniz onaylandı. Limitleriniz kısa süre içinde güncellenir."
+                  : "Ödemeniz başarıyla alındı. Aboneliğiniz aktive edildi.",
+              );
+              setTimeout(() => setLocation("/dashboard"), isTopup ? 2800 : 2200);
               return;
             }
             if (p.status === "failed") {
+              if (p.billingCycle === "topup") {
+                successKindRef.current = "topup";
+                trackProductEvent("billing_topup_client_error", { stage: "return_poll_failed", conversation_id: conversationId });
+              }
               setState("error");
               setMessage(p.errorMessage || "Ödeme başarısız.");
               return;
@@ -148,7 +192,7 @@ export default function OdemeSonucPage() {
           {state === "error" && <XCircle className="w-16 h-16 mx-auto mb-4 text-destructive" />}
           <h1 className="text-2xl font-bold mb-2">
             {state === "loading" && "İşleniyor"}
-            {state === "success" && "Ödeme Başarılı"}
+            {state === "success" && (successKindRef.current === "topup" ? "Kontör Ödemesi Tamam" : "Ödeme Başarılı")}
             {state === "error" && "İşlem Tamamlanamadı"}
           </h1>
           <p className="text-muted-foreground mb-6" data-testid="text-payment-message">{message}</p>
@@ -176,17 +220,34 @@ export default function OdemeSonucPage() {
 
           {state !== "loading" && (
             <div className="flex flex-col gap-3 items-center">
-              <div className="flex gap-2 justify-center">
-                <Button variant="outline" onClick={() => setLocation("/paketler")}>Paketlere Dön</Button>
-                {state === "success" && (
-                  <Button onClick={() => setLocation("/dashboard")} data-testid="button-go-dashboard">
-                    Panele Git
-                  </Button>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center w-full sm:w-auto">
+                {state === "success" && successKindRef.current === "topup" ? (
+                  <>
+                    <Button variant="outline" asChild className="w-full sm:w-auto">
+                      <Link href="/settings/credit-topup">Başka paket</Link>
+                    </Button>
+                    <Button onClick={() => setLocation("/dashboard")} className="w-full sm:w-auto" data-testid="button-go-dashboard">
+                      Panele git
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" onClick={() => setLocation("/paketler")} className="w-full sm:w-auto">Paketlere Dön</Button>
+                    {state === "success" && (
+                      <Button onClick={() => setLocation("/dashboard")} className="w-full sm:w-auto" data-testid="button-go-dashboard">
+                        Panele Git
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
-              <div className="text-xs text-muted-foreground flex items-center gap-2">
-                <LifeBuoy className="h-4 w-4" />
-                <span>Devam eden bir sorun varsa: Paketi tekrar deneyin veya farklı kartla yeniden deneyin.</span>
+              <div className="text-xs text-muted-foreground flex items-center gap-2 text-center sm:text-left">
+                <LifeBuoy className="h-4 w-4 shrink-0" />
+                <span>
+                  {state === "success" && successKindRef.current === "topup"
+                    ? "Limitler webhook sonrası birkaç saniye içinde yansır. Hâlâ eksik görünüyorsa sayfayı yenileyin veya destek ile paylaşın."
+                    : "Devam eden bir sorun varsa: Paketi tekrar deneyin veya farklı kartla yeniden deneyin."}
+                </span>
               </div>
             </div>
           )}
