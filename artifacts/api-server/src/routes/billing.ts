@@ -89,12 +89,6 @@ router.post("/checkout", requireAuth, requireRole(["admin", "super_admin"]), asy
         error: { code: "PHONE_REQUIRED", message: "Ödeme için telefon numarası gerekli. Ayarlar → Firma bilgileri alanını doldurun." },
       });
     }
-    const gsmNumber = (user?.phone || settings?.phone || "").trim();
-    if (!gsmNumber) {
-      return res.status(400).json({
-        error: { code: "PHONE_REQUIRED", message: "Ödeme için telefon numarası gerekli. Ayarlar → Firma bilgileri alanını doldurun." },
-      });
-    }
 
     const conversationId = newConversationId();
     const provider = getBillingProvider();
