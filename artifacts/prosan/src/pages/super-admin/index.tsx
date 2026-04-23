@@ -2077,6 +2077,30 @@ export default function SuperAdminHubPage() {
           {metrics?.revenueAttributionV3 && (
             <div className="rounded-md border border-dashed border-primary/25 bg-primary/[0.02] p-2 space-y-2 mt-2">
               <p className="text-xs font-semibold text-foreground">v3 derinlik (UTM / plan / ay)</p>
+              <div className="grid gap-2 sm:grid-cols-3 text-[11px]">
+                <div className="rounded-md border bg-muted/30 px-2 py-2">
+                  <p className="text-muted-foreground">Canlı ödemeler (bu ay)</p>
+                  <p className="font-mono text-foreground">
+                    {metrics.revenueAttributionV3.livePaymentsThisMonth?.paidCount ?? 0} adet · {fmtTRY(metrics.revenueAttributionV3.livePaymentsThisMonth?.paidAmountTry ?? 0)}
+                  </p>
+                </div>
+                <div className="rounded-md border bg-muted/30 px-2 py-2">
+                  <p className="text-muted-foreground">Kimlik kapısı (bu ay)</p>
+                  <p className="font-mono text-foreground">
+                    gösterim {metrics.revenueAttributionV3.identityGateThisMonth?.shownCount ?? 0} · kaydet {metrics.revenueAttributionV3.identityGateThisMonth?.savedCount ?? 0}
+                  </p>
+                </div>
+                <div className="rounded-md border bg-muted/30 px-2 py-2">
+                  <p className="text-muted-foreground">Ödeme hata kümeleri (30g)</p>
+                  <ul className="font-mono flex flex-wrap gap-x-2 gap-y-0.5">
+                    {(metrics.revenueAttributionV3.paymentFailureClusters30d ?? []).length === 0
+                      ? <li className="text-muted-foreground">—</li>
+                      : (metrics.revenueAttributionV3.paymentFailureClusters30d ?? []).map((x) => (
+                        <li key={x.errorCode}>{x.errorCode}: {x.count}</li>
+                      ))}
+                  </ul>
+                </div>
+              </div>
               <div className="grid gap-2 sm:grid-cols-2 text-[11px]">
                 <div>
                   <p className="text-muted-foreground mb-0.5">Ödeme başarısı UTM (30g)</p>
