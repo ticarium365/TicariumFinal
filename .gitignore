@@ -62,3 +62,7 @@ attached_assets/
 !.env.example
 *.pem
 *.key
+
+# Local one-off db migration helpers (kept out of git)
+lib/db/apply-funnel-migration.mjs
+lib/db/apply-sql-migrations.mjs
