@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 import {
   Webhook, Key, Plus, X, Pencil, Trash2, CheckCircle, XCircle,
   Send, Eye, EyeOff, Copy, RefreshCw, Activity, Zap,
   BookOpen, ShoppingCart, PlayCircle, ChevronDown, ChevronUp,
-  Search, LayoutGrid,
+  Search, LayoutGrid, Truck, Radio, CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +57,7 @@ type HubCatalogEntry = {
   setupChecklist: string[];
   envReadiness: Record<string, boolean>;
   connectedCountHint?: number;
+  statusHint?: { ok: boolean; message: string; checkedAtIso?: string };
   deepLinkTab: TabId | null;
   inboundPath?: string;
 };
@@ -65,7 +67,62 @@ type IntegrationCatalogPayload = {
   generatedAt: string;
   entries: HubCatalogEntry[];
   tenantCounts: { webhooks: number; apiKeys: number; accounting: number; ecommerce: number };
+  tenantActivityProfile?: {
+    productsCount: number;
+    salesLast30d: number;
+    activeMarketplaceChannelAccounts: number;
+  };
   recommendedEntryIds: string[];
+  recommendationRationale?: { entryId: string; reason: string }[];
+};
+
+type LiveReadinessPayload = {
+  version: 1;
+  payment: {
+    providerName: string;
+    healthOk: boolean;
+    healthMessage: string;
+    mode: string;
+    iyzicoApiKeyConfigured: boolean;
+    iyzicoSecretConfigured: boolean;
+    iyzicoModeOverride: string | null;
+    returnPathHint: string;
+  };
+  marketplace: {
+    accounts: {
+      accountId: number;
+      name: string;
+      provider: string;
+      sandbox: boolean;
+      isActive: boolean;
+      readiness: string;
+      readinessDetail: string;
+      lastSyncAtIso: string | null;
+      credentialFieldsExpected: number;
+      credentialFieldsNonEmpty: number;
+    }[];
+    recentFailures: {
+      id: number;
+      source: string;
+      accountId: number | null;
+      operationOrType: string;
+      message: string | null;
+      createdAtIso: string;
+    }[];
+  };
+  shipping: {
+    architecturePhase: string;
+    description: string;
+    zonesCount: number;
+    rulesCount: number;
+    defaultZoneConfigured: boolean;
+    managePath: string;
+    carrierCatalog: string[];
+  };
+  extSyncFailures: {
+    accounting: { id: number; integrationId: number; operationOrType: string; message: string | null; createdAtIso: string }[];
+    ecommerce: { id: number; integrationId: number; operationOrType: string; message: string | null; createdAtIso: string }[];
+  };
 };
 
 function fmt(d: string) { return new Date(d).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" }); }
@@ -116,6 +173,16 @@ export default function IntegrationsPage() {
       return r.json();
     },
     staleTime: 120_000,
+  });
+
+  const liveReadinessQ = useQuery<LiveReadinessPayload>({
+    queryKey: ["integrations-live-readiness"],
+    queryFn: async () => {
+      const r = await fetch("/api/integrations/live-readiness", { credentials: "include" });
+      if (!r.ok) throw new Error("readiness");
+      return r.json();
+    },
+    staleTime: 60_000,
   });
 
   const pingCatalogEntry = useMutation({
@@ -399,6 +466,163 @@ export default function IntegrationsPage() {
         </AlertDescription>
       </Alert>
 
+      <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold">Canlı hazırlık paneli</h2>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs"
+            onClick={() => {
+              void qc.invalidateQueries({ queryKey: ["integrations-live-readiness"] });
+              void qc.invalidateQueries({ queryKey: ["integrations-catalog"] });
+            }}
+          >
+            Yenile
+          </Button>
+        </div>
+        {liveReadinessQ.isLoading && <p className="text-xs text-muted-foreground">Özet yükleniyor…</p>}
+        {liveReadinessQ.isError && (
+          <p className="text-xs text-destructive">Hazırlık verisi alınamadı. Oturum veya ağ hatası olabilir.</p>
+        )}
+        {liveReadinessQ.data && (
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold">
+                <CreditCard className="h-3.5 w-3.5" />
+                Ödeme sağlayıcısı
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                <span className="font-mono text-foreground">{liveReadinessQ.data.payment.providerName}</span>
+                {" · "}
+                mod: <span className="font-mono">{liveReadinessQ.data.payment.mode}</span>
+                {liveReadinessQ.data.payment.iyzicoModeOverride ? (
+                  <> · IYZICO_MODE=<span className="font-mono">{liveReadinessQ.data.payment.iyzicoModeOverride}</span></>
+                ) : null}
+              </p>
+              <div className="flex items-center gap-1.5 text-xs">
+                {liveReadinessQ.data.payment.healthOk ? (
+                  <CheckCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                ) : (
+                  <XCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                )}
+                <span>{liveReadinessQ.data.payment.healthMessage}</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground font-mono leading-snug">
+                API_KEY: {liveReadinessQ.data.payment.iyzicoApiKeyConfigured ? "set" : "unset"} · SECRET:{" "}
+                {liveReadinessQ.data.payment.iyzicoSecretConfigured ? "set" : "unset"}
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-snug">{liveReadinessQ.data.payment.returnPathHint}</p>
+            </div>
+
+            <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs font-semibold">
+                  <Truck className="h-3.5 w-3.5" />
+                  Kargo mimarisi
+                </div>
+                <Button variant="link" className="h-auto p-0 text-xs" asChild>
+                  <Link href={liveReadinessQ.data.shipping.managePath}>Bölgeler / kurallar</Link>
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">{liveReadinessQ.data.shipping.description}</p>
+              <p className="text-[11px] font-mono text-foreground">
+                Bölge: {liveReadinessQ.data.shipping.zonesCount} · Kural: {liveReadinessQ.data.shipping.rulesCount}
+                {" · "}varsayılan bölge: {liveReadinessQ.data.shipping.defaultZoneConfigured ? "evet" : "hayır"}
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                Taşıyıcı kataloğu (fiyat motoru): {liveReadinessQ.data.shipping.carrierCatalog.slice(0, 6).join(", ")}
+                {liveReadinessQ.data.shipping.carrierCatalog.length > 6 ? "…" : ""}
+              </p>
+            </div>
+
+            <div className="rounded-lg border bg-muted/20 p-3 space-y-2 md:col-span-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 text-xs font-semibold">
+                  <Radio className="h-3.5 w-3.5" />
+                  Pazaryeri hesapları
+                </div>
+                <Button variant="link" className="h-auto p-0 text-xs" asChild>
+                  <Link href="/marketplace">Pazaryeri konsolu</Link>
+                </Button>
+              </div>
+              {liveReadinessQ.data.marketplace.accounts.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground">Bu kiracıda kanal hesabı yok. Stok ve sipariş otomasyonu için önce mağaza ekleyin.</p>
+              ) : (
+                <ul className="space-y-1.5 max-h-40 overflow-y-auto">
+                  {liveReadinessQ.data.marketplace.accounts.map((a) => (
+                    <li key={a.accountId} className="text-[11px] flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-border/40 pb-1.5 last:border-0">
+                      <span className="font-medium">{a.name}</span>
+                      <span className="font-mono text-muted-foreground">{a.provider}</span>
+                      {a.sandbox ? <Badge variant="outline" className="text-[9px] h-4 px-1">sandbox</Badge> : null}
+                      <Badge
+                        variant={
+                          a.readiness === "healthy" ? "default"
+                            : a.readiness === "unhealthy" ? "destructive"
+                              : "secondary"
+                        }
+                        className="text-[9px] h-4 px-1"
+                      >
+                        {a.readiness}
+                      </Badge>
+                      <span className="text-muted-foreground w-full">{a.readinessDetail}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {(liveReadinessQ.data.marketplace.recentFailures.length > 0
+              || liveReadinessQ.data.extSyncFailures.accounting.length > 0
+              || liveReadinessQ.data.extSyncFailures.ecommerce.length > 0) && (
+              <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 space-y-2 md:col-span-2">
+                <p className="text-xs font-semibold text-destructive">Son senkron / kuyruk hataları</p>
+                {liveReadinessQ.data.marketplace.recentFailures.length > 0 && (
+                  <ul className="text-[10px] font-mono space-y-1">
+                    {liveReadinessQ.data.marketplace.recentFailures.map((f) => (
+                      <li key={`${f.source}-${f.id}`}>
+                        [{f.source}] {f.operationOrType} · acc {f.accountId ?? "—"} · {fmtTime(f.createdAtIso)}
+                        {f.message ? ` — ${f.message.slice(0, 120)}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {liveReadinessQ.data.extSyncFailures.accounting.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-medium text-muted-foreground mb-0.5">Muhasebe senkron</p>
+                    <ul className="text-[10px] font-mono space-y-1">
+                      {liveReadinessQ.data.extSyncFailures.accounting.map((f) => (
+                        <li key={`acc-${f.id}`}>
+                          int#{f.integrationId} {f.operationOrType} · {fmtTime(f.createdAtIso)}
+                          {f.message ? ` — ${f.message.slice(0, 120)}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {liveReadinessQ.data.extSyncFailures.ecommerce.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-medium text-muted-foreground mb-0.5">E-ticaret senkron</p>
+                    <ul className="text-[10px] font-mono space-y-1">
+                      {liveReadinessQ.data.extSyncFailures.ecommerce.map((f) => (
+                        <li key={`ec-${f.id}`}>
+                          int#{f.integrationId} {f.operationOrType} · {fmtTime(f.createdAtIso)}
+                          {f.message ? ` — ${f.message.slice(0, 120)}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="rounded-xl border border-border/80 bg-gradient-to-b from-muted/40 to-card/90 p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -410,8 +634,29 @@ export default function IntegrationsPage() {
               </span>
             )}
           </div>
+          {catalogQ.data?.tenantActivityProfile && (
+            <p className="text-[10px] text-muted-foreground font-mono">
+              Profil sinyali (30g): ürün {catalogQ.data.tenantActivityProfile.productsCount} · satış{" "}
+              {catalogQ.data.tenantActivityProfile.salesLast30d} · aktif pazaryeri hesabı{" "}
+              {catalogQ.data.tenantActivityProfile.activeMarketplaceChannelAccounts}
+            </p>
+          )}
           {catalogQ.isError && <span className="text-xs text-destructive">Katalog yüklenemedi</span>}
         </div>
+        {(catalogQ.data?.recommendationRationale?.length ?? 0) > 0 && (
+          <div className="rounded-md border border-dashed border-primary/20 bg-primary/[0.03] px-2 py-2 space-y-1">
+            <p className="text-[10px] font-semibold text-foreground">Bu kiracı için öneri gerekçeleri</p>
+            <ul className="text-[10px] text-muted-foreground space-y-0.5 list-disc pl-4">
+              {(catalogQ.data?.recommendationRationale ?? []).map((r) => (
+                <li key={r.entryId}>
+                  <span className="font-mono text-foreground/90">{r.entryId}</span>
+                  {" — "}
+                  {r.reason}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2 items-center">
           <div className="relative flex-1 min-w-[180px] max-w-md">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -481,6 +726,19 @@ export default function IntegrationsPage() {
                   </p>
                   {e.connectedCountHint != null && (
                     <p className="text-[10px] font-mono text-muted-foreground">Bu kiracıda bağlı: {e.connectedCountHint}</p>
+                  )}
+                  {e.statusHint && (
+                    <p className="text-[10px] text-muted-foreground">
+                      Son durum:{" "}
+                      <span className={e.statusHint.ok ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}>
+                        {e.statusHint.ok ? "ok" : "dikkat"}
+                      </span>
+                      {" — "}
+                      {e.statusHint.message}
+                      {e.statusHint.checkedAtIso ? (
+                        <span className="font-mono text-[9px] ml-1">({fmtTime(e.statusHint.checkedAtIso)})</span>
+                      ) : null}
+                    </p>
                   )}
                   {e.inboundPath && (
                     <p className="text-[9px] font-mono text-muted-foreground break-all">Inbound: {e.inboundPath}</p>

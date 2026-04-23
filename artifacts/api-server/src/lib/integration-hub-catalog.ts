@@ -395,6 +395,15 @@ export type TenantIntegrationCounts = {
   ecommerce: number;
 };
 
+/** Katalog önerilerini kişiselleştirmek için hafif sinyaller (PII yok). */
+export type TenantActivityProfile = {
+  productsCount: number;
+  salesLast30d: number;
+  activeMarketplaceChannelAccounts: number;
+};
+
+export type RecommendationRationale = { entryId: string; reason: string };
+
 export type ProviderConnectedCounts = Partial<Record<string, number>>;
 
 export type ConnectionStatusHint = {
@@ -412,7 +421,11 @@ export type IntegrationCatalogResponse = {
     statusHint?: ConnectionStatusHint;
   }>;
   tenantCounts: TenantIntegrationCounts;
+  /** Ürün / satış / kanal — öneri açıklamalarında kullanılır. */
+  tenantActivityProfile?: TenantActivityProfile;
   recommendedEntryIds: string[];
+  /** Her öneri için tek cümle gerekçe (dürüst, satış dili değil operasyon). */
+  recommendationRationale: RecommendationRationale[];
 };
 
 function envTruthy(name: string, env: NodeJS.ProcessEnv): boolean {
@@ -421,12 +434,74 @@ function envTruthy(name: string, env: NodeJS.ProcessEnv): boolean {
   return !["0", "false", "no", "off"].includes(v.toLowerCase());
 }
 
+function envHasIyzicoKeys(env: NodeJS.ProcessEnv): boolean {
+  return Boolean((env.IYZICO_API_KEY ?? "").trim() && (env.IYZICO_SECRET_KEY ?? "").trim());
+}
+
+/**
+ * Kiracı sayıları + son 30g aktiviteye göre öncelikli entegrasyonlar.
+ * Yol haritasındaki kalemler asla "hazır" gibi önerilmez; yalnızca gerekçe metninde geçer.
+ */
+export function computeRecommendedIntegrationPlan(
+  env: NodeJS.ProcessEnv,
+  tenantCounts: TenantIntegrationCounts,
+  profile?: TenantActivityProfile,
+): { recommendedEntryIds: string[]; recommendationRationale: RecommendationRationale[] } {
+  const rationale: RecommendationRationale[] = [];
+  const ids: string[] = [];
+  const push = (entryId: string, reason: string) => {
+    if (!ids.includes(entryId)) {
+      ids.push(entryId);
+      rationale.push({ entryId, reason });
+    }
+  };
+
+  const p: TenantActivityProfile = profile ?? {
+    productsCount: 0,
+    salesLast30d: 0,
+    activeMarketplaceChannelAccounts: 0,
+  };
+
+  if (tenantCounts.webhooks === 0) {
+    if (p.salesLast30d >= 8) {
+      push("connectivity_webhooks", "Son 30 günde satış kaydı yüksek; dış sistemlere olay taşımak için webhook ilk adım.");
+    } else {
+      push("connectivity_webhooks", "Harici ERP/BI ve otomasyon için standart çıkış; henüz tanımlı değil.");
+    }
+  }
+  if (tenantCounts.apiKeys === 0 && tenantCounts.webhooks > 0) {
+    push("connectivity_api_keys", "Webhook sonrası sunucu–sunucu çağrılar için kiracı API anahtarı önerilir.");
+  }
+  if (tenantCounts.accounting === 0) {
+    push("accounting_parasut", "Muhasebe bağlantısı yok; fiş/satış aktarımı için Paraşüt canlı yolu mevcut.");
+  }
+  if (p.productsCount > 0 && p.activeMarketplaceChannelAccounts === 0) {
+    if (p.salesLast30d >= 20) {
+      push("ecommerce_trendyol", "Aktif ürün kataloğu + yoğun satış — tek pazaryeri kanalıyla stoğu doğrulamak düşük riskli adım (pilot etiketine dikkat).");
+    } else {
+      push("ecommerce_trendyol", "Ürün kaydı var, kanal hesabı yok; çok kanallı envanter için bağlantı önerilir.");
+    }
+  }
+  push("einvoice_mock", "e-Belge uçlarını mock ile doğrulayın; canlı GİB/entegratör öncesi zorunlu güvenlik adımı.");
+  if (envHasIyzicoKeys(env)) {
+    push("payments_iyzico", "Sunucuda Iyzico anahtarları tanımlı; üretim öncesi return-path ve webhook imzasını checklist ile doğrulayın.");
+  } else {
+    push("payments_mock", "Gerçek PSP anahtarı yok — tahsilat mock kipinde; canlıya geçmeden Iyzico env set edin.");
+  }
+
+  return {
+    recommendedEntryIds: ids.slice(0, 6),
+    recommendationRationale: rationale.slice(0, 8),
+  };
+}
+
 export function buildIntegrationCatalogResponse(
   env: NodeJS.ProcessEnv,
   tenantCounts: TenantIntegrationCounts,
   opts?: {
     connectedByProvider?: ProviderConnectedCounts;
     statusByEntryId?: Partial<Record<string, ConnectionStatusHint>>;
+    tenantActivityProfile?: TenantActivityProfile;
   },
 ): IntegrationCatalogResponse {
   const entries = getAllIntegrationCatalogEntries().map((e) => {
@@ -444,18 +519,19 @@ export function buildIntegrationCatalogResponse(
     return { ...e, envReadiness, connectedCountHint, statusHint };
   });
 
-  const recommendedEntryIds: string[] = [];
-  if (tenantCounts.webhooks === 0) recommendedEntryIds.push("connectivity_webhooks");
-  if (tenantCounts.apiKeys === 0 && tenantCounts.webhooks > 0) recommendedEntryIds.push("connectivity_api_keys");
-  if (tenantCounts.accounting === 0) recommendedEntryIds.push("accounting_parasut");
-  recommendedEntryIds.push("einvoice_mock");
-  recommendedEntryIds.push("payments_iyzico");
+  const { recommendedEntryIds, recommendationRationale } = computeRecommendedIntegrationPlan(
+    env,
+    tenantCounts,
+    opts?.tenantActivityProfile,
+  );
 
   return {
     version: 1,
     generatedAt: new Date().toISOString(),
     entries,
     tenantCounts,
-    recommendedEntryIds: [...new Set(recommendedEntryIds)].slice(0, 6),
+    tenantActivityProfile: opts?.tenantActivityProfile,
+    recommendedEntryIds,
+    recommendationRationale,
   };
 }

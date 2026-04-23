@@ -3,7 +3,7 @@ import {
   db, webhooksTable, webhookDeliveriesTable, apiKeysTable,
   accountingIntegrationsTable, ecommerceIntegrationsTable,
 } from "@workspace/db";
-import { and, eq, desc, sql, count } from "drizzle-orm";
+import { and, eq, desc, sql, count, isNotNull } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { Errors } from "../lib/errors.js";
 import { buildIntegrationCatalogResponse } from "../lib/integration-hub-catalog.js";
@@ -11,7 +11,7 @@ import { pingResolvedAdapter } from "../services/integration-hub/registry.js";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { channelAccountsTable, einvoiceSettingsTable } from "@workspace/db";
-import { and, desc as desc2, isNotNull, sql as sql2 } from "drizzle-orm";
+import { buildLiveReadinessBundleV1, loadTenantActivityProfile } from "../lib/integration-live-readiness.js";
 
 const router = Router();
 
@@ -307,17 +307,28 @@ router.put("/api-keys/:id", requireAuth, requireRole(["admin"]), async (req: Req
 // ─────────────────────────────────────────────────────────────────────────────
 // DESTEKLENEN WEBHOOK OLAYLARI
 // ─────────────────────────────────────────────────────────────────────────────
+router.get("/live-readiness", requireAuth, requireRole(["admin"]), async (req: Request, res: Response) => {
+  try {
+    const cid = req.companyId!;
+    const bundle = await buildLiveReadinessBundleV1(cid);
+    res.json(bundle);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Sunucu hatası" });
+  }
+});
+
 router.get("/catalog", requireAuth, requireRole(["admin"]), async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const [[wh], [keys], [acc], [ec], mpCounts, mpLatest, einvRow] = await Promise.all([
+    const [[wh], [keys], [acc], [ec], mpCounts, mpLatest, einvRow, tenantActivityProfile] = await Promise.all([
       db.select({ c: count() }).from(webhooksTable).where(eq(webhooksTable.companyId, cid)),
       db.select({ c: count() }).from(apiKeysTable).where(eq(apiKeysTable.companyId, cid)),
       db.select({ c: count() }).from(accountingIntegrationsTable).where(eq(accountingIntegrationsTable.companyId, cid)),
       db.select({ c: count() }).from(ecommerceIntegrationsTable).where(eq(ecommerceIntegrationsTable.companyId, cid)),
       db.select({
         provider: channelAccountsTable.provider,
-        c: sql2<number>`count(*)::int`,
+        c: sql<number>`count(*)::int`,
       }).from(channelAccountsTable)
         .where(and(eq(channelAccountsTable.companyId, cid), eq(channelAccountsTable.isActive, true)))
         .groupBy(channelAccountsTable.provider),
@@ -332,7 +343,7 @@ router.get("/catalog", requireAuth, requireRole(["admin"]), async (req: Request,
           eq(channelAccountsTable.isActive, true),
           isNotNull(channelAccountsTable.lastHealthOk),
         ))
-        .orderBy(desc2(channelAccountsTable.lastSyncAt))
+        .orderBy(desc(channelAccountsTable.lastSyncAt))
         .limit(30),
       db.select({
         provider: einvoiceSettingsTable.provider,
@@ -341,6 +352,7 @@ router.get("/catalog", requireAuth, requireRole(["admin"]), async (req: Request,
         lastHealthMessage: einvoiceSettingsTable.lastHealthMessage,
         lastHealthCheck: einvoiceSettingsTable.lastHealthCheck,
       }).from(einvoiceSettingsTable).where(eq(einvoiceSettingsTable.companyId, cid)).limit(1),
+      loadTenantActivityProfile(cid!),
     ]);
     const tenantCounts = {
       webhooks: Number(wh?.c ?? 0),
@@ -380,7 +392,11 @@ router.get("/catalog", requireAuth, requireRole(["admin"]), async (req: Request,
         };
       }
     }
-    res.json(buildIntegrationCatalogResponse(process.env, tenantCounts, { connectedByProvider, statusByEntryId }));
+    res.json(buildIntegrationCatalogResponse(process.env, tenantCounts, {
+      connectedByProvider,
+      statusByEntryId,
+      tenantActivityProfile,
+    }));
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Sunucu hatası" });
