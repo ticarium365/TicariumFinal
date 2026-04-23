@@ -46,6 +46,7 @@ export const FinancePage = lazy(() => import("@/pages/finance/index"));
 export const BranchesPage = lazy(() => import("@/pages/branches/index"));
 export const IntegrationsPage = lazy(() => import("@/pages/settings/integrations"));
 export const SubscriptionPage = lazy(() => import("@/pages/settings/subscription"));
+export const CreditTopupPage = lazy(() => import("@/pages/settings/credit-topup"));
 export const DocumentsPage = lazy(() => import("@/pages/documents/index"));
 export const FinanceDocumentsPage = lazy(() => import("@/pages/finance-documents/index"));
 export const BankingPage = lazy(() => import("@/pages/banking/index"));

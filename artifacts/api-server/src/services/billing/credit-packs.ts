@@ -1,7 +1,7 @@
 /**
  * Dalga 23 — Ek kontör (top-up) paket kataloğu.
  * Her pack: code (unique), metric, quantity, unit price (TRY).
- * Frontend `/abonelik/topup` sayfası bunu /api/billing/credit-packs üzerinden okur.
+ * Frontend `/settings/credit-topup` sayfası bunu /api/billing/credit-packs üzerinden okur.
  */
 import type { UsageMetric } from "../usage";
 

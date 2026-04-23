@@ -18,6 +18,7 @@ const PERSIST_TO_DB = new Set([
   "billing_return_success",
   "billing_return_error",
   "billing_return_redirect_error",
+  "billing_topup_checkout_started",
   "retention_hint_view",
   "retention_hint_cta",
   "subscription_cancel_rescue_view",

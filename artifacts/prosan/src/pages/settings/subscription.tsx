@@ -282,9 +282,14 @@ export default function SubscriptionPage() {
           <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Abonelik & Plan</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Plan yönetimi ve fatura geçmişi</p>
         </div>
-        <Button variant="outline" size="sm" className="gap-1.5 h-8" onClick={() => qc.invalidateQueries({ queryKey: ["subscription-current"] })}>
-          <RefreshCw className="h-3.5 w-3.5" />Yenile
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" className="h-8" asChild>
+            <Link href="/settings/credit-topup">Ek kontör</Link>
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 h-8" onClick={() => qc.invalidateQueries({ queryKey: ["subscription-current"] })}>
+            <RefreshCw className="h-3.5 w-3.5" />Yenile
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}

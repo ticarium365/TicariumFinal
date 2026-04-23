@@ -3081,6 +3081,7 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
               'billing_phone_saved',
               'billing_checkout_failed',
               'billing_topup_failed',
+              'billing_topup_checkout_started',
               'billing_return_redirect_error',
               'plan_upgraded',
               'grace_period_reactivate_success'
@@ -3659,6 +3660,29 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
         });
       }
 
+      if (returnRedirectErrMo >= 1) {
+        recommendationsV2.push({
+          id: "billing:return_redirect_errors",
+          kind: "billing_reliability",
+          roiScore: Math.min(96, 74 + returnRedirectErrMo * 7),
+          headline: "Ödeme dönüş yolu: Iyzico /api/billing/return ve ödeme sonuç sayfasını doğrula",
+          rationale:
+            `Bu ay billing_return_redirect_error ${returnRedirectErrMo} kayıt. Playbook: docs/playbooks/BILLING_METRICS.md — üretimde x-billing-return-sig, IYZICO_SECRET_KEY ve /odeme/sonuc query parametrelerini kontrol edin.`,
+          badges: ["ödeme", "iyzico"],
+        });
+      }
+      if (topupFailedMo >= 1) {
+        recommendationsV2.push({
+          id: "billing:topup_failures",
+          kind: "billing_reliability",
+          roiScore: Math.min(94, 66 + topupFailedMo * 9),
+          headline: "Kontör top-up: sağlayıcı init ve GSM/VKN doğrulamasını incele",
+          rationale:
+            `Bu ay billing_topup_failed ${topupFailedMo} olay. payments.error_code, firma ayarları telefon/VKN ve callbackUrl/host uyumunu; gerekirse sandbox anahtarlarını gözden geçirin.`,
+          badges: ["ödeme", "kontör"],
+        });
+      }
+
       recommendationsV2.sort((a, b) => b.roiScore - a.roiScore);
       const topRecs = recommendationsV2.slice(0, 8);
 
@@ -3693,6 +3717,8 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
             : "",
           topDebtCo ? `Tahsilat önceliği: ${topDebtCo.name} (${Math.round(topDebtCo.overdueTry)} TRY, ${topDebtCo.oldestDueDays}g).` : "",
           s3 >= 4 ? `B2B: ${s3} teklif 3+ gün bekliyor.` : "",
+          returnRedirectErrMo >= 2 ? `Ödeme return-path: ${returnRedirectErrMo} billing_return_redirect_error (bu ay).` : "",
+          topupFailedMo >= 2 ? `Kontör top-up hatası: ${topupFailedMo} billing_topup_failed (bu ay).` : "",
         ].filter(Boolean).join(" ") || "Kritik risk sinyali düşük; rutin gözlem yeterli.",
       };
 

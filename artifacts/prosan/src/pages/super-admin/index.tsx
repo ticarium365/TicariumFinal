@@ -341,6 +341,8 @@ type FounderOvernightPackV1 = {
     billingPaidThisMonth: number;
     billingErrorThisMonth: number;
     checkoutDropOffPct: number;
+    billingReturnRedirectErrorsThisMonth?: number;
+    billingTopupFailedThisMonth?: number;
     funnelDelta24h: { eventKey: string; last24h: number; prev24h: number; delta: number }[];
   };
   executiveAttentionV1: {
@@ -1636,6 +1638,8 @@ export default function SuperAdminHubPage() {
                 {metrics.founderOvernightPackV1.funnelHygieneV1.billingPaidThisMonth} · Hata{" "}
                 {metrics.founderOvernightPackV1.funnelHygieneV1.billingErrorThisMonth} · Düşüş %{" "}
                 {metrics.founderOvernightPackV1.funnelHygieneV1.checkoutDropOffPct}
+                {" · "}return_redirect {metrics.founderOvernightPackV1.funnelHygieneV1.billingReturnRedirectErrorsThisMonth ?? 0}
+                {" · "}topup_fail {metrics.founderOvernightPackV1.funnelHygieneV1.billingTopupFailedThisMonth ?? 0}
               </p>
             </div>
           </div>

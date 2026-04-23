@@ -99,6 +99,7 @@ const ENTRIES: SearchEntry[] = [
   { href: "/users", label: "Kullanıcılar", group: "Sayfalar", icon: Users, keywords: "kullanici user", roles: ["admin"] },
   { href: "/settings", label: "Genel Ayarlar", group: "Sayfalar", icon: Settings, keywords: "ayar setting", roles: ["admin"] },
   { href: "/settings/subscription", label: "Abonelik", group: "Sayfalar", icon: CreditCard, keywords: "abonelik subscription", roles: ["admin"] },
+  { href: "/settings/credit-topup", label: "Ek kontör", group: "Sayfalar", icon: CreditCard, keywords: "kontor kontör topup limit einvoice ocr api sms", roles: ["admin", "super_admin"] },
   { href: "/settings/notifications", label: "Bildirim Ayarları", group: "Sayfalar", icon: Bell, keywords: "bildirim notification", roles: ["admin"] },
   { href: "/reports", label: "Raporlar", group: "Sayfalar", icon: BarChart3, keywords: "rapor report" },
   { href: "/super-admin", label: "Platform merkezi", group: "Sayfalar", icon: Activity, keywords: "super admin kiraci platform", roles: ["super_admin"] },

@@ -53,6 +53,9 @@ export type FounderOvernightPackV1 = {
     billingPaidThisMonth: number;
     billingErrorThisMonth: number;
     checkoutDropOffPct: number;
+    /** Ödeme sonuç sayfasına hatalı yönlendirme (ürün funnel, bu ay) */
+    billingReturnRedirectErrorsThisMonth: number;
+    billingTopupFailedThisMonth: number;
     funnelDelta24h: { eventKey: string; last24h: number; prev24h: number; delta: number }[];
   };
     executiveAttentionV1: {
@@ -233,6 +236,12 @@ export function buildFounderIntelligenceV2(input: {
       : []),
     ...(fh.checkoutDropOffPct >= 35 && fh.checkoutStartedThisMonth >= 4
       ? [`Checkout→ödeme düşüşü %${fh.checkoutDropOffPct} (bu ay).`]
+      : []),
+    ...(fh.billingReturnRedirectErrorsThisMonth >= 1
+      ? [`billing_return_redirect_error: ${fh.billingReturnRedirectErrorsThisMonth} (bu ay) — Iyzico /return ve webhook hizası.`]
+      : []),
+    ...(fh.billingTopupFailedThisMonth >= 1
+      ? [`billing_topup_failed: ${fh.billingTopupFailedThisMonth} (bu ay) — kontör ödemesi başlatma.`]
       : []),
   ].filter(Boolean);
 
@@ -590,6 +599,11 @@ function scoreDailyAction(c: ActionCandidate): { total: number; drivers: { label
     drivers.push({ label: "Büyüme / genişleme", points: 10 });
     total += 10;
   }
+  const billingish = c.kind === "billing_reliability" || /iyzico|ödeme dönüş|return-path|top-up|topup|webhook|billing_/i.test(c.headline);
+  if (billingish) {
+    drivers.push({ label: "Ödeme güvenilirliği", points: 12 });
+    total += 12;
+  }
   if (c.source === "v2") {
     drivers.push({ label: "Günlük öncelik listesi", points: 6 });
     total += 6;
@@ -881,7 +895,14 @@ export async function computeFounderOvernightPackV1(opts: {
       SELECT event_key, count(*)::int AS c
       FROM product_funnel_events
       WHERE created_at >= ${opts.monthStart}
-        AND event_key IN ('billing_checkout_started', 'billing_return_success', 'billing_return_error')
+        AND event_key IN (
+          'billing_checkout_started',
+          'billing_return_success',
+          'billing_return_error',
+          'billing_return_redirect_error',
+          'billing_topup_failed',
+          'billing_topup_checkout_started'
+        )
       GROUP BY event_key
     `),
     db.execute(sql`
@@ -894,6 +915,9 @@ export async function computeFounderOvernightPackV1(opts: {
           'plan_upgraded',
           'billing_return_success',
           'billing_checkout_started',
+          'billing_return_redirect_error',
+          'billing_topup_failed',
+          'billing_topup_checkout_started',
           'grace_period_reactivate_success',
           'subscription_cancel_confirmed'
         )
@@ -1043,6 +1067,8 @@ export async function computeFounderOvernightPackV1(opts: {
   const checkoutStartedThisMonth = fm.get("billing_checkout_started") ?? 0;
   const billingPaidThisMonth = fm.get("billing_return_success") ?? 0;
   const billingErrorThisMonth = fm.get("billing_return_error") ?? 0;
+  const billingReturnRedirectErrorsThisMonth = fm.get("billing_return_redirect_error") ?? 0;
+  const billingTopupFailedThisMonth = fm.get("billing_topup_failed") ?? 0;
   const checkoutDropOffPct = checkoutStartedThisMonth > 0
     ? Math.round((1 - billingPaidThisMonth / checkoutStartedThisMonth) * 1000) / 10
     : 0;
@@ -1130,6 +1156,8 @@ export async function computeFounderOvernightPackV1(opts: {
       billingPaidThisMonth,
       billingErrorThisMonth,
       checkoutDropOffPct,
+      billingReturnRedirectErrorsThisMonth,
+      billingTopupFailedThisMonth,
       funnelDelta24h,
     },
     executiveAttentionV1: {

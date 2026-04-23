@@ -57,6 +57,7 @@ import {
   BranchesPage,
   IntegrationsPage,
   SubscriptionPage,
+  CreditTopupPage,
   DocumentsPage,
   FinanceDocumentsPage,
   BankingPage,
@@ -340,6 +341,10 @@ function AuthenticatedRouter() {
 
         <Route path="/settings/subscription">
           {() => <ProtectedRoute component={SubscriptionPage} roles={["admin"]} />}
+        </Route>
+
+        <Route path="/settings/credit-topup">
+          {() => <ProtectedRoute component={CreditTopupPage} roles={["admin", "super_admin"]} />}
         </Route>
 
         <Route path="/documents">
