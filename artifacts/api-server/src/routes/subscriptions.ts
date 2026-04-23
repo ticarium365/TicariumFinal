@@ -17,6 +17,7 @@ import { Errors } from "../lib/errors.js";
 import { getCompanyFeatureContext, invalidateFeaturesCache } from "../middlewares/features.js";
 import { audit } from "../lib/audit.js";
 import { buildMarketplaceWorkerFounderAlertsV1 } from "../lib/marketplace-worker-observability.js";
+import { buildMarketplaceSelfHealFounderAlertsV1 } from "../services/marketplace/self-heal.js";
 import {
   computeFounderOvernightPackV1,
   computeB2bOpsSupplementV1,
@@ -1675,7 +1676,8 @@ router.post("/admin/billing/extend-trial", requireSuperAdmin, async (req: Reques
 router.get("/admin/marketplace-worker-alerts", requireSuperAdmin, async (_req: Request, res: Response) => {
   try {
     const data = await buildMarketplaceWorkerFounderAlertsV1();
-    res.json(data);
+    const automation = await buildMarketplaceSelfHealFounderAlertsV1();
+    res.json({ ...data, automationAlerts: automation.alerts });
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Sunucu hatası" });

@@ -11,6 +11,7 @@ import { getProviderForAccount, MP_META, MP_REGISTRY, logSync } from "../service
 import { applyPricingRule, applyStockRule } from "../services/marketplace/types.js";
 import { encryptSecrets } from "../lib/secret-crypto.js";
 import { buildMarketplaceWorkerObservabilityV1 } from "../lib/marketplace-worker-observability.js";
+import { buildMarketplaceSelfHealingBundleV1 } from "../services/marketplace/self-heal.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -306,6 +307,17 @@ router.get("/worker-observability", requireRole(["admin", "super_admin"]), async
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "worker_observability_failed" });
+  }
+});
+
+/** Otomatik kurtarma audit + hesap önerileri (yıkıcı işlem yok). */
+router.get("/self-healing", requireRole(["admin", "super_admin"]), async (req, res) => {
+  try {
+    const bundle = await buildMarketplaceSelfHealingBundleV1(req.companyId!);
+    res.json(bundle);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "self_healing_bundle_failed" });
   }
 });
 

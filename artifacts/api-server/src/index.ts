@@ -6,6 +6,7 @@ logProductionAuthHints();
 import { db, usersTable, productsTable } from "@workspace/db";
 import { seedSubscriptionPlans } from "./routes/subscriptions.js";
 import { startMarketplaceWorker } from "./services/marketplace/worker.js";
+import { startMarketplaceSelfHealScheduler } from "./services/marketplace/self-heal.js";
 import { startProfitCron } from "./services/profitEngine.js";
 import { startOutboxWorker } from "./services/queue/outbox-worker.js";
 import { fetchAndStoreTcmbRates } from "./services/currency/tcmb-fetcher.js";
@@ -334,6 +335,7 @@ app.listen(port, (err?: Error) => {
   runSeeds().catch((err) => logger.error({ err }, "Seed error"));
   // Start marketplace sync worker (in-process)
   try { startMarketplaceWorker(); } catch (e) { logger.error({ err: e }, "Marketplace worker failed to start"); }
+  try { startMarketplaceSelfHealScheduler(); } catch (e) { logger.error({ err: e }, "Marketplace self-heal scheduler failed to start"); }
   // Sprint 72 — daily profit snapshots
   try { startProfitCron(); } catch (e) { logger.error({ err: e }, "Profit cron failed to start"); }
   // Dahili scheduler (db-backup, audit-archive) — opt-in via ENABLE_SCHEDULER=true

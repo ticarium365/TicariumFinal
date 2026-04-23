@@ -165,8 +165,16 @@ async function processOne(): Promise<boolean> {
       default: throw new Error(`Unknown jobType: ${job.jobType}`);
     }
 
+    const prevResult = job.result && typeof job.result === "object" ? (job.result as Record<string, unknown>) : {};
+    const selfHealMeta = prevResult.selfHeal && typeof prevResult.selfHeal === "object"
+      ? (prevResult.selfHeal as Record<string, unknown>)
+      : null;
+    const mergedResult: Record<string, unknown> = { ...prevResult, ...result };
+    if (selfHealMeta) {
+      mergedResult.selfHeal = { ...selfHealMeta, completedAfterSelfHealAt: new Date().toISOString() };
+    }
     await db.update(syncJobsTable).set({
-      status: "completed", completedAt: new Date(), result,
+      status: "completed", completedAt: new Date(), result: mergedResult as any,
     }).where(eq(syncJobsTable.id, job.id));
 
     await logSync({
@@ -176,6 +184,25 @@ async function processOne(): Promise<boolean> {
       message: `Job #${job.id} (${job.jobType}) tamamlandı`,
       payload: result,
     });
+
+    const trackSelfHealRetry =
+      selfHealMeta
+      && (selfHealMeta.awaitingWorkerRetry === true
+        || Number(selfHealMeta.transientRetries ?? 0) > 0
+        || Number(selfHealMeta.rateLimitRetries ?? 0) > 0);
+    if (trackSelfHealRetry) {
+      await logSync({
+        companyId: job.companyId,
+        accountId: account.id,
+        jobId: job.id,
+        operation: "self_heal_retry_succeeded",
+        status: "success",
+        level: "info",
+        durationMs: Date.now() - start,
+        message: `Otomatik kurtarma sonrası job #${job.id} başarıyla tamamlandı (${job.jobType}).`,
+        payload: { source: "marketplace_self_heal", selfHeal: selfHealMeta },
+      });
+    }
   } catch (e: any) {
     // Hata sınıfı tanı: Permanent → retry yok; RateLimit → retryAfterMs penceresi;
     // diğer (Transient veya bilinmeyen) → exponential backoff (attempt^2 dakika).

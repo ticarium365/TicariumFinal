@@ -5,7 +5,7 @@ import {
   Webhook, Key, Plus, X, Pencil, Trash2, CheckCircle, XCircle,
   Send, Eye, EyeOff, Copy, RefreshCw, Activity, Zap,
   BookOpen, ShoppingCart, PlayCircle, ChevronDown, ChevronUp,
-  Search, LayoutGrid, Truck, Radio, CreditCard, BarChart3, Timer, AlertTriangle,
+  Search, LayoutGrid, Truck, Radio, CreditCard, BarChart3, Timer, AlertTriangle, Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -174,6 +174,29 @@ type MarketplaceWorkerObservabilityV1 = {
   tenantAlerts: { severity: "critical" | "warning"; code: string; message: string; accountIds?: number[] }[];
 };
 
+type MarketplaceSelfHealingBundleV1 = {
+  version: 1;
+  generatedAtIso: string;
+  recommendations: {
+    accountId: number;
+    name: string;
+    provider: string;
+    priority: "high" | "medium";
+    code: string;
+    message: string;
+  }[];
+  recentAutoActions: {
+    id: number;
+    createdAtIso: string;
+    operation: string;
+    accountId: number | null;
+    jobId: number | null;
+    message: string | null;
+    payload: unknown;
+  }[];
+  retrySuccess24h: number;
+};
+
 function workerObsHealthLabel(h: WorkerObsHealthHonest): string {
   switch (h) {
     case "healthy_recent":
@@ -264,6 +287,18 @@ export default function IntegrationsPage() {
     enabled: marketplaceWorkerObsEnabled,
     staleTime: 45_000,
     refetchInterval: marketplaceWorkerObsEnabled ? 90_000 : false,
+  });
+
+  const selfHealingQ = useQuery<MarketplaceSelfHealingBundleV1>({
+    queryKey: ["marketplace-self-healing"],
+    queryFn: async () => {
+      const r = await fetch("/api/marketplace/self-healing", { credentials: "include" });
+      if (!r.ok) throw new Error("self_healing");
+      return r.json();
+    },
+    enabled: marketplaceWorkerObsEnabled,
+    staleTime: 45_000,
+    refetchInterval: marketplaceWorkerObsEnabled ? 120_000 : false,
   });
 
   const pingCatalogEntry = useMutation({
@@ -561,7 +596,10 @@ export default function IntegrationsPage() {
             onClick={() => {
               void qc.invalidateQueries({ queryKey: ["integrations-live-readiness"] });
               void qc.invalidateQueries({ queryKey: ["integrations-catalog"] });
-              if (marketplaceWorkerObsEnabled) void qc.invalidateQueries({ queryKey: ["marketplace-worker-observability"] });
+              if (marketplaceWorkerObsEnabled) {
+                void qc.invalidateQueries({ queryKey: ["marketplace-worker-observability"] });
+                void qc.invalidateQueries({ queryKey: ["marketplace-self-healing"] });
+              }
             }}
           >
             Yenile
@@ -706,6 +744,7 @@ export default function IntegrationsPage() {
       </div>
 
       {marketplaceWorkerObsEnabled ? (
+        <div className="space-y-4">
         <div className="rounded-xl border border-border bg-card p-4 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
@@ -912,6 +951,86 @@ export default function IntegrationsPage() {
               </p>
             </div>
           )}
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Wrench className="h-4 w-4 text-primary shrink-0" />
+              <div>
+                <h2 className="text-sm font-semibold">Pazaryeri self-healing</h2>
+                <p className="text-[10px] text-muted-foreground leading-snug">
+                  Sunucu tarafı güvenli kurtarma (takılı kuyruk, running timeout, [geçici]/[rate-limit] yeniden kuyruk).
+                  Anahtar silme / hesap kapatma / sipariş silme yok. Tüm adımlar <span className="font-mono">sync_logs</span> içinde
+                  <span className="font-mono"> self_heal_*</span> operasyonlarıyla izlenir.
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs shrink-0 gap-1.5"
+              onClick={() => void qc.invalidateQueries({ queryKey: ["marketplace-self-healing"] })}
+              disabled={selfHealingQ.isFetching}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${selfHealingQ.isFetching ? "animate-spin" : ""}`} />
+              Özet yenile
+            </Button>
+          </div>
+          {selfHealingQ.isLoading && <p className="text-xs text-muted-foreground">Self-healing verisi yükleniyor…</p>}
+          {selfHealingQ.isError && (
+            <p className="text-xs text-destructive">Self-healing özeti alınamadı.</p>
+          )}
+          {selfHealingQ.data && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2 text-[11px]">
+                <Badge variant="outline" className="font-mono tabular-nums">
+                  Otomatik retry başarı (24s): {selfHealingQ.data.retrySuccess24h}
+                </Badge>
+              </div>
+              {selfHealingQ.data.recommendations.length > 0 && (
+                <div className="rounded-md border border-amber-500/25 bg-amber-500/5 p-2 space-y-1">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase">Hesap önerileri (manuel müdahale)</p>
+                  <ul className="space-y-1.5 text-[11px]">
+                    {selfHealingQ.data.recommendations.map((rec) => (
+                      <li key={`${rec.accountId}-${rec.code}`} className="flex flex-col gap-0.5 border-b border-border/30 pb-1.5 last:border-0">
+                        <span className="font-medium">
+                          {rec.name}{" "}
+                          <span className="font-mono text-muted-foreground">({rec.provider})</span>{" "}
+                          <Badge variant={rec.priority === "high" ? "destructive" : "secondary"} className="text-[9px] h-4">
+                            {rec.priority}
+                          </Badge>
+                        </span>
+                        <span className="text-muted-foreground">{rec.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Son otomatik aksiyonlar (audit)</p>
+                <ul className="max-h-48 overflow-y-auto space-y-1 text-[10px] font-mono border rounded-md p-2 bg-muted/10">
+                  {selfHealingQ.data.recentAutoActions.length === 0 ? (
+                    <li className="text-muted-foreground">Henüz self_heal kaydı yok veya henüz tetiklenmedi.</li>
+                  ) : (
+                    selfHealingQ.data.recentAutoActions.map((a) => (
+                      <li key={a.id} className="break-all">
+                        {fmtTime(a.createdAtIso)} · <span className="text-foreground">{a.operation}</span>
+                        {a.jobId != null ? ` · job#${a.jobId}` : ""}
+                        {a.accountId != null ? ` · acc#${a.accountId}` : ""}
+                        {a.message ? ` — ${a.message.slice(0, 100)}` : ""}
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+              <p className="text-[10px] text-muted-foreground font-mono">
+                Üretim: {new Date(selfHealingQ.data.generatedAtIso).toLocaleString("tr-TR")}
+              </p>
+            </div>
+          )}
+        </div>
         </div>
       ) : null}
 

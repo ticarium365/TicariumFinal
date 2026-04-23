@@ -15,6 +15,13 @@ type FounderMpWorkerAlerts = {
     stuckJobs: number;
     failedJobs24h: number;
   }[];
+  automationAlerts?: {
+    severity: "critical" | "warning";
+    code: string;
+    message: string;
+    companyId?: number;
+    companyName?: string;
+  }[];
 };
 
 type AccountHealth = {
@@ -165,9 +172,9 @@ export default function PazaryeriSaglikPage() {
         <CardContent className="p-5">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">Kuyruk / worker uyarıları (kiracı özeti)</h2>
+              <h2 className="text-base font-semibold text-slate-900">Kuyruk / worker / self-healing</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Takılı sync_jobs olan firmalar — kritik hesap müdahalesi için. Sağlayıcı ping sayfasından bağımsızdır.
+                Takılı kuyruk özeti ve otomatik kurtarma alarmları (yoğun self-heal veya heal&apos;e dirençli running işler).
               </p>
             </div>
           </div>
@@ -178,13 +185,13 @@ export default function PazaryeriSaglikPage() {
               <AlertTriangle className="h-4 w-4 shrink-0" />
               Worker uyarıları alınamadı (yetki veya sunucu).
             </div>
-          ) : !founderWorkerQ.data?.alerts?.length ? (
+          ) : !founderWorkerQ.data?.alerts?.length && !(founderWorkerQ.data?.automationAlerts?.length) ? (
             <div className="text-sm text-slate-600 py-3 rounded-md border border-slate-200 bg-slate-50/80 px-3">
-              Şu an takılı kuyruk tespiti yok (eşik aşılmamış veya iş yok).
+              Şu an takılı kuyruk veya otomasyon alarmı yok (eşik aşılmamış veya iş yok).
             </div>
           ) : (
             <ul className="space-y-2">
-              {founderWorkerQ.data.alerts.map((a) => (
+              {(founderWorkerQ.data?.alerts ?? []).map((a) => (
                 <li
                   key={a.companyId}
                   className={`rounded-lg border p-3 text-sm ${
@@ -202,6 +209,28 @@ export default function PazaryeriSaglikPage() {
                   <div className="text-xs text-slate-700 mt-1 font-mono tabular-nums">
                     takılı job: {a.stuckJobs} · son 24s failed: {a.failedJobs24h}
                   </div>
+                </li>
+              ))}
+              {(founderWorkerQ.data?.automationAlerts ?? []).map((a, i) => (
+                <li
+                  key={`auto-${a.code}-${a.companyId ?? i}`}
+                  className={`rounded-lg border p-3 text-sm ${
+                    a.severity === "critical"
+                      ? "border-violet-300 bg-violet-50/70"
+                      : "border-slate-200 bg-slate-50/80"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                    <Badge variant="outline" className="text-[9px] font-mono">
+                      otomasyon · {a.code}
+                    </Badge>
+                    {a.severity === "critical" ? (
+                      <span className="text-[10px] font-semibold text-violet-900">kritik</span>
+                    ) : (
+                      <span className="text-[10px] text-slate-600">uyarı</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-800 leading-snug">{a.message}</p>
                 </li>
               ))}
             </ul>
