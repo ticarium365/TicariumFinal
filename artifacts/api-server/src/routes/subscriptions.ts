@@ -2923,6 +2923,7 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
         medianDaysSignupToPaidByPlanSlug: { planSlug: string; medianDays: number; sampleSize: number }[];
         livePaymentsThisMonth: { paidCount: number; paidAmountTry: number };
         identityGateThisMonth: { shownCount: number; savedCount: number };
+        paymentFailureClusters30d: { errorCode: string; count: number }[];
         trialCohortByMonth: {
           monthKey: string;
           trialCompanies: number;
@@ -2939,6 +2940,7 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
         medianDaysSignupToPaidByPlanSlug: [],
         livePaymentsThisMonth: { paidCount: 0, paidAmountTry: 0 },
         identityGateThisMonth: { shownCount: 0, savedCount: 0 },
+        paymentFailureClusters30d: [],
         trialCohortByMonth: [],
         pricingViewToPaidWithin7dCompanies30d: 0,
         upsellConversionsByTrigger30d: [],
@@ -3012,6 +3014,7 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
         recoveredWeekRow,
         funnelMonthSql,
         paymentsThisMonthSql,
+        paymentFailClusters30dSql,
         outcomeSql,
         staleContRow,
         tierRows,
@@ -3075,6 +3078,17 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
           FROM payments
           WHERE paid_at >= ${monthStart}
             AND paid_at < ${monthEnd}
+        `),
+        db.execute(sql`
+          SELECT
+            coalesce(error_code, 'unknown') AS error_code,
+            count(*)::int AS c
+          FROM payments
+          WHERE status = 'failed'
+            AND created_at >= ${ago30}
+          GROUP BY coalesce(error_code, 'unknown')
+          ORDER BY c DESC
+          LIMIT 8
         `),
         db.execute(sql`
           SELECT
@@ -3349,6 +3363,8 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
         paidAmountTry: Math.round(Number(payRow.paid_try ?? 0)),
       };
       const identityGateThisMonth = { shownCount: identityShownMo, savedCount: identitySavedMo };
+      const paymentFailureClusters30d = ((paymentFailClusters30dSql.rows ?? []) as { error_code: string; c: number | string }[])
+        .map((r) => ({ errorCode: r.error_code || "unknown", count: Number(r.c ?? 0) }));
 
       const or = (outcomeSql.rows?.[0] ?? {}) as Record<string, unknown>;
       const resolvedN = Number(or.resolved_n ?? 0);
@@ -3435,6 +3451,7 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
         ...revenueAttributionV2,
         livePaymentsThisMonth,
         identityGateThisMonth,
+        paymentFailureClusters30d,
         billingPaidSuccessByUtm30d: utmRows.map((r) => ({
           utmSource: r.utm || "unknown",
           count: Number(r.c ?? 0),
