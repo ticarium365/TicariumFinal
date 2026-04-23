@@ -46,9 +46,9 @@ const services: Service[] = [
     badge: "Hizmet 1",
     badgeColor: "hsl(217 91% 60%)",
     title: "Pazaryeri Entegrasyonları",
-    highlight: "Bir ekran. Tüm pazaryerleri. Sıfır karmaşa.",
+    highlight: "Sipariş ve stok için tek operasyon paneli.",
     desc:
-      "Trendyol, Hepsiburada, N11, Amazon… Hepsi tek panelde, tek mantıkta. Ürünü bir kez tanımlarsınız, tüm kanallarda eş zamanlı yayında olur. Stok düştüğünde otomatik düşer, fiyat değiştiğinde dakikalar içinde her vitrine yansır. Kanal bazlı ayrı strateji uygulamak isteyenler için kurallı fiyatlandırma, hata anında uyaran akıllı alarmlar ve karar destekleyici raporlar hazır. Kargoda ise tek başınıza erişemeyeceğiniz toplu tarifelerle çalışırsınız — her gönderiniz baştan kârlı başlar.",
+      "Desteklenen pazaryeri hesaplarınızı bağlayıp ürün, sipariş ve stok akışını buradan yönetirsiniz. Hangi platformların hesabınızda açık olduğu Ayarlar → Entegrasyonlar ve paket kapsamınıza bağlıdır; canlı öncesi mutlaka bağlantı durumunu kontrol edin.",
     icon: Globe,
     accent: "hsl(217 91% 60%)",
     features: [
@@ -57,7 +57,7 @@ const services: Service[] = [
       { icon: LineChart, text: "Rakip fiyat takibi ve detaylı satış / ciro analiz raporları" },
       { icon: Megaphone, text: "Tüm kanallarda eş zamanlı kampanya, indirim ve kupon tanımlama" },
       { icon: Zap, text: "Stok azalması, fiyat sapması ve sipariş durumlarına özel uyarı sistemi" },
-      { icon: Truck, text: "Yurtiçi, Aras, MNG ve PTT için merkezi anlaşmalı avantajlı kargo tarifeleri" },
+      { icon: Truck, text: "Kargo ayarları ve gönderi akışı (taşıyıcı entegrasyonunun hazır olmasına bağlı)" },
     ],
     primaryCta: { label: "Pazaryeri Yayınını Aç", href: "/marketplace" },
     secondaryCta: { label: "Kanal Bağlantıları", href: "/channels" },
@@ -67,17 +67,17 @@ const services: Service[] = [
     badge: "Hizmet 2",
     badgeColor: "hsl(280 70% 55%)",
     title: "Kendi E-Ticaret Siteniz",
-    highlight: "Markanız sahnede, altyapı sahne arkasında.",
+    highlight: "Markanız önde, operasyon tek yerde.",
     desc:
-      "Kendi alan adınız, kendi markanız, kendi tasarımınız — fakat arkasında 365 gün hiç durmayan bir motor. Stok, fiyat, kargo, sipariş ve fatura akışları arka planda otomatik çalışır; siz vitrini düşünür, biz işin görünmeyen yükünü taşırız. Tahsilatta esneklik tam: Ticarium365 sanal POS'u ile saniyede başlayın ya da kendi banka POS'unuzu birkaç tıkla bağlayın. Reklam ister misiniz? Yapay zeka destekli pazarlama ekibimiz Google ve Meta bütçenizi sizin için işletir. SSL, sunucu, bakım ve güncelleme dertleri ise tamamen bize devredilir.",
+      "Hazır mağaza şablonları ve kanal ayarlarıyla vitrininizi açar; stok, fiyat ve sipariş bilgisini merkezdeki kayıtlarla eşlersiniz. Tahsilat ve POS seçenekleri paketinize ve ödeme sağlayıcısı bağlantılarınıza göre değişir. Reklam ve dönüşüm ölçümü için entegrasyonlar yol haritasında; canlı önce destekten teyit alın.",
     icon: Store,
     accent: "hsl(280 70% 55%)",
     features: [
       { icon: Globe, text: "firmaadi.ticarium365.shop veya tamamen size özel alan adı" },
       { icon: Package, text: "Stok, fiyat, kargo ve sipariş tek bir altyapıda entegre çalışır" },
       { icon: CreditCard, text: "Bizim sanal POS'umuz ya da kendi banka POS'unuzla tahsilat" },
-      { icon: Brain, text: "İsteğe bağlı Google ve Meta reklam yönetimi: yapay zeka + uzman pazarlama ekibi" },
-      { icon: ShieldCheck, text: "SSL sertifikası, sunucu, bakım ve güncellemeler tarafımızdan karşılanır" },
+      { icon: Brain, text: "Google / Meta piksel ve kampanya bağlantıları (hesabınıza göre, yol haritası)" },
+      { icon: ShieldCheck, text: "Barındırma ve güvenlik katmanı ürün politikasına göre sağlanır" },
       { icon: Share2, text: "Sosyal medya paylaşım altyapısı hazır (hesap yönetim hizmeti sunulmaz)" },
     ],
     primaryCta: { label: "Mağazamı Kur", href: "/magaza" },
@@ -85,21 +85,21 @@ const services: Service[] = [
   },
   {
     key: "ticarium-pazar",
-    badge: "Hizmet 3 — En Önemlisi",
-    badgeColor: EMERALD,
-    title: "Ticarium Pazar — Sektörel Pazaryerimiz",
-    highlight: "Adil bir pazaryeri mümkün. Ticarium Pazar tam olarak bunun için kuruldu.",
+    badge: "Pilot / yol haritası",
+    badgeColor: "hsl(38 92% 50%)",
+    title: "Sektörel vitrin (Ticarium Pazar)",
+    highlight: "Tüm hesaplarda canlı satış vaadi yoktur; kapsam satış ekibiyle netleşir.",
     desc:
-      "En büyük yatırımımız Ticarium Pazar, sektörlere ayrılmış vitrinlerden oluşur. Otomotiv yedek parçası ile hırdavat aynı sayfada karışmaz — her sektör kendi alanında, kendi müşterisiyle buluşur. Ticarium365'te tanımladığınız ürün, ek bir işlem gerektirmeden uygun pazaryerinde anında yerini alır. Bir müşteri arama yaptığında; fiyat, stok ve teslim süresini değerlendiren motor, en doğru teklifi öne çıkarır. Bu yapı sadece büyük markalara değil, doğru fiyatlandıran her satıcıya kazanma şansı verir. Reklam ve pazarlama yatırımı tüm ekosistem için ortak yapılır — trafik birlikte büyür, fayda birlikte paylaşılır.",
+      "Sektörel vitrin ve ortak keşif kanalı fikri uzun vadeli ürün yönümüzdür. Bugün öncelik: mevcut pazaryeri ve kendi mağazanızdan gelen siparişleri tek stok ve fiyat mantığıyla yönetmek. Bu blokta anlatılan bazı deneyimler henüz üretimde tamamlanmamış veya sınırlı pilot olabilir; yatırım kararı vermeden önce ürün ekibinden güncel durum isteyin.",
     icon: Building2,
     accent: EMERALD,
     features: [
-      { icon: Layers, text: "Sektörel ayrıştırma: her pazaryeri kendi alanında uzmanlaşır" },
-      { icon: TrendingDown, text: "Sabit ve şeffaf komisyon oranı; gizli ücret yoktur" },
-      { icon: Brain, text: "Yapay zeka destekli ürün eşleştirme ve fiyat rekabeti motoru" },
-      { icon: Rocket, text: "Tüm satıcıların yararlandığı merkezi Google ve Meta reklam yatırımı" },
-      { icon: Truck, text: "Merkezi kargo anlaşmaları sayesinde küçük satıcı da büyük indirimden yararlanır" },
-      { icon: ShoppingBag, text: "Müşteri tek sepette farklı satıcılardan alışveriş yapabilir" },
+      { icon: Layers, text: "Sektöre göre vitrin ayrımı (tasarım hedefi)" },
+      { icon: TrendingDown, text: "Komisyon ve ücret politikası şeffaflığı hedeflenir" },
+      { icon: Brain, text: "Ürün eşleştirme ve fiyat önerileri (geliştirme aşamasında olabilir)" },
+      { icon: Rocket, text: "Ortak pazarlama bütçesi modeli değerlendirme aşamasında" },
+      { icon: Truck, text: "Kargo tarafında taşıyıcı anlaşmaları ayrı sözleşmeye tabidir" },
+      { icon: ShoppingBag, text: "Çok satıcılı sepet deneyimi pilotlarda sınırlı olabilir" },
     ],
     primaryCta: { label: "Karlılık Analizini Aç", href: "/karlilik-kanal" },
     secondaryCta: { label: "Komisyon Karşılaştırması", href: "/karlilik-kanal" },
@@ -296,17 +296,15 @@ export default function ETicariumMerkeziPage() {
           <div className="max-w-3xl">
             <div className="flex items-center gap-2 text-xs font-medium opacity-80 mb-3">
               <Sparkles className="h-3.5 w-3.5" />
-              e-Ticaret Çözüm Merkezi
+              Online satış özeti
             </div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-              e-Ticarium <span style={{ color: EMERALD }}>Merkezi</span>
+              Online <span style={{ color: EMERALD }}>Satış Merkezi</span>
             </h1>
             <p className="mt-3 text-sm md:text-base opacity-90 leading-relaxed">
-              Üç güçlü hizmet, tek altyapı. İster mevcut pazaryerlerinde büyüyün,
-              ister kendi markanızla bağımsız e-ticaret sitenizi açın, isterseniz
-              <strong className="font-semibold" style={{ color: EMERALD }}> Ticarium Pazar</strong>'da bizim
-              kurduğumuz sektörel pazaryerine doğrudan akın. Tüm fonksiyonlar — stok, fiyat,
-              kargo, sipariş, reklam — sorunsuz çalışır.
+              Pazaryeri siparişleri, hazır mağaza vitrininiz ve B2B vitrin ayarlarına buradan geçin.
+              Stok ve fiyat tek merkezde tutulur; hangi kanalın ne kadar katkı verdiğini ilgili raporlardan izlersiniz.
+              Aşağıdaki üç blokta anlatılan bazı özellikler paket ve entegrasyon durumunuza göre değişir; emin olmadığınız noktada destek ekibine yazın.
             </p>
           </div>
 
@@ -335,7 +333,7 @@ export default function ETicariumMerkeziPage() {
         </div>
       </div>
 
-      {/* Üç hizmet bölümü */}
+      {/* Üç hizmet bölümü (3. blok pilot / yol haritası içerebilir) */}
       <div className="space-y-5">
         {services.map((s) => (
           <ServiceSection key={s.key} service={s} />
@@ -347,12 +345,12 @@ export default function ETicariumMerkeziPage() {
         <CardContent className="p-5 md:p-6">
           <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
             <Wallet className="h-4 w-4" style={{ color: EMERALD }} />
-            Üç Hizmeti Birlikte Kullanın — Maksimum Erişim
+            Tek stok, çok kanal
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
             <div className="flex gap-2">
               <Check className="h-4 w-4 mt-0.5 shrink-0" style={{ color: EMERALD }} />
-              <span><strong>Tek stok havuzu</strong> — pazaryeri, kendi siteniz ve Ticarium Pazar aynı stoktan satar.</span>
+              <span><strong>Tek stok kaynağı</strong> — bağladığınız pazaryeri ve mağaza kanalları aynı ürün kartından beslenir.</span>
             </div>
             <div className="flex gap-2">
               <Check className="h-4 w-4 mt-0.5 shrink-0" style={{ color: EMERALD }} />

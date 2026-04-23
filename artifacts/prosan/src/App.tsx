@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,118 +8,120 @@ import { CompanyProvider } from "@/components/company-context";
 import { Layout } from "@/components/layout";
 import { TrialGateway } from "@/components/trial-gateway";
 import NotFound from "@/pages/not-found";
-
-// Pages
 import Login from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import VerifyPage from "@/pages/verify";
-import EntegrasyonlarPage from "@/pages/entegrasyonlar";
 import ForgotPassword from "@/pages/forgot-password";
-import KarsilastirPage from "@/pages/karsilastir";
-import HakkimizdaPage from "@/pages/hakkimizda";
-import AmacimizPage from "@/pages/amacimiz";
-import PaketlerPage from "@/pages/paketler";
-import OdemeSonucPage from "@/pages/odeme-sonuc";
-import IletisimPage from "@/pages/iletisim";
-import Catalog from "@/pages/catalog/index";
-import Dashboard from "@/pages/dashboard";
-import ProductsList from "@/pages/products/index";
-import ProductNew from "@/pages/products/new";
-import ProductDetail from "@/pages/products/detail";
-import ProductEdit from "@/pages/products/edit";
-import BarcodeScanner from "@/pages/barcode/index";
-import SalesScreen from "@/pages/sales/index";
-import SalesHistory from "@/pages/sales/history";
-import StockEntry from "@/pages/stock/index";
-import Reports from "@/pages/reports/index";
-import DailySummary from "@/pages/reports/daily-summary";
-import UsersList from "@/pages/users/index";
-import Settings from "@/pages/settings/index";
-import FirmaProfili from "@/pages/settings/firma-profili";
-import SetupScore from "@/pages/setup-score/index";
-import MusteriDoluluk from "@/pages/admin/musteri-doluluk";
-import CompaniesAdmin from "@/pages/admin/companies";
-import AdminPayments from "@/pages/admin/payments";
-import PlatformSettings from "@/pages/admin/platform-settings";
-import Onboarding from "@/pages/onboarding/index";
 import HomePage from "@/pages/home";
-import CustomersList from "@/pages/customers/index";
-import CustomerDetail from "@/pages/customers/detail";
-import SuppliersList from "@/pages/suppliers/index";
-import SupplierDetail from "@/pages/suppliers/detail";
-import PurchasesList from "@/pages/purchases/index";
-import NewPurchase from "@/pages/purchases/new";
-import BarcodesPage from "@/pages/barcodes/index";
-import StockCountsPage from "@/pages/stock-counts/index";
-import StockCountDetail from "@/pages/stock-counts/detail";
-import FinancePage from "@/pages/finance/index";
-import BranchesPage from "@/pages/branches/index";
-import IntegrationsPage from "@/pages/settings/integrations";
-import SubscriptionPage from "@/pages/settings/subscription";
-import DocumentsPage from "@/pages/documents/index";
-import FinanceDocumentsPage from "@/pages/finance-documents/index";
-import BankingPage from "@/pages/banking/index";
-import FinanceDashboardPage from "@/pages/finance-dashboard/index";
-import EInvoicePage from "@/pages/einvoice/index";
-import MarketplacePage from "@/pages/marketplace/index";
-import ETicariumMerkeziPage from "@/pages/eticarium-merkezi/index";
-import MagazaListesi from "@/pages/magaza/index";
-import MagazaDetay from "@/pages/magaza/detail";
-import FiyatMotoru from "@/pages/fiyat-motoru/index";
-import KargoYonetimi from "@/pages/kargo/index";
-import KarlilikKanalPage from "@/pages/karlilik-kanal/index";
-import PublicStorefrontPage from "@/pages/storefront-public/index";
-import ProfitPage from "@/pages/profit/index";
-import MuhasebeciPage from "@/pages/muhasebeci/index";
-import BudgetsPage from "@/pages/butce/index";
-import AdBudgetPage from "@/pages/reklam-butce/index";
-import PazarPage from "@/pages/pazar/index";
-import AggregatorAdminPage from "@/pages/aggregator-admin/index";
-import ContactRequestsAdmin from "@/pages/super-admin/talepler";
-import AuditLogsPage from "@/pages/super-admin/audit-logs";
-import NewTenantWizard from "@/pages/super-admin/yeni-firma";
-import ImportPage from "@/pages/ice-aktarim/index";
-import POSPage from "@/pages/sales/pos";
-import ProductionPage from "@/pages/uretim/index";
-import LoyaltyPage from "@/pages/sadakat/index";
-import CurrencyPage from "@/pages/doviz/index";
-import NotificationSettingsPage from "@/pages/settings/notifications";
-import MenuPrefsPage from "@/pages/settings/menu";
-import NotificationsPage from "@/pages/notifications/index";
-import PersonnelPage from "@/pages/personnel";
-import CampaignsPage from "@/pages/campaigns";
-import NetworkPage from "@/pages/network/index";
-import CompanyProfilePage from "@/pages/network/company-profile";
-import MyNetworkProfilePage from "@/pages/network/my-profile";
-import QuotesListPage from "@/pages/b2b/quotes-list";
-import QuoteNewPage from "@/pages/b2b/quote-new";
-import QuoteDetailPage from "@/pages/b2b/quote-detail";
-import OrdersListPage from "@/pages/b2b/orders-list";
-import OrderDetailPage from "@/pages/b2b/order-detail";
-import CatalogManagePage from "@/pages/b2b/catalog-manage";
-import B2BVitrinPage from "@/pages/b2b/vitrin";
-import ChannelsListPage from "@/pages/channels/channels-list";
-import ChannelDetailPage from "@/pages/channels/channel-detail";
-import ChannelsBulkPage from "@/pages/channels/channels-bulk";
-import PricingPage from "@/pages/pricing";
-import AdminBillingPage from "@/pages/admin/billing";
-import GercekKarDashboard from "@/pages/gercek-kar/dashboard";
-import GercekKarAyarlar from "@/pages/gercek-kar/ayarlar";
-import GercekKarOneriler from "@/pages/gercek-kar/oneriler";
+import { RouteFallback } from "@/components/route-fallback";
+import {
+  EntegrasyonlarPage,
+  KarsilastirPage,
+  HakkimizdaPage,
+  AmacimizPage,
+  PaketlerPage,
+  OdemeSonucPage,
+  IletisimPage,
+  KvkkPage,
+  Catalog,
+  Dashboard,
+  ProductsList,
+  ProductNew,
+  ProductDetail,
+  ProductEdit,
+  BarcodeScanner,
+  SalesScreen,
+  SalesHistory,
+  StockEntry,
+  Reports,
+  DailySummary,
+  UsersList,
+  Settings,
+  FirmaProfili,
+  SetupScore,
+  MusteriDoluluk,
+  CompaniesAdmin,
+  AdminPayments,
+  PlatformSettings,
+  Onboarding,
+  CustomersList,
+  CustomerDetail,
+  SuppliersList,
+  SupplierDetail,
+  PurchasesList,
+  NewPurchase,
+  BarcodesPage,
+  StockCountsPage,
+  StockCountDetail,
+  FinancePage,
+  BranchesPage,
+  IntegrationsPage,
+  SubscriptionPage,
+  DocumentsPage,
+  FinanceDocumentsPage,
+  BankingPage,
+  FinanceDashboardPage,
+  EInvoicePage,
+  MarketplacePage,
+  ETicariumMerkeziPage,
+  MagazaListesi,
+  MagazaDetay,
+  FiyatMotoru,
+  KargoYonetimi,
+  KarlilikKanalPage,
+  PublicStorefrontPage,
+  ProfitPage,
+  MuhasebeciPage,
+  BudgetsPage,
+  AdBudgetPage,
+  PazarPage,
+  AggregatorAdminPage,
+  ContactRequestsAdmin,
+  AuditLogsPage,
+  NewTenantWizard,
+  ImportPage,
+  POSPage,
+  ProductionPage,
+  LoyaltyPage,
+  CurrencyPage,
+  NotificationSettingsPage,
+  MenuPrefsPage,
+  NotificationsPage,
+  PersonnelPage,
+  CampaignsPage,
+  NetworkPage,
+  CompanyProfilePage,
+  MyNetworkProfilePage,
+  QuotesListPage,
+  QuoteNewPage,
+  QuoteDetailPage,
+  OrdersListPage,
+  OrderDetailPage,
+  CatalogManagePage,
+  B2BVitrinPage,
+  ChannelsListPage,
+  ChannelDetailPage,
+  ChannelsBulkPage,
+  PricingPage,
+  AdminBillingPage,
+  GercekKarDashboard,
+  GercekKarAyarlar,
+  GercekKarOneriler,
+  RuntimeFlagsAdminPage,
+  AdminPlanlarPage,
+  PazaryeriSaglikPage,
+  SistemSaglikPage,
+  SuperAdminHubPage,
+  SatinalmaDiscovery,
+  SatinalmaNewRfq,
+  SatinalmaRfqsList,
+  SatinalmaRfqDetail,
+  SatinalmaSellerInbox,
+  SatinalmaHome,
+  SatinalmaMerkeziPage,
+} from "@/routes/lazy-pages";
 import { UpgradeModal, installFeatureLockInterceptor } from "@/components/upgrade-modal";
 import CookieConsentBanner from "@/components/cookie-consent-banner";
-import KvkkPage from "@/pages/kvkk";
-import RuntimeFlagsAdminPage from "@/pages/admin/runtime-flags";
-import AdminPlanlarPage from "@/pages/admin/planlar";
-import PazaryeriSaglikPage from "@/pages/super-admin/pazaryeri-saglik";
-import SistemSaglikPage from "@/pages/super-admin/sistem-saglik";
-// Sprint H — Satınalma (eski buyer-portal entegrasyonu)
-import SatinalmaDiscovery from "@/pages/satinalma/Discovery";
-import SatinalmaNewRfq from "@/pages/satinalma/NewRfq";
-import { RfqsList as SatinalmaRfqsList, RfqDetail as SatinalmaRfqDetail } from "@/pages/satinalma/Rfqs";
-import SatinalmaSellerInbox from "@/pages/satinalma/SellerInbox";
-import SatinalmaHome from "@/pages/satinalma/index";
-import SatinalmaMerkeziPage from "@/pages/satinalma-merkezi/index";
 
 installFeatureLockInterceptor();
 
@@ -544,6 +547,9 @@ function AuthenticatedRouter() {
         <Route path="/super-admin/pazaryeri-saglik">
           {() => <ProtectedRoute component={PazaryeriSaglikPage} roles={["super_admin"]} />}
         </Route>
+        <Route path="/super-admin">
+          {() => <ProtectedRoute component={SuperAdminHubPage} roles={["super_admin"]} />}
+        </Route>
 
         <Route path="/pricing">
           {() => <ProtectedRoute component={PricingPage} />}
@@ -575,6 +581,7 @@ function App() {
       <TooltipProvider>
         <CompanyProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Suspense fallback={<RouteFallback />}>
             <Switch>
               <Route path="/catalog" component={Catalog} />
               <Route path="/s/:slug" component={PublicStorefrontPage} />
@@ -582,6 +589,7 @@ function App() {
                 {() => <AuthenticatedRouter />}
               </Route>
             </Switch>
+            </Suspense>
           </WouterRouter>
           <Toaster />
           <UpgradeModal />

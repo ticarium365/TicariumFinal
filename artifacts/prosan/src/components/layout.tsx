@@ -57,6 +57,7 @@ import {
   ChevronsRight,
   Lock,
   Activity,
+  X,
 } from "lucide-react";
 import { useFeatures } from "@/components/use-features";
 import { getNavLockReason, lockUiText, filterVisibleNavGroups, type AccountType, type LockReason } from "@/lib/nav-lock";
@@ -84,7 +85,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { trackProductEvent } from "@/lib/product-analytics";
 
 function TrialBanner() {
   const { user } = useAuth();
@@ -101,11 +104,174 @@ function TrialBanner() {
     <div className={`mx-3 mb-2 rounded-lg px-3 py-2 text-white text-xs ${color}`}>
       <div className="flex items-center gap-1.5 font-semibold">
         <Clock className="h-3 w-3 shrink-0" />
-        Trial: {days} gün kaldı
+        Deneme süresi: {days} gün kaldı
       </div>
       {days <= 7 && (
-        <p className="mt-0.5 opacity-80">Süre dolmadan ödeme yapın.</p>
+        <p className="mt-0.5 opacity-80">Süre dolmadan uygun paketi seçebilir veya ekibimizle görüşebilirsiniz.</p>
       )}
+    </div>
+  );
+}
+
+const TRIAL_STRIP_DISMISS_KEY = "t365_trial_strip_dismiss";
+
+/** Üst içerik alanı — deneme bitmeden 7 gün ve altı; 12 saatliğine kapatılabilir. */
+function hashMsgKey(s: string) {
+  let h = 0;
+  for (let i = 0; i < Math.min(s.length, 120); i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return String(h);
+}
+
+function RetentionHintBanner() {
+  const { user } = useAuth();
+  const [dismissed, setDismissed] = useState(false);
+  const tracked = useRef(false);
+
+  const { data } = useQuery<{
+    message: string | null;
+    ctaHref: string | null;
+  }>({
+    queryKey: ["dashboard", "retention-hint"],
+    queryFn: async () => {
+      const r = await fetch("/api/dashboard/retention-hint", { credentials: "include" });
+      if (!r.ok) return { message: null, ctaHref: null };
+      return r.json();
+    },
+    staleTime: 4 * 60 * 60 * 1000,
+    enabled: !!user && user.role !== "super_admin" && ["admin", "staff"].includes(user.role),
+  });
+
+  useEffect(() => {
+    const msg = data?.message;
+    if (!msg) return;
+    try {
+      const k = `t365_retention_ok_${hashMsgKey(msg)}`;
+      if (localStorage.getItem(k) === "1") setDismissed(true);
+    } catch {
+      /* ignore */
+    }
+  }, [data?.message]);
+
+  useEffect(() => {
+    if (!data?.message || dismissed || tracked.current) return;
+    tracked.current = true;
+    trackProductEvent("retention_hint_view", {});
+  }, [data?.message, dismissed]);
+
+  if (!user || user.role === "super_admin" || !data?.message || dismissed) return null;
+
+  const dismiss = () => {
+    try {
+      localStorage.setItem(`t365_retention_ok_${hashMsgKey(data.message!)}`, "1");
+    } catch {
+      /* ignore */
+    }
+    setDismissed(true);
+  };
+
+  return (
+    <div
+      className="rounded-lg border border-sky-200/90 bg-sky-50/95 text-sky-950 px-3 py-2.5 text-sm flex flex-wrap gap-2 items-start justify-between"
+      data-testid="retention-hint-banner"
+    >
+      <p className="min-w-0 flex-1 leading-snug">{data.message}</p>
+      <div className="flex gap-2 shrink-0 items-center">
+        {data.ctaHref ? (
+          <Button variant="secondary" size="sm" className="h-8" asChild>
+            <Link href={data.ctaHref} onClick={() => trackProductEvent("retention_hint_cta", { to: data.ctaHref ?? "" })}>
+              Aç
+            </Link>
+          </Button>
+        ) : null}
+        <Button variant="ghost" size="sm" className="h-8" type="button" onClick={dismiss}>
+          Tamam
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function TrialReminderStrip() {
+  const { user } = useAuth();
+  const { data: status } = usePaymentStatus();
+  const [dismissed, setDismissed] = useState(false);
+  const trackedRef = useRef(false);
+
+  useEffect(() => {
+    if (!status?.trialEndsAt) return;
+    try {
+      const raw = localStorage.getItem(TRIAL_STRIP_DISMISS_KEY);
+      if (!raw) return;
+      const o = JSON.parse(raw) as { until: number; trialEndsAt: string };
+      if (o.trialEndsAt !== status.trialEndsAt) return;
+      if (Date.now() < o.until) setDismissed(true);
+    } catch {
+      /* ignore */
+    }
+  }, [status?.trialEndsAt]);
+
+  const days = status?.trialDaysLeft;
+  const visible =
+    !!user &&
+    user.role !== "super_admin" &&
+    status &&
+    status.planType === "trial" &&
+    !status.isTrialExpired &&
+    days != null &&
+    days <= 7 &&
+    !dismissed;
+
+  useEffect(() => {
+    if (!visible || trackedRef.current) return;
+    trackedRef.current = true;
+    trackProductEvent("trial_layout_strip_view", { days_left: days ?? -1 });
+  }, [visible, days]);
+
+  if (!visible) return null;
+
+  const dismiss = () => {
+    if (status?.trialEndsAt) {
+      try {
+        localStorage.setItem(
+          TRIAL_STRIP_DISMISS_KEY,
+          JSON.stringify({ until: Date.now() + 12 * 3600 * 1000, trialEndsAt: status.trialEndsAt }),
+        );
+      } catch {
+        /* ignore */
+      }
+    }
+    setDismissed(true);
+  };
+
+  const tone =
+    (days ?? 8) <= 3
+      ? "border-rose-300/80 bg-rose-50 text-rose-950"
+      : "border-amber-300/80 bg-amber-50 text-amber-950";
+
+  return (
+    <div
+      className={`rounded-lg border px-3 py-2.5 text-sm flex flex-wrap items-center gap-3 ${tone}`}
+      data-testid="trial-reminder-strip"
+    >
+      <div className="flex items-start gap-2 min-w-0 flex-1">
+        <Clock className="h-4 w-4 shrink-0 mt-0.5" />
+        <div className="min-w-0">
+          <p className="font-semibold">Deneme süreniz {days} gün içinde bitiyor</p>
+          <p className="text-xs opacity-90 mt-0.5">
+            Kesintisiz kullanım için plan seçin; faturalama ve abonelik ayarlarından devam edebilirsiniz.
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <Button variant="default" size="sm" className="h-8" asChild>
+          <Link href="/pricing" onClick={() => trackProductEvent("trial_cta_click", { from: "layout_strip", to: "pricing" })}>
+            Planları gör
+          </Link>
+        </Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={dismiss} title="12 saat gizle" type="button">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }
@@ -118,7 +284,7 @@ const TOP_ITEM: NavItem = {
 };
 
 const HERO_ITEM: NavItem = {
-  href: "/eticarium-merkezi", label: "e-Ticarium Merkezi", icon: Sparkles,
+  href: "/eticarium-merkezi", label: "Online Satış Merkezi", icon: Sparkles,
   roles: ["admin", "staff", "viewer"],
 };
 
@@ -253,7 +419,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </Link>
       )}
 
-      {/* HERO — e-Ticarium Merkezi (öne çıkarılmış; Sprint I: Satınalma Hesabı'nda gizli) */}
+      {user?.role === "super_admin" && (
+        <Link href="/super-admin">
+          <div
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer text-sm mb-2 ${
+              location === "/super-admin"
+                ? "bg-violet-50 text-violet-800 font-semibold border border-violet-200"
+                : "text-slate-600 font-medium hover:bg-slate-100 border border-transparent"
+            }`}
+            onClick={() => setIsOpen(false)}
+            data-testid="nav-link-super-admin-hub"
+          >
+            <Activity className="h-4 w-4 shrink-0 text-violet-600" />
+            <span>Platform merkezi</span>
+          </div>
+        </Link>
+      )}
+
+      {/* HERO — Online Satış Merkezi (öne çıkarılmış; satınalma hesabında gizli) */}
       {user && !isPurchasing && HERO_ITEM.roles.includes(user.role) && (
         <Link href={HERO_ITEM.href}>
           <div
@@ -544,7 +727,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
         <DemoDataBanner />
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          <div className="mx-auto max-w-6xl">
+          <div className="mx-auto max-w-6xl space-y-3">
+            <TrialReminderStrip />
+            <RetentionHintBanner />
             <FeatureGate feature={currentRouteFeature ?? undefined}>
               {children}
             </FeatureGate>

@@ -1,12 +1,17 @@
 import { Router, Request, Response } from "express";
 import {
   db, webhooksTable, webhookDeliveriesTable, apiKeysTable,
+  accountingIntegrationsTable, ecommerceIntegrationsTable,
 } from "@workspace/db";
-import { and, eq, desc, sql } from "drizzle-orm";
+import { and, eq, desc, sql, count } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { Errors } from "../lib/errors.js";
+import { buildIntegrationCatalogResponse } from "../lib/integration-hub-catalog.js";
+import { pingResolvedAdapter } from "../services/integration-hub/registry.js";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
+import { channelAccountsTable, einvoiceSettingsTable } from "@workspace/db";
+import { and, desc as desc2, isNotNull, sql as sql2 } from "drizzle-orm";
 
 const router = Router();
 
@@ -302,6 +307,99 @@ router.put("/api-keys/:id", requireAuth, requireRole(["admin"]), async (req: Req
 // ─────────────────────────────────────────────────────────────────────────────
 // DESTEKLENEN WEBHOOK OLAYLARI
 // ─────────────────────────────────────────────────────────────────────────────
+router.get("/catalog", requireAuth, requireRole(["admin"]), async (req: Request, res: Response) => {
+  try {
+    const cid = req.companyId;
+    const [[wh], [keys], [acc], [ec], mpCounts, mpLatest, einvRow] = await Promise.all([
+      db.select({ c: count() }).from(webhooksTable).where(eq(webhooksTable.companyId, cid)),
+      db.select({ c: count() }).from(apiKeysTable).where(eq(apiKeysTable.companyId, cid)),
+      db.select({ c: count() }).from(accountingIntegrationsTable).where(eq(accountingIntegrationsTable.companyId, cid)),
+      db.select({ c: count() }).from(ecommerceIntegrationsTable).where(eq(ecommerceIntegrationsTable.companyId, cid)),
+      db.select({
+        provider: channelAccountsTable.provider,
+        c: sql2<number>`count(*)::int`,
+      }).from(channelAccountsTable)
+        .where(and(eq(channelAccountsTable.companyId, cid), eq(channelAccountsTable.isActive, true)))
+        .groupBy(channelAccountsTable.provider),
+      db.select({
+        provider: channelAccountsTable.provider,
+        lastSyncAt: channelAccountsTable.lastSyncAt,
+        lastHealthOk: channelAccountsTable.lastHealthOk,
+        lastHealthMessage: channelAccountsTable.lastHealthMessage,
+      }).from(channelAccountsTable)
+        .where(and(
+          eq(channelAccountsTable.companyId, cid),
+          eq(channelAccountsTable.isActive, true),
+          isNotNull(channelAccountsTable.lastHealthOk),
+        ))
+        .orderBy(desc2(channelAccountsTable.lastSyncAt))
+        .limit(30),
+      db.select({
+        provider: einvoiceSettingsTable.provider,
+        sandbox: einvoiceSettingsTable.sandbox,
+        lastHealthOk: einvoiceSettingsTable.lastHealthOk,
+        lastHealthMessage: einvoiceSettingsTable.lastHealthMessage,
+        lastHealthCheck: einvoiceSettingsTable.lastHealthCheck,
+      }).from(einvoiceSettingsTable).where(eq(einvoiceSettingsTable.companyId, cid)).limit(1),
+    ]);
+    const tenantCounts = {
+      webhooks: Number(wh?.c ?? 0),
+      apiKeys: Number(keys?.c ?? 0),
+      accounting: Number(acc?.c ?? 0),
+      ecommerce: Number(ec?.c ?? 0),
+    };
+    const connectedByProvider: Record<string, number> = {};
+    for (const r of mpCounts as any[]) {
+      if (!r?.provider) continue;
+      connectedByProvider[String(r.provider)] = Number(r.c ?? 0);
+    }
+    const statusByEntryId: Record<string, { ok: boolean; message: string; checkedAtIso?: string }> = {};
+    for (const r of mpLatest as any[]) {
+      const provider = String(r.provider ?? "");
+      if (!provider) continue;
+      const entryId = provider === "trendyol" ? "ecommerce_trendyol"
+        : provider === "hepsiburada" ? "ecommerce_hepsiburada"
+          : provider === "n11" ? "ecommerce_n11"
+            : null;
+      if (!entryId) continue;
+      if (statusByEntryId[entryId]) continue; // first wins
+      statusByEntryId[entryId] = {
+        ok: Boolean(r.lastHealthOk),
+        message: String(r.lastHealthMessage ?? (r.lastHealthOk ? "Sağlıklı" : "Sağlıksız")),
+        checkedAtIso: r.lastSyncAt ? new Date(r.lastSyncAt).toISOString() : undefined,
+      };
+    }
+    const einv = (einvRow as any[])?.[0];
+    if (einv?.provider) {
+      const eid = String(einv.provider) === "parasut" ? "einvoice_parasut" : "einvoice_mock";
+      if (einv.lastHealthOk != null || einv.lastHealthMessage) {
+        statusByEntryId[eid] = {
+          ok: Boolean(einv.lastHealthOk),
+          message: String(einv.lastHealthMessage ?? (einv.lastHealthOk ? "Sağlıklı" : "Sağlıksız")),
+          checkedAtIso: einv.lastHealthCheck ? new Date(einv.lastHealthCheck).toISOString() : undefined,
+        };
+      }
+    }
+    res.json(buildIntegrationCatalogResponse(process.env, tenantCounts, { connectedByProvider, statusByEntryId }));
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Sunucu hatası" });
+  }
+});
+
+/** Katalog adapter ping — anahtar yoksa açıklayıcı no-op döner (UI güveni için). */
+router.post("/catalog/:entryId/ping", requireAuth, requireRole(["admin"]), async (req: Request, res: Response) => {
+  try {
+    const entryId = (req.params.entryId ?? "").trim();
+    if (!entryId) return void res.status(400).json(Errors.badRequest("entryId gerekli"));
+    const result = await pingResolvedAdapter(entryId, { companyId: req.companyId });
+    res.json({ entryId, result });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Sunucu hatası" });
+  }
+});
+
 router.get("/webhook-events", requireAuth, async (_req, res) => {
   res.json({
     events: [

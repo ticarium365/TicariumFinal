@@ -65,6 +65,10 @@ export const companySubscriptionsTable = pgTable("company_subscriptions", {
   gracePeriodEndsAt: timestamp("grace_period_ends_at", { withTimezone: true }),
   autoRenew: boolean("auto_renew").notNull().default(true),
   notes: text("notes"),
+  /** İptal hunisi: price | features | support | pause | other | unknown (opsiyonel). */
+  cancelReason: text("cancel_reason"),
+  /** Serbest metin / birleşik nota ek olarak kısa detay. */
+  cancelReasonDetail: text("cancel_reason_detail"),
   managedBy: integer("managed_by").references(() => usersTable.id), // super_admin
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

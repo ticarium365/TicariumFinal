@@ -29,7 +29,7 @@ export function useNotificationsCount() {
     queryKey: ["notifications-count"],
     queryFn: () => apiCall("GET", "/notifications/count"),
     refetchInterval: 60_000,
-    staleTime: 30_000,
+    staleTime: 60_000,
   });
 }
 
@@ -37,7 +37,7 @@ export function useNotifications(unread = false) {
   return useQuery<{ notifications: Notification[]; total: number }>({
     queryKey: ["notifications", unread],
     queryFn: () => apiCall("GET", `/notifications?unread=${unread}&limit=20`),
-    staleTime: 15_000,
+    staleTime: 45_000,
   });
 }
 

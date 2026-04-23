@@ -74,7 +74,7 @@ export default function SuppliersList() {
       });
       return apiFetch("GET", `/suppliers?${params}`);
     },
-    staleTime: 10_000,
+    staleTime: 30_000,
   });
 
   // Dalga 29 — KPI count fetches + top creditors (admin-only)

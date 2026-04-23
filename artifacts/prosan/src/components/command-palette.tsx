@@ -83,7 +83,7 @@ export function CommandPalette() {
           {role !== "super_admin" && (
             <CommandItem onSelect={() => go("/eticarium-merkezi")}>
               <Sparkles />
-              <span>e-Ticarium Merkezi</span>
+              <span>Online Satış Merkezi</span>
             </CommandItem>
           )}
           {role !== "super_admin" && (

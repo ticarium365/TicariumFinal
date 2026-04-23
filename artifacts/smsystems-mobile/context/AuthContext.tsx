@@ -66,16 +66,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const apiGet = useCallback(async <T>(path: string): Promise<T> => {
+  const apiGet = useCallback(async <T,>(path: string): Promise<T> => {
     const headers = await getHeaders();
-    const res = await fetch(`${API_BASE}${path}`, { method: "GET", headers });
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
     const cookies = parseCookies(res.headers);
     if (cookies.length > 0) await saveCookies(cookies);
     if (!res.ok) throw new Error(`${res.status}`);
     return res.json();
   }, [getHeaders]);
 
-  const apiPost = useCallback(async <T>(path: string, body: unknown): Promise<T> => {
+  const apiPost = useCallback(async <T,>(path: string, body: unknown): Promise<T> => {
     const headers = await getHeaders();
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
@@ -91,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return res.json();
   }, [getHeaders]);
 
-  const apiPatch = useCallback(async <T>(path: string, body: unknown): Promise<T> => {
+  const apiPatch = useCallback(async <T,>(path: string, body: unknown): Promise<T> => {
     const headers = await getHeaders();
     const res = await fetch(`${API_BASE}${path}`, {
       method: "PATCH",
@@ -107,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return res.json();
   }, [getHeaders]);
 
-  const apiPut = useCallback(async <T>(path: string, body: unknown): Promise<T> => {
+  const apiPut = useCallback(async <T,>(path: string, body: unknown): Promise<T> => {
     const headers = await getHeaders();
     const res = await fetch(`${API_BASE}${path}`, {
       method: "PUT",

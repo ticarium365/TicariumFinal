@@ -86,7 +86,7 @@ export function SetupChecklistPopover() {
 
           <div className="mt-3 space-y-1.5">
             <div className="flex justify-between text-xs">
-              <span>Kurulum Skoru</span>
+              <span>Kurulum ilerlemesi</span>
               <span className="font-semibold">
                 {data.scorePercent}% — {data.itemsDone}/{data.itemsTotal}
               </span>

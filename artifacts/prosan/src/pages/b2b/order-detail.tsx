@@ -112,8 +112,13 @@ export default function OrderDetailPage() {
     setLoading(true);
     try {
       const [orderRes, meRes] = await Promise.all([
-        fetch(`${apiBase}/b2b/orders/${orderId}`, { credentials: "include" }).then((r) => r.json()),
-        fetch(`${apiBase}/auth/me`, { credentials: "include" }).then((r) => r.json()),
+        fetch(`${apiBase}/b2b/orders/${orderId}`, {
+          credentials: "include",
+          cache: "no-store",
+        }).then((r) => r.json()),
+        fetch(`${apiBase}/auth/me`, { credentials: "include", cache: "no-store" }).then((r) =>
+          r.json(),
+        ),
       ]);
       if (orderRes.error) throw new Error(orderRes.error);
       setOrder(orderRes.order);

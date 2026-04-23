@@ -1,5 +1,8 @@
 import app from "./app";
+import { logProductionAuthHints } from "./lib/env-validation.js";
 import { logger } from "./lib/logger";
+
+logProductionAuthHints();
 import { db, usersTable, productsTable } from "@workspace/db";
 import { seedSubscriptionPlans } from "./routes/subscriptions.js";
 import { startMarketplaceWorker } from "./services/marketplace/worker.js";

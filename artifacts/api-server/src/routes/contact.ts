@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type IRouter } from "express";
-import { db, contactRequestsTable } from "@workspace/db";
-import { desc, eq } from "drizzle-orm";
+import { db, contactRequestsTable, companiesTable } from "@workspace/db";
+import { desc, eq, count, gte } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth, requireSuperAdmin } from "../middlewares/auth.js";
 
@@ -27,13 +27,31 @@ router.post("/", async (req: Request, res: Response) => {
     email,
     status: "new",
   }).returning({ id: contactRequestsTable.id });
-  res.json({ ok: true, id: row?.id });
+  return res.json({ ok: true, id: row?.id });
+});
+
+// GET /api/contact/admin/summary — hub için hafif sayaçlar (tüm talep listesini çekmez)
+router.get("/admin/summary", requireAuth, requireSuperAdmin, async (_req: Request, res: Response) => {
+  const [openRow] = await db
+    .select({ c: count() })
+    .from(contactRequestsTable)
+    .where(eq(contactRequestsTable.status, "new"));
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const [signupRow] = await db
+    .select({ c: count() })
+    .from(companiesTable)
+    .where(gte(companiesTable.createdAt, weekAgo));
+  return res.json({
+    openContactRequests: Number(openRow?.c ?? 0),
+    newCompaniesLast7Days: Number(signupRow?.c ?? 0),
+  });
 });
 
 // GET /api/contact/admin — super admin: tüm talepler
 router.get("/admin", requireAuth, requireSuperAdmin, async (_req: Request, res: Response) => {
   const rows = await db.select().from(contactRequestsTable).orderBy(desc(contactRequestsTable.createdAt));
-  res.json(rows);
+  return res.json(rows);
 });
 
 // PATCH /api/contact/admin/:id — durum güncelle
@@ -49,7 +67,7 @@ router.patch("/admin/:id", requireAuth, requireSuperAdmin, async (req: Request, 
   if (notes !== undefined) patch.notes = notes;
   if (status === "contacted") patch.contactedAt = new Date();
   await db.update(contactRequestsTable).set(patch).where(eq(contactRequestsTable.id, id));
-  res.json({ ok: true });
+  return res.json({ ok: true });
 });
 
 export default router;

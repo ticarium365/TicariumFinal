@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "wouter";
 import { useGetSettings } from "@workspace/api-client-react";
+import { useAuth } from "@/components/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save, ImageUp, X, Palette, Trash2, AlertTriangle } from "lucide-react";
+import { Loader2, Save, ImageUp, X, Palette, Trash2, AlertTriangle, Building2, CreditCard, Flag, Activity, Inbox, ScrollText, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,6 +18,7 @@ const PRESET_COLORS = [
 ];
 
 export default function Settings() {
+  const { user } = useAuth();
   const { data: settings, isLoading } = useGetSettings();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -332,6 +335,32 @@ export default function Settings() {
           </Card>
         </div>
       </div>
+
+      {(user as { role?: string } | null)?.role === "super_admin" && (
+        <Card className="border-primary/25 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Building2 className="h-4 w-4" />
+              Platform yönetimi
+            </CardTitle>
+            <CardDescription>
+              Tüm kiracılar ve faturalama — yalnız süper admin erişir. Demo veya satış toplantısından önce bu kısayolları kullanın.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" asChild><Link href="/admin/companies"><Building2 className="h-3.5 w-3.5 mr-1" />Firmalar</Link></Button>
+            <Button variant="outline" size="sm" asChild><Link href="/admin/planlar"><CreditCard className="h-3.5 w-3.5 mr-1" />Planlar</Link></Button>
+            <Button variant="outline" size="sm" asChild><Link href="/admin/payments"><CreditCard className="h-3.5 w-3.5 mr-1" />Ödemeler</Link></Button>
+            <Button variant="outline" size="sm" asChild><Link href="/admin/billing"><CreditCard className="h-3.5 w-3.5 mr-1" />Faturalama</Link></Button>
+            <Button variant="outline" size="sm" asChild><Link href="/admin/runtime-flags"><Flag className="h-3.5 w-3.5 mr-1" />Özellik bayrakları</Link></Button>
+            <Button variant="outline" size="sm" asChild><Link href="/super-admin/sistem-saglik"><Activity className="h-3.5 w-3.5 mr-1" />Sistem sağlığı</Link></Button>
+            <Button variant="outline" size="sm" asChild><Link href="/super-admin/pazaryeri-saglik"><Activity className="h-3.5 w-3.5 mr-1" />Pazaryeri sağlığı</Link></Button>
+            <Button variant="outline" size="sm" asChild><Link href="/super-admin/talepler"><Inbox className="h-3.5 w-3.5 mr-1" />İletişim talepleri</Link></Button>
+            <Button variant="outline" size="sm" asChild><Link href="/super-admin/audit-logs"><ScrollText className="h-3.5 w-3.5 mr-1" />Denetim günlüğü</Link></Button>
+            <Button variant="outline" size="sm" asChild><Link href="/super-admin/yeni-firma"><UserPlus className="h-3.5 w-3.5 mr-1" />Yeni firma</Link></Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Demo Sıfırlama (sadece non-production) */}
       {typeof window !== "undefined" && !window.location.hostname.includes(".replit.app") && (

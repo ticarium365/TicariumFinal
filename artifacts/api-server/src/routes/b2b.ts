@@ -9,7 +9,7 @@ import {
   b2bOrdersTable,
   notificationsTable,
 } from "@workspace/db";
-import { eq, and, desc, or, inArray, sql } from "drizzle-orm";
+import { eq, and, desc, or, inArray, sql, count, lt, gte, isNotNull } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { z } from "zod/v4";
 
@@ -214,6 +214,63 @@ router.get("/quotes/outbox", async (req: Request, res: Response) => {
   } catch (err) {
     req.log.error({ err }, "b2b outbox failed");
     res.status(500).json({ error: "Liste alınamadı" });
+  }
+});
+
+/** Satıcı/alıcı SLA sinyalleri + son 30 gün kabul — liste sayfaları için hafif. */
+router.get("/quotes/pipeline-metrics", async (req: Request, res: Response) => {
+  try {
+    const companyId = req.companyId!;
+    const now = new Date();
+    const ago48h = new Date(now.getTime() - 48 * 3600 * 1000);
+    const ago72h = new Date(now.getTime() - 72 * 3600 * 1000);
+    const ago30d = new Date(now);
+    ago30d.setDate(ago30d.getDate() - 30);
+
+    const [
+      sellerPending48,
+      sellerPending72,
+      buyerPending48,
+      inboxQuotedAwaitingBuyer,
+      sellerAcceptedQuotes30d,
+    ] = await Promise.all([
+      db.select({ c: count() }).from(b2bQuoteRequestsTable).where(and(
+        eq(b2bQuoteRequestsTable.toCompanyId, companyId),
+        eq(b2bQuoteRequestsTable.status, "pending"),
+        lt(b2bQuoteRequestsTable.createdAt, ago48h),
+      )),
+      db.select({ c: count() }).from(b2bQuoteRequestsTable).where(and(
+        eq(b2bQuoteRequestsTable.toCompanyId, companyId),
+        eq(b2bQuoteRequestsTable.status, "pending"),
+        lt(b2bQuoteRequestsTable.createdAt, ago72h),
+      )),
+      db.select({ c: count() }).from(b2bQuoteRequestsTable).where(and(
+        eq(b2bQuoteRequestsTable.fromCompanyId, companyId),
+        eq(b2bQuoteRequestsTable.status, "pending"),
+        lt(b2bQuoteRequestsTable.createdAt, ago48h),
+      )),
+      db.select({ c: count() }).from(b2bQuoteRequestsTable).where(and(
+        eq(b2bQuoteRequestsTable.toCompanyId, companyId),
+        eq(b2bQuoteRequestsTable.status, "quoted"),
+      )),
+      db.select({ c: count() }).from(b2bQuoteRequestsTable).where(and(
+        eq(b2bQuoteRequestsTable.toCompanyId, companyId),
+        eq(b2bQuoteRequestsTable.status, "accepted"),
+        isNotNull(b2bQuoteRequestsTable.decidedAt),
+        gte(b2bQuoteRequestsTable.decidedAt, ago30d),
+      )),
+    ]);
+
+    return res.json({
+      sellerInboxPendingOver48h: Number(sellerPending48[0]?.c ?? 0),
+      sellerInboxPendingOver72h: Number(sellerPending72[0]?.c ?? 0),
+      buyerOutboxPendingOver48h: Number(buyerPending48[0]?.c ?? 0),
+      sellerInboxQuotedAwaitingBuyer: Number(inboxQuotedAwaitingBuyer[0]?.c ?? 0),
+      sellerAcceptedQuotesLast30Days: Number(sellerAcceptedQuotes30d[0]?.c ?? 0),
+    });
+  } catch (err) {
+    req.log.error({ err }, "b2b pipeline metrics failed");
+    return res.status(500).json({ error: "Metrik alınamadı" });
   }
 });
 

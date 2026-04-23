@@ -1,3 +1,4 @@
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { useGetDashboardStats, useGetTopProducts } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,10 +10,12 @@ import {
   Banknote, ArrowRight, AlertCircle, PackageX, PackageMinus,
   Mail, Sparkles, Wallet, FileText, TrendingDown, ListChecks,
 } from "lucide-react";
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
-} from "recharts";
+import { RouteFallback } from "@/components/route-fallback";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { trackProductEvent } from "@/lib/product-analytics";
+
+const DashboardRevenueChart = lazy(() => import("@/components/dashboard-revenue-chart"));
 
 interface DailyStat {
   date: string;
@@ -52,12 +55,6 @@ interface TcmbRates {
 
 const fmt = (v: number) =>
   v.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " ₺";
-
-const fmtShort = (v: number) => {
-  if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + "M";
-  if (v >= 1_000) return (v / 1_000).toFixed(0) + "K";
-  return String(v);
-};
 
 const fmtKur = (v: number) =>
   v.toLocaleString("tr-TR", { minimumFractionDigits: v < 1 ? 4 : 2, maximumFractionDigits: v < 1 ? 4 : 2 });
@@ -105,21 +102,33 @@ function useCrossModuleActions() {
           return await r.json();
         } catch { return "unavailable"; }
       };
-      const [banking, marketplace, b2b, profit] = await Promise.all([
-        safeFetch("/api/banking/transactions?status=unmatched&limit=500"),
-        safeFetch("/api/marketplace/orders?converted=false&limit=500"),
+      const [counts, b2b, profit] = await Promise.all([
+        safeFetch("/api/dashboard/action-counts"),
         safeFetch("/api/b2b/quotes/stats"),
-        safeFetch("/api/profit-engine/dashboard"),
+        safeFetch("/api/profit-engine/dashboard-counts"),
       ]);
-      const lenOr = (v: any): CrossModuleCount => v === "unavailable" ? "unavailable" : (Array.isArray(v) ? v.length : 0);
+      const bankingUnmatched: CrossModuleCount = counts === "unavailable" ? "unavailable" : Number(counts?.bankingUnmatched ?? 0);
+      const marketplacePending: CrossModuleCount = counts === "unavailable" ? "unavailable" : Number(counts?.marketplacePendingConversion ?? 0);
       return {
-        bankingUnmatched: lenOr(banking),
-        marketplacePending: lenOr(marketplace),
+        bankingUnmatched,
+        marketplacePending,
         b2bInboxPending: b2b === "unavailable" ? "unavailable" : Number(b2b?.inbox?.pending || 0),
-        profitLosing: profit === "unavailable" ? "unavailable" : (Array.isArray(profit?.losing) ? profit.losing.length : 0),
+        profitLosing: profit === "unavailable" ? "unavailable" : Number(profit?.losingCount ?? 0),
       };
     },
     staleTime: 60_000,
+  });
+}
+
+function useSubscriptionFeatures() {
+  return useQuery<{ planSlug: string; status: string; trialEndsAt?: string }>({
+    queryKey: ["/api/subscriptions/features"],
+    queryFn: async () => {
+      const r = await fetch("/api/subscriptions/features", { credentials: "include" });
+      if (!r.ok) return { planSlug: "", status: "unknown" };
+      return r.json();
+    },
+    staleTime: 120_000,
   });
 }
 
@@ -166,23 +175,6 @@ function relativeTime(iso: string) {
   if (diff < 7 * 86400) return `${Math.floor(diff / 86400)}g`;
   return d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
 }
-
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  const date = new Date(label + "T00:00:00");
-  const day = date.toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
-  return (
-    <div className="bg-popover border border-border rounded-lg shadow-lg p-3 text-sm min-w-[140px]">
-      <p className="font-semibold mb-2 text-foreground">{day}</p>
-      {payload.map((entry: any) => (
-        <div key={entry.name} className="flex justify-between gap-4 text-xs">
-          <span style={{ color: entry.color }}>{entry.name === "revenue" ? "Ciro" : "Kâr"}</span>
-          <span className="font-mono font-medium">{fmt(entry.value)}</span>
-        </div>
-      ))}
-    </div>
-  );
-};
 
 function ProductMiniRow({ p, accent }: { p: MiniProduct; accent: string }) {
   return (
@@ -264,6 +256,20 @@ export default function Dashboard() {
   const { data: notifData } = useNotifications();
   const { data: tcmb } = useTcmbRates();
   const { data: crossActions } = useCrossModuleActions();
+  const { data: subFeat } = useSubscriptionFeatures();
+  const trialBannerTracked = useRef(false);
+
+  const trialDaysLeft =
+    subFeat?.status === "trial" && subFeat.trialEndsAt
+      ? Math.ceil((new Date(subFeat.trialEndsAt).getTime() - Date.now()) / 86_400_000)
+      : null;
+
+  useEffect(() => {
+    if (trialBannerTracked.current) return;
+    if (subFeat?.status !== "trial") return;
+    trialBannerTracked.current = true;
+    trackProductEvent("trial_dashboard_banner_view", { days_left: trialDaysLeft ?? -1 });
+  }, [subFeat?.status, trialDaysLeft]);
 
   const chartData30 = daily30?.map(d => ({
     ...d,
@@ -285,6 +291,50 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-5">
+      {subFeat?.status === "trial" && (
+        <Alert className="border-blue-300/60 bg-blue-50/90 dark:bg-blue-950/30 dark:border-blue-700/50">
+          <Sparkles className="h-4 w-4 text-blue-600" />
+          <AlertTitle className="text-blue-900 dark:text-blue-100">
+            Deneme süreniz
+            {trialDaysLeft != null
+              ? trialDaysLeft >= 0
+                ? ` — yaklaşık ${trialDaysLeft} gün kaldı`
+                : " — süresi doldu; hemen plan seçin"
+              : ""}
+          </AlertTitle>
+          <AlertDescription className="text-blue-900/90 dark:text-blue-100/90 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <span>
+              Kesintisiz kullanım için plan seçip ödeme adımına geçin. Tüm paketler ve fiyatlar için fiyat sayfasına; mevcut kullanımınız için abonelik ekranına gidin.
+            </span>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <Button size="sm" className="gap-1" asChild>
+                <Link href="/pricing" onClick={() => trackProductEvent("trial_cta_click", { from: "dashboard_banner", to: "pricing" })}>
+                  Planları gör <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+              <Button size="sm" variant="outline" asChild>
+                <Link href="/settings/subscription" onClick={() => trackProductEvent("trial_cta_click", { from: "dashboard_banner", to: "subscription" })}>
+                  Abonelik
+                </Link>
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {subFeat?.status === "expired" && (
+        <Alert variant="destructive" className="border-red-300/80">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Abonelik / deneme süresi dolmuş olabilir</AlertTitle>
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <span>Özelliklere tam erişim için plan yenileyin.</span>
+            <Button size="sm" variant="secondary" asChild>
+              <Link href="/pricing" onClick={() => trackProductEvent("expired_cta_click", { from: "dashboard_banner" })}>Plan seç</Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Başlık + Kompakt Kur Şeridi */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="t365-heading-accent">
@@ -293,6 +343,9 @@ export default function Dashboard() {
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {new Date().toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          </p>
+          <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+            Bugünün cirosu, stok uyarıları ve bekleyen işler tek bakışta.
           </p>
         </div>
 
@@ -471,53 +524,24 @@ export default function Dashboard() {
         </div>
       </Link>
 
-      {/* 30 Günlük Ciro & Kâr Grafiği */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <BarChart2 className="h-4 w-4 text-primary" />
-            Son 30 Gün — Ciro & Kâr
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={chartData30} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.22} />
-                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                tickLine={false}
-                axisLine={false}
-                interval={4}
-              />
-              <YAxis
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={fmtShort}
-                width={42}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend
-                wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
-                formatter={(v) => v === "revenue" ? "Ciro" : "Kâr"}
-              />
-              <Area type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} fill="url(#colorRevenue)" dot={false} />
-              <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} fill="url(#colorProfit)" dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {/* 30 Günlük Ciro & Kâr — recharts ayrı chunk */}
+      <Suspense
+        fallback={(
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <BarChart2 className="h-4 w-4 text-primary" />
+                Son 30 Gün — Ciro & Kâr
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 min-h-[220px] flex items-center justify-center">
+              <RouteFallback />
+            </CardContent>
+          </Card>
+        )}
+      >
+        <DashboardRevenueChart data={chartData30} />
+      </Suspense>
 
       {/* Çok Satanlar — LİSTE + Bildirimler */}
       <div className="grid gap-4 lg:grid-cols-2">

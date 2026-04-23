@@ -80,6 +80,101 @@ router.get("/today", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+/** Tek gün için tam özet: tüm satırları çekmeden top ürün + saat dağılımı + ciro (Satış Geçmişi widget'ları). */
+router.get("/day-summary", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const cid = req.companyId;
+    const date = String(req.query.date || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: "Bad Request", message: "date=YYYY-MM-DD gerekli" });
+    }
+    const saleTypeRaw = req.query.saleType;
+    const dayStart = new Date(date);
+    const dayEnd = new Date(date);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const rangeConds = [
+      eq(salesTable.companyId, cid),
+      gte(salesTable.createdAt, dayStart),
+      lte(salesTable.createdAt, dayEnd),
+    ];
+    if (saleTypeRaw === "wholesale" || saleTypeRaw === "retail") {
+      rangeConds.push(eq(salesTable.saleType, String(saleTypeRaw)));
+    }
+    const rangeWhere = and(...rangeConds);
+
+    const hourExpr = sql<number>`(extract(hour from (${salesTable.createdAt} at time zone 'Europe/Istanbul')))::int`;
+
+    const [[totalRow], [validAgg], [returnedRow], topRows, hourRows] = await Promise.all([
+      db.select({ c: count() }).from(salesTable).where(rangeWhere),
+      db.select({
+        revenue: sql<number>`coalesce(sum(${salesTable.totalPrice}), 0)::double precision`,
+        profit: sql<number>`coalesce(sum(${salesTable.profit}), 0)::double precision`,
+        cnt: sql<number>`count(*)::int`,
+      }).from(salesTable).where(and(rangeWhere, eq(salesTable.returned, false))),
+      db.select({ c: count() }).from(salesTable).where(and(rangeWhere, eq(salesTable.returned, true))),
+      db
+        .select({
+          name: salesTable.productName,
+          qty: sql<number>`sum(${salesTable.quantity})::int`,
+          revenue: sql<number>`coalesce(sum(${salesTable.totalPrice}), 0)::double precision`,
+        })
+        .from(salesTable)
+        .where(and(rangeWhere, eq(salesTable.returned, false)))
+        .groupBy(salesTable.productName)
+        .orderBy(desc(sql`sum(${salesTable.quantity})`))
+        .limit(5),
+      db
+        .select({
+          hour: hourExpr,
+          cnt: sql<number>`count(*)::int`,
+        })
+        .from(salesTable)
+        .where(and(rangeWhere, eq(salesTable.returned, false)))
+        .groupBy(hourExpr),
+    ]);
+
+    const hourBuckets = Array.from({ length: 24 }, () => 0);
+    for (const row of hourRows) {
+      const h = Number(row.hour);
+      const c = Number(row.cnt);
+      if (Number.isFinite(h) && h >= 0 && h < 24) hourBuckets[h] = c;
+    }
+    let peakHour: number | null = null;
+    let peakVal = 0;
+    for (let i = 0; i < 24; i++) {
+      if (hourBuckets[i] > peakVal) {
+        peakVal = hourBuckets[i];
+        peakHour = i;
+      }
+    }
+    if (peakVal === 0) peakHour = null;
+
+    const validCount = Number(validAgg?.cnt ?? 0);
+    const topProducts = topRows.map((r) => ({
+      name: r.name,
+      qty: Number(r.qty) || 0,
+      revenue: Number(r.revenue) || 0,
+    }));
+
+    return res.json({
+      date,
+      saleType: saleTypeRaw === "wholesale" || saleTypeRaw === "retail" ? saleTypeRaw : "all",
+      totalLines: Number(totalRow?.c ?? 0),
+      returnedCount: Number(returnedRow?.c ?? 0),
+      validCount,
+      validRevenue: Number(validAgg?.revenue ?? 0),
+      validProfit: Number(validAgg?.profit ?? 0),
+      topProducts,
+      hourBuckets,
+      peakHour,
+    });
+  } catch (err) {
+    req.log?.error({ err }, "Day summary error");
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 router.get("/", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;

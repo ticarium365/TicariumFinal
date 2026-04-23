@@ -6,18 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { trackProductEvent } from "@/lib/product-analytics";
 import {
   Building2, Palette, ImageUp, CheckCircle2, ChevronRight,
   Loader2, X, ArrowLeft, Sparkles, Factory, Store, Database,
 } from "lucide-react";
 
 const STEPS = [
-  { id: 1, title: "Firma",   icon: Building2, desc: "Bilgiler" },
-  { id: 2, title: "Logo",    icon: ImageUp,   desc: "Markanız" },
-  { id: 3, title: "Tema",    icon: Palette,   desc: "Renginiz" },
-  { id: 4, title: "Sektör",  icon: Factory,   desc: "İş kolu" },
-  { id: 5, title: "Demo",    icon: Database,  desc: "Veri seti" },
-  { id: 6, title: "Hazır",   icon: Sparkles,  desc: "Tamamla" },
+  { id: 1, title: "Firma", icon: Building2, desc: "Temel bilgiler" },
+  { id: 2, title: "Logo", icon: ImageUp, desc: "İsteğe bağlı" },
+  { id: 3, title: "Tema", icon: Palette, desc: "Marka rengi" },
+  { id: 4, title: "Sektör", icon: Factory, desc: "İş kolu" },
+  { id: 5, title: "Demo", icon: Database, desc: "Örnek veri" },
+  { id: 6, title: "Başla", icon: Sparkles, desc: "Panele geç" },
 ];
 
 const PRESET_COLORS = [
@@ -73,15 +74,25 @@ export default function OnboardingPage() {
     reader.readAsDataURL(f);
   };
 
-  const saveStep1 = async () => {
+  const saveStep1 = async (): Promise<boolean> => {
     setSaving(true);
     try {
-      await fetch("/api/settings", {
+      const res = await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ companyName, phone, email, address }),
       });
+      if (!res.ok) {
+        trackProductEvent("onboarding_step_error", { step: "1", code: String(res.status) });
+        toast({ title: "Kaydedilemedi", description: "Firma bilgileri sunucuya yazılamadı. Bağlantınızı kontrol edip tekrar deneyin.", variant: "destructive" });
+        return false;
+      }
+      return true;
+    } catch {
+      trackProductEvent("onboarding_step_error", { step: "1", code: "network" });
+      toast({ title: "Bağlantı hatası", description: "İnternet bağlantınızı kontrol edin.", variant: "destructive" });
+      return false;
     } finally {
       setSaving(false);
     }
@@ -168,6 +179,7 @@ export default function OnboardingPage() {
         throw new Error("user complete failed");
       }
       await checkAuth();
+      trackProductEvent("onboarding_completed", { sector: sector ?? "other" });
       localStorage.setItem("show_welcome_tour", "1");
       navigate("/dashboard");
     } catch {
@@ -178,18 +190,23 @@ export default function OnboardingPage() {
   };
 
   const next = async () => {
-    if (step === 1) await saveStep1();
+    if (step === 1) {
+      const ok = await saveStep1();
+      if (!ok) return;
+    }
     if (step === 2 && logoFile) await saveStep2();
     if (step === 3) await saveStep3();
     if (step === 5) {
       const ok = await seedDemoIfRequested();
       if (!ok) return; // hata varsa adımda kal
     }
+    trackProductEvent("onboarding_step_done", { step: String(step) });
     if (step < 6) setStep((s) => s + 1);
     else await completeOnboarding();
   };
 
   const skip = () => {
+    trackProductEvent("onboarding_step_skipped", { step: String(step) });
     if (step === 4) setSector("other");
     if (step === 5) setDemoChoice("skip");
     if (step < 6) setStep((s) => s + 1);
@@ -204,14 +221,16 @@ export default function OnboardingPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary text-white mb-3 shadow-lg">
             <Sparkles className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold">Ticarium365'e Hoş Geldiniz</h1>
-          <p className="text-muted-foreground text-sm mt-1">Hızlı kurulumu tamamlayalım</p>
+          <h1 className="text-2xl font-bold">Ticarium365&apos;e hoş geldiniz</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Birkaç dakikada firma bilgilerinizi ve tercihlerinizi kaydedin; isterseniz örnek veriyle panele alışın.
+          </p>
         </div>
 
         {/* Adım göstergesi */}
         <div className="flex items-center justify-center gap-1.5 mb-6">
           {STEPS.map((s, i) => (
-            <div key={s.id} className="flex items-center gap-1.5">
+            <div key={s.id} className="flex items-center gap-1.5" title={`${s.title}: ${s.desc}`}>
               <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold transition-colors ${
                 step > s.id ? "bg-green-500 text-white" : step === s.id ? "bg-primary text-white" : "bg-muted text-muted-foreground"
               }`}>
@@ -223,6 +242,9 @@ export default function OnboardingPage() {
             </div>
           ))}
         </div>
+        <p className="text-center text-xs text-muted-foreground mb-4">
+          Adım {step} / {STEPS.length} — çoğu kullanıcı yaklaşık 2 dakikada tamamlar. İstemediğiniz adımları atlayabilirsiniz.
+        </p>
 
         <Card className="shadow-xl border-0">
           <CardContent className="p-7">
@@ -235,7 +257,9 @@ export default function OnboardingPage() {
                   </div>
                   <div>
                     <h2 className="font-semibold text-lg">Firma Bilgileri</h2>
-                    <p className="text-sm text-muted-foreground">Temel bilgileri girin</p>
+                    <p className="text-sm text-muted-foreground">
+                      Yalnızca firma adı zorunlu; telefon ve e-postayı şimdi veya daha sonra Ayarlar&apos;dan ekleyebilirsiniz.
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-3">

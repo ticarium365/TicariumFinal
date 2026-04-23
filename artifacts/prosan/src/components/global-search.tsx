@@ -40,6 +40,7 @@ import {
   Bell,
   Sparkles,
   PlusCircle,
+  Activity,
 } from "lucide-react";
 import { useAuth } from "./auth-context";
 
@@ -63,7 +64,7 @@ const ENTRIES: SearchEntry[] = [
 
   // Sayfalar
   { href: "/dashboard", label: "Ana Panel", group: "Sayfalar", icon: LayoutDashboard, keywords: "dashboard ana sayfa" },
-  { href: "/eticarium-merkezi", label: "e-Ticarium Merkezi", group: "Sayfalar", icon: Sparkles, keywords: "eticarium merkezi" },
+  { href: "/eticarium-merkezi", label: "Online Satış Merkezi", group: "Sayfalar", icon: Sparkles, keywords: "eticarium merkezi online satis" },
   { href: "/sales", label: "Satış Ekranı", group: "Sayfalar", icon: ShoppingCart, keywords: "satis sale" },
   { href: "/pos", label: "Hızlı Satış (POS)", group: "Sayfalar", icon: ScanLine, keywords: "pos hizli satis" },
   { href: "/sales/history", label: "Satış Geçmişi", group: "Sayfalar", icon: History, keywords: "gecmis history" },
@@ -100,6 +101,7 @@ const ENTRIES: SearchEntry[] = [
   { href: "/settings/subscription", label: "Abonelik", group: "Sayfalar", icon: CreditCard, keywords: "abonelik subscription", roles: ["admin"] },
   { href: "/settings/notifications", label: "Bildirim Ayarları", group: "Sayfalar", icon: Bell, keywords: "bildirim notification", roles: ["admin"] },
   { href: "/reports", label: "Raporlar", group: "Sayfalar", icon: BarChart3, keywords: "rapor report" },
+  { href: "/super-admin", label: "Platform merkezi", group: "Sayfalar", icon: Activity, keywords: "super admin kiraci platform", roles: ["super_admin"] },
 ];
 
 export function GlobalSearch() {

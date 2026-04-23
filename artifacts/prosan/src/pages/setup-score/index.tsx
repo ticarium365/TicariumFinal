@@ -71,7 +71,7 @@ function ScoreGauge({ value }: { value: number }) {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <div className="text-5xl font-bold text-slate-900">{value}<span className="text-2xl text-slate-400">%</span></div>
-        <div className="text-xs text-slate-500 uppercase tracking-wide mt-1">Kurulum Skoru</div>
+        <div className="text-xs text-slate-500 uppercase tracking-wide mt-1">Kurulum İlerlemesi</div>
       </div>
     </div>
   );

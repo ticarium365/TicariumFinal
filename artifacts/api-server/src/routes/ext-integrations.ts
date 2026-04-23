@@ -8,6 +8,10 @@ import { and, eq, desc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { Errors } from "../lib/errors.js";
 import { encryptSecrets, decryptSecrets } from "../lib/secret-crypto.js";
+import {
+  LEGACY_ACCOUNTING_PROVIDER_LIST,
+  LEGACY_ECOMMERCE_PLATFORM_LIST,
+} from "../lib/integration-hub-catalog.js";
 
 const router = Router();
 
@@ -47,24 +51,10 @@ export async function getDecryptedEcommerceCredentials(integrationId: number, co
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DESTEKLENEN SAĞLAYICILAR
+// DESTEKLENEN SAĞLAYICILAR — `integration-hub-catalog.ts` ile tek kaynak
 // ─────────────────────────────────────────────────────────────────────────────
-const ACCOUNTING_PROVIDERS = [
-  { id: "parasut",    name: "Paraşüt",      logo: "🧾", description: "Bulut tabanlı muhasebe yazılımı" },
-  { id: "logo",       name: "Logo",         logo: "📊", description: "Logo Tiger / Go / Start" },
-  { id: "mikro",      name: "Mikro",        logo: "📈", description: "Mikro ERP yazılımı" },
-  { id: "luca",       name: "Luca",         logo: "🔢", description: "DYS Yazılım / Luca muhasebe" },
-  { id: "netsis",     name: "Netsis",       logo: "🏢", description: "Netsis ERP sistemi" },
-];
-
-const ECOMMERCE_PLATFORMS = [
-  { id: "trendyol",     name: "Trendyol",     logo: "🛍️", description: "Türkiye'nin en büyük e-ticaret pazaryeri" },
-  { id: "hepsiburada",  name: "Hepsiburada",  logo: "🛒", description: "Hepsiburada.com" },
-  { id: "n11",          name: "n11",          logo: "🏪", description: "n11.com pazaryeri" },
-  { id: "pazarama",     name: "Pazarama",     logo: "🏬", description: "Pazarama.com" },
-  { id: "shopify",      name: "Shopify",      logo: "🌐", description: "Kendi mağazanız (Shopify)" },
-  { id: "woocommerce",  name: "WooCommerce",  logo: "🔌", description: "WordPress / WooCommerce" },
-];
+const ACCOUNTING_PROVIDERS = LEGACY_ACCOUNTING_PROVIDER_LIST;
+const ECOMMERCE_PLATFORMS = LEGACY_ECOMMERCE_PLATFORM_LIST;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PROVIDER/PLATFORM LİSTELERİ

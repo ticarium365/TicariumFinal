@@ -146,6 +146,7 @@ router.post("/logout", async (req: Request, res: Response) => {
 });
 
 router.get("/me", requireAuth, async (req: Request, res: Response) => {
+  res.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
   const user = req.session.user!;
 
   let onboardingCompleted: boolean | null = null;
@@ -1054,6 +1055,7 @@ router.post("/admin/trial-watcher/run", requireAuth, async (req: Request, res: R
 });
 
 router.get("/tenant", (req: Request, res: Response) => {
+  res.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
   const { company } = req;
   res.json({
     id: company.id,

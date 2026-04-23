@@ -10,8 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import JsBarcode from "jsbarcode";
-
 interface StockMovement {
   id: number;
   type: string;
@@ -74,9 +72,14 @@ export default function ProductDetail({ id }: { id: string }) {
   const barcodeValue = product?.barcode || product?.productCode || "";
 
   useEffect(() => {
-    if (barcodeSvgRef.current && barcodeValue) {
+    if (!barcodeValue) return;
+    let cancelled = false;
+    (async () => {
+      const { default: JsBarcode } = await import("jsbarcode");
+      if (cancelled || !barcodeSvgRef.current) return;
+      const el = barcodeSvgRef.current;
       try {
-        JsBarcode(barcodeSvgRef.current, barcodeValue, {
+        JsBarcode(el, barcodeValue, {
           format: barcodeValue.length === 13 ? "EAN13" : barcodeValue.length === 12 ? "EAN13" : "CODE128",
           width: 2,
           height: 60,
@@ -88,7 +91,7 @@ export default function ProductDetail({ id }: { id: string }) {
         });
       } catch {
         try {
-          JsBarcode(barcodeSvgRef.current, barcodeValue, {
+          JsBarcode(el, barcodeValue, {
             format: "CODE128",
             width: 2,
             height: 60,
@@ -98,7 +101,10 @@ export default function ProductDetail({ id }: { id: string }) {
           });
         } catch { /* barcode not renderable */ }
       }
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [barcodeValue]);
 
   const handlePrintBarcode = () => {

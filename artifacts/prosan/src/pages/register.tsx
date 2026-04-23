@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { trackProductEvent } from "@/lib/product-analytics";
 import { PublicNav } from "@/components/public-nav";
 import { BrandLogo } from "@/components/brand-logo";
 import {
@@ -31,8 +32,8 @@ export default function RegisterPage() {
   const isBusiness = mode === "business";
   const title = isBusiness ? "İşletme Hesabı Oluştur" : "Satınalmacı Hesabı Oluştur";
   const subtitle = isBusiness
-    ? "21 gün boyunca tüm özellikleri ücretsiz kullanın. Kart bilgisi gerekmez."
-    : "B2B satınalma vitrinine tek tıkla erişin. Tedarikçilerle bağlantı kurun.";
+    ? "Deneme süresi ve kapsam hesap politikasına göredir; güncel koşullar için Paketler sayfasına bakın."
+    : "Satınalma vitrinine erişim; tedarikçi keşfi paket ve yetkilere bağlıdır.";
   const endpoint = isBusiness ? "/api/auth/register/business" : "/api/auth/register/buyer";
   const successPath = isBusiness ? "/dashboard?welcome=1" : "/satinalma-merkezi?welcome=1";
 
@@ -71,6 +72,7 @@ export default function RegisterPage() {
         title: "Hesabınız oluşturuldu",
         description: data?.message || "Yönlendiriliyorsunuz…",
       });
+      trackProductEvent("signup_completed", { account: isBusiness ? "business" : "buyer" });
       // Doğrulama kodu zaten gönderildi; ana panele yönlendir, banner üstte uyaracak.
       setTimeout(() => window.location.replace(successPath), 600);
     } catch {

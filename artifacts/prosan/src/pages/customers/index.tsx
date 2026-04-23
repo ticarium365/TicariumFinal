@@ -96,7 +96,7 @@ export default function CustomersList() {
       });
       return apiFetch("GET", `/customers?${params}`);
     },
-    staleTime: 10_000,
+    staleTime: 30_000,
   });
 
   // Dalga 28 — Sadece aktif müşteri toplam sayısı (KPI strip için)

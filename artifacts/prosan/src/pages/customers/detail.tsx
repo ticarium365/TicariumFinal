@@ -79,21 +79,21 @@ export default function CustomerDetail({ id }: { id: string }) {
   const { data: custData, isLoading } = useQuery({
     queryKey: ["customer", id],
     queryFn: () => apiFetch("GET", `/customers/${id}`),
-    staleTime: 10_000,
+    staleTime: 30_000,
   });
 
   const { data: txData } = useQuery({
     queryKey: ["customer-txs", id, txPage],
     queryFn: () => apiFetch("GET", `/customers/${id}/transactions?page=${txPage}&limit=20`),
     enabled: tab === "transactions",
-    staleTime: 10_000,
+    staleTime: 30_000,
   });
 
   const { data: salesData } = useQuery({
     queryKey: ["customer-sales", id, salesPage],
     queryFn: () => apiFetch("GET", `/customers/${id}/sales?page=${salesPage}&limit=20`),
     enabled: tab === "sales",
-    staleTime: 10_000,
+    staleTime: 30_000,
   });
 
   if (isLoading) return (

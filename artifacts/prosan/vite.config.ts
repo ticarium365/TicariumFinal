@@ -14,6 +14,12 @@ if (rawPort && (Number.isNaN(port) || port <= 0)) {
 // BASE_PATH defaults to "/" for production builds
 const basePath = process.env.BASE_PATH ?? "/";
 
+// Yerelde Vite (ör. :3000) ile API (:8080) ayrı process; Replit'te genelde tek host reverse proxy vardı.
+const apiDevTarget = (process.env.VITE_API_BASE_URL ?? "http://localhost:8080").replace(
+  /\/+$/,
+  "",
+);
+
 export default defineConfig({
   base: basePath,
   plugins: [
@@ -45,11 +51,24 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        /** Sadece React çekirdeği — diğer paketleri varsayılan grupta bırak (döngüsel chunk uyarısı önlenir). */
+        manualChunks(id) {
+          if (id.includes("node_modules/react-dom") || id.includes("node_modules/react/")) {
+            return "vendor-react";
+          }
+        },
+      },
+    },
   },
   server: {
     port,
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: {
+      "/api": { target: apiDevTarget, changeOrigin: true },
+    },
     fs: {
       strict: true,
       deny: ["**/.*"],
@@ -59,5 +78,8 @@ export default defineConfig({
     port,
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: {
+      "/api": { target: apiDevTarget, changeOrigin: true },
+    },
   },
 });

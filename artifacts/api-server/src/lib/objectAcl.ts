@@ -1,21 +1,13 @@
-import { File } from "@google-cloud/storage";
+import type { StorageObjectLike } from "./storage/types.js";
+import { GCS_ACL_METADATA_KEY, R2_ACL_METADATA_KEY } from "./storage/metadata-keys.js";
 
-const ACL_POLICY_METADATA_KEY = "custom:aclPolicy";
+/** @deprecated GCS ile aynı anahtar adı — import için bırakıldı */
+export const ACL_POLICY_METADATA_KEY = GCS_ACL_METADATA_KEY;
 
-// Can be flexibly defined according to the use case.
-//
-// Examples:
-// - USER_LIST: the users from a list stored in the database;
-// - EMAIL_DOMAIN: the users whose email is in a specific domain;
-// - GROUP_MEMBER: the users who are members of a specific group;
-// - SUBSCRIBER: the users who are subscribers of a specific service / content
-//   creator.
 export enum ObjectAccessGroupType {}
 
 export interface ObjectAccessGroup {
   type: ObjectAccessGroupType;
-  // The logic id that identifies qualified group members. Format depends on the
-  // ObjectAccessGroupType — e.g. a user-list DB id, an email domain, a group id.
   id: string;
 }
 
@@ -29,7 +21,6 @@ export interface ObjectAclRule {
   permission: ObjectPermission;
 }
 
-// Stored as object custom metadata under "custom:aclPolicy" (JSON string).
 export interface ObjectAclPolicy {
   owner: string;
   visibility: "public" | "private";
@@ -59,39 +50,49 @@ function createObjectAccessGroup(
   group: ObjectAccessGroup,
 ): BaseObjectAccessGroup {
   switch (group.type) {
-    // Implement per access group type, e.g.:
-    // case "USER_LIST":
-    //   return new UserListAccessGroup(group.id);
     default:
       throw new Error(`Unknown access group type: ${group.type}`);
   }
 }
 
+function readAclJson(metadata: Record<string, string> | undefined): string | undefined {
+  if (!metadata) return undefined;
+  const lower: Record<string, string> = {};
+  for (const [k, v] of Object.entries(metadata)) {
+    lower[k.toLowerCase()] = v;
+  }
+  return (
+    metadata[GCS_ACL_METADATA_KEY] ??
+    metadata[R2_ACL_METADATA_KEY] ??
+    lower[GCS_ACL_METADATA_KEY.toLowerCase()] ??
+    lower[R2_ACL_METADATA_KEY.toLowerCase()]
+  );
+}
+
 export async function setObjectAclPolicy(
-  objectFile: File,
+  objectFile: StorageObjectLike,
   aclPolicy: ObjectAclPolicy,
 ): Promise<void> {
-  const [exists] = await objectFile.exists();
-  if (!exists) {
-    throw new Error(`Object not found: ${objectFile.name}`);
+  if (!(await objectFile.exists())) {
+    throw new Error(`Object not found: ${objectFile.debugName}`);
   }
 
   await objectFile.setMetadata({
     metadata: {
-      [ACL_POLICY_METADATA_KEY]: JSON.stringify(aclPolicy),
+      [GCS_ACL_METADATA_KEY]: JSON.stringify(aclPolicy),
     },
   });
 }
 
 export async function getObjectAclPolicy(
-  objectFile: File,
+  objectFile: StorageObjectLike,
 ): Promise<ObjectAclPolicy | null> {
-  const [metadata] = await objectFile.getMetadata();
-  const aclPolicy = metadata?.metadata?.[ACL_POLICY_METADATA_KEY];
+  const meta = await objectFile.getMetadata();
+  const aclPolicy = readAclJson(meta.metadata);
   if (!aclPolicy) {
     return null;
   }
-  return JSON.parse(aclPolicy as string);
+  return JSON.parse(aclPolicy) as ObjectAclPolicy;
 }
 
 export async function canAccessObject({
@@ -100,7 +101,7 @@ export async function canAccessObject({
   requestedPermission,
 }: {
   userId?: string;
-  objectFile: File;
+  objectFile: StorageObjectLike;
   requestedPermission: ObjectPermission;
 }): Promise<boolean> {
   const aclPolicy = await getObjectAclPolicy(objectFile);

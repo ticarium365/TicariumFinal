@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useListSales, getListSalesQueryKey } from "@workspace/api-client-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -111,27 +111,35 @@ export default function SalesHistory() {
     limit: 50,
     ...(saleTypeFilter !== "all" ? { saleType: saleTypeFilter } : {}),
   } as any;
+
   const { data, isLoading } = useListSales(listParams, {
     query: {
-      queryKey: getListSalesQueryKey(listParams)
-    }
+      queryKey: getListSalesQueryKey(listParams),
+      staleTime: 45_000,
+    },
   });
 
-  // Dalga 27 — Aggregate-only fetch (page-bağımsız, tüm günü temsil eden widget'lar için)
-  const aggregateParams = {
-    startDate: dateStr,
-    endDate: dateStr,
-    page: 1,
-    limit: 500,
-    ...(saleTypeFilter !== "all" ? { saleType: saleTypeFilter } : {}),
-  } as any;
-  const { data: aggregateData } = useListSales(aggregateParams, {
-    query: {
-      queryKey: getListSalesQueryKey(aggregateParams)
-    }
+  type DaySummary = {
+    date: string;
+    validCount: number;
+    validRevenue: number;
+    validProfit: number;
+    topProducts: { name: string; qty: number; revenue: number }[];
+    hourBuckets: number[];
+    peakHour: number | null;
+  };
+
+  const { data: daySummary, isPending: summaryPending, isError: summaryErr } = useQuery<DaySummary>({
+    queryKey: ["sales-day-summary", dateStr, saleTypeFilter],
+    queryFn: async () => {
+      const qs = new URLSearchParams({ date: dateStr });
+      if (saleTypeFilter !== "all") qs.set("saleType", saleTypeFilter);
+      const r = await fetch(`/api/sales/day-summary?${qs.toString()}`, { credentials: "include" });
+      if (!r.ok) throw new Error("day-summary");
+      return r.json();
+    },
+    staleTime: 60_000,
   });
-  const aggregateSales = aggregateData?.sales ?? [];
-  const aggregateTruncated = (aggregateData?.total ?? 0) > 500;
 
   const handleReturn = async () => {
     if (!returnDialog) return;
@@ -140,8 +148,8 @@ export default function SalesHistory() {
       toast({ title: "İade kaydedildi", description: `${returnDialog.name} — ${returnDialog.qty} adet iade edildi, stok güncellendi.` });
       setReturnDialog(null);
       setReturnNote("");
-      // Dalga 27 — Hem sayfa hem aggregate sorgusunu geçersiz kıl (prefix-based)
       queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
+      queryClient.invalidateQueries({ queryKey: ["sales-day-summary"] });
     } catch (err: any) {
       toast({ title: "Hata", description: err.message, variant: "destructive" });
     }
@@ -150,57 +158,25 @@ export default function SalesHistory() {
   const totalRevenue = data?.sales?.filter(s => !(s as any).returned).reduce((s, r) => s + r.totalPrice, 0) ?? 0;
   const totalProfit = data?.sales?.filter(s => !(s as any).returned).reduce((s, r) => s + r.profit, 0) ?? 0;
 
-  // Dalga 27 — Ek özet hesaplamaları
-  // Sayfa-bağımlı (sadece görünen sayfanın özeti — KPI strip için):
   const validSales = useMemo(
     () => (data?.sales ?? []).filter(s => !(s as any).returned),
     [data?.sales]
   );
   const validCount = validSales.length;
-  const avgTicket = validCount > 0 ? totalRevenue / validCount : 0;
 
-  // Aggregate (tüm gün — Top 5 ve Saat dağılımı için):
-  const aggregateValid = useMemo(
-    () => aggregateSales.filter(s => !(s as any).returned),
-    [aggregateSales]
-  );
-  const aggregateValidCount = aggregateValid.length;
+  const kpiUsesDay = !summaryPending && daySummary != null && !summaryErr;
+  const kpiCount = kpiUsesDay ? daySummary.validCount : validCount;
+  const kpiRevenue = kpiUsesDay ? daySummary.validRevenue : totalRevenue;
+  const kpiProfit = kpiUsesDay ? daySummary.validProfit : totalProfit;
+  const kpiAvgTicket = kpiCount > 0 ? kpiRevenue / kpiCount : 0;
 
-  // En çok satan 5 ürün — TÜM gün
-  const topProducts = useMemo(() => {
-    const map = new Map<string, { name: string; qty: number; revenue: number }>();
-    for (const s of aggregateValid) {
-      const key = s.productName ?? `#${s.id}`;
-      const cur = map.get(key) ?? { name: key, qty: 0, revenue: 0 };
-      cur.qty += s.quantity ?? 0;
-      cur.revenue += s.totalPrice ?? 0;
-      map.set(key, cur);
-    }
-    return Array.from(map.values()).sort((a, b) => b.qty - a.qty).slice(0, 5);
-  }, [aggregateValid]);
-
-  // Saat bazlı dağılım (0-23 → adet) — TÜM gün, TR saat dilimine sabitlenmiş
-  const trHourFmt = useMemo(
-    () => new Intl.DateTimeFormat("tr-TR", {
-      timeZone: "Europe/Istanbul",
-      hour: "2-digit",
-      hour12: false,
-    }),
-    []
-  );
-  const hourBuckets = useMemo(() => {
-    const buckets = Array.from({ length: 24 }, () => 0);
-    for (const s of aggregateValid) {
-      const h = parseInt(trHourFmt.format(new Date(s.createdAt)), 10);
-      if (!Number.isNaN(h) && h >= 0 && h < 24) buckets[h] += 1;
-    }
-    return buckets;
-  }, [aggregateValid, trHourFmt]);
-  const peakHour = useMemo(() => {
-    const maxIdx = hourBuckets.reduce((mi, v, i, arr) => v > arr[mi] ? i : mi, 0);
-    return hourBuckets[maxIdx] > 0 ? maxIdx : null;
-  }, [hourBuckets]);
+  const topProducts = daySummary?.topProducts ?? [];
+  const hourBuckets = daySummary?.hourBuckets?.length === 24
+    ? daySummary.hourBuckets
+    : Array.from({ length: 24 }, () => 0);
+  const peakHour = daySummary?.peakHour ?? null;
   const maxBucket = Math.max(1, ...hourBuckets);
+  const dayWidgetCount = !summaryErr && daySummary ? daySummary.validCount : 0;
 
   // ─── Toplu Faturalama (Sprint 62 köprüsü) ───
   const invoiceableSales = useMemo(
@@ -296,32 +272,42 @@ export default function SalesHistory() {
         </div>
       </div>
 
-      {/* Özet kartlar — Dalga 27: 4. kart "Ortalama Sepet" eklendi */}
-      {data?.sales && data.sales.length > 0 && (
+      {/* Özet kartlar — gün toplamı sunucu özeti; liste sayfalı */}
+      {kpiCount > 0 && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="bg-card border rounded-lg p-3">
             <p className="text-xs text-muted-foreground">Satış Adedi</p>
-            <p className="text-xl font-bold tabular-nums">{validCount}</p>
+            <p className="text-xl font-bold tabular-nums">{kpiCount}</p>
           </div>
           <div className="bg-card border rounded-lg p-3">
             <p className="text-xs text-muted-foreground">Toplam Ciro</p>
-            <p className="text-xl font-bold text-primary tabular-nums">{totalRevenue.toFixed(2)} TL</p>
+            <p className="text-xl font-bold text-primary tabular-nums">{kpiRevenue.toFixed(2)} TL</p>
           </div>
           <div className="bg-card border rounded-lg p-3">
             <p className="text-xs text-muted-foreground">Toplam Kâr</p>
-            <p className="text-xl font-bold text-emerald-600 tabular-nums">{totalProfit.toFixed(2)} TL</p>
+            <p className="text-xl font-bold text-emerald-600 tabular-nums">{kpiProfit.toFixed(2)} TL</p>
           </div>
           <div className="bg-card border rounded-lg p-3">
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <Receipt className="h-3 w-3" /> Ortalama Sepet
             </p>
-            <p className="text-xl font-bold text-indigo-600 tabular-nums">{avgTicket.toFixed(2)} TL</p>
+            <p className="text-xl font-bold text-indigo-600 tabular-nums">{kpiAvgTicket.toFixed(2)} TL</p>
           </div>
         </div>
       )}
 
-      {/* Dalga 27 — Top 5 ürün + saat dağılımı (tüm günün aggregate datasından) */}
-      {aggregateValidCount > 0 && (
+      {/* Top 5 ürün + saat dağılımı — sunucu özeti (200 satır sınırı yok) */}
+      {summaryPending && (
+        <div className="grid lg:grid-cols-2 gap-3">
+          <div className="bg-card border rounded-lg p-8 flex items-center justify-center text-muted-foreground text-sm gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" /> Gün özeti yükleniyor…
+          </div>
+          <div className="bg-card border rounded-lg p-8 flex items-center justify-center text-muted-foreground text-sm gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" /> Saat dağılımı yükleniyor…
+          </div>
+        </div>
+      )}
+      {!summaryPending && dayWidgetCount > 0 && (
         <div className="grid lg:grid-cols-2 gap-3">
           {/* En çok satan 5 ürün */}
           <div className="bg-card border rounded-lg p-4 shadow-sm">
@@ -330,7 +316,7 @@ export default function SalesHistory() {
                 <Trophy className="h-4 w-4 text-amber-500" /> En Çok Satan 5 Ürün
               </p>
               <span className="text-[10px] text-muted-foreground">
-                {aggregateTruncated ? "ilk 500 satıştan" : `${aggregateValidCount} satıştan`}
+                Tüm gün · {dayWidgetCount} satış · İstanbul saati
               </span>
             </div>
             {topProducts.length === 0 ? (

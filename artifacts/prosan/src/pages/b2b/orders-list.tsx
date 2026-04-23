@@ -121,24 +121,46 @@ function StatChip({ label, value, color }: { label: string; value: number; color
   );
 }
 
+const PAGE_SIZE = 30;
+
 export default function OrdersListPage() {
   const { toast } = useToast();
   const [tab, setTab] = useState<"inbox" | "outbox">("outbox");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
   const [data, setData] = useState<Order[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function fetchData() {
     setLoading(true);
     try {
-      const url = `${apiBase}/b2b/orders/${tab}${statusFilter !== "all" ? `?status=${statusFilter}` : ""}`;
-      const [list, s] = await Promise.all([
+      const q = new URLSearchParams();
+      if (statusFilter !== "all") q.set("status", statusFilter);
+      q.set("limit", String(PAGE_SIZE));
+      q.set("page", String(page));
+      if (searchDebounced.trim().length >= 2) {
+        q.set("q", searchDebounced.trim());
+      }
+      const qs = q.toString();
+      const url = `${apiBase}/b2b/orders/${tab}${qs ? `?${qs}` : ""}`;
+      const [listRes, s] = await Promise.all([
         fetch(url, { credentials: "include" }).then((r) => r.json()),
         fetch(`${apiBase}/b2b/orders/stats`, { credentials: "include" }).then((r) => r.json()),
       ]);
-      setData(Array.isArray(list) ? list : []);
+      if (listRes && typeof listRes === "object" && Array.isArray(listRes.items)) {
+        setData(listRes.items);
+        setTotal(Number(listRes.total ?? 0));
+      } else if (Array.isArray(listRes)) {
+        setData(listRes);
+        setTotal(listRes.length);
+      } else {
+        setData([]);
+        setTotal(0);
+      }
       setStats(s);
     } catch {
       toast({ title: "Hata", description: "Siparişler yüklenemedi", variant: "destructive" });
@@ -148,19 +170,32 @@ export default function OrdersListPage() {
   }
 
   useEffect(() => {
+    const t = window.setTimeout(() => setSearchDebounced(searchInput.trim()), 350);
+    return () => window.clearTimeout(t);
+  }, [searchInput]);
+
+  useEffect(() => {
     fetchData();
-  }, [tab, statusFilter]);
+  }, [tab, statusFilter, page, searchDebounced]);
 
-  const filtered = search
-    ? data.filter(
-        (o) =>
-          o.code.toLowerCase().includes(search.toLowerCase()) ||
-          o.buyerCompany?.name?.toLowerCase().includes(search.toLowerCase()) ||
-          o.sellerCompany?.name?.toLowerCase().includes(search.toLowerCase()) ||
-          o.trackingNo?.toLowerCase().includes(search.toLowerCase())
-      )
-    : data;
+  useEffect(() => {
+    setPage(1);
+  }, [tab, statusFilter, searchDebounced]);
 
+  const serverSearch = searchDebounced.trim().length >= 2;
+  const filtered = serverSearch
+    ? data
+    : searchInput.trim()
+      ? data.filter(
+          (o) =>
+            o.code.toLowerCase().includes(searchInput.toLowerCase()) ||
+            o.buyerCompany?.name?.toLowerCase().includes(searchInput.toLowerCase()) ||
+            o.sellerCompany?.name?.toLowerCase().includes(searchInput.toLowerCase()) ||
+            o.trackingNo?.toLowerCase().includes(searchInput.toLowerCase())
+        )
+      : data;
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const currentStats = stats?.[tab];
 
   return (
@@ -207,11 +242,21 @@ export default function OrdersListPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Kod, firma veya kargo no ara..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Kod, firma veya kargo no ara (2+ harf: tüm kayıtlar)..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="pl-9"
             />
+            {!serverSearch && total > PAGE_SIZE && (
+              <p className="text-[11px] text-muted-foreground mt-1 pl-1">
+                Kısa arama: yalnızca bu sayfadaki {PAGE_SIZE} kayıt içinde filtrelenir.
+              </p>
+            )}
+            {serverSearch && (
+              <p className="text-[11px] text-muted-foreground mt-1 pl-1">
+                Sunucu tüm siparişlerde arar; sonuçlar sayfalanır.
+              </p>
+            )}
           </div>
           <div className="flex gap-1 flex-wrap">
             {["all", "pending", "confirmed", "shipped", "delivered", "completed", "cancelled"].map((s) => (
@@ -238,6 +283,33 @@ export default function OrdersListPage() {
           ) : (
             filtered.map((o) => <OrderCard key={o.id} o={o} mode="outbox" />)
           )}
+          {!loading && total > PAGE_SIZE && (
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/60">
+              <p className="text-xs text-muted-foreground tabular-nums">
+                Toplam {total} kayıt · sayfa {page} / {totalPages}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Önceki
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Sonraki
+                </Button>
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="inbox" className="space-y-3 mt-5">
@@ -250,6 +322,33 @@ export default function OrdersListPage() {
             </div>
           ) : (
             filtered.map((o) => <OrderCard key={o.id} o={o} mode="inbox" />)
+          )}
+          {!loading && total > PAGE_SIZE && (
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/60">
+              <p className="text-xs text-muted-foreground tabular-nums">
+                Toplam {total} kayıt · sayfa {page} / {totalPages}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Önceki
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Sonraki
+                </Button>
+              </div>
+            </div>
           )}
         </TabsContent>
       </Tabs>

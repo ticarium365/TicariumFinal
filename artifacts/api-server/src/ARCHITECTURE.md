@@ -39,7 +39,7 @@ artifacts/api-server/src/
 | **`/marketplace`** | `marketplace_accounts`, `marketplace_orders`, `sync_jobs` | **CANONICAL** pazaryeri hattı. Provider adapter + queue worker + idempotent push/pull. Trendyol/Hepsiburada/N11 production. | ✅ Aktif, geliştirilebilir |
 | `/channels` | `marketplace_*` (aynı tablolar) | UI bridge — eski "Kanal Yönetimi" sayfaları için ince wrapper. `MARKETPLACE_PRO` feature flag arkasında. | ⚠️ Frontend hâlâ kullanıyor; yeni endpoint **EKLEME**. Yeni iş `/marketplace`'e yazılır. |
 | `/ext-integrations` | `accounting_integrations`, `ecommerce_integrations` | LEGACY — Sprint 14/15'te muhasebe + e-ticaret CRUD'u için yazıldı, mock sync. Credentials artık AES-256-GCM şifreli (Sprint 70). Yerini `/marketplace` ve müstakil muhasebe entegrasyonları alıyor. | 🟡 Bakımda; yeni provider eklemeyin. |
-| `/integrations` | `integrations` (in-app feature toggles) | Tenant'ın kendi içinde aktif/pasif edebileceği özellik bayrakları (Sprint 19). Pazaryeri ile karıştırılmamalı. | ✅ Aktif, kapsam farklı |
+| `/integrations` | `webhooks`, `api_keys`, **`GET /catalog`** (birleşik katalog + kiracı sayıları), `POST /catalog/:entryId/ping` | Tenant admin: giden webhook, API anahtarı; katalog `integration-hub-catalog` + `ext-integrations` ile tek kaynaklı sağlayıcı listesi. | ✅ Aktif |
 | `/aggregator` | `network_*` (cross-tenant) | Sprint 30+ "Ticarium Network" — tenant'lar arası tedarik/satış hattı. Pazaryeri **değil**, B2B network'tür. | ✅ Aktif, kapsam farklı |
 
 ---

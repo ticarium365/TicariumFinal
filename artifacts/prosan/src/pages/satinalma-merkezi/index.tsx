@@ -23,7 +23,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import * as XLSX from "xlsx";
 
 // ─── tipler ──────────────────────────────────────────────────────────────────
 type CatalogItem = {
@@ -216,14 +215,16 @@ export default function SatinalmaMerkeziPage() {
     }));
   }
 
-  function exportExcel() {
+  async function exportExcel() {
+    const XLSX = await import("xlsx");
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(exportRows());
     XLSX.utils.book_append_sheet(wb, ws, "Vitrin");
     XLSX.writeFile(wb, `b2b-vitrin-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
-  function exportCSV() {
+  async function exportCSV() {
+    const XLSX = await import("xlsx");
     const ws = XLSX.utils.json_to_sheet(exportRows());
     const csv = XLSX.utils.sheet_to_csv(ws);
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });

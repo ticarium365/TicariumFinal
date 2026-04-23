@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageHeader } from "@/components/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-context";
@@ -146,15 +147,24 @@ export default function EntegrasyonlarPage() {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <PageHeader
-        title="Entegrasyon Merkezi"
-        description="Pazaryerleri, banka, e-fatura, kargo ve mesajlaşma entegrasyonlarınızı tek panelden yönetin."
+        title="Bağlantılar ve dış sistemler"
+        description="Pazaryeri, ödeme, e-belge, kargo ve muhasebe bağlantılarını buradan keşfedin; kurulumu Ayarlar → Entegrasyonlar üzerinden yönetin."
         actions={
           <Badge variant="outline" className="gap-1.5" data-testid="badge-toplam">
             <Plug className="h-3.5 w-3.5" />
-            {stats.total} entegrasyon
+            {stats.total} kayıt
           </Badge>
         }
       />
+
+      <Alert className="mb-6 border-amber-500/40 bg-amber-500/5">
+        <AlertTitle className="text-amber-900 dark:text-amber-100">Dürüst durum özeti</AlertTitle>
+        <AlertDescription className="text-amber-950/80 dark:text-amber-50/90">
+          Bu sayfa hem canlı bağlantıları hem de yol haritasındaki entegrasyonları listeler. «Yakında» veya «Pilot» etiketi,
+          üretimde henüz tamamlanmamış veya hesabınıza özel koşul gerektiren akışlar anlamına gelebilir. Canlıya almadan önce
+          destek ekibinden doğrulama istemenizi öneririz; bağlantı kurulmuş satırlarda «Yönet» ile ayarlara gidebilirsiniz.
+        </AlertDescription>
+      </Alert>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Toplam</div><div className="text-2xl font-bold" data-testid="stat-total">{stats.total}</div></CardContent></Card>
@@ -262,10 +272,14 @@ export default function EntegrasyonlarPage() {
                     </span>
                   ) : i.status === "coming_soon" ? (
                     <span className="text-xs flex items-center gap-1 text-amber-700" data-testid={`status-${i.id}`}>
-                      <Clock className="h-3.5 w-3.5" /> Yakında
+                      <Clock className="h-3.5 w-3.5" /> Yakında / pilot
+                    </span>
+                  ) : i.backendId ? (
+                    <span className="text-xs text-blue-800 dark:text-blue-200" data-testid={`status-${i.id}`}>
+                      Ayarlardan bağlanır
                     </span>
                   ) : (
-                    <span className="text-xs text-muted-foreground" data-testid={`status-${i.id}`}>Hazır</span>
+                    <span className="text-xs text-muted-foreground" data-testid={`status-${i.id}`}>Yol haritasında</span>
                   )}
                   {cta}
                 </div>

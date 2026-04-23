@@ -18,6 +18,7 @@ import webhookReceiversRouter from "./routes/webhook-receivers.js";
 import { logger } from "./lib/logger.js";
 import { tenantMiddleware } from "./middlewares/tenant.js";
 import { initSentry, Sentry } from "./lib/sentry.js";
+import { applyTrustProxy, buildSessionOptions } from "./lib/session-config.js";
 import crypto from "node:crypto";
 
 void initSentry();
@@ -87,8 +88,8 @@ app.use(helmet({
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
 }));
 
-// Trust proxy (Replit edge proxy için — rate limit IP doğru çalışsın)
-app.set("trust proxy", 1);
+// Cloudflare / TLS sonlandırıcı — X-Forwarded-For / X-Forwarded-Proto (trust proxy: session-config)
+applyTrustProxy(app);
 
 // ─── Yanıt sıkıştırma (Sprint 25) ────────────────────────────────────────────
 app.use(compression());
@@ -132,9 +133,18 @@ const CORS_EXTRA = (process.env.CORS_EXTRA_ORIGINS || "")
   .split(",").map(s => s.trim()).filter(Boolean)
   .map(s => new RegExp("^" + s.replace(/[.*+?^${}()|[\]\\]/g, r => r === "*" ? ".*" : "\\" + r) + "$"));
 
+/** Virgülle tam köken eşleşmesi: https://app.alanadiniz.com (Cloudflare app/api ayrımı) */
+const CORS_EXACT_ORIGINS = new Set(
+  (process.env.CORS_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map(s => s.trim().replace(/\/+$/, ""))
+    .filter(Boolean),
+);
+
 app.use(cors({
   origin(origin, cb) {
     if (!origin) return cb(null, true); // same-origin / curl / mobil app
+    if (CORS_EXACT_ORIGINS.has(origin)) return cb(null, true);
     const allow = IS_PRODUCTION ? CORS_PROD_ALLOW : [...CORS_PROD_ALLOW, ...CORS_DEV_ALLOW];
     const all = [...allow, ...CORS_EXTRA];
     if (all.some(rx => rx.test(origin))) return cb(null, true);
@@ -142,6 +152,7 @@ app.use(cors({
     return cb(new Error(`CORS: ${origin} izinli değil`));
   },
   credentials: true,
+  maxAge: 600,
 }));
 
 // İstek gövdesi boyut sınırı (Sprint 25)
@@ -183,19 +194,7 @@ if (IS_PRODUCTION) {
   }
 }
 
-app.use(session({
-  secret: sessionSecret,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: IS_PRODUCTION,            // prod'da HTTPS zorunlu
-    httpOnly: true,                   // JS ile erişilemez
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    // Tenant subdomain'leri arasında auth flow'un (şifre sıfırlama linki, mail doğrulama)
-    // bozulmaması için "lax". "strict" cross-site GET'lerinde cookie göndermez.
-    sameSite: "lax",
-  },
-}));
+app.use(session(buildSessionOptions(sessionSecret)));
 
 // Brute-force koruması: login endpoint'i 15 dakikada max 20 deneme (prod only).
 // T017 (Phase A): Sadece IP yerine `IP + username` key — ofis NAT senaryolarında

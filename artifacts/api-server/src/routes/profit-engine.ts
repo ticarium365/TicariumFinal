@@ -137,6 +137,29 @@ router.get("/products/:id/snapshot", gateHolding, requireViewer, async (req: Req
   res.json(snap ?? null);
 });
 
+// ─── DASHBOARD SAYAÇLARI (ana panel — tüm snapshot satırlarını taşımadan) ─
+router.get("/dashboard-counts", gateDashboard, requireViewer, async (req: Request, res: Response) => {
+  const cid = req.companyId!;
+  const result = await db.execute(sql`
+    SELECT s.status AS status, COUNT(*)::int AS cnt
+    FROM (
+      SELECT DISTINCT ON (product_id) product_id, status
+      FROM product_profit_snapshots
+      WHERE company_id = ${cid}
+      ORDER BY product_id, snapshot_date DESC
+    ) AS s
+    GROUP BY s.status
+  `);
+  const rows = (result.rows ?? []) as { status: string; cnt: number | string }[];
+  const by = (st: string) => Number(rows.find((r) => r.status === st)?.cnt ?? 0);
+  return res.json({
+    losingCount: by("losing"),
+    stagnantCount: by("stagnant"),
+    starCount: by("star"),
+    productCount: rows.reduce((a, r) => a + Number(r.cnt), 0),
+  });
+});
+
 // ─── DASHBOARD ────────────────────────────────────────────────────────
 router.get("/dashboard", gateDashboard, requireViewer, async (req: Request, res: Response) => {
   const cid = req.companyId!;

@@ -32,7 +32,7 @@ export default function PurchasesList() {
   const { data, isLoading } = useQuery({
     queryKey: ["purchases", page],
     queryFn: () => apiFetch(`/purchases?page=${page}&limit=20`),
-    staleTime: 10_000,
+    staleTime: 45_000,
   });
 
   const purchases: Purchase[] = data?.purchases ?? [];

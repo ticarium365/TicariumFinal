@@ -3,6 +3,8 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { Client as ObjectStorageClient } from "@replit/object-storage";
 import nodemailer from "nodemailer";
+import { resolveStorageDriver } from "../lib/storage/driver.js";
+import { probeR2Storage, r2EnvSummary } from "../lib/storage/r2.js";
 
 const router: IRouter = Router();
 const startTime = Date.now();
@@ -26,14 +28,50 @@ async function checkDb(): Promise<CheckResult> {
 }
 
 async function checkObjectStorage(): Promise<CheckResult> {
+  const driver = resolveStorageDriver();
+
+  if (driver === "r2") {
+    const env = r2EnvSummary();
+    if (!env.ok) {
+      return {
+        status: "disabled",
+        detail: `R2 yapılandırması eksik (${env.missing.join(", ")}). .env.example içindeki R2_* değişkenlerini doldurun.`,
+      };
+    }
+    const r = await probeR2Storage();
+    if (!r.ok) {
+      return {
+        status: "down",
+        detail: r.message,
+        latencyMs: r.latencyMs,
+      };
+    }
+    return {
+      status: "ok",
+      latencyMs: r.latencyMs,
+      detail: r.detail,
+    };
+  }
+
   const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-  if (!bucketId) return { status: "disabled", detail: "Bucket konfigüre değil" };
+  if (!bucketId) {
+    return {
+      status: "disabled",
+      detail: "Replit object storage (DEFAULT_OBJECT_STORAGE_BUCKET_ID) tanımlı değil — STORAGE_DRIVER=replit veya R2_* ile R2 kullanın.",
+    };
+  }
   const t = Date.now();
   try {
     const client = new ObjectStorageClient({ bucketId });
     const list = await client.list({ prefix: "healthz/", maxResults: 1 });
-    if (!list.ok) return { status: "degraded", detail: list.error?.message ?? "list başarısız" };
-    return { status: "ok", latencyMs: Date.now() - t };
+    if (!list.ok) {
+      return { status: "degraded", detail: list.error?.message ?? "list başarısız" };
+    }
+    return {
+      status: "ok",
+      latencyMs: Date.now() - t,
+      detail: "Replit Object Storage listesi OK",
+    };
   } catch (e: any) {
     return { status: "down", detail: e?.message ?? "Storage hatası" };
   }
@@ -63,11 +101,6 @@ router.get("/healthz", (_req: Request, res: Response) => {
   res.json({ status: "ok" });
 });
 
-/**
- * Public derin sağlık kontrolü.
- * Sadece bileşen statülerini döner (ok/degraded/down/disabled) — exception detayları,
- * latency, runtime parmak izi (node version, memory) gibi hassas bilgileri dışlar.
- */
 router.get("/healthz/deep", async (_req: Request, res: Response) => {
   const uptime = Math.floor((Date.now() - startTime) / 1000);
   const [dbR, storageR, smtpR] = await Promise.all([checkDb(), checkObjectStorage(), checkSmtp()]);
@@ -89,13 +122,7 @@ router.get("/healthz/deep", async (_req: Request, res: Response) => {
   });
 });
 
-/**
- * Detaylı (kimliksiz erişimde sansürlü) health endpoint.
- * Sadece super_admin tüm bilgileri görür: latency, hata mesajı, node version, memory.
- */
 router.get("/healthz/internal", async (req: Request, res: Response) => {
-  // Bu kod tabanında oturum rolü req.session.user.role altında durur.
-  // (Architect bulgusu: önceden req.session.role okunuyordu → super_admin'ler bile 403 alıyordu.)
   const role = (req.session as any)?.user?.role;
   if (role !== "super_admin") {
     return res.status(403).json({ error: { code: "FORBIDDEN", message: "Yalnızca süper admin" } });

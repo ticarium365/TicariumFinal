@@ -7,16 +7,40 @@ import {
   b2bQuoteItemsTable,
   notificationsTable,
 } from "@workspace/db";
-import { eq, and, desc, inArray, or } from "drizzle-orm";
+import { eq, and, desc, inArray, or, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { z } from "zod/v4";
 
 const router = Router();
 router.use(requireAuth);
 
-function parseId(raw: string): number | null {
-  const n = Number(raw);
+function parseId(raw: string | string[] | undefined): number | null {
+  const s = Array.isArray(raw) ? raw[0] : raw;
+  const n = Number(s);
   return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+function firstQs(val: unknown): string | undefined {
+  if (val === undefined || val === null) return undefined;
+  if (Array.isArray(val)) return typeof val[0] === "string" ? val[0] : undefined;
+  return typeof val === "string" ? val : undefined;
+}
+
+/** ILIKE metakarakterlerini sadeleştirir; min 2 karakter. */
+function normalizeOrderSearch(val: unknown): string | null {
+  const s = firstQs(val)?.trim();
+  if (!s || s.length < 2) return null;
+  return s.replace(/[%_\\]/g, " ").slice(0, 80);
+}
+
+function parsePageParams(req: Request): { limit: number; offset: number } {
+  const rawLimit = Number(req.query.limit);
+  const rawPage = Number(req.query.page);
+  const limit = Number.isFinite(rawLimit)
+    ? Math.min(100, Math.max(1, Math.floor(rawLimit)))
+    : 30;
+  const page = Number.isFinite(rawPage) ? Math.max(1, Math.floor(rawPage)) : 1;
+  return { limit, offset: (page - 1) * limit };
 }
 
 const ORDER_FIELDS = {
@@ -61,7 +85,8 @@ async function attachCompanies(rows: any[]) {
     })
     .from(companiesTable)
     .where(inArray(companiesTable.id, ids));
-  const map = new Map(companies.map((c) => [c.id, c]));
+  type CoMini = (typeof companies)[number];
+  const map = new Map<number, CoMini>(companies.map((c: CoMini) => [c.id, c]));
   return rows.map((r) => ({
     ...r,
     buyerCompany: map.get(r.buyerCompanyId) ?? null,
@@ -72,72 +97,116 @@ async function attachCompanies(rows: any[]) {
 router.get("/inbox", async (req: Request, res: Response) => {
   try {
     const companyId = req.companyId!;
-    const status = req.query.status as string | undefined;
+    const status = firstQs(req.query.status);
     const conds = [eq(b2bOrdersTable.sellerCompanyId, companyId)];
     if (status && status !== "all") conds.push(eq(b2bOrdersTable.status, status));
-    const rows = await db
-      .select(ORDER_FIELDS)
-      .from(b2bOrdersTable)
-      .where(and(...conds))
-      .orderBy(desc(b2bOrdersTable.createdAt))
-      .limit(200);
-    res.json(await attachCompanies(rows));
+    const nq = normalizeOrderSearch(req.query.q);
+    if (nq) {
+      const p = `%${nq}%`;
+      conds.push(sql`(
+        ${b2bOrdersTable.code}::text ILIKE ${p}
+        OR COALESCE(${b2bOrdersTable.trackingNo}, '')::text ILIKE ${p}
+        OR EXISTS (
+          SELECT 1 FROM companies bc
+          WHERE bc.id = ${b2bOrdersTable.buyerCompanyId} AND bc.name ILIKE ${p}
+        )
+        OR EXISTS (
+          SELECT 1 FROM companies sc
+          WHERE sc.id = ${b2bOrdersTable.sellerCompanyId} AND sc.name ILIKE ${p}
+        )
+      )`);
+    }
+    const whereClause = and(...conds);
+    const { limit, offset } = parsePageParams(req);
+    const [[{ total }], rows] = await Promise.all([
+      db.select({ total: sql<number>`count(*)::int` }).from(b2bOrdersTable).where(whereClause),
+      db
+        .select(ORDER_FIELDS)
+        .from(b2bOrdersTable)
+        .where(whereClause)
+        .orderBy(desc(b2bOrdersTable.createdAt))
+        .limit(limit)
+        .offset(offset),
+    ]);
+    return res.json({ items: await attachCompanies(rows), total: Number(total ?? 0) });
   } catch (err) {
     req.log.error({ err }, "b2b orders inbox failed");
-    res.status(500).json({ error: "Siparişler alınamadı" });
+    return res.status(500).json({ error: "Siparişler alınamadı" });
   }
 });
 
 router.get("/outbox", async (req: Request, res: Response) => {
   try {
     const companyId = req.companyId!;
-    const status = req.query.status as string | undefined;
+    const status = firstQs(req.query.status);
     const conds = [eq(b2bOrdersTable.buyerCompanyId, companyId)];
     if (status && status !== "all") conds.push(eq(b2bOrdersTable.status, status));
-    const rows = await db
-      .select(ORDER_FIELDS)
-      .from(b2bOrdersTable)
-      .where(and(...conds))
-      .orderBy(desc(b2bOrdersTable.createdAt))
-      .limit(200);
-    res.json(await attachCompanies(rows));
+    const nq = normalizeOrderSearch(req.query.q);
+    if (nq) {
+      const p = `%${nq}%`;
+      conds.push(sql`(
+        ${b2bOrdersTable.code}::text ILIKE ${p}
+        OR COALESCE(${b2bOrdersTable.trackingNo}, '')::text ILIKE ${p}
+        OR EXISTS (
+          SELECT 1 FROM companies bc
+          WHERE bc.id = ${b2bOrdersTable.buyerCompanyId} AND bc.name ILIKE ${p}
+        )
+        OR EXISTS (
+          SELECT 1 FROM companies sc
+          WHERE sc.id = ${b2bOrdersTable.sellerCompanyId} AND sc.name ILIKE ${p}
+        )
+      )`);
+    }
+    const whereClause = and(...conds);
+    const { limit, offset } = parsePageParams(req);
+    const [[{ total }], rows] = await Promise.all([
+      db.select({ total: sql<number>`count(*)::int` }).from(b2bOrdersTable).where(whereClause),
+      db
+        .select(ORDER_FIELDS)
+        .from(b2bOrdersTable)
+        .where(whereClause)
+        .orderBy(desc(b2bOrdersTable.createdAt))
+        .limit(limit)
+        .offset(offset),
+    ]);
+    return res.json({ items: await attachCompanies(rows), total: Number(total ?? 0) });
   } catch (err) {
     req.log.error({ err }, "b2b orders outbox failed");
-    res.status(500).json({ error: "Siparişler alınamadı" });
+    return res.status(500).json({ error: "Siparişler alınamadı" });
   }
 });
+
+function rollupStatusCounts(rows: { status: string; c: number | string }[]) {
+  const get = (s: string) => Number(rows.find((r) => r.status === s)?.c ?? 0);
+  return {
+    pending: get("pending"),
+    confirmed: get("confirmed"),
+    shipped: get("shipped"),
+    delivered: get("delivered"),
+    completed: get("completed"),
+    cancelled: get("cancelled"),
+  };
+}
 
 router.get("/stats", async (req: Request, res: Response) => {
   try {
     const companyId = req.companyId!;
-    const allRows = await db
-      .select({
-        id: b2bOrdersTable.id,
-        status: b2bOrdersTable.status,
-        buyerCompanyId: b2bOrdersTable.buyerCompanyId,
-        sellerCompanyId: b2bOrdersTable.sellerCompanyId,
-      })
-      .from(b2bOrdersTable)
-      .where(
-        or(
-          eq(b2bOrdersTable.buyerCompanyId, companyId),
-          eq(b2bOrdersTable.sellerCompanyId, companyId)
-        )
-      );
-    const inbox = allRows.filter((r) => r.sellerCompanyId === companyId);
-    const outbox = allRows.filter((r) => r.buyerCompanyId === companyId);
-    const counts = (rows: typeof allRows) => ({
-      pending: rows.filter((r) => r.status === "pending").length,
-      confirmed: rows.filter((r) => r.status === "confirmed").length,
-      shipped: rows.filter((r) => r.status === "shipped").length,
-      delivered: rows.filter((r) => r.status === "delivered").length,
-      completed: rows.filter((r) => r.status === "completed").length,
-      cancelled: rows.filter((r) => r.status === "cancelled").length,
-    });
-    res.json({ inbox: counts(inbox), outbox: counts(outbox) });
+    const [inboxRows, outboxRows] = await Promise.all([
+      db
+        .select({ status: b2bOrdersTable.status, c: sql<number>`count(*)::int` })
+        .from(b2bOrdersTable)
+        .where(eq(b2bOrdersTable.sellerCompanyId, companyId))
+        .groupBy(b2bOrdersTable.status),
+      db
+        .select({ status: b2bOrdersTable.status, c: sql<number>`count(*)::int` })
+        .from(b2bOrdersTable)
+        .where(eq(b2bOrdersTable.buyerCompanyId, companyId))
+        .groupBy(b2bOrdersTable.status),
+    ]);
+    return res.json({ inbox: rollupStatusCounts(inboxRows), outbox: rollupStatusCounts(outboxRows) });
   } catch (err) {
     req.log.error({ err }, "b2b orders stats failed");
-    res.status(500).json({ error: "İstatistik alınamadı" });
+    return res.status(500).json({ error: "İstatistik alınamadı" });
   }
 });
 
@@ -160,10 +229,10 @@ router.get("/:id", async (req: Request, res: Response) => {
       .from(b2bQuoteItemsTable)
       .where(eq(b2bQuoteItemsTable.requestId, order.quoteId));
     const [enriched] = await attachCompanies([order]);
-    res.json({ order: enriched, items });
+    return res.json({ order: enriched, items });
   } catch (err) {
     req.log.error({ err }, "b2b order detail failed");
-    res.status(500).json({ error: "Sipariş alınamadı" });
+    return res.status(500).json({ error: "Sipariş alınamadı" });
   }
 });
 
@@ -263,10 +332,10 @@ router.patch("/:id/status", async (req: Request, res: Response) => {
       entityId: order.id,
     });
 
-    res.json({ ok: true, status: parsed.data.status });
+    return res.json({ ok: true, status: parsed.data.status });
   } catch (err) {
     req.log.error({ err }, "b2b order status update failed");
-    res.status(500).json({ error: "Durum güncellenemedi" });
+    return res.status(500).json({ error: "Durum güncellenemedi" });
   }
 });
 

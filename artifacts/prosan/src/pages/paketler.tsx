@@ -397,8 +397,7 @@ export default function PaketlerPage() {
           <span className="t365-brand-gradient">Sana uygun bir paket var.</span>
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          4 paket, küçük bir dükkândan çoklu firmalı holdinge kadar. İhtiyacın değiştikçe yukarı geç,
-          veriler ve ekibin aynen kalsın.
+          Net paket seçenekleri: küçük işletmeden çok şubeli yapıya. İhtiyaç büyüdükçe yükseltin; verileriniz ve ekibiniz aynı ortamda kalır.
         </p>
 
         <div className="flex items-center justify-center gap-3 mt-8">
@@ -444,8 +443,8 @@ export default function PaketlerPage() {
               ))}
             </div>
             <p className="text-center text-sm text-muted-foreground mt-8 max-w-2xl mx-auto">
-              Tüm paketler 30 gün ücretsiz başlatılır (Kurumsal feature seti). Kredi kartı gerekmez.
-              Beğenmezsen veriler 30 gün saklanır.
+              Deneme süresi ve ödeme koşulları hesap politikasına göre değişebilir; kart zorunluluğu ve veri saklama süresi için
+              satış veya destek ekibinden güncel metni isteyin.
             </p>
           </>
         )}

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
-import { db, productsTable, salesTable, productViewsTable } from "@workspace/db";
-import { and, gte, lte, count, desc, sql, eq } from "drizzle-orm";
+import { db, productsTable, salesTable, productViewsTable, bankTransactionsTable, marketplaceOrdersTable, companiesTable } from "@workspace/db";
+import { and, gte, lte, count, desc, sql, eq, isNull } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { requireAdmin } from "../middlewares/auth.js";
 
@@ -53,7 +53,7 @@ router.get("/stats", requireAuth, async (req: Request, res: Response) => {
       else { todayRetailRevenue += s.totalPrice; todayRetailCount += 1; }
     }
 
-    res.json({
+    return res.json({
       totalProducts: totalProductsResult[0]?.count ?? 0,
       outOfStock: stockMap[0] ?? 0,
       stock1: stockMap[1] ?? 0,
@@ -72,7 +72,68 @@ router.get("/stats", requireAuth, async (req: Request, res: Response) => {
     });
   } catch (err) {
     req.log?.error({ err }, "Dashboard stats error");
-    res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+/** Widget sayaçları — ana panel için; büyük listeleri (500 satır) çekmeden. */
+/** Hafif tutma / satış hatırlatıcısı — admin & staff. */
+router.get("/retention-hint", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const role = req.session?.user?.role;
+    if (!role || !["admin", "staff"].includes(role)) {
+      return res.json({ message: null as string | null, ctaHref: null as string | null });
+    }
+    const cid = req.companyId;
+    const ago7 = new Date();
+    ago7.setDate(ago7.getDate() - 7);
+    const [[salesRow], [prodRow], [co]] = await Promise.all([
+      db.select({ c: count() }).from(salesTable).where(and(
+        eq(salesTable.companyId, cid),
+        gte(salesTable.createdAt, ago7),
+      )),
+      db.select({ c: count() }).from(productsTable).where(eq(productsTable.companyId, cid)),
+      db.select({ planType: companiesTable.planType }).from(companiesTable).where(eq(companiesTable.id, cid)).limit(1),
+    ]);
+    const salesLast7Days = Number(salesRow?.c ?? 0);
+    const productCount = Number(prodRow?.c ?? 0);
+    const planType = co?.planType ?? "trial";
+    let message: string | null = null;
+    let ctaHref: string | null = null;
+    if (planType === "trial" && salesLast7Days === 0 && productCount >= 2) {
+      message = "Deneme süresinde henüz satış kaydı yok; POS veya satış ekranından bir fiş keserek başlayın.";
+      ctaHref = "/sales";
+    } else if (planType === "active" && salesLast7Days === 0 && productCount >= 8) {
+      message = "Son 7 günde satış görünmüyor; stok hazır — Online Satış Merkezi veya kampanyalarla hareketlendirin.";
+      ctaHref = "/eticarium-merkezi";
+    }
+    return res.json({ message, ctaHref, planType, salesLast7Days, productCount });
+  } catch (err) {
+    req.log?.error({ err }, "Dashboard retention-hint error");
+    return res.status(500).json({ message: null, ctaHref: null });
+  }
+});
+
+router.get("/action-counts", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const cid = req.companyId;
+    const [[bankingRow], [mktRow]] = await Promise.all([
+      db.select({ c: count() }).from(bankTransactionsTable).where(and(
+        eq(bankTransactionsTable.companyId, cid),
+        eq(bankTransactionsTable.status, "unmatched"),
+      )),
+      db.select({ c: count() }).from(marketplaceOrdersTable).where(and(
+        eq(marketplaceOrdersTable.companyId, cid),
+        isNull(marketplaceOrdersTable.convertedSaleId),
+      )),
+    ]);
+    return res.json({
+      bankingUnmatched: Number(bankingRow?.c ?? 0),
+      marketplacePendingConversion: Number(mktRow?.c ?? 0),
+    });
+  } catch (err) {
+    req.log?.error({ err }, "Dashboard action-counts error");
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

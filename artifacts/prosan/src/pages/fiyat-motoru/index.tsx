@@ -116,7 +116,7 @@ export default function FiyatMotoru() {
         <div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
             <Sparkles className="w-4 h-4 text-emerald-600" />
-            <Link href="/eticarium-merkezi" className="hover:underline">e-Ticarium Merkezi</Link>
+            <Link href="/eticarium-merkezi" className="hover:underline">Online Satış Merkezi</Link>
             <span>/</span>
             <span>Fiyat Motoru</span>
           </div>

@@ -9,10 +9,14 @@
     "./feature-codes": "./src/feature-codes.ts"
   },
   "scripts": {
-    "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
+    "db:push": "pnpm run push",
+    "push": "dotenv -e ../../.env -- drizzle-kit push --config ./drizzle.config.ts",
+    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
+    "migrate:funnel": "dotenv -e ../../.env -- node ./apply-funnel-migration.mjs",
+    "migrate:sql": "dotenv -e ../../.env -- node ./apply-sql-migrations.mjs"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "^0.8.3",
     "pg": "^8.20.0",

@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import JsBarcode from "jsbarcode";
 import { QRCodeSVG } from "qrcode.react";
 import {
   Printer, Search, X, Plus, Minus, Tag, Scan, Grid3X3, LayoutGrid,
@@ -76,12 +75,20 @@ function Barcode({ value, height = 40, fontSize = 9 }: { value: string; height?:
   const svgRef = useRef<SVGSVGElement>(null);
   useEffect(() => {
     if (!svgRef.current) return;
-    try {
-      JsBarcode(svgRef.current, value, {
-        format: "CODE128", height, fontSize, margin: 2, textMargin: 1,
-        displayValue: true, lineColor: "#000", background: "#fff",
-      });
-    } catch { /* geçersiz */ }
+    let cancelled = false;
+    (async () => {
+      const { default: JsBarcode } = await import("jsbarcode");
+      if (cancelled || !svgRef.current) return;
+      try {
+        JsBarcode(svgRef.current, value, {
+          format: "CODE128", height, fontSize, margin: 2, textMargin: 1,
+          displayValue: true, lineColor: "#000", background: "#fff",
+        });
+      } catch { /* geçersiz */ }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [value, height, fontSize]);
   return <svg ref={svgRef} style={{ width: "100%" }} />;
 }

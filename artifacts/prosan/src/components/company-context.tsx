@@ -35,7 +35,10 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
 
     async function resolve() {
       // Önce oturum kontrolü — super_admin ise platform markası göster
-      const meRes = await fetch("/api/auth/me", { credentials: "include" }).catch(() => null);
+      const meRes = await fetch("/api/auth/me", {
+        credentials: "include",
+        cache: "no-store",
+      }).catch(() => null);
       if (meRes?.ok) {
         const me = await meRes.json().catch(() => null);
         if (me?.role === "super_admin") {
@@ -45,7 +48,10 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Normal kullanıcı: tenant'a ait şirket bilgisini al
-      const tenantRes = await fetch("/api/auth/tenant", { credentials: "include" }).catch(() => null);
+      const tenantRes = await fetch("/api/auth/tenant", {
+        credentials: "include",
+        cache: "no-store",
+      }).catch(() => null);
       if (tenantRes?.ok) {
         const data = await tenantRes.json().catch(() => null);
         if (mounted && data) setCompany(data);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Building2, CheckCircle, XCircle, Package, Users, ShoppingCart, Calendar, Settings } from "lucide-react";
+import { Loader2, Plus, Building2, CheckCircle, XCircle, Package, Users, ShoppingCart, Calendar, Settings, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Company {
   id: number;
@@ -37,6 +37,8 @@ interface NewCompanyForm {
   primaryColor: string;
   trialDays: string;
 }
+
+const LIST_PAGE_SIZE = 15;
 
 const emptyForm: NewCompanyForm = {
   name: "",
@@ -72,6 +74,7 @@ function PlanBadge({ company }: { company: Company }) {
 
 export default function CompaniesAdmin() {
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [listPage, setListPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [trialDialog, setTrialDialog] = useState<Company | null>(null);
@@ -88,6 +91,7 @@ export default function CompaniesAdmin() {
       if (!res.ok) throw new Error("Yüklenemedi");
       const data = await res.json();
       setCompanies(data);
+      setListPage(1);
     } catch {
       toast({ title: "Hata", description: "Firmalar yüklenemedi.", variant: "destructive" });
     } finally {
@@ -181,6 +185,12 @@ export default function CompaniesAdmin() {
   const f = (key: keyof NewCompanyForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(prev => ({ ...prev, [key]: e.target.value }));
 
+  const totalListPages = Math.max(1, Math.ceil(companies.length / LIST_PAGE_SIZE));
+  const pagedCompanies = useMemo(() => {
+    const start = (listPage - 1) * LIST_PAGE_SIZE;
+    return companies.slice(start, start + LIST_PAGE_SIZE);
+  }, [companies, listPage]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -259,8 +269,25 @@ export default function CompaniesAdmin() {
           <p>Henüz firma yok</p>
         </div>
       ) : (
+        <div className="space-y-3">
+          {companies.length > LIST_PAGE_SIZE && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+              <span className="text-muted-foreground">
+                {(listPage - 1) * LIST_PAGE_SIZE + 1}–{Math.min(listPage * LIST_PAGE_SIZE, companies.length)} / {companies.length} firma
+              </span>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled={listPage <= 1} onClick={() => setListPage((p) => p - 1)} aria-label="Önceki sayfa">
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-xs tabular-nums text-muted-foreground">Sayfa {listPage} / {totalListPages}</span>
+                <Button variant="outline" size="sm" disabled={listPage >= totalListPages} onClick={() => setListPage((p) => p + 1)} aria-label="Sonraki sayfa">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         <div className="grid gap-4">
-          {companies.map((company) => (
+          {pagedCompanies.map((company) => (
             <div key={company.id} className="bg-card border rounded-xl p-5 flex items-center gap-4">
               <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0" style={{ background: company.primaryColor ?? "#2563eb" }}>
                 {company.name.charAt(0).toUpperCase()}
@@ -296,6 +323,7 @@ export default function CompaniesAdmin() {
               </div>
             </div>
           ))}
+        </div>
         </div>
       )}
 

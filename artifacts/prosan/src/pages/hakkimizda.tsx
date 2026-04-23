@@ -22,9 +22,9 @@ export default function HakkimizdaPage() {
           <span className="t365-brand-gradient">Biz Kimiz?</span>
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-          <strong>Ticarium365</strong>, Türkiye'deki KOBİ'lerin günlük operasyonunu — stok, satış, e-fatura, pazaryeri ve finans dahil —
-          tek panelden yönetmesi için kurulmuş bir işletim sistemidir. Yazılım yığınını sadeleştirmek, gizli faturayı ortadan kaldırmak
-          ve "hangi modülü açacağız?" kararını ortadan kaldırmak için varız.
+          <strong>Ticarium365</strong>, Türkiye&apos;deki KOBİ&apos;lerin günlük operasyonunu — stok, satış, e-belge, pazaryeri ve finans —
+          tek panelde toplamak için geliştirilen bulut tabanlı bir işletme yazılımıdır. Amacımız gereksiz modül karmaşasını azaltmak,
+          maliyetleri şeffaf tutmak ve günlük işi hızlandırmaktır.
         </p>
       </section>
 
@@ -41,9 +41,8 @@ export default function HakkimizdaPage() {
           <Card className="border-2"><CardContent className="p-8">
             <h2 className="text-2xl font-bold mb-3" style={{ fontFamily: "var(--font-display)", color: NAVY }}>Bugün</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Stok ve barkoddan e-faturaya, 11 pazaryerinden mobil POS'a, gerçek kâr motorundan B2B teklif sistemine kadar geniş bir ürün
-              yelpazesini tek aboneliğin altında sunuyoruz. Her firmanın verisini ayrı kiracıda tutan çoklu firma mimarimizle, küçük bir
-              dükkândan zincir mağazaya kadar büyüyebilirsin.
+              Stok ve barkoddan e-belgeye, pazaryeri ve mağaza kanallarından kârlılık takibine kadar modülleri tek abonelik altında sunuyoruz.
+              Veriniz şirket bazında ayrı tutulur; küçük bir dükkândan çok şubeli yapıya doğru ölçeklenebilirsiniz.
             </p>
           </CardContent></Card>
         </div>

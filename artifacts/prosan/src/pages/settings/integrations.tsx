@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Webhook, Key, Plus, X, Pencil, Trash2, CheckCircle, XCircle,
   Send, Eye, EyeOff, Copy, RefreshCw, Activity, Zap,
   BookOpen, ShoppingCart, PlayCircle, ChevronDown, ChevronUp,
+  Search, LayoutGrid,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -35,6 +38,35 @@ interface SyncLog {
 }
 
 type TabId = "webhooks" | "api-keys" | "accounting" | "ecommerce";
+
+type HubLifecycle = "all" | "live" | "pilot" | "roadmap";
+
+type HubCatalogEntry = {
+  entryId: string;
+  family: string;
+  providerId: string;
+  displayName: string;
+  emoji: string;
+  description: string;
+  lifecycle: "live" | "pilot" | "roadmap";
+  setupDifficulty: "low" | "medium" | "high";
+  businessImpactTags: string[];
+  recommendedFor: string[];
+  packageEligibilityHint: string;
+  setupChecklist: string[];
+  envReadiness: Record<string, boolean>;
+  connectedCountHint?: number;
+  deepLinkTab: TabId | null;
+  inboundPath?: string;
+};
+
+type IntegrationCatalogPayload = {
+  version: 1;
+  generatedAt: string;
+  entries: HubCatalogEntry[];
+  tenantCounts: { webhooks: number; apiKeys: number; accounting: number; ecommerce: number };
+  recommendedEntryIds: string[];
+};
 
 function fmt(d: string) { return new Date(d).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" }); }
 function fmtTime(d: string) { return new Date(d).toLocaleString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }); }
@@ -71,7 +103,91 @@ export default function IntegrationsPage() {
   const [ecForm, setEcForm] = useState({ platform: "", storeName: "", apiKey: "", apiSecret: "" });
   const [expandedLogs, setExpandedLogs] = useState<{ type: "acc" | "ec"; id: number } | null>(null);
 
+  const [hubSearch, setHubSearch] = useState("");
+  const [hubLifecycle, setHubLifecycle] = useState<HubLifecycle>("all");
+  const [hubFamily, setHubFamily] = useState<"all" | HubCatalogEntry["family"]>("all");
+
   // ─── Sorgular ─────────────────────────────────────────────────────────────
+  const catalogQ = useQuery<IntegrationCatalogPayload>({
+    queryKey: ["integrations-catalog"],
+    queryFn: async () => {
+      const r = await fetch("/api/integrations/catalog", { credentials: "include" });
+      if (!r.ok) throw new Error("catalog");
+      return r.json();
+    },
+    staleTime: 120_000,
+  });
+
+  const pingCatalogEntry = useMutation({
+    mutationFn: async (entryId: string) => {
+      const r = await fetch(`/api/integrations/catalog/${encodeURIComponent(entryId)}/ping`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.message ?? "ping");
+      return j as { entryId: string; result: { ok: boolean; message: string; mode: string } };
+    },
+    onSuccess: (d) => {
+      if (d.result?.ok) {
+        toast({ title: "Bağlantı testi", description: d.result.message });
+      } else {
+        toast({ title: "Test yanıtı", description: d.result?.message ?? "", variant: "destructive" });
+      }
+    },
+    onError: (e: Error) => toast({ title: "Test başarısız", description: e.message, variant: "destructive" }),
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const hl = sp.get("highlight");
+    const tb = sp.get("tab");
+    if (tb === "webhooks" || tb === "api-keys" || tb === "accounting" || tb === "ecommerce") setTab(tb);
+    if (hl?.startsWith("accounting_")) {
+      const pid = hl.slice("accounting_".length);
+      setAccForm((f) => ({ ...f, provider: pid }));
+      setTab("accounting");
+    }
+    if (hl?.startsWith("ecommerce_")) {
+      const pid = hl.slice("ecommerce_".length);
+      setEcForm((f) => ({ ...f, platform: pid }));
+      setTab("ecommerce");
+    }
+    if (hl === "connectivity_webhooks") setTab("webhooks");
+    if (hl === "connectivity_api_keys") setTab("api-keys");
+  }, []);
+
+  const hubEntries = useMemo(() => {
+    const raw = catalogQ.data?.entries ?? [];
+    const q = hubSearch.trim().toLowerCase();
+    return raw.filter((e) => {
+      if (hubLifecycle !== "all" && e.lifecycle !== hubLifecycle) return false;
+      if (hubFamily !== "all" && e.family !== hubFamily) return false;
+      if (!q) return true;
+      const blob = `${e.displayName} ${e.description} ${e.businessImpactTags.join(" ")} ${e.recommendedFor.join(" ")}`.toLowerCase();
+      return blob.includes(q);
+    });
+  }, [catalogQ.data?.entries, hubSearch, hubLifecycle, hubFamily]);
+
+  const openCatalogEntry = (e: HubCatalogEntry) => {
+    if (e.deepLinkTab) {
+      setTab(e.deepLinkTab);
+      const u = new URL(window.location.href);
+      u.searchParams.set("tab", e.deepLinkTab);
+      u.searchParams.set("highlight", e.entryId);
+      window.history.replaceState({}, "", `${u.pathname}?${u.searchParams.toString()}`);
+      if (e.deepLinkTab === "accounting" && e.family === "accounting") {
+        setAccForm((f) => ({ ...f, provider: e.providerId }));
+        setShowAccForm(true);
+      }
+      if (e.deepLinkTab === "ecommerce" && e.family === "ecommerce") {
+        setEcForm((f) => ({ ...f, platform: e.providerId }));
+        setShowEcForm(true);
+      }
+    }
+  };
+
   const webhooksQ = useQuery<{ webhooks: WebhookItem[] }>({
     queryKey: ["webhooks"],
     queryFn: async () => { const r = await fetch("/api/integrations/webhooks", { credentials: "include" }); if (!r.ok) throw new Error(); return r.json(); },
@@ -131,12 +247,17 @@ export default function IntegrationsPage() {
       const r = await fetch(url, { method: editHook ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify(body) });
       const j = await r.json(); if (!r.ok) throw new Error(j.message); return j;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["webhooks"] }); setShowHookForm(false); setEditHook(null); setHookForm({ name: "", url: "", events: [], secret: "" }); toast({ title: "Webhook kaydedildi" }); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["webhooks"] });
+      qc.invalidateQueries({ queryKey: ["integrations-catalog"] });
+      setShowHookForm(false); setEditHook(null); setHookForm({ name: "", url: "", events: [], secret: "" });
+      toast({ title: "Webhook kaydedildi" });
+    },
     onError: (e: Error) => toast({ title: "Hata", description: e.message, variant: "destructive" }),
   });
   const deleteHook = useMutation({
     mutationFn: async (id: number) => { await fetch(`/api/integrations/webhooks/${id}`, { method: "DELETE", credentials: "include" }); },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["webhooks"] }); toast({ title: "Webhook silindi" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["webhooks"] }); qc.invalidateQueries({ queryKey: ["integrations-catalog"] }); toast({ title: "Webhook silindi" }); },
   });
   const testHook = useMutation({
     mutationFn: async (id: number) => { const r = await fetch(`/api/integrations/webhooks/${id}/test`, { method: "POST", credentials: "include" }); return r.json(); },
@@ -150,7 +271,9 @@ export default function IntegrationsPage() {
       const j = await r.json(); if (!r.ok) throw new Error(j.message); return j;
     },
     onSuccess: (d) => {
-      qc.invalidateQueries({ queryKey: ["api-keys"] }); setShowKeyForm(false); setKeyForm({ name: "", scopes: "read" });
+      qc.invalidateQueries({ queryKey: ["api-keys"] });
+      qc.invalidateQueries({ queryKey: ["integrations-catalog"] });
+      setShowKeyForm(false); setKeyForm({ name: "", scopes: "read" });
       setRevealedKey(d.apiKey.rawKey); setShowRawKey(true);
       toast({ title: "API Key oluşturuldu — yalnızca bir kez gösterilir!" });
     },
@@ -158,14 +281,14 @@ export default function IntegrationsPage() {
   });
   const deleteKey = useMutation({
     mutationFn: async (id: number) => { await fetch(`/api/integrations/api-keys/${id}`, { method: "DELETE", credentials: "include" }); },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["api-keys"] }); toast({ title: "API Key silindi" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["api-keys"] }); qc.invalidateQueries({ queryKey: ["integrations-catalog"] }); toast({ title: "API Key silindi" }); },
   });
   const toggleKey = useMutation({
     mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
       const r = await fetch(`/api/integrations/api-keys/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ isActive }) });
       if (!r.ok) throw new Error();
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["api-keys"] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["api-keys"] }); qc.invalidateQueries({ queryKey: ["integrations-catalog"] }); },
   });
 
   // ─── Ext Integration Mutasyonları ─────────────────────────────────────────
@@ -174,12 +297,17 @@ export default function IntegrationsPage() {
       const r = await fetch("/api/ext-integrations/accounting", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify(body) });
       const j = await r.json(); if (!r.ok) throw new Error(j.message); return j;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["acc-integrations"] }); setShowAccForm(false); setAccForm({ provider: "", displayName: "", apiKey: "", apiSecret: "" }); toast({ title: "Muhasebe entegrasyonu eklendi" }); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["acc-integrations"] });
+      qc.invalidateQueries({ queryKey: ["integrations-catalog"] });
+      setShowAccForm(false); setAccForm({ provider: "", displayName: "", apiKey: "", apiSecret: "" });
+      toast({ title: "Muhasebe entegrasyonu eklendi" });
+    },
     onError: (e: Error) => toast({ title: "Hata", description: e.message, variant: "destructive" }),
   });
   const deleteAcc = useMutation({
     mutationFn: async (id: number) => { await fetch(`/api/ext-integrations/accounting/${id}`, { method: "DELETE", credentials: "include" }); },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["acc-integrations"] }); toast({ title: "Entegrasyon silindi" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["acc-integrations"] }); qc.invalidateQueries({ queryKey: ["integrations-catalog"] }); toast({ title: "Entegrasyon silindi" }); },
   });
   const syncAcc = useMutation({
     mutationFn: async ({ id, syncType }: { id: number; syncType: string }) => {
@@ -197,12 +325,17 @@ export default function IntegrationsPage() {
       const r = await fetch("/api/ext-integrations/ecommerce", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify(body) });
       const j = await r.json(); if (!r.ok) throw new Error(j.message); return j;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["ec-integrations"] }); setShowEcForm(false); setEcForm({ platform: "", storeName: "", apiKey: "", apiSecret: "" }); toast({ title: "E-ticaret entegrasyonu eklendi" }); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ec-integrations"] });
+      qc.invalidateQueries({ queryKey: ["integrations-catalog"] });
+      setShowEcForm(false); setEcForm({ platform: "", storeName: "", apiKey: "", apiSecret: "" });
+      toast({ title: "E-ticaret entegrasyonu eklendi" });
+    },
     onError: (e: Error) => toast({ title: "Hata", description: e.message, variant: "destructive" }),
   });
   const deleteEc = useMutation({
     mutationFn: async (id: number) => { await fetch(`/api/ext-integrations/ecommerce/${id}`, { method: "DELETE", credentials: "include" }); },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["ec-integrations"] }); toast({ title: "Entegrasyon silindi" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["ec-integrations"] }); qc.invalidateQueries({ queryKey: ["integrations-catalog"] }); toast({ title: "Entegrasyon silindi" }); },
   });
   const syncEc = useMutation({
     mutationFn: async ({ id, syncType }: { id: number; syncType: string }) => {
@@ -246,8 +379,8 @@ export default function IntegrationsPage() {
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Entegrasyon Merkezi</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">Webhook, API ve harici entegrasyon yönetimi</p>
+          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Bağlantılar ve API</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">Webhook, API anahtarı ve muhasebe / e-ticaret sağlayıcı ayarları</p>
         </div>
         <div className="flex gap-2">
           {tab === "webhooks" && <Button size="sm" className="gap-1.5 h-8" onClick={() => { setEditHook(null); setHookForm({ name: "", url: "", events: [], secret: "" }); setShowHookForm(true); }}><Plus className="h-3.5 w-3.5" />Webhook Ekle</Button>}
@@ -255,6 +388,128 @@ export default function IntegrationsPage() {
           {tab === "accounting" && <Button size="sm" className="gap-1.5 h-8" onClick={() => setShowAccForm(true)}><Plus className="h-3.5 w-3.5" />Entegrasyon Ekle</Button>}
           {tab === "ecommerce" && <Button size="sm" className="gap-1.5 h-8" onClick={() => setShowEcForm(true)}><Plus className="h-3.5 w-3.5" />Mağaza Ekle</Button>}
         </div>
+      </div>
+
+      <Alert className="border-blue-500/30 bg-blue-500/5">
+        <AlertTitle className="text-slate-900 dark:text-slate-100">Canlı bağlantı mı, deneme mi?</AlertTitle>
+        <AlertDescription className="text-slate-800/90 dark:text-slate-100/85">
+          Burada yaptığınız kayıtlar gerçek API anahtarları ve webhook URL’leri içerir. Harici platformun (pazaryeri, muhasebe, banka)
+          hesabınızda da ilgili izinlerin açık olduğundan emin olun. Bağlantı hata verirse önce sağlayıcı panelinde anahtarı yenileyin;
+          sorun sürerse destek ekibine senkron logları iletin.
+        </AlertDescription>
+      </Alert>
+
+      <div className="rounded-xl border border-border/80 bg-gradient-to-b from-muted/40 to-card/90 p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm font-semibold text-foreground">Entegrasyon haritası</p>
+            {catalogQ.data?.tenantCounts && (
+              <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
+                webhook {catalogQ.data.tenantCounts.webhooks} · API key {catalogQ.data.tenantCounts.apiKeys} · muhasebe {catalogQ.data.tenantCounts.accounting} · e-ticaret {catalogQ.data.tenantCounts.ecommerce}
+              </span>
+            )}
+          </div>
+          {catalogQ.isError && <span className="text-xs text-destructive">Katalog yüklenemedi</span>}
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="relative flex-1 min-w-[180px] max-w-md">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={hubSearch}
+              onChange={(e) => setHubSearch(e.target.value)}
+              placeholder="İsim, etiket veya açıklama ara…"
+              className="pl-8 h-8 text-sm"
+            />
+          </div>
+          <select
+            value={hubLifecycle}
+            onChange={(e) => setHubLifecycle(e.target.value as HubLifecycle)}
+            className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+          >
+            <option value="all">Tüm yaşam döngüleri</option>
+            <option value="live">Canlı</option>
+            <option value="pilot">Pilot</option>
+            <option value="roadmap">Yol haritası</option>
+          </select>
+          <select
+            value={hubFamily}
+            onChange={(e) => setHubFamily(e.target.value as typeof hubFamily)}
+            className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+          >
+            <option value="all">Tüm aileler</option>
+            <option value="connectivity">Bağlantı</option>
+            <option value="accounting">Muhasebe</option>
+            <option value="ecommerce">E-ticaret</option>
+            <option value="einvoice">E-belge</option>
+          </select>
+        </div>
+        {catalogQ.isLoading ? (
+          <p className="text-xs text-muted-foreground py-4 text-center">Harita yükleniyor…</p>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 max-h-[min(52vh,520px)] overflow-y-auto pr-1">
+            {hubEntries.slice(0, 24).map((e) => {
+              const rec = catalogQ.data?.recommendedEntryIds?.includes(e.entryId);
+              const lifeVariant =
+                e.lifecycle === "live" ? "default" : e.lifecycle === "pilot" ? "secondary" : "outline";
+              return (
+                <div
+                  key={e.entryId}
+                  className={`rounded-lg border bg-card/80 p-3 space-y-1.5 text-left transition-shadow ${rec ? "ring-1 ring-primary/30" : ""}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-lg shrink-0">{e.emoji}</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium leading-tight truncate">{e.displayName}</p>
+                        <p className="text-[10px] text-muted-foreground line-clamp-2">{e.description}</p>
+                      </div>
+                    </div>
+                    <Badge variant={lifeVariant} className="shrink-0 text-[10px] px-1.5 py-0 h-5">
+                      {e.lifecycle}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {e.businessImpactTags.slice(0, 3).map((t) => (
+                      <span key={t} className="text-[9px] px-1.5 py-0 rounded bg-muted/60 text-muted-foreground">{t}</span>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Kurulum: <span className="font-medium text-foreground/80">{e.setupDifficulty}</span>
+                    {" · "}
+                    {e.packageEligibilityHint}
+                  </p>
+                  {e.connectedCountHint != null && (
+                    <p className="text-[10px] font-mono text-muted-foreground">Bu kiracıda bağlı: {e.connectedCountHint}</p>
+                  )}
+                  {e.inboundPath && (
+                    <p className="text-[9px] font-mono text-muted-foreground break-all">Inbound: {e.inboundPath}</p>
+                  )}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {e.deepLinkTab && (
+                      <Button size="sm" variant="secondary" className="h-7 text-xs" type="button" onClick={() => openCatalogEntry(e)}>
+                        Sekmeye git
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      type="button"
+                      disabled={pingCatalogEntry.isPending}
+                      onClick={() => pingCatalogEntry.mutate(e.entryId)}
+                    >
+                      Bağlantı testi
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {hubEntries.length > 24 && (
+          <p className="text-[10px] text-muted-foreground text-center">Filtreleri daraltarak daha fazla girdiye ulaşın ({hubEntries.length} eşleşme).</p>
+        )}
       </div>
 
       {/* Tabs */}

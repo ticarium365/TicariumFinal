@@ -1,0 +1,2 @@
+-- Deprecated duplicate: canonical migration is lib/db/migrations/001_product_funnel_events.sql
+-- Use: pnpm -C lib/db run migrate:funnel

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,9 +8,11 @@ import {
   TrendingUp, Banknote, Receipt, FileText, AlertTriangle,
   Loader2, Bot, Send, Download, RefreshCw, ArrowUpRight, ArrowDownRight,
 } from "lucide-react";
-import {
-  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
-} from "recharts";
+const FinanceDashboardCashflowChart = lazy(() =>
+  import("@/components/finance-dashboard-cashflow-chart").then((m) => ({
+    default: m.FinanceDashboardCashflowChart,
+  })),
+);
 
 const fmtTL = (n: number) =>
   new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(n || 0);
@@ -234,33 +236,9 @@ export default function FinanceDashboardPage() {
           <Card className="lg:col-span-2">
             <CardHeader><CardTitle className="text-base">Son 30 Gün Nakit Akışı</CardTitle></CardHeader>
             <CardContent>
-              {safeData.cashflow30d.length === 0 ? (
-                <div className="text-center text-sm text-muted-foreground py-12">Henüz banka hareketi yok.</div>
-              ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <AreaChart data={safeData.cashflow30d}>
-                    <defs>
-                      <linearGradient id="gIn" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
-                        <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="gOut" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#ef4444" stopOpacity={0.4} />
-                        <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="date" tickFormatter={(d) => new Date(d).toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit" })} fontSize={11} />
-                    <YAxis tickFormatter={(v) => `₺${(v/1000).toFixed(0)}K`} fontSize={11} />
-                    <Tooltip
-                      formatter={(v: number) => fmtTLp(v)}
-                      labelFormatter={(d) => new Date(d as string).toLocaleDateString("tr-TR")}
-                    />
-                    <Area type="monotone" dataKey="inflow" stroke="#10b981" fill="url(#gIn)" name="Giriş" />
-                    <Area type="monotone" dataKey="outflow" stroke="#ef4444" fill="url(#gOut)" name="Çıkış" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
+              <Suspense fallback={<div className="flex h-[260px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+                <FinanceDashboardCashflowChart data={safeData.cashflow30d} />
+              </Suspense>
             </CardContent>
           </Card>
 
@@ -295,7 +273,7 @@ export default function FinanceDashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bot className="h-5 w-5" /> AI CFO — Yapay Zeka Mali Müşaviriniz
-              <Badge variant="outline" className="ml-2">GPT-5.2</Badge>
+              <Badge variant="outline" className="ml-2">Beta</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">

@@ -29,6 +29,14 @@ interface Stats {
   outbox: { pending: number; quoted: number; accepted: number; rejected: number };
 }
 
+interface PipelineMetrics {
+  sellerInboxPendingOver48h: number;
+  sellerInboxPendingOver72h: number;
+  buyerOutboxPendingOver48h: number;
+  sellerInboxQuotedAwaitingBuyer: number;
+  sellerAcceptedQuotesLast30Days: number;
+}
+
 const STATUS_META: Record<string, { label: string; color: string; icon: any }> = {
   pending: { label: "Bekliyor", color: "bg-amber-500/10 text-amber-300 border-amber-500/20", icon: Hourglass },
   quoted: { label: "Yanıtlandı", color: "bg-blue-500/10 text-blue-300 border-blue-500/20", icon: FileText },
@@ -105,18 +113,21 @@ export default function QuotesListPage() {
   const [search, setSearch] = useState("");
   const [data, setData] = useState<Quote[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [pipeline, setPipeline] = useState<PipelineMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function fetchData() {
     setLoading(true);
     try {
       const url = `${apiBase}/b2b/quotes/${tab}${statusFilter !== "all" ? `?status=${statusFilter}` : ""}`;
-      const [list, s] = await Promise.all([
+      const [list, s, p] = await Promise.all([
         fetch(url, { credentials: "include" }).then((r) => r.json()),
         fetch(`${apiBase}/b2b/quotes/stats`, { credentials: "include" }).then((r) => r.json()),
+        fetch(`${apiBase}/b2b/quotes/pipeline-metrics`, { credentials: "include" }).then((r) => (r.ok ? r.json() : null)),
       ]);
       setData(list);
       setStats(s);
+      setPipeline(p && typeof p === "object" ? p : null);
     } catch {
       toast({ title: "Hata", description: "Teklifler yüklenemedi", variant: "destructive" });
     } finally {
@@ -169,6 +180,36 @@ export default function QuotesListPage() {
             Giden
           </TabsTrigger>
         </TabsList>
+
+        {pipeline && (
+          <div className="flex flex-wrap gap-2 mt-3 text-xs" data-testid="b2b-pipeline-sla">
+            {tab === "inbox" && pipeline.sellerInboxPendingOver48h > 0 && (
+              <div className="rounded-md border border-amber-500/50 bg-amber-500/10 px-2.5 py-1.5 text-amber-950 dark:text-amber-100">
+                <span className="font-semibold tabular-nums">{pipeline.sellerInboxPendingOver48h}</span> gelen teklif 48+ saat yanıtsız
+                {pipeline.sellerInboxPendingOver72h > 0 ? (
+                  <span className="block text-[11px] opacity-90 mt-0.5 tabular-nums">
+                    ({pipeline.sellerInboxPendingOver72h} adet 72+ saat)
+                  </span>
+                ) : null}
+              </div>
+            )}
+            {tab === "inbox" && pipeline.sellerInboxQuotedAwaitingBuyer > 0 && (
+              <div className="rounded-md border border-blue-500/40 bg-blue-500/10 px-2.5 py-1.5 text-foreground">
+                <span className="font-semibold tabular-nums">{pipeline.sellerInboxQuotedAwaitingBuyer}</span> teklif alıcı kararında
+              </div>
+            )}
+            {tab === "outbox" && pipeline.buyerOutboxPendingOver48h > 0 && (
+              <div className="rounded-md border border-amber-500/50 bg-amber-500/10 px-2.5 py-1.5 text-amber-950 dark:text-amber-100">
+                <span className="font-semibold tabular-nums">{pipeline.buyerOutboxPendingOver48h}</span> giden talep 48+ saat satıcı yanıtı bekliyor
+              </div>
+            )}
+            {tab === "inbox" && pipeline.sellerAcceptedQuotesLast30Days > 0 && (
+              <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-emerald-950 dark:text-emerald-100">
+                Son 30 gün: <span className="font-semibold tabular-nums">{pipeline.sellerAcceptedQuotesLast30Days}</span> kabul (satıcı)
+              </div>
+            )}
+          </div>
+        )}
 
         {currentStats && (
           <div className="flex flex-wrap gap-2 mt-4">

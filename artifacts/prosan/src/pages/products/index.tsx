@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
 import { useSearch } from "wouter";
-import * as XLSX from "xlsx";
 import {
   useListProducts,
   useUpdateProduct,
@@ -318,6 +317,7 @@ export default function ProductsList() {
         "Açıklama": p.description ?? "",
       }));
 
+      const XLSX = await import("xlsx");
       const ws = XLSX.utils.json_to_sheet(rows);
       const colWidths = [
         { wch: 14 }, { wch: 16 }, { wch: 36 }, { wch: 18 }, { wch: 18 },

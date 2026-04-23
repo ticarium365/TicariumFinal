@@ -14,7 +14,17 @@
  *   webhook handler (success ikinci kez gelirse no-op).
  */
 import { Router, Request, Response } from "express";
-import { db, paymentsTable, subscriptionPlansTable, companySubscriptionsTable, companiesTable, usersTable, creditPurchasesTable } from "@workspace/db";
+import {
+  db,
+  paymentsTable,
+  subscriptionPlansTable,
+  companySubscriptionsTable,
+  companiesTable,
+  usersTable,
+  companySettingsTable,
+  creditPurchasesTable,
+  productFunnelEventsTable,
+} from "@workspace/db";
 import { and, eq, desc, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { getBillingProvider, newConversationId } from "../services/billing/iyzico";
@@ -65,6 +75,14 @@ router.post("/checkout", requireAuth, requireRole(["admin", "super_admin"]), asy
     // Buyer bilgisi
     const [company] = await db.select().from(companiesTable).where(eq(companiesTable.id, companyId)).limit(1);
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.user!.id)).limit(1);
+    const [settings] = await db.select().from(companySettingsTable).where(eq(companySettingsTable.companyId, companyId)).limit(1);
+
+    const identityNumber = (settings?.taxNumber || "").trim();
+    if (!identityNumber) {
+      return res.status(400).json({
+        error: { code: "IDENTITY_REQUIRED", message: "Ödeme için vergi numarası (VKN/TCKN) gerekli. Ayarlar → Firma bilgileri alanını doldurun." },
+      });
+    }
 
     const conversationId = newConversationId();
     const provider = getBillingProvider();
@@ -83,7 +101,8 @@ router.post("/checkout", requireAuth, requireRole(["admin", "super_admin"]), asy
     }).returning();
 
     // Sonra provider'a checkout session aç
-    const callbackUrl = `${req.protocol}://${req.get("host")}/odeme/sonuc`;
+    // Gerçek iyzico akışında token callbackUrl'ye POST edilir → backend /return karşılar
+    const callbackUrl = `${req.protocol}://${req.get("host")}/api/billing/return`;
     const session = await provider.createCheckoutSession({
       conversationId,
       companyId,
@@ -98,11 +117,20 @@ router.post("/checkout", requireAuth, requireRole(["admin", "super_admin"]), asy
         name: (user?.fullName?.split(" ")[0]) || "Adsız",
         surname: (user?.fullName?.split(" ").slice(1).join(" ")) || "Kullanıcı",
         email: user?.email || `noreply+${companyId}@ticarium365.local`,
-        registrationAddress: company?.address || "Türkiye",
+        gsmNumber: user?.phone || undefined,
+        identityNumber,
+        registrationAddress: settings?.address || "Türkiye",
         city: company?.city || "İstanbul",
         country: "Turkey",
+        ip: req.ip,
       },
     });
+
+    // Checkout token'ı kayıt altına al (return/retrieve correlation için).
+    await db.update(paymentsTable).set({
+      rawResponse: { ...(pending.rawResponse as any || {}), checkoutToken: session.token, provider: session.provider } as any,
+      updatedAt: new Date(),
+    }).where(eq(paymentsTable.id, pending.id));
 
     return res.status(201).json({
       ok: true,
@@ -144,6 +172,14 @@ router.post("/topup", requireAuth, requireRole(["admin", "super_admin"]), async 
     const companyId = req.session.user!.companyId;
     const [company] = await db.select().from(companiesTable).where(eq(companiesTable.id, companyId)).limit(1);
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.user!.id)).limit(1);
+    const [settings] = await db.select().from(companySettingsTable).where(eq(companySettingsTable.companyId, companyId)).limit(1);
+
+    const identityNumber = (settings?.taxNumber || "").trim();
+    if (!identityNumber) {
+      return res.status(400).json({
+        error: { code: "IDENTITY_REQUIRED", message: "Ödeme için vergi numarası (VKN/TCKN) gerekli. Ayarlar → Firma bilgileri alanını doldurun." },
+      });
+    }
     const conversationId = newConversationId();
     const provider = getBillingProvider();
 
@@ -173,7 +209,7 @@ router.post("/topup", requireAuth, requireRole(["admin", "super_admin"]), async 
       status: "pending",
     });
 
-    const callbackUrl = `${req.protocol}://${req.get("host")}/odeme/sonuc`;
+    const callbackUrl = `${req.protocol}://${req.get("host")}/api/billing/return`;
     const session = await provider.createCheckoutSession({
       conversationId,
       companyId,
@@ -188,11 +224,19 @@ router.post("/topup", requireAuth, requireRole(["admin", "super_admin"]), async 
         name: (user?.fullName?.split(" ")[0]) || "Adsız",
         surname: (user?.fullName?.split(" ").slice(1).join(" ")) || "Kullanıcı",
         email: user?.email || `noreply+${companyId}@ticarium365.local`,
-        registrationAddress: company?.address || "Türkiye",
+        gsmNumber: user?.phone || undefined,
+        identityNumber,
+        registrationAddress: settings?.address || "Türkiye",
         city: company?.city || "İstanbul",
         country: "Turkey",
+        ip: req.ip,
       },
     });
+
+    await db.update(paymentsTable).set({
+      rawResponse: { ...(pending.rawResponse as any || {}), checkoutToken: session.token, provider: session.provider } as any,
+      updatedAt: new Date(),
+    }).where(eq(paymentsTable.id, pending.id));
 
     return res.status(201).json({
       ok: true,
@@ -303,6 +347,17 @@ async function handleWebhookEvent(rawBody: string, headers: Record<string, strin
         rawResponse: evt.raw as any,
         updatedAt: new Date(),
       }).where(eq(paymentsTable.id, payment.id));
+      // Funnel: ödeme hatası
+      await tx.insert(productFunnelEventsTable).values({
+        companyId: payment.companyId,
+        eventKey: "billing_payment_failed",
+        props: JSON.stringify({
+          provider: payment.provider,
+          billing_cycle: payment.billingCycle,
+          conversation_id: payment.conversationId,
+          error_code: evt.errorCode,
+        }).slice(0, 4000),
+      }).catch(() => {});
       return { status: 200 as const, body: { ok: true, paymentId: payment.id, status: "failed" } };
     }
 
@@ -397,11 +452,99 @@ async function handleWebhookEvent(rawBody: string, headers: Record<string, strin
       updatedAt: now,
     }).where(eq(paymentsTable.id, payment.id));
 
+    try {
+      if (payment.planId > 0 && (!active || active.planId !== payment.planId)) {
+        const [npSlug] = await tx.select({ slug: subscriptionPlansTable.slug })
+          .from(subscriptionPlansTable)
+          .where(eq(subscriptionPlansTable.id, payment.planId))
+          .limit(1);
+        let prevPlanSlug: string | null = null;
+        let prevPlanId: number | null = null;
+        if (active) {
+          prevPlanId = active.planId;
+          const [opSlug] = await tx.select({ slug: subscriptionPlansTable.slug })
+            .from(subscriptionPlansTable)
+            .where(eq(subscriptionPlansTable.id, active.planId))
+            .limit(1);
+          prevPlanSlug = opSlug?.slug ?? null;
+        }
+        await tx.insert(productFunnelEventsTable).values({
+          companyId: payment.companyId,
+          eventKey: "plan_upgraded",
+          props: JSON.stringify({
+            source: "billing_webhook",
+            prev_plan_id: prevPlanId,
+            prev_plan_slug: prevPlanSlug,
+            new_plan_id: payment.planId,
+            new_plan_slug: npSlug?.slug ?? "",
+            billing_cycle: payment.billingCycle,
+            conversation_id: payment.conversationId,
+          }).slice(0, 4000),
+        });
+      }
+    } catch (fe) {
+      logger.warn({ fe, companyId: payment.companyId }, "plan_upgraded_funnel_insert_failed");
+    }
+
     invalidateFeaturesCache(payment.companyId);
     logger.info({ companyId: payment.companyId, planId: payment.planId, paymentId: payment.id, subscriptionId }, "billing_payment_succeeded");
+    await tx.insert(productFunnelEventsTable).values({
+      companyId: payment.companyId,
+      eventKey: "billing_payment_succeeded",
+      props: JSON.stringify({
+        provider: payment.provider,
+        billing_cycle: payment.billingCycle,
+        conversation_id: payment.conversationId,
+        amount_try: Number(payment.amount),
+      }).slice(0, 4000),
+    }).catch(() => {});
     return { status: 200 as const, body: { ok: true, paymentId: payment.id, status: "succeeded", subscriptionId } };
   });
 }
+
+/* -------------------- /return (Iyzico callbackUrl) -------------------- */
+/**
+ * iyzico PWI/CheckoutForm dönüşü: callbackUrl'ye `token` POST edilir.
+ * Bu endpoint token ile retrieve çağrısını yapar, ödeme durumunu DB'ye uygular
+ * ve kullanıcıyı UI sonuç sayfasına yönlendirir.
+ */
+router.all("/return", async (req: Request, res: Response) => {
+  try {
+    const token = String((req.body as any)?.token || (req.query as any)?.token || "").trim();
+    const conversationId = String((req.query as any)?.conversation_id || (req.body as any)?.conversationId || (req.body as any)?.conversation_id || "").trim();
+    if (!token) return void res.status(400).json({ error: { code: "MISSING_TOKEN", message: "token gerekli" } });
+
+    const provider = getBillingProvider();
+    const evt = await provider.retrieveCheckoutResult({ token, conversationId: conversationId || null });
+    const payload = {
+      status: evt.eventType === "payment.succeeded" ? "success" : "failure",
+      paymentStatus: evt.eventType === "payment.succeeded" ? "SUCCESS" : "FAILURE",
+      conversationId: evt.conversationId || conversationId,
+      paymentId: evt.externalId,
+      paidPrice: evt.amount,
+      price: evt.amount,
+      errorCode: evt.errorCode,
+      errorMessage: evt.errorMessage,
+      raw: evt.raw,
+    };
+    const r: any = await handleWebhookEvent(JSON.stringify(payload), provider.name === "mock" ? { "x-mock-signature": "mock-ok" } as any : ({} as any));
+    if (Array.isArray(r._applyTopups) && r._applyTopups.length > 0) {
+      await applyTopupsAfterCommit(r._applyTopups);
+      invalidateFeaturesCache(r._applyTopups[0].companyId);
+    }
+
+    const u = new URL(`${req.protocol}://${req.get("host")}/odeme/sonuc`);
+    u.searchParams.set("conversation_id", evt.conversationId || conversationId);
+    return res.redirect(302, u.toString());
+  } catch (err: any) {
+    logger.warn({ err }, "billing_return_failed");
+    const u = new URL(`${req.protocol}://${req.get("host")}/odeme/sonuc`);
+    const conversationId = String((req.query as any)?.conversation_id || (req.body as any)?.conversationId || (req.body as any)?.conversation_id || "").trim();
+    if (conversationId) u.searchParams.set("conversation_id", conversationId);
+    u.searchParams.set("simulate", "fail");
+    return res.redirect(302, u.toString());
+  }
+});
 
 /* -------------------- POST /webhook -------------------- */
 router.post("/webhook", async (req: Request, res: Response) => {
