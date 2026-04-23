@@ -42,6 +42,7 @@ export default function PricingPage() {
   const [yearly, setYearly] = useState(false);
   const [identityDialogOpen, setIdentityDialogOpen] = useState(false);
   const [identityTaxNumber, setIdentityTaxNumber] = useState("");
+  const [identityPhone, setIdentityPhone] = useState("");
   const [identitySaving, setIdentitySaving] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<Plan | null>(null);
   const { data, isLoading, isError, refetch } = useQuery<{ plans: Plan[] }>({
@@ -143,10 +144,10 @@ export default function PricingPage() {
       toast({ title: "Ödeme sayfasına yönlendiriliyorsunuz", description: `${plan.name} — ${j.amount} ${j.currency}` });
       window.location.href = j.paymentPageUrl;
     } else {
-      if (r.status === 400 && j?.error?.code === "IDENTITY_REQUIRED") {
+      if (r.status === 400 && (j?.error?.code === "IDENTITY_REQUIRED" || j?.error?.code === "PHONE_REQUIRED")) {
         setPendingPlan(plan);
         setIdentityDialogOpen(true);
-        trackProductEvent("billing_identity_required_shown", {
+        trackProductEvent(j?.error?.code === "PHONE_REQUIRED" ? "billing_phone_required_shown" : "billing_identity_required_shown", {
           plan_slug: plan.slug,
           cycle: yearly ? "yearly" : "monthly",
         });
@@ -182,6 +183,20 @@ export default function PricingPage() {
             </p>
           </div>
 
+          <div className="grid gap-2">
+            <Label htmlFor="billingPhone">Telefon (GSM)</Label>
+            <Input
+              id="billingPhone"
+              inputMode="tel"
+              placeholder="+90 5xx xxx xx xx"
+              value={identityPhone}
+              onChange={(e) => setIdentityPhone(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Banka/ödeme doğrulaması için gerekir. Kart bilgileri sistemimize gelmez.
+            </p>
+          </div>
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -200,17 +215,23 @@ export default function PricingPage() {
                   toast({ title: "Hata", description: "VKN 10 haneli, TCKN 11 haneli olmalı", variant: "destructive" });
                   return;
                 }
+                const phone = identityPhone.trim();
+                if (!phone) {
+                  toast({ title: "Hata", description: "Telefon numarası gerekli", variant: "destructive" });
+                  return;
+                }
                 try {
                   setIdentitySaving(true);
                   const sr = await fetch("/api/settings", {
                     method: "PUT",
                     credentials: "include",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ taxNumber: v }),
+                    body: JSON.stringify({ taxNumber: v, phone }),
                   });
                   const sj = await sr.json().catch(() => ({}));
                   if (!sr.ok) throw new Error(sj?.error?.message || "Ayarlar kaydedilemedi");
                   trackProductEvent("billing_identity_saved", { tax_len: v.length });
+                  trackProductEvent("billing_phone_saved", {});
                   setIdentityDialogOpen(false);
                   const retryPlan = pendingPlan;
                   setPendingPlan(null);
