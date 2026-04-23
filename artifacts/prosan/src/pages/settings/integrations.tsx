@@ -5,13 +5,14 @@ import {
   Webhook, Key, Plus, X, Pencil, Trash2, CheckCircle, XCircle,
   Send, Eye, EyeOff, Copy, RefreshCw, Activity, Zap,
   BookOpen, ShoppingCart, PlayCircle, ChevronDown, ChevronUp,
-  Search, LayoutGrid, Truck, Radio, CreditCard,
+  Search, LayoutGrid, Truck, Radio, CreditCard, BarChart3, Timer, AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { useFeatures } from "@/components/use-features";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TİPLER
@@ -125,6 +126,71 @@ type LiveReadinessPayload = {
   };
 };
 
+type WorkerObsHealthHonest =
+  | "no_channel"
+  | "no_success_yet"
+  | "healthy_recent"
+  | "stale_success"
+  | "degraded_queue";
+
+type MarketplaceWorkerObservabilityV1 = {
+  version: 1;
+  generatedAtIso: string;
+  queueSummary: {
+    queued: number;
+    running: number;
+    retrying: number;
+    failed: number;
+    completed24h: number;
+    skipped: number;
+    cancelled: number;
+    stuckQueued: number;
+    stuckRunning: number;
+  };
+  avgSuccessLatencyMs7d: number | null;
+  p95SuccessLatencyMs7d: number | null;
+  retryReasonMix30d: { bucket: string; count: number }[];
+  failedJobClusters30d: { jobType: string; errorSample: string; count: number }[];
+  perAccount: {
+    accountId: number;
+    name: string;
+    provider: string;
+    sandbox: boolean;
+    isActive: boolean;
+    lastProviderHealthOk: boolean | null;
+    lastProviderHealthMessage: string | null;
+    lastSuccessSyncAtIso: string | null;
+    lastSuccessOperation: string | null;
+    lastSuccessDurationMs: number | null;
+    avgSuccessLatencyMs7d: number | null;
+    failedJobs7d: number;
+    queuedJobsNow: number;
+    runningJobsNow: number;
+    queuedStuck: boolean;
+    runningStuck: boolean;
+    healthHonest: WorkerObsHealthHonest;
+    slaWarnings: string[];
+  }[];
+  tenantAlerts: { severity: "critical" | "warning"; code: string; message: string; accountIds?: number[] }[];
+};
+
+function workerObsHealthLabel(h: WorkerObsHealthHonest): string {
+  switch (h) {
+    case "healthy_recent":
+      return "Worker: yakın başarı";
+    case "stale_success":
+      return "Worker: gecikmeli";
+    case "no_success_yet":
+      return "Worker: başarı kaydı yok";
+    case "degraded_queue":
+      return "Worker: kuyruk/hata";
+    case "no_channel":
+      return "—";
+    default:
+      return h;
+  }
+}
+
 function fmt(d: string) { return new Date(d).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" }); }
 function fmtTime(d: string) { return new Date(d).toLocaleString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }); }
 
@@ -134,6 +200,9 @@ function fmtTime(d: string) { return new Date(d).toLocaleString("tr-TR", { day: 
 export default function IntegrationsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { isLoading: featuresLoading, isError: featuresError, features } = useFeatures();
+  const marketplaceWorkerObsEnabled =
+    !featuresLoading && !featuresError && features.includes("marketplace.basic");
   const [tab, setTab] = useState<TabId>(() => {
     if (typeof window === "undefined") return "webhooks";
     const t = new URLSearchParams(window.location.search).get("tab");
@@ -183,6 +252,18 @@ export default function IntegrationsPage() {
       return r.json();
     },
     staleTime: 60_000,
+  });
+
+  const workerObsQ = useQuery<MarketplaceWorkerObservabilityV1>({
+    queryKey: ["marketplace-worker-observability"],
+    queryFn: async () => {
+      const r = await fetch("/api/marketplace/worker-observability", { credentials: "include" });
+      if (!r.ok) throw new Error("worker_observability");
+      return r.json();
+    },
+    enabled: marketplaceWorkerObsEnabled,
+    staleTime: 45_000,
+    refetchInterval: marketplaceWorkerObsEnabled ? 90_000 : false,
   });
 
   const pingCatalogEntry = useMutation({
@@ -480,6 +561,7 @@ export default function IntegrationsPage() {
             onClick={() => {
               void qc.invalidateQueries({ queryKey: ["integrations-live-readiness"] });
               void qc.invalidateQueries({ queryKey: ["integrations-catalog"] });
+              if (marketplaceWorkerObsEnabled) void qc.invalidateQueries({ queryKey: ["marketplace-worker-observability"] });
             }}
           >
             Yenile
@@ -622,6 +704,216 @@ export default function IntegrationsPage() {
           </div>
         )}
       </div>
+
+      {marketplaceWorkerObsEnabled ? (
+        <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <BarChart3 className="h-4 w-4 text-primary shrink-0" />
+              <div>
+                <h2 className="text-sm font-semibold">Pazaryeri worker gözlemi</h2>
+                <p className="text-[10px] text-muted-foreground leading-snug">
+                  Kuyruk, sync_logs gecikmesi ve hata kümeleri. Sağlayıcı API ping sonucu ayrı sütundadır — yeşil API, worker başarısı anlamına gelmez.
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs shrink-0 gap-1.5"
+              onClick={() => void qc.invalidateQueries({ queryKey: ["marketplace-worker-observability"] })}
+              disabled={workerObsQ.isFetching}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${workerObsQ.isFetching ? "animate-spin" : ""}`} />
+              Worker verisini yenile
+            </Button>
+          </div>
+
+          {workerObsQ.isLoading && (
+            <p className="text-xs text-muted-foreground">Worker metrikleri yükleniyor…</p>
+          )}
+          {workerObsQ.isError && (
+            <p className="text-xs text-destructive">Worker gözlemi alınamadı. Oturum veya sunucu hatası.</p>
+          )}
+          {workerObsQ.data && (
+            <div className="space-y-4">
+              {workerObsQ.data.tenantAlerts.length > 0 && (
+                <div className="space-y-2">
+                  {workerObsQ.data.tenantAlerts.map((a) => (
+                    <Alert
+                      key={`${a.code}-${a.message.slice(0, 40)}`}
+                      variant={a.severity === "critical" ? "destructive" : "default"}
+                      className={a.severity === "warning" ? "border-amber-500/40 bg-amber-500/5" : undefined}
+                    >
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle className="text-xs font-semibold">
+                        {a.severity === "critical" ? "Kritik" : "Uyarı"} · {a.code}
+                      </AlertTitle>
+                      <AlertDescription className="text-[11px] leading-relaxed">{a.message}</AlertDescription>
+                    </Alert>
+                  ))}
+                </div>
+              )}
+
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 text-[11px]">
+                <div className="rounded-md border bg-muted/15 px-2 py-1.5">
+                  <div className="text-muted-foreground font-medium">Kuyruk</div>
+                  <div className="font-mono tabular-nums text-foreground mt-0.5">
+                    q {workerObsQ.data.queueSummary.queued} · run {workerObsQ.data.queueSummary.running} · retry{" "}
+                    {workerObsQ.data.queueSummary.retrying}
+                  </div>
+                </div>
+                <div className="rounded-md border bg-muted/15 px-2 py-1.5">
+                  <div className="text-muted-foreground font-medium">Takılı (eşik)</div>
+                  <div className="font-mono tabular-nums text-foreground mt-0.5">
+                    q {workerObsQ.data.queueSummary.stuckQueued} · run {workerObsQ.data.queueSummary.stuckRunning}
+                  </div>
+                </div>
+                <div className="rounded-md border bg-muted/15 px-2 py-1.5">
+                  <div className="text-muted-foreground font-medium flex items-center gap-1">
+                    <Timer className="h-3 w-3" />
+                    Ort. / p95 (7g başarılı)
+                  </div>
+                  <div className="font-mono tabular-nums text-foreground mt-0.5">
+                    {workerObsQ.data.avgSuccessLatencyMs7d != null ? `${workerObsQ.data.avgSuccessLatencyMs7d} ms` : "—"} ·{" "}
+                    {workerObsQ.data.p95SuccessLatencyMs7d != null ? `${workerObsQ.data.p95SuccessLatencyMs7d} ms` : "—"}
+                  </div>
+                </div>
+                <div className="rounded-md border bg-muted/15 px-2 py-1.5">
+                  <div className="text-muted-foreground font-medium">24s tamamlanan job</div>
+                  <div className="font-mono tabular-nums text-foreground mt-0.5">
+                    {workerObsQ.data.queueSummary.completed24h}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-md border p-2 space-y-1.5">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Yeniden deneme nedeni (30g)</p>
+                  <div className="flex flex-wrap gap-1">
+                    {workerObsQ.data.retryReasonMix30d.length === 0 ? (
+                      <span className="text-[11px] text-muted-foreground">Veri yok</span>
+                    ) : (
+                      workerObsQ.data.retryReasonMix30d.map((b) => (
+                        <Badge key={b.bucket} variant="outline" className="text-[10px] h-5 font-mono">
+                          {b.bucket}: {b.count}
+                        </Badge>
+                      ))
+                    )}
+                  </div>
+                </div>
+                <div className="rounded-md border p-2 space-y-1.5 min-h-[4.5rem]">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Başarısız job kümeleri (30g)</p>
+                  <ul className="text-[10px] font-mono space-y-1 max-h-32 overflow-y-auto">
+                    {workerObsQ.data.failedJobClusters30d.length === 0 ? (
+                      <li className="text-muted-foreground">Son 30 günde kümelenmiş başarısız job yok.</li>
+                    ) : (
+                      workerObsQ.data.failedJobClusters30d.map((c, i) => (
+                        <li key={`${c.jobType}-${i}`} className="break-all">
+                          <span className="text-foreground/90">{c.jobType}</span> ×{c.count}
+                          {c.errorSample ? ` — ${c.errorSample.slice(0, 100)}` : ""}
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto rounded-md border">
+                <div
+                  className="min-w-[720px] grid gap-0 text-[10px]"
+                  style={{
+                    gridTemplateColumns: "minmax(120px,1.2fr) minmax(100px,0.9fr) minmax(88px,0.7fr) minmax(100px,0.8fr) minmax(72px,0.5fr) minmax(140px,1fr)",
+                  }}
+                >
+                  <div className="contents font-semibold text-muted-foreground bg-muted/30 border-b">
+                    <div className="px-2 py-1.5">Hesap</div>
+                    <div className="px-2 py-1.5">Worker durumu</div>
+                    <div className="px-2 py-1.5">Son başarılı sync</div>
+                    <div className="px-2 py-1.5">Ort. gecikme 7g</div>
+                    <div className="px-2 py-1.5">Kuyruk</div>
+                    <div className="px-2 py-1.5">API ping (ayrı)</div>
+                  </div>
+                  {workerObsQ.data.perAccount.length === 0 ? (
+                    <div
+                      className="px-2 py-4 text-muted-foreground text-xs bg-muted/10"
+                      style={{ gridColumn: "1 / -1" }}
+                    >
+                      Bu kiracıda pazaryeri kanal hesabı yok.
+                    </div>
+                  ) : (
+                    workerObsQ.data.perAccount.map((row) => {
+                      const honestOk = row.healthHonest === "healthy_recent";
+                      return (
+                        <div key={row.accountId} className="contents group">
+                          <div className="px-2 py-1.5 border-b border-border/50 flex flex-col gap-0.5">
+                            <span className="font-medium text-foreground text-[11px]">{row.name}</span>
+                            <span className="font-mono text-muted-foreground">{row.provider}</span>
+                            {row.sandbox ? <Badge variant="outline" className="text-[9px] h-4 w-fit">sandbox</Badge> : null}
+                            {!row.isActive ? (
+                              <Badge variant="secondary" className="text-[9px] h-4 w-fit">
+                                pasif
+                              </Badge>
+                            ) : null}
+                          </div>
+                          <div className="px-2 py-1.5 border-b border-border/50 align-top">
+                            <Badge
+                              variant={honestOk ? "outline" : row.healthHonest === "degraded_queue" ? "destructive" : "secondary"}
+                              className={`text-[9px] h-5 max-w-full whitespace-normal text-left font-normal ${
+                                honestOk ? "border-emerald-600/40 text-emerald-800 dark:text-emerald-200" : ""
+                              }`}
+                            >
+                              {workerObsHealthLabel(row.healthHonest)}
+                            </Badge>
+                            {row.slaWarnings.length > 0 && (
+                              <ul className="mt-1 text-[9px] text-amber-800 dark:text-amber-200/90 list-disc pl-3 space-y-0.5">
+                                {row.slaWarnings.map((w, i) => (
+                                  <li key={i}>{w}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                          <div className="px-2 py-1.5 border-b border-border/50 font-mono text-muted-foreground">
+                            {row.lastSuccessSyncAtIso ? fmtTime(row.lastSuccessSyncAtIso) : "—"}
+                            {row.lastSuccessOperation ? (
+                              <div className="text-[9px] opacity-80 truncate">{row.lastSuccessOperation}</div>
+                            ) : null}
+                          </div>
+                          <div className="px-2 py-1.5 border-b border-border/50 font-mono">
+                            {row.avgSuccessLatencyMs7d != null ? `${row.avgSuccessLatencyMs7d} ms` : "—"}
+                          </div>
+                          <div className="px-2 py-1.5 border-b border-border/50 font-mono">
+                            q {row.queuedJobsNow}
+                            {row.queuedStuck ? <span className="text-rose-600"> !</span> : ""} · r {row.runningJobsNow}
+                            {row.runningStuck ? <span className="text-rose-600"> !</span> : ""}
+                            <div className="text-[9px] text-muted-foreground">fail 7g: {row.failedJobs7d}</div>
+                          </div>
+                          <div className="px-2 py-1.5 border-b border-border/50 text-[10px]">
+                            {row.lastProviderHealthOk === null ? (
+                              <span className="text-muted-foreground">Ping yok</span>
+                            ) : (
+                              <span className={row.lastProviderHealthOk ? "text-slate-600" : "text-rose-700"}>
+                                {row.lastProviderHealthOk ? "OK" : "Hata"}
+                                {row.lastProviderHealthMessage
+                                  ? ` — ${row.lastProviderHealthMessage.slice(0, 80)}`
+                                  : ""}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground font-mono">
+                Üretim: {new Date(workerObsQ.data.generatedAtIso).toLocaleString("tr-TR")}
+              </p>
+            </div>
+          )}
+        </div>
+      ) : null}
 
       <div className="rounded-xl border border-border/80 bg-gradient-to-b from-muted/40 to-card/90 p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">

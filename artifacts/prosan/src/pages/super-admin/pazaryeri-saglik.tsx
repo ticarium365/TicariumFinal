@@ -6,6 +6,17 @@ import {
   Activity, RefreshCcw, AlertTriangle, CheckCircle2, XCircle, Loader2,
 } from "lucide-react";
 
+type FounderMpWorkerAlerts = {
+  generatedAtIso: string;
+  alerts: {
+    severity: "critical" | "warning";
+    companyId: number;
+    companyName: string;
+    stuckJobs: number;
+    failedJobs24h: number;
+  }[];
+};
+
 type AccountHealth = {
   count: number;
   healthy: number;
@@ -53,7 +64,21 @@ export default function PazaryeriSaglikPage() {
     staleTime: 60_000,
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["marketplace-accounts-health"] });
+  const founderWorkerQ = useQuery<FounderMpWorkerAlerts>({
+    queryKey: ["admin-marketplace-worker-alerts"],
+    queryFn: async () => {
+      const r = await fetch("/api/subscriptions/admin/marketplace-worker-alerts", { credentials: "include" });
+      if (!r.ok) throw new Error(`worker_alerts_${r.status}`);
+      return r.json();
+    },
+    refetchInterval: 5 * 60_000,
+    staleTime: 60_000,
+  });
+
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["marketplace-accounts-health"] });
+    void queryClient.invalidateQueries({ queryKey: ["admin-marketplace-worker-alerts"] });
+  };
 
   return (
     <div className="space-y-4">
@@ -133,6 +158,59 @@ export default function PazaryeriSaglikPage() {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card data-testid="marketplace-worker-founder-alerts">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">Kuyruk / worker uyarıları (kiracı özeti)</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Takılı sync_jobs olan firmalar — kritik hesap müdahalesi için. Sağlayıcı ping sayfasından bağımsızdır.
+              </p>
+            </div>
+          </div>
+          {founderWorkerQ.isLoading ? (
+            <div className="text-sm text-slate-500 py-4 text-center">Özet yükleniyor…</div>
+          ) : founderWorkerQ.isError ? (
+            <div className="flex items-center gap-2 text-sm text-rose-600 py-2">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              Worker uyarıları alınamadı (yetki veya sunucu).
+            </div>
+          ) : !founderWorkerQ.data?.alerts?.length ? (
+            <div className="text-sm text-slate-600 py-3 rounded-md border border-slate-200 bg-slate-50/80 px-3">
+              Şu an takılı kuyruk tespiti yok (eşik aşılmamış veya iş yok).
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {founderWorkerQ.data.alerts.map((a) => (
+                <li
+                  key={a.companyId}
+                  className={`rounded-lg border p-3 text-sm ${
+                    a.severity === "critical"
+                      ? "border-rose-300 bg-rose-50/60"
+                      : "border-amber-200 bg-amber-50/50"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="font-medium text-slate-900">{a.companyName}</span>
+                    <Badge variant="outline" className="text-[10px] font-mono">
+                      #{a.companyId}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-slate-700 mt-1 font-mono tabular-nums">
+                    takılı job: {a.stuckJobs} · son 24s failed: {a.failedJobs24h}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          {founderWorkerQ.data?.generatedAtIso ? (
+            <p className="text-[10px] text-slate-400 mt-3 font-mono">
+              Üretim: {new Date(founderWorkerQ.data.generatedAtIso).toLocaleString("tr-TR")}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
     </div>

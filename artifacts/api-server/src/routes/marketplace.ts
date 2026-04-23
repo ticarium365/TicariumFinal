@@ -10,6 +10,7 @@ import { idempotencyMiddleware } from "../middlewares/idempotency.js";
 import { getProviderForAccount, MP_META, MP_REGISTRY, logSync } from "../services/marketplace/factory.js";
 import { applyPricingRule, applyStockRule } from "../services/marketplace/types.js";
 import { encryptSecrets } from "../lib/secret-crypto.js";
+import { buildMarketplaceWorkerObservabilityV1 } from "../lib/marketplace-worker-observability.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -295,6 +296,17 @@ router.get("/stats", async (req, res) => {
   const mappings = await db.execute(sql`SELECT COUNT(*)::int AS count FROM product_channel_mappings WHERE company_id = ${companyId} AND is_published = true`);
   const orders = await db.execute(sql`SELECT status, COUNT(*)::int AS count FROM marketplace_orders WHERE company_id = ${companyId} GROUP BY status`);
   res.json({ accounts: accounts.rows, jobs: jobs.rows, publishedMappings: mappings.rows, orders: orders.rows });
+});
+
+/** Sync worker gözlemi — kuyruk, gecikme, kümeler, hesap başına dürüst durum (yeşil uydurma yok). */
+router.get("/worker-observability", requireRole(["admin", "super_admin"]), async (req, res) => {
+  try {
+    const bundle = await buildMarketplaceWorkerObservabilityV1(req.companyId!);
+    res.json(bundle);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "worker_observability_failed" });
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
