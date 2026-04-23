@@ -2087,7 +2087,9 @@ export default function SuperAdminHubPage() {
                 <div className="rounded-md border bg-muted/30 px-2 py-2">
                   <p className="text-muted-foreground">Kimlik kapısı (bu ay)</p>
                   <p className="font-mono text-foreground">
-                    gösterim {metrics.revenueAttributionV3.identityGateThisMonth?.shownCount ?? 0} · kaydet {metrics.revenueAttributionV3.identityGateThisMonth?.savedCount ?? 0}
+                    VKN/TCKN gösterim {metrics.revenueAttributionV3.identityGateThisMonth?.shownCount ?? 0} · kaydet {metrics.revenueAttributionV3.identityGateThisMonth?.savedCount ?? 0}
+                    {" · "}GSM gösterim {metrics.revenueAttributionV3.identityGateThisMonth?.phoneShownCount ?? 0} · kaydet {metrics.revenueAttributionV3.identityGateThisMonth?.phoneSavedCount ?? 0}
+                    {" · "}checkout_failed {metrics.revenueAttributionV3.identityGateThisMonth?.checkoutFailedCount ?? 0}
                   </p>
                 </div>
                 <div className="rounded-md border bg-muted/30 px-2 py-2">
