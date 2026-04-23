@@ -83,6 +83,18 @@ router.post("/checkout", requireAuth, requireRole(["admin", "super_admin"]), asy
         error: { code: "IDENTITY_REQUIRED", message: "Ödeme için vergi numarası (VKN/TCKN) gerekli. Ayarlar → Firma bilgileri alanını doldurun." },
       });
     }
+    const gsmNumber = (user?.phone || settings?.phone || "").trim();
+    if (!gsmNumber) {
+      return res.status(400).json({
+        error: { code: "PHONE_REQUIRED", message: "Ödeme için telefon numarası gerekli. Ayarlar → Firma bilgileri alanını doldurun." },
+      });
+    }
+    const gsmNumber = (user?.phone || settings?.phone || "").trim();
+    if (!gsmNumber) {
+      return res.status(400).json({
+        error: { code: "PHONE_REQUIRED", message: "Ödeme için telefon numarası gerekli. Ayarlar → Firma bilgileri alanını doldurun." },
+      });
+    }
 
     const conversationId = newConversationId();
     const provider = getBillingProvider();
@@ -119,7 +131,7 @@ router.post("/checkout", requireAuth, requireRole(["admin", "super_admin"]), asy
           name: (user?.fullName?.split(" ")[0]) || "Adsız",
           surname: (user?.fullName?.split(" ").slice(1).join(" ")) || "Kullanıcı",
           email: user?.email || `noreply+${companyId}@ticarium365.local`,
-          gsmNumber: user?.phone || undefined,
+          gsmNumber,
           identityNumber,
           registrationAddress: settings?.address || "Türkiye",
           city: company?.city || "İstanbul",
@@ -245,7 +257,7 @@ router.post("/topup", requireAuth, requireRole(["admin", "super_admin"]), async 
           name: (user?.fullName?.split(" ")[0]) || "Adsız",
           surname: (user?.fullName?.split(" ").slice(1).join(" ")) || "Kullanıcı",
           email: user?.email || `noreply+${companyId}@ticarium365.local`,
-          gsmNumber: user?.phone || undefined,
+        gsmNumber,
           identityNumber,
           registrationAddress: settings?.address || "Türkiye",
           city: company?.city || "İstanbul",
