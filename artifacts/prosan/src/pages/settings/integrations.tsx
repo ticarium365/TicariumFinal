@@ -5,7 +5,7 @@ import {
   Webhook, Key, Plus, X, Pencil, Trash2, CheckCircle, XCircle,
   Send, Eye, EyeOff, Copy, RefreshCw, Activity, Zap,
   BookOpen, ShoppingCart, PlayCircle, ChevronDown, ChevronUp,
-  Search, LayoutGrid, Truck, Radio, CreditCard, BarChart3, Timer, AlertTriangle, Wrench,
+  Search, LayoutGrid, Truck, Radio, CreditCard, BarChart3, Timer, AlertTriangle, Wrench, TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -197,6 +197,94 @@ type MarketplaceSelfHealingBundleV1 = {
   retrySuccess24h: number;
 };
 
+type MarketplaceProfitAutomationV1 = {
+  version: 1;
+  generatedAtIso: string;
+  lowStockSalesRisk: {
+    productId: number;
+    name: string;
+    stock: number;
+    minStock: number;
+    accountId: number;
+    accountName: string;
+    provider: string;
+    severity: "warning" | "critical";
+    message: string;
+  }[];
+  priceChannelSignals: {
+    mappingId: number;
+    productId: number;
+    productName: string;
+    accountId: number;
+    accountName: string;
+    provider: string;
+    masterSalePrice: number;
+    purchasePrice: number;
+    channelPrice: number;
+    gapPct: number;
+    signal: "overpriced_vs_master" | "underpriced_vs_master";
+    message: string;
+  }[];
+  zeroSaleListedProducts: {
+    mappingId: number;
+    productId: number;
+    productName: string;
+    accountId: number;
+    accountName: string;
+    provider: string;
+    message: string;
+  }[];
+  highReturnSkus: {
+    productId: number;
+    productName: string;
+    returnedQty: number;
+    soldQty: number;
+    returnRatio: number;
+    message: string;
+  }[];
+  topRevenueChannels: {
+    channelKey: string;
+    salesRevenue30d: number;
+    saleLines30d: number;
+    pulledOrderRevenue30d: number;
+    pulledOrderCount30d: number;
+    combinedHint: string;
+  }[];
+  lowMarginProducts: {
+    productId: number;
+    name: string;
+    salePrice: number;
+    purchasePrice: number;
+    marginPct: number | null;
+    message: string;
+  }[];
+  staleListings: {
+    mappingId: number;
+    productId: number;
+    productName: string;
+    accountId: number;
+    accountName: string;
+    provider: string;
+    lastSyncedAtIso: string | null;
+    syncStatus: string;
+    message: string;
+  }[];
+  repricingRecommendations: {
+    mappingId: number;
+    productId: number;
+    productName: string;
+    accountId: number;
+    accountName: string;
+    provider: string;
+    currentChannelPrice: number;
+    masterSalePrice: number;
+    suggestedPrice: number;
+    signal: "overpriced_vs_master" | "underpriced_vs_master";
+    rationale: string;
+    nonDestructive: true;
+  }[];
+};
+
 function workerObsHealthLabel(h: WorkerObsHealthHonest): string {
   switch (h) {
     case "healthy_recent":
@@ -299,6 +387,18 @@ export default function IntegrationsPage() {
     enabled: marketplaceWorkerObsEnabled,
     staleTime: 45_000,
     refetchInterval: marketplaceWorkerObsEnabled ? 120_000 : false,
+  });
+
+  const profitAutomationQ = useQuery<MarketplaceProfitAutomationV1>({
+    queryKey: ["marketplace-profit-automation"],
+    queryFn: async () => {
+      const r = await fetch("/api/marketplace/profit-automation", { credentials: "include" });
+      if (!r.ok) throw new Error("profit_automation");
+      return r.json();
+    },
+    enabled: marketplaceWorkerObsEnabled,
+    staleTime: 120_000,
+    refetchInterval: marketplaceWorkerObsEnabled ? 180_000 : false,
   });
 
   const pingCatalogEntry = useMutation({
@@ -599,6 +699,7 @@ export default function IntegrationsPage() {
               if (marketplaceWorkerObsEnabled) {
                 void qc.invalidateQueries({ queryKey: ["marketplace-worker-observability"] });
                 void qc.invalidateQueries({ queryKey: ["marketplace-self-healing"] });
+                void qc.invalidateQueries({ queryKey: ["marketplace-profit-automation"] });
               }
             }}
           >
@@ -1027,6 +1128,153 @@ export default function IntegrationsPage() {
               </div>
               <p className="text-[10px] text-muted-foreground font-mono">
                 Üretim: {new Date(selfHealingQ.data.generatedAtIso).toLocaleString("tr-TR")}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <TrendingUp className="h-4 w-4 text-primary shrink-0" />
+              <div>
+                <h2 className="text-sm font-semibold">Pazaryeri kâr otomasyonu</h2>
+                <p className="text-[10px] text-muted-foreground leading-snug">
+                  Salt okunur sinyaller: stok riski, fiyat sapması, satışsız listeler, iade oranı, kanal cirosu, düşük marj,
+                  bayat senkron ve önerilen fiyat yönü. Otomatik fiyat/stok yazılmaz — önce değerlendirme.
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs shrink-0 gap-1.5"
+              onClick={() => void qc.invalidateQueries({ queryKey: ["marketplace-profit-automation"] })}
+              disabled={profitAutomationQ.isFetching}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${profitAutomationQ.isFetching ? "animate-spin" : ""}`} />
+              Kâr verisini yenile
+            </Button>
+          </div>
+          {profitAutomationQ.isLoading && <p className="text-xs text-muted-foreground">Kâr sinyalleri yükleniyor…</p>}
+          {profitAutomationQ.isError && <p className="text-xs text-destructive">Kâr otomasyonu alınamadı.</p>}
+          {profitAutomationQ.data && (
+            <div className="space-y-3 text-[11px]">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-md border p-2 space-y-1">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase">Kanal cirosu (30g)</p>
+                  <ul className="space-y-1 font-mono text-[10px]">
+                    {profitAutomationQ.data.topRevenueChannels.length === 0 ? (
+                      <li className="text-muted-foreground">Veri yok</li>
+                    ) : (
+                      profitAutomationQ.data.topRevenueChannels.map((c) => (
+                        <li key={c.channelKey}>
+                          <span className="font-medium text-foreground">{c.channelKey}</span>
+                          <div className="text-muted-foreground">{c.combinedHint}</div>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+                <div className="rounded-md border p-2 space-y-1 max-h-44 overflow-y-auto">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase">Stok + satış riski</p>
+                  <ul className="space-y-1">
+                    {profitAutomationQ.data.lowStockSalesRisk.length === 0 ? (
+                      <li className="text-muted-foreground">Kayıt yok</li>
+                    ) : (
+                      profitAutomationQ.data.lowStockSalesRisk.map((r) => (
+                        <li key={`${r.productId}-${r.accountId}`}>
+                          <Badge variant={r.severity === "critical" ? "destructive" : "secondary"} className="text-[9px] h-4 mr-1">
+                            {r.severity}
+                          </Badge>
+                          {r.name} · stok {r.stock}/{r.minStock} · {r.accountName}
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+                <div className="rounded-md border p-2 space-y-1 max-h-44 overflow-y-auto">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase">Düşük marj ürün</p>
+                  <ul className="space-y-1">
+                    {profitAutomationQ.data.lowMarginProducts.length === 0 ? (
+                      <li className="text-muted-foreground">Eşik altı yok</li>
+                    ) : (
+                      profitAutomationQ.data.lowMarginProducts.map((m) => (
+                        <li key={m.productId}>
+                          {m.name} · %{m.marginPct ?? "?"} marj
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                <div className="rounded-md border p-2 space-y-1 max-h-40 overflow-y-auto">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase">Fiyat sapması (kanal vs ana)</p>
+                  <ul className="space-y-1 font-mono text-[10px]">
+                    {profitAutomationQ.data.priceChannelSignals.length === 0 ? (
+                      <li className="text-muted-foreground">Sapma yok</li>
+                    ) : (
+                      profitAutomationQ.data.priceChannelSignals.map((p) => (
+                        <li key={p.mappingId}>
+                          {p.productName} · {p.signal === "overpriced_vs_master" ? "yüksek" : "düşük"} · %{Math.abs(p.gapPct).toFixed(1)}
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+                <div className="rounded-md border p-2 space-y-1 max-h-40 overflow-y-auto">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase">Önerilen fiyat (manuel)</p>
+                  <ul className="space-y-1 text-[10px]">
+                    {profitAutomationQ.data.repricingRecommendations.length === 0 ? (
+                      <li className="text-muted-foreground">Öneri yok</li>
+                    ) : (
+                      profitAutomationQ.data.repricingRecommendations.map((r) => (
+                        <li key={r.mappingId}>
+                          {r.productName}: {r.currentChannelPrice} → öneri ~{r.suggestedPrice} ₺ — {r.rationale.slice(0, 80)}…
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              </div>
+              <div className="grid gap-2 md:grid-cols-3">
+                <div className="rounded-md border p-2 max-h-36 overflow-y-auto space-y-1">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase">Satışsız listelenen</p>
+                  <ul className="text-[10px] space-y-0.5">
+                    {profitAutomationQ.data.zeroSaleListedProducts.slice(0, 12).map((z) => (
+                      <li key={z.mappingId}>{z.productName} · {z.accountName}</li>
+                    ))}
+                    {profitAutomationQ.data.zeroSaleListedProducts.length === 0 ? <li className="text-muted-foreground">—</li> : null}
+                  </ul>
+                </div>
+                <div className="rounded-md border p-2 max-h-36 overflow-y-auto space-y-1">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase">Yüksek iade SKU</p>
+                  <ul className="text-[10px] space-y-0.5">
+                    {profitAutomationQ.data.highReturnSkus.map((h) => (
+                      <li key={h.productId}>
+                        {h.productName} · %{(h.returnRatio * 100).toFixed(0)} ({h.returnedQty}/{h.soldQty})
+                      </li>
+                    ))}
+                    {profitAutomationQ.data.highReturnSkus.length === 0 ? <li className="text-muted-foreground">—</li> : null}
+                  </ul>
+                </div>
+                <div className="rounded-md border p-2 max-h-36 overflow-y-auto space-y-1">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase">Bayat / hatalı liste</p>
+                  <ul className="text-[10px] space-y-0.5">
+                    {profitAutomationQ.data.staleListings.slice(0, 12).map((s) => (
+                      <li key={s.mappingId}>
+                        {s.productName} · {s.syncStatus}
+                        {s.lastSyncedAtIso ? ` · ${fmtTime(s.lastSyncedAtIso)}` : ""}
+                      </li>
+                    ))}
+                    {profitAutomationQ.data.staleListings.length === 0 ? <li className="text-muted-foreground">—</li> : null}
+                  </ul>
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground font-mono">
+                Üretim: {new Date(profitAutomationQ.data.generatedAtIso).toLocaleString("tr-TR")}
               </p>
             </div>
           )}

@@ -18,6 +18,7 @@ import { getCompanyFeatureContext, invalidateFeaturesCache } from "../middleware
 import { audit } from "../lib/audit.js";
 import { buildMarketplaceWorkerFounderAlertsV1 } from "../lib/marketplace-worker-observability.js";
 import { buildMarketplaceSelfHealFounderAlertsV1 } from "../services/marketplace/self-heal.js";
+import { buildMarketplaceProfitFounderAlertsV1 } from "../lib/marketplace-profit-automation.js";
 import {
   computeFounderOvernightPackV1,
   computeB2bOpsSupplementV1,
@@ -1677,7 +1678,12 @@ router.get("/admin/marketplace-worker-alerts", requireSuperAdmin, async (_req: R
   try {
     const data = await buildMarketplaceWorkerFounderAlertsV1();
     const automation = await buildMarketplaceSelfHealFounderAlertsV1();
-    res.json({ ...data, automationAlerts: automation.alerts });
+    const profitAuto = await buildMarketplaceProfitFounderAlertsV1();
+    res.json({
+      ...data,
+      automationAlerts: automation.alerts,
+      profitAutomationAlerts: profitAuto.alerts,
+    });
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Sunucu hatası" });

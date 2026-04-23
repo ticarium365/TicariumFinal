@@ -12,6 +12,7 @@ import { applyPricingRule, applyStockRule } from "../services/marketplace/types.
 import { encryptSecrets } from "../lib/secret-crypto.js";
 import { buildMarketplaceWorkerObservabilityV1 } from "../lib/marketplace-worker-observability.js";
 import { buildMarketplaceSelfHealingBundleV1 } from "../services/marketplace/self-heal.js";
+import { buildMarketplaceProfitAutomationV1 } from "../lib/marketplace-profit-automation.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -318,6 +319,17 @@ router.get("/self-healing", requireRole(["admin", "super_admin"]), async (req, r
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "self_healing_bundle_failed" });
+  }
+});
+
+/** Kâr sinyalleri — öneri salt okunur; fiyat/stok yazılmaz. */
+router.get("/profit-automation", requireRole(["admin", "super_admin"]), async (req, res) => {
+  try {
+    const bundle = await buildMarketplaceProfitAutomationV1(req.companyId!);
+    res.json(bundle);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "profit_automation_failed" });
   }
 });
 

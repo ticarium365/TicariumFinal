@@ -22,6 +22,14 @@ type FounderMpWorkerAlerts = {
     companyId?: number;
     companyName?: string;
   }[];
+  profitAutomationAlerts?: {
+    severity: "critical" | "warning";
+    code: string;
+    message: string;
+    companyId: number;
+    companyName: string;
+    metric?: number;
+  }[];
 };
 
 type AccountHealth = {
@@ -185,9 +193,11 @@ export default function PazaryeriSaglikPage() {
               <AlertTriangle className="h-4 w-4 shrink-0" />
               Worker uyarıları alınamadı (yetki veya sunucu).
             </div>
-          ) : !founderWorkerQ.data?.alerts?.length && !(founderWorkerQ.data?.automationAlerts?.length) ? (
+          ) : !founderWorkerQ.data?.alerts?.length
+            && !(founderWorkerQ.data?.automationAlerts?.length)
+            && !(founderWorkerQ.data?.profitAutomationAlerts?.length) ? (
             <div className="text-sm text-slate-600 py-3 rounded-md border border-slate-200 bg-slate-50/80 px-3">
-              Şu an takılı kuyruk veya otomasyon alarmı yok (eşik aşılmamış veya iş yok).
+              Şu an kuyruk, self-heal veya kâr otomasyon alarmı yok (eşik aşılmamış veya veri yok).
             </div>
           ) : (
             <ul className="space-y-2">
@@ -229,6 +239,35 @@ export default function PazaryeriSaglikPage() {
                     ) : (
                       <span className="text-[10px] text-slate-600">uyarı</span>
                     )}
+                  </div>
+                  <p className="text-xs text-slate-800 leading-snug">{a.message}</p>
+                </li>
+              ))}
+              {(founderWorkerQ.data?.profitAutomationAlerts ?? []).map((a) => (
+                <li
+                  key={`profit-${a.code}-${a.companyId}`}
+                  className={`rounded-lg border p-3 text-sm ${
+                    a.severity === "critical"
+                      ? "border-teal-300 bg-teal-50/70"
+                      : "border-slate-200 bg-slate-50/80"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                    <Badge variant="outline" className="text-[9px] font-mono">
+                      kâr · {a.code}
+                    </Badge>
+                    <span className="text-[10px] font-mono text-slate-600">#{a.companyId}</span>
+                    {a.metric != null ? (
+                      <span className="text-[10px] font-mono text-slate-600">
+                        {a.code === "weak_marketplace_sale_margin"
+                          ? ` ${(a.metric * 100).toFixed(1)}% ort. kâr/tutar`
+                          : a.code === "zero_sale_listing_load"
+                            ? ` ${a.metric} satırsız liste`
+                            : a.code === "marketplace_gmv_spotlight_7d"
+                              ? ` ~${Math.round(a.metric).toLocaleString("tr-TR")} ₺`
+                              : ` ${a.metric}`}
+                      </span>
+                    ) : null}
                   </div>
                   <p className="text-xs text-slate-800 leading-snug">{a.message}</p>
                 </li>
