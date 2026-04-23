@@ -34,6 +34,24 @@ export default function OdemeSonucPage() {
     const params = new URLSearchParams(window.location.search);
     const conversationId = params.get("conversation_id");
     const simulate = params.get("simulate");
+    const returnStatus = params.get("return_status");
+    const returnCode = params.get("return_code");
+
+    if (returnStatus && returnStatus !== "200") {
+      if (conversationId) setConversationId(conversationId);
+      setState("error");
+      const code = returnCode || "UNKNOWN";
+      const hints: Record<string, string> = {
+        MISSING_TOKEN: "Ödeme doğrulama bilgisi eksik. Lütfen paket seçiminden yeniden deneyin.",
+        RETRIEVE_FAILED: "Banka/iyzico yanıtı okunamadı. Birkaç dakika sonra tekrar deneyin.",
+        INVALID_SIGNATURE: "Ödeme doğrulaması başarısız. Destek ekibine iletin.",
+        PAYMENT_NOT_FOUND: "Ödeme kaydı bulunamadı. Oturumunuz doğru şirkette mi kontrol edin.",
+        PROVIDER_INIT_FAILED: "Ödeme başlatılamadı. Ayarlarınızı kontrol edip tekrar deneyin.",
+      };
+      setMessage(hints[code] || `Ödeme tamamlanamadı (${code}).`);
+      trackProductEvent("billing_return_redirect_error", { return_status: returnStatus, return_code: code });
+      return;
+    }
 
     if (!conversationId) {
       setState("error");

@@ -3075,6 +3075,7 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
               'billing_phone_required_shown',
               'billing_phone_saved',
               'billing_checkout_failed',
+              'billing_topup_failed',
               'plan_upgraded',
               'grace_period_reactivate_success'
             )

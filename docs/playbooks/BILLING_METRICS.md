@@ -24,3 +24,9 @@
 | `docsPlaybooksBundleV1` | Repo playbook yolları + board playbook aynası |
 
 Detaylı mimari: `docs/FOUNDER_INTELLIGENCE_AND_BACKLOG_SYSTEMS.md`.
+
+## Ödeme dönüşü (`/api/billing/return`)
+
+- iyzico `token` ile `retrieveCheckoutResult` sonrası oluşturulan **sentetik** webhook gövdesi, dış PSP imzası taşımaz.
+- Bu yüzden `handleWebhookEvent` içinde **`x-billing-return-sig`** başlığı ile `HMAC-SHA256(IYZICO_SECRET_KEY, rawBody)` doğrulanır; doğrulanırsa PSP `verifyWebhookSignature` atlanır.
+- Dış dünyadan gelen gerçek `/api/billing/webhook` çağrıları yalnızca PSP imzası ile kabul edilir (aynı handler, farklı güven kanalı).

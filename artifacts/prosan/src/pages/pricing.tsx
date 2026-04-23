@@ -144,13 +144,15 @@ export default function PricingPage() {
       toast({ title: "Ödeme sayfasına yönlendiriliyorsunuz", description: `${plan.name} — ${j.amount} ${j.currency}` });
       window.location.href = j.paymentPageUrl;
     } else {
-      if (r.status === 400 && (j?.error?.code === "IDENTITY_REQUIRED" || j?.error?.code === "PHONE_REQUIRED")) {
+      if (r.status === 400 && (j?.error?.code === "IDENTITY_REQUIRED" || j?.error?.code === "PHONE_REQUIRED" || j?.error?.code === "PHONE_INVALID")) {
         setPendingPlan(plan);
         setIdentityDialogOpen(true);
-        trackProductEvent(j?.error?.code === "PHONE_REQUIRED" ? "billing_phone_required_shown" : "billing_identity_required_shown", {
-          plan_slug: plan.slug,
-          cycle: yearly ? "yearly" : "monthly",
-        });
+        trackProductEvent(
+          j?.error?.code === "PHONE_REQUIRED" || j?.error?.code === "PHONE_INVALID"
+            ? "billing_phone_required_shown"
+            : "billing_identity_required_shown",
+          { plan_slug: plan.slug, cycle: yearly ? "yearly" : "monthly", code: j?.error?.code },
+        );
         return;
       }
       toast({ title: "Hata", description: j?.error?.message ?? j?.message ?? "İşlem başarısız", variant: "destructive" });

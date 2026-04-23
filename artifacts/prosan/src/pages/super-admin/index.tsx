@@ -243,6 +243,15 @@ type RevenueAttributionV3 = RevenueAttributionV2 & {
   billingPaidSuccessByPropsSource30d: { source: string; count: number }[];
   graceRescueViewsBySource30d: { source: string; count: number }[];
   medianDaysSignupToPaidByPlanSlug: { planSlug: string; medianDays: number; sampleSize: number }[];
+  livePaymentsThisMonth?: { paidCount: number; paidAmountTry: number };
+  identityGateThisMonth?: {
+    shownCount: number;
+    savedCount: number;
+    phoneShownCount?: number;
+    phoneSavedCount?: number;
+    checkoutFailedCount?: number;
+  };
+  paymentFailureClusters30d?: { errorCode: string; count: number }[];
   trialCohortByMonth: {
     monthKey: string;
     trialCompanies: number;

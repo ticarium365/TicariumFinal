@@ -14,6 +14,7 @@
  *   webhook handler (success ikinci kez gelirse no-op).
  */
 import { Router, Request, Response } from "express";
+import crypto from "node:crypto";
 import {
   db,
   paymentsTable,
@@ -32,6 +33,47 @@ import { CREDIT_PACKS, findCreditPack } from "../services/billing/credit-packs";
 import { addPurchasedCredits, currentPeriodUTC } from "../services/usage";
 import { invalidateFeaturesCache } from "../middlewares/features";
 import { logger } from "../lib/logger";
+
+/** +905xxxxxxxxx (13 chars) — Iyzico buyer.gsmNumber için tutarlı biçim */
+function normalizeTrGsm(raw: string): string | null {
+  let d = String(raw || "").replace(/\D/g, "");
+  if (!d) return null;
+  if (d.startsWith("90") && d.length >= 12) d = d.slice(2);
+  if (d.length === 11 && d.startsWith("0")) d = d.slice(1);
+  if (d.length === 10 && d.startsWith("5")) return `+90${d}`;
+  return null;
+}
+
+function requireNormalizedGsm(
+  userPhone: string | null | undefined,
+  settingsPhone: string | null | undefined,
+): { ok: true; gsm: string } | { ok: false; code: "PHONE_REQUIRED" | "PHONE_INVALID" } {
+  const raw = String(userPhone || settingsPhone || "").trim();
+  if (!raw) return { ok: false, code: "PHONE_REQUIRED" };
+  const gsm = normalizeTrGsm(raw);
+  if (!gsm || !/^\+905\d{9}$/.test(gsm)) return { ok: false, code: "PHONE_INVALID" };
+  return { ok: true, gsm };
+}
+
+/** `/api/billing/return` içinden üretilen sentetik webhook gövdesi — PSP imzası yok; HMAC ile güvenilir */
+function signBillingReturnHmac(rawBody: string): string | null {
+  const sk = process.env.IYZICO_SECRET_KEY || "";
+  if (!sk) return null;
+  return crypto.createHmac("sha256", sk).update(rawBody, "utf8").digest("hex");
+}
+
+function verifyBillingReturnHmac(rawBody: string, headers: Record<string, string | string[] | undefined>): boolean {
+  const expected = signBillingReturnHmac(rawBody);
+  if (!expected) return false;
+  const hdr = headers["x-billing-return-sig"];
+  const got = Array.isArray(hdr) ? hdr[0] : String(hdr || "");
+  if (!got || got.length !== expected.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(got, "utf8"), Buffer.from(expected, "utf8"));
+  } catch {
+    return false;
+  }
+}
 
 const router = Router();
 
@@ -83,12 +125,18 @@ router.post("/checkout", requireAuth, requireRole(["admin", "super_admin"]), asy
         error: { code: "IDENTITY_REQUIRED", message: "Ödeme için vergi numarası (VKN/TCKN) gerekli. Ayarlar → Firma bilgileri alanını doldurun." },
       });
     }
-    const gsmNumber = (user?.phone || settings?.phone || "").trim();
-    if (!gsmNumber) {
+    const gsmRes = requireNormalizedGsm(user?.phone, settings?.phone);
+    if (!gsmRes.ok) {
       return res.status(400).json({
-        error: { code: "PHONE_REQUIRED", message: "Ödeme için telefon numarası gerekli. Ayarlar → Firma bilgileri alanını doldurun." },
+        error: {
+          code: gsmRes.code,
+          message: gsmRes.code === "PHONE_INVALID"
+            ? "Ödeme için geçerli bir Türkiye GSM numarası gerekli (örn. +905xx… veya 05xx…)."
+            : "Ödeme için telefon numarası gerekli. Ayarlar → Firma bilgileri alanını doldurun.",
+        },
       });
     }
+    const gsmNumber = gsmRes.gsm;
 
     const conversationId = newConversationId();
     const provider = getBillingProvider();
@@ -205,6 +253,18 @@ router.post("/topup", requireAuth, requireRole(["admin", "super_admin"]), async 
         error: { code: "IDENTITY_REQUIRED", message: "Ödeme için vergi numarası (VKN/TCKN) gerekli. Ayarlar → Firma bilgileri alanını doldurun." },
       });
     }
+    const gsmRes = requireNormalizedGsm(user?.phone, settings?.phone);
+    if (!gsmRes.ok) {
+      return res.status(400).json({
+        error: {
+          code: gsmRes.code,
+          message: gsmRes.code === "PHONE_INVALID"
+            ? "Ödeme için geçerli bir Türkiye GSM numarası gerekli (örn. +905xx… veya 05xx…)."
+            : "Ödeme için telefon numarası gerekli. Ayarlar → Firma bilgileri alanını doldurun.",
+        },
+      });
+    }
+    const gsmNumber = gsmRes.gsm;
     const conversationId = newConversationId();
     const provider = getBillingProvider();
 
@@ -251,7 +311,7 @@ router.post("/topup", requireAuth, requireRole(["admin", "super_admin"]), async 
           name: (user?.fullName?.split(" ")[0]) || "Adsız",
           surname: (user?.fullName?.split(" ").slice(1).join(" ")) || "Kullanıcı",
           email: user?.email || `noreply+${companyId}@ticarium365.local`,
-        gsmNumber,
+          gsmNumber,
           identityNumber,
           registrationAddress: settings?.address || "Türkiye",
           city: company?.city || "İstanbul",
@@ -348,7 +408,8 @@ async function applyTopupsAfterCommit(items: Array<{ companyId: number; metric: 
  */
 async function handleWebhookEvent(rawBody: string, headers: Record<string, string | string[] | undefined>) {
   const provider = getBillingProvider();
-  if (!provider.verifyWebhookSignature(rawBody, headers)) {
+  const trustedReturn = verifyBillingReturnHmac(rawBody, headers);
+  if (!trustedReturn && !provider.verifyWebhookSignature(rawBody, headers)) {
     return { status: 401, body: { error: { code: "INVALID_SIGNATURE", message: "Geçersiz imza" } } };
   }
   let payload: any;
@@ -553,13 +614,33 @@ async function handleWebhookEvent(rawBody: string, headers: Record<string, strin
  * ve kullanıcıyı UI sonuç sayfasına yönlendirir.
  */
 router.all("/return", async (req: Request, res: Response) => {
+  const redirectResult = (opts: { conversationId?: string; returnStatus?: string; returnCode?: string }) => {
+    const u = new URL(`${req.protocol}://${req.get("host")}/odeme/sonuc`);
+    if (opts.conversationId) u.searchParams.set("conversation_id", opts.conversationId);
+    if (opts.returnStatus) u.searchParams.set("return_status", opts.returnStatus);
+    if (opts.returnCode) u.searchParams.set("return_code", opts.returnCode);
+    return res.redirect(302, u.toString());
+  };
+
   try {
-    const token = String((req.body as any)?.token || (req.query as any)?.token || "").trim();
-    const conversationId = String((req.query as any)?.conversation_id || (req.body as any)?.conversationId || (req.body as any)?.conversation_id || "").trim();
-    if (!token) return void res.status(400).json({ error: { code: "MISSING_TOKEN", message: "token gerekli" } });
+    const body = (req.body && typeof req.body === "object") ? (req.body as any) : {};
+    const q = req.query as any;
+    const token = String(body.token || q.token || "").trim();
+    const conversationId = String(q.conversation_id || body.conversationId || body.conversation_id || "").trim();
+
+    if (!token) {
+      return redirectResult({ conversationId: conversationId || undefined, returnStatus: "400", returnCode: "MISSING_TOKEN" });
+    }
 
     const provider = getBillingProvider();
-    const evt = await provider.retrieveCheckoutResult({ token, conversationId: conversationId || null });
+    let evt;
+    try {
+      evt = await provider.retrieveCheckoutResult({ token, conversationId: conversationId || null });
+    } catch (e: any) {
+      logger.warn({ err: e, conversationId }, "billing_return_retrieve_failed");
+      return redirectResult({ conversationId: conversationId || undefined, returnStatus: "502", returnCode: "RETRIEVE_FAILED" });
+    }
+
     const payload = {
       status: evt.eventType === "payment.succeeded" ? "success" : "failure",
       paymentStatus: evt.eventType === "payment.succeeded" ? "SUCCESS" : "FAILURE",
@@ -571,10 +652,25 @@ router.all("/return", async (req: Request, res: Response) => {
       errorMessage: evt.errorMessage,
       raw: evt.raw,
     };
-    const r: any = await handleWebhookEvent(JSON.stringify(payload), provider.name === "mock" ? { "x-mock-signature": "mock-ok" } as any : ({} as any));
+    const rawBody = JSON.stringify(payload);
+    const trustHeaders: Record<string, string | string[] | undefined> =
+      provider.name === "mock"
+        ? { "x-mock-signature": "mock-ok" }
+        : { "x-billing-return-sig": signBillingReturnHmac(rawBody) || "" };
+
+    const r: any = await handleWebhookEvent(rawBody, trustHeaders);
     if (Array.isArray(r._applyTopups) && r._applyTopups.length > 0) {
       await applyTopupsAfterCommit(r._applyTopups);
       invalidateFeaturesCache(r._applyTopups[0].companyId);
+    }
+
+    if (r.status !== 200) {
+      const code = (r.body as any)?.error?.code || `BILLING_${r.status}`;
+      return redirectResult({
+        conversationId: String(evt.conversationId || conversationId || ""),
+        returnStatus: String(r.status),
+        returnCode: code,
+      });
     }
 
     const u = new URL(`${req.protocol}://${req.get("host")}/odeme/sonuc`);
@@ -582,11 +678,8 @@ router.all("/return", async (req: Request, res: Response) => {
     return res.redirect(302, u.toString());
   } catch (err: any) {
     logger.warn({ err }, "billing_return_failed");
-    const u = new URL(`${req.protocol}://${req.get("host")}/odeme/sonuc`);
     const conversationId = String((req.query as any)?.conversation_id || (req.body as any)?.conversationId || (req.body as any)?.conversation_id || "").trim();
-    if (conversationId) u.searchParams.set("conversation_id", conversationId);
-    u.searchParams.set("simulate", "fail");
-    return res.redirect(302, u.toString());
+    return redirectResult({ conversationId: conversationId || undefined, returnStatus: "500", returnCode: "UNEXPECTED" });
   }
 });
 

@@ -17,6 +17,7 @@ const PERSIST_TO_DB = new Set([
   "expired_cta_click",
   "billing_return_success",
   "billing_return_error",
+  "billing_return_redirect_error",
   "retention_hint_view",
   "retention_hint_cta",
   "subscription_cancel_rescue_view",
