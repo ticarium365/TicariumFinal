@@ -2922,7 +2922,13 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
         graceRescueViewsBySource30d: { source: string; count: number }[];
         medianDaysSignupToPaidByPlanSlug: { planSlug: string; medianDays: number; sampleSize: number }[];
         livePaymentsThisMonth: { paidCount: number; paidAmountTry: number };
-        identityGateThisMonth: { shownCount: number; savedCount: number };
+        identityGateThisMonth: {
+          shownCount: number;
+          savedCount: number;
+          phoneShownCount: number;
+          phoneSavedCount: number;
+          checkoutFailedCount: number;
+        };
         paymentFailureClusters30d: { errorCode: string; count: number }[];
         trialCohortByMonth: {
           monthKey: string;
@@ -2939,7 +2945,7 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
         graceRescueViewsBySource30d: [],
         medianDaysSignupToPaidByPlanSlug: [],
         livePaymentsThisMonth: { paidCount: 0, paidAmountTry: 0 },
-        identityGateThisMonth: { shownCount: 0, savedCount: 0 },
+        identityGateThisMonth: { shownCount: 0, savedCount: 0, phoneShownCount: 0, phoneSavedCount: 0, checkoutFailedCount: 0 },
         paymentFailureClusters30d: [],
         trialCohortByMonth: [],
         pricingViewToPaidWithin7dCompanies30d: 0,
@@ -3066,6 +3072,9 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
               'billing_payment_failed',
               'billing_identity_required_shown',
               'billing_identity_saved',
+              'billing_phone_required_shown',
+              'billing_phone_saved',
+              'billing_checkout_failed',
               'plan_upgraded',
               'grace_period_reactivate_success'
             )
@@ -3356,13 +3365,22 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
       const planUpgradedMo = fm.get("plan_upgraded") ?? 0;
       const identityShownMo = fm.get("billing_identity_required_shown") ?? 0;
       const identitySavedMo = fm.get("billing_identity_saved") ?? 0;
+      const phoneShownMo = fm.get("billing_phone_required_shown") ?? 0;
+      const phoneSavedMo = fm.get("billing_phone_saved") ?? 0;
+      const checkoutFailedMo = fm.get("billing_checkout_failed") ?? 0;
 
       const payRow = (paymentsThisMonthSql.rows?.[0] ?? {}) as { paid_n?: number | string; paid_try?: number | string };
       const livePaymentsThisMonth = {
         paidCount: Number(payRow.paid_n ?? 0),
         paidAmountTry: Math.round(Number(payRow.paid_try ?? 0)),
       };
-      const identityGateThisMonth = { shownCount: identityShownMo, savedCount: identitySavedMo };
+      const identityGateThisMonth = {
+        shownCount: identityShownMo,
+        savedCount: identitySavedMo,
+        phoneShownCount: phoneShownMo,
+        phoneSavedCount: phoneSavedMo,
+        checkoutFailedCount: checkoutFailedMo,
+      };
       const paymentFailureClusters30d = ((paymentFailClusters30dSql.rows ?? []) as { error_code: string; c: number | string }[])
         .map((r) => ({ errorCode: r.error_code || "unknown", count: Number(r.c ?? 0) }));
 
