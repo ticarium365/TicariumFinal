@@ -212,10 +212,12 @@ class IyzicoBillingProvider implements BillingProvider {
     const cb = new URL(input.callbackUrl);
     cb.searchParams.set("conversation_id", input.conversationId);
 
-    // PWI buyer gereksinimleri: ip + gsm + identityNumber. Sistemimizde identity yoksa placeholder.
-    const gsmNumber = (input.buyer.gsmNumber || "").replace(/[^\d+]/g, "") || "+905555555555";
-    const identityNumber = (input.buyer.identityNumber || "").replace(/[^\d]/g, "") || "11111111111";
+    // PWI buyer gereksinimleri: ip + gsm + identityNumber. Trust-first: placeholder kullanma.
+    const gsmNumber = (input.buyer.gsmNumber || "").replace(/[^\d+]/g, "");
+    const identityNumber = (input.buyer.identityNumber || "").replace(/[^\d]/g, "");
     const ip = input.buyer.ip || "127.0.0.1";
+    if (!gsmNumber) throw new Error("buyer.gsmNumber zorunlu");
+    if (!identityNumber) throw new Error("buyer.identityNumber (VKN/TCKN) zorunlu");
 
     const reqBody = {
       locale: "tr",

@@ -103,28 +103,47 @@ router.post("/checkout", requireAuth, requireRole(["admin", "super_admin"]), asy
     // Sonra provider'a checkout session aç
     // Gerçek iyzico akışında token callbackUrl'ye POST edilir → backend /return karşılar
     const callbackUrl = `${req.protocol}://${req.get("host")}/api/billing/return`;
-    const session = await provider.createCheckoutSession({
-      conversationId,
-      companyId,
-      planId,
-      planName: plan.name,
-      billingCycle: billingCycle as "monthly" | "yearly",
-      amount,
-      currency: "TRY",
-      callbackUrl,
-      buyer: {
-        id: `co-${companyId}`,
-        name: (user?.fullName?.split(" ")[0]) || "Adsız",
-        surname: (user?.fullName?.split(" ").slice(1).join(" ")) || "Kullanıcı",
-        email: user?.email || `noreply+${companyId}@ticarium365.local`,
-        gsmNumber: user?.phone || undefined,
-        identityNumber,
-        registrationAddress: settings?.address || "Türkiye",
-        city: company?.city || "İstanbul",
-        country: "Turkey",
-        ip: req.ip,
-      },
-    });
+    let session: { paymentPageUrl: string; token: string; provider: string };
+    try {
+      session = await provider.createCheckoutSession({
+        conversationId,
+        companyId,
+        planId,
+        planName: plan.name,
+        billingCycle: billingCycle as "monthly" | "yearly",
+        amount,
+        currency: "TRY",
+        callbackUrl,
+        buyer: {
+          id: `co-${companyId}`,
+          name: (user?.fullName?.split(" ")[0]) || "Adsız",
+          surname: (user?.fullName?.split(" ").slice(1).join(" ")) || "Kullanıcı",
+          email: user?.email || `noreply+${companyId}@ticarium365.local`,
+          gsmNumber: user?.phone || undefined,
+          identityNumber,
+          registrationAddress: settings?.address || "Türkiye",
+          city: company?.city || "İstanbul",
+          country: "Turkey",
+          ip: req.ip,
+        },
+      });
+    } catch (err: any) {
+      const msg = err?.message || "provider_initialize_failed";
+      await db.update(paymentsTable).set({
+        status: "failed",
+        errorCode: "PROVIDER_INIT_FAILED",
+        errorMessage: msg,
+        rawResponse: { ...(pending.rawResponse as any || {}), initError: msg } as any,
+        updatedAt: new Date(),
+      }).where(eq(paymentsTable.id, pending.id)).catch(() => {});
+      await db.insert(productFunnelEventsTable).values({
+        companyId,
+        eventKey: "billing_checkout_failed",
+        props: JSON.stringify({ stage: "initialize", provider: provider.name, plan_id: planId, billing_cycle: billingCycle, conversation_id: conversationId }).slice(0, 4000),
+      }).catch(() => {});
+      logger.warn({ err, conversationId, companyId }, "billing_checkout_provider_init_failed");
+      return res.status(502).json({ error: { code: "PROVIDER_INIT_FAILED", message: "Ödeme başlatılamadı. Lütfen birkaç dakika sonra tekrar deneyin.", details: { conversationId } } });
+    }
 
     // Checkout token'ı kayıt altına al (return/retrieve correlation için).
     await db.update(paymentsTable).set({
@@ -210,28 +229,47 @@ router.post("/topup", requireAuth, requireRole(["admin", "super_admin"]), async 
     });
 
     const callbackUrl = `${req.protocol}://${req.get("host")}/api/billing/return`;
-    const session = await provider.createCheckoutSession({
-      conversationId,
-      companyId,
-      planId: 0,
-      planName: pack.label,
-      billingCycle: "monthly", // provider için zorunlu (top-up için anlamsız)
-      amount: pack.totalPrice,
-      currency: "TRY",
-      callbackUrl,
-      buyer: {
-        id: `co-${companyId}`,
-        name: (user?.fullName?.split(" ")[0]) || "Adsız",
-        surname: (user?.fullName?.split(" ").slice(1).join(" ")) || "Kullanıcı",
-        email: user?.email || `noreply+${companyId}@ticarium365.local`,
-        gsmNumber: user?.phone || undefined,
-        identityNumber,
-        registrationAddress: settings?.address || "Türkiye",
-        city: company?.city || "İstanbul",
-        country: "Turkey",
-        ip: req.ip,
-      },
-    });
+    let session: { paymentPageUrl: string; token: string; provider: string };
+    try {
+      session = await provider.createCheckoutSession({
+        conversationId,
+        companyId,
+        planId: 0,
+        planName: pack.label,
+        billingCycle: "monthly", // provider için zorunlu (top-up için anlamsız)
+        amount: pack.totalPrice,
+        currency: "TRY",
+        callbackUrl,
+        buyer: {
+          id: `co-${companyId}`,
+          name: (user?.fullName?.split(" ")[0]) || "Adsız",
+          surname: (user?.fullName?.split(" ").slice(1).join(" ")) || "Kullanıcı",
+          email: user?.email || `noreply+${companyId}@ticarium365.local`,
+          gsmNumber: user?.phone || undefined,
+          identityNumber,
+          registrationAddress: settings?.address || "Türkiye",
+          city: company?.city || "İstanbul",
+          country: "Turkey",
+          ip: req.ip,
+        },
+      });
+    } catch (err: any) {
+      const msg = err?.message || "provider_initialize_failed";
+      await db.update(paymentsTable).set({
+        status: "failed",
+        errorCode: "PROVIDER_INIT_FAILED",
+        errorMessage: msg,
+        rawResponse: { ...(pending.rawResponse as any || {}), initError: msg } as any,
+        updatedAt: new Date(),
+      }).where(eq(paymentsTable.id, pending.id)).catch(() => {});
+      await db.insert(productFunnelEventsTable).values({
+        companyId,
+        eventKey: "billing_topup_failed",
+        props: JSON.stringify({ stage: "initialize", provider: provider.name, pack_code: pack.code, conversation_id: conversationId }).slice(0, 4000),
+      }).catch(() => {});
+      logger.warn({ err, conversationId, companyId }, "billing_topup_provider_init_failed");
+      return res.status(502).json({ error: { code: "PROVIDER_INIT_FAILED", message: "Ödeme başlatılamadı. Lütfen birkaç dakika sonra tekrar deneyin.", details: { conversationId } } });
+    }
 
     await db.update(paymentsTable).set({
       rawResponse: { ...(pending.rawResponse as any || {}), checkoutToken: session.token, provider: session.provider } as any,
