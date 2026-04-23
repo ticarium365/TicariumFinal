@@ -260,6 +260,8 @@ type RevenueAttributionV3 = RevenueAttributionV2 & {
   }[];
   pricingViewToPaidWithin7dCompanies30d: number;
   upsellConversionsByTrigger30d: { trigger: string; count: number }[];
+  billingReturnRedirectErrorsThisMonth?: number;
+  billingTopupFailedThisMonth?: number;
 };
 
 type FounderCopilotV1 = {
@@ -2086,7 +2088,7 @@ export default function SuperAdminHubPage() {
           {metrics?.revenueAttributionV3 && (
             <div className="rounded-md border border-dashed border-primary/25 bg-primary/[0.02] p-2 space-y-2 mt-2">
               <p className="text-xs font-semibold text-foreground">v3 derinlik (UTM / plan / ay)</p>
-              <div className="grid gap-2 sm:grid-cols-3 text-[11px]">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 text-[11px]">
                 <div className="rounded-md border bg-muted/30 px-2 py-2">
                   <p className="text-muted-foreground">Canlı ödemeler (bu ay)</p>
                   <p className="font-mono text-foreground">
@@ -2099,6 +2101,13 @@ export default function SuperAdminHubPage() {
                     VKN/TCKN gösterim {metrics.revenueAttributionV3.identityGateThisMonth?.shownCount ?? 0} · kaydet {metrics.revenueAttributionV3.identityGateThisMonth?.savedCount ?? 0}
                     {" · "}GSM gösterim {metrics.revenueAttributionV3.identityGateThisMonth?.phoneShownCount ?? 0} · kaydet {metrics.revenueAttributionV3.identityGateThisMonth?.phoneSavedCount ?? 0}
                     {" · "}checkout_failed {metrics.revenueAttributionV3.identityGateThisMonth?.checkoutFailedCount ?? 0}
+                  </p>
+                </div>
+                <div className="rounded-md border bg-muted/30 px-2 py-2">
+                  <p className="text-muted-foreground">Return / topup (bu ay, funnel)</p>
+                  <p className="font-mono text-foreground">
+                    billing_return_redirect_error {metrics.revenueAttributionV3.billingReturnRedirectErrorsThisMonth ?? 0}
+                    {" · "}billing_topup_failed {metrics.revenueAttributionV3.billingTopupFailedThisMonth ?? 0}
                   </p>
                 </div>
                 <div className="rounded-md border bg-muted/30 px-2 py-2">

@@ -2938,6 +2938,9 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
         }[];
         pricingViewToPaidWithin7dCompanies30d: number;
         upsellConversionsByTrigger30d: { trigger: string; count: number }[];
+        /** `/api/billing/return` → ödeme sonuç sayfasına hatalı yönlendirme (ürün funnel) */
+        billingReturnRedirectErrorsThisMonth: number;
+        billingTopupFailedThisMonth: number;
       } = {
         ...revenueAttributionV2,
         billingPaidSuccessByUtm30d: [],
@@ -2950,6 +2953,8 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
         trialCohortByMonth: [],
         pricingViewToPaidWithin7dCompanies30d: 0,
         upsellConversionsByTrigger30d: [],
+        billingReturnRedirectErrorsThisMonth: 0,
+        billingTopupFailedThisMonth: 0,
       };
 
     let founderCopilotV1: {
@@ -3076,6 +3081,7 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
               'billing_phone_saved',
               'billing_checkout_failed',
               'billing_topup_failed',
+              'billing_return_redirect_error',
               'plan_upgraded',
               'grace_period_reactivate_success'
             )
@@ -3369,6 +3375,8 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
       const phoneShownMo = fm.get("billing_phone_required_shown") ?? 0;
       const phoneSavedMo = fm.get("billing_phone_saved") ?? 0;
       const checkoutFailedMo = fm.get("billing_checkout_failed") ?? 0;
+      const returnRedirectErrMo = fm.get("billing_return_redirect_error") ?? 0;
+      const topupFailedMo = fm.get("billing_topup_failed") ?? 0;
 
       const payRow = (paymentsThisMonthSql.rows?.[0] ?? {}) as { paid_n?: number | string; paid_try?: number | string };
       const livePaymentsThisMonth = {
@@ -3496,6 +3504,8 @@ router.get("/admin/billing/metrics", requireSuperAdmin, async (_req, res) => {
           trigger: x.source,
           count: x.count,
         })),
+        billingReturnRedirectErrorsThisMonth: returnRedirectErrMo,
+        billingTopupFailedThisMonth: topupFailedMo,
       };
 
       const growthLbl: string[] = [];
