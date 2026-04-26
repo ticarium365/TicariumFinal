@@ -38,6 +38,20 @@ type PlansResponse = { plans: Plan[] };
 
 const fmtLimit = (n: number): string => (n === -1 ? "Sınırsız" : n === 0 ? "—" : n.toLocaleString("tr-TR"));
 const fmtStorage = (mb: number): string => (mb >= 1000 ? `${(mb / 1000).toFixed(0)} GB` : `${mb} MB`);
+const planDisplayName = (slug: string, fallback: string): string => {
+  if (slug.includes("starter")) return "Başlangıç";
+  if (slug.includes("pro")) return "Büyüyen İşletme";
+  if (slug.includes("business")) return "Pazaryeri Odaklı";
+  if (slug.includes("enterprise")) return "Çok Şubeli / Kurumsal";
+  return fallback;
+};
+const recommendedBySlug = (slug: string): string => {
+  if (slug.includes("starter")) return "Yeni başlayan küçük ekipler";
+  if (slug.includes("pro")) return "Büyüyen işletmeler";
+  if (slug.includes("business")) return "Pazaryeri satan KOBİ’ler";
+  if (slug.includes("enterprise")) return "Çok şubeli / yüksek hacimli yapılar";
+  return "İhtiyaca göre";
+};
 const parseFeatures = (raw: string | string[]): string[] => {
   if (Array.isArray(raw)) return raw;
   try { const v = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch { return []; }
@@ -91,9 +105,9 @@ function AdvisorWizard({ plans, onPick }: { plans: Plan[]; onPick: (slug: string
           </div>
           <div>
             <CardTitle className="text-lg" style={{ fontFamily: "var(--font-display)" }}>
-              Sana Uygun Paketi Bulalım
+              Hangi paket bana uygun?
             </CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">4 kısa soru — saniyeler içinde öneri</p>
+            <p className="text-xs text-muted-foreground mt-0.5">4 kısa soru — satış ekibini beklemeden ilk öneriyi görün</p>
           </div>
         </div>
       </CardHeader>
@@ -143,11 +157,11 @@ function AdvisorWizard({ plans, onPick }: { plans: Plan[]; onPick: (slug: string
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <Button onClick={submit} disabled={!canSubmit} className="gap-2" data-testid="btn-wizard-submit">
-            <Sparkles className="h-4 w-4" /> Önerimi Göster
+            <Sparkles className="h-4 w-4" /> Bana paketi öner
           </Button>
           {recPlan && (
             <div className="text-sm" data-testid="wizard-result">
-              Senin için en uygun paket: <span className="font-semibold text-primary">{recPlan.name}</span>{" "}
+              Senin için ilk önerimiz: <span className="font-semibold text-primary">{planDisplayName(recPlan.slug, recPlan.name)}</span>{" "}
               <span className="text-muted-foreground">— aşağıda işaretlendi</span>
             </div>
           )}
@@ -222,10 +236,10 @@ function ComparisonSection({ plans, recommendedSlug }: { plans: Plan[]; recommen
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-10">
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-3" style={{ fontFamily: "var(--font-display)" }}>
-            Paket Karşılaştırma
+            Paketleri sadece önemli farklarla karşılaştırın
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Tüm özellikler ve limitler yan yana. Her üst paket, alttakinin tümünü kapsar.
+            Mobilde yana kaydırarak bakabilirsiniz. Kararsız kalırsanız öneri aracından başlayın.
           </p>
         </div>
 
@@ -243,7 +257,7 @@ function ComparisonSection({ plans, recommendedSlug }: { plans: Plan[]; recommen
                         className={`text-center px-3 py-3 font-semibold ${isRec ? "text-primary bg-primary/5" : ""}`}
                       >
                         <div className="flex flex-col items-center gap-1">
-                          <span>{p.name}</span>
+                          <span>{planDisplayName(p.slug, p.name)}</span>
                           {isRec && <span className="text-[10px] font-medium uppercase tracking-wide">Senin için önerilen</span>}
                         </div>
                       </th>
@@ -320,7 +334,10 @@ function PlanCard({ plan, yearly, recommended, popular }: { plan: Plan; yearly: 
         <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">En çok tercih edilen</Badge>
       )}
       <CardHeader className="pb-3">
-        <CardTitle className="text-xl" style={{ fontFamily: "var(--font-display)" }}>{plan.name}</CardTitle>
+        <CardTitle className="text-xl" style={{ fontFamily: "var(--font-display)" }}>{planDisplayName(plan.slug, plan.name)}</CardTitle>
+        <Badge variant={recommended || popular ? "default" : "secondary"} className="w-fit">
+          {recommendedBySlug(plan.slug)}
+        </Badge>
         <p className="text-sm text-muted-foreground min-h-[40px]">{plan.description}</p>
         <div className="pt-2">
           <div className="text-3xl font-extrabold">
@@ -356,9 +373,12 @@ function PlanCard({ plan, yearly, recommended, popular }: { plan: Plan; yearly: 
         </ul>
         <Link href="/iletisim">
           <Button className="w-full mt-5" variant={recommended || popular ? "default" : "outline"} data-testid={`btn-pkg-${plan.slug}`}>
-            Detay iste <ArrowRight className="h-4 w-4 ml-1" />
+            {recommended || popular ? "Bu paketi görüşelim" : "Detay iste"} <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
         </Link>
+        <p className="mt-3 text-center text-[11px] text-muted-foreground">
+          Emin değilseniz 15 dakikalık demo görüşmesinde birlikte netleştiririz.
+        </p>
       </CardContent>
     </Card>
   );
@@ -392,12 +412,18 @@ export default function PaketlerPage() {
   return (
     <div className="min-h-screen bg-background" data-testid="page-paketler">
       <PublicNav />
+      <div className="bg-amber-50 border-b border-amber-200">
+        <div className="container mx-auto px-4 py-3 text-center text-sm text-amber-900">
+          Açılış dönemi için kurulum görüşmeleri önceliklendiriliyor. Kontenjan değil, destek planlaması için erken başvurmanız önerilir.
+        </div>
+      </div>
       <section className="t365-page-hero container mx-auto px-4 py-16 md:py-20 text-center">
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-5" style={{ fontFamily: "var(--font-display)" }}>
-          <span className="t365-brand-gradient">Sana uygun bir paket var.</span>
+          <span className="t365-brand-gradient">İşletmene uygun paketi birlikte bulalım.</span>
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          Net paket seçenekleri: küçük işletmeden çok şubeli yapıya. İhtiyaç büyüdükçe yükseltin; verileriniz ve ekibiniz aynı ortamda kalır.
+          Küçük dükkân, büyüyen ekip, pazaryeri satan firma veya çok şubeli yapı…
+          Paketleri teknik isimlerle değil, günlük ihtiyacınıza göre sadeleştirdik.
         </p>
 
         <div className="flex items-center justify-center gap-3 mt-8">
@@ -409,9 +435,9 @@ export default function PaketlerPage() {
         </div>
       </section>
 
-      {/* AI Öneri */}
+      {/* Öneri aracı */}
       {plans.length > 0 && (
-        <section className="container mx-auto px-4 pb-12 max-w-4xl">
+        <section className="container mx-auto px-4 pb-12 max-w-4xl -mt-2">
           <AdvisorWizard plans={plans} onPick={setRecommendedSlug} />
         </section>
       )}
@@ -451,6 +477,33 @@ export default function PaketlerPage() {
       </section>
 
       {plans.length > 0 && <ComparisonSection plans={plans} recommendedSlug={recommendedSlug} />}
+
+      <section className="container mx-auto px-4 pb-16 max-w-4xl" data-testid="pricing-faq">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-extrabold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
+            Karar vermeden önce en çok sorulanlar
+          </h2>
+          <p className="mt-2 text-muted-foreground">KOBİ sahiplerinden gelen gerçek itirazlara göre sade cevaplar.</p>
+        </div>
+        <div className="grid md:grid-cols-2 gap-4">
+          {[
+            { q: "Yanlış paket seçersem ne olur?", a: "Sorun değil. İhtiyaç büyüdükçe paket değiştirilebilir; amaç ilk gün doğru başlangıcı kolaylaştırmak." },
+            { q: "Kart bilgilerim sizde mi tutulur?", a: "Hayır. Ödeme sağlayıcı tarafında işlenir; sistemde kart saklama hedeflenmez." },
+            { q: "Kurulumda yalnız mı kalırım?", a: "Hayır. İlk kurulumda takıldığınız noktalar için demo/destek görüşmesi planlanabilir." },
+            { q: "Pazaryeri satmıyorsam yine gerekli mi?", a: "Evet; satış, stok, cari ve kâr takibi için başlayabilir, pazaryeri tarafını sonra açabilirsiniz." },
+          ].map((item) => (
+            <div key={item.q} className="rounded-2xl border bg-card p-5">
+              <h3 className="font-bold mb-2">{item.q}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{item.a}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <Link href="/iletisim">
+            <Button size="lg">15 dakikalık demo iste</Button>
+          </Link>
+        </div>
+      </section>
 
       <PublicFooter />
     </div>

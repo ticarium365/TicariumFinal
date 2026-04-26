@@ -2,14 +2,21 @@
   "name": "workspace",
   "version": "0.0.0",
   "license": "MIT",
+  "engines": {
+    "node": ">=20.10.0 <25"
+  },
   "scripts": {
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "ci:gate": "pnpm exec tsc -p lib/db && pnpm -C artifacts/api-server run build && node scripts/verify-production-schema.mjs && node scripts/verify-no-committed-prosan-dist.mjs",
+    "ci:deploy": "node scripts/verify-production-env.mjs && pnpm exec tsc -p lib/db && pnpm -C artifacts/api-server run build && node scripts/verify-production-schema.mjs && node scripts/verify-no-committed-prosan-dist.mjs",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+    "smoke:staging": "node scripts/staging-smoke.mjs"
   },
   "private": true,
   "devDependencies": {
+    "pg": "^8.20.0",
     "dotenv-cli": "^11.0.0",
     "playwright": "^1.59.1",
     "prettier": "^3.8.1",

@@ -1,0 +1,122 @@
+[
+  {
+    "slug": "01-anasayfa",
+    "title": "Ana Sayfa",
+    "path": "/",
+    "ok": true,
+    "fileName": "01-anasayfa.png",
+    "finalUrl": "http://localhost:3000/"
+  },
+  {
+    "slug": "02-giris",
+    "title": "Giriş",
+    "path": "/login",
+    "ok": true,
+    "fileName": "02-giris.png",
+    "finalUrl": "http://localhost:3000/login"
+  },
+  {
+    "slug": "03-kayit",
+    "title": "Kayıt",
+    "path": "/kayit",
+    "ok": true,
+    "fileName": "03-kayit.png",
+    "finalUrl": "http://localhost:3000/kayit"
+  },
+  {
+    "slug": "04-isletme-kaydi",
+    "title": "İşletme Kaydı",
+    "path": "/kayit/isletme",
+    "ok": true,
+    "fileName": "04-isletme-kaydi.png",
+    "finalUrl": "http://localhost:3000/kayit/isletme"
+  },
+  {
+    "slug": "05-satinalmaci-kaydi",
+    "title": "Satınalmacı Kaydı",
+    "path": "/kayit/satinalmaci",
+    "ok": true,
+    "fileName": "05-satinalmaci-kaydi.png",
+    "finalUrl": "http://localhost:3000/kayit/satinalmaci"
+  },
+  {
+    "slug": "06-sifremi-unuttum",
+    "title": "Şifremi Unuttum",
+    "path": "/sifremi-unuttum",
+    "ok": true,
+    "fileName": "06-sifremi-unuttum.png",
+    "finalUrl": "http://localhost:3000/sifremi-unuttum"
+  },
+  {
+    "slug": "07-karsilastir",
+    "title": "Karşılaştır",
+    "path": "/karsilastir",
+    "ok": true,
+    "fileName": "07-karsilastir.png",
+    "finalUrl": "http://localhost:3000/karsilastir"
+  },
+  {
+    "slug": "08-hakkimizda",
+    "title": "Hakkımızda",
+    "path": "/hakkimizda",
+    "ok": true,
+    "fileName": "08-hakkimizda.png",
+    "finalUrl": "http://localhost:3000/hakkimizda"
+  },
+  {
+    "slug": "09-amacimiz",
+    "title": "Amacımız",
+    "path": "/amacimiz",
+    "ok": true,
+    "fileName": "09-amacimiz.png",
+    "finalUrl": "http://localhost:3000/amacimiz"
+  },
+  {
+    "slug": "10-paketler",
+    "title": "Paketler",
+    "path": "/paketler",
+    "ok": true,
+    "fileName": "10-paketler.png",
+    "finalUrl": "http://localhost:3000/paketler"
+  },
+  {
+    "slug": "11-iletisim",
+    "title": "İletişim",
+    "path": "/iletisim",
+    "ok": true,
+    "fileName": "11-iletisim.png",
+    "finalUrl": "http://localhost:3000/iletisim"
+  },
+  {
+    "slug": "12-kvkk",
+    "title": "KVKK",
+    "path": "/kvkk",
+    "ok": true,
+    "fileName": "12-kvkk.png",
+    "finalUrl": "http://localhost:3000/kvkk"
+  },
+  {
+    "slug": "13-odeme-sonuc",
+    "title": "Ödeme Sonuç",
+    "path": "/odeme/sonuc",
+    "ok": true,
+    "fileName": "13-odeme-sonuc.png",
+    "finalUrl": "http://localhost:3000/login"
+  },
+  {
+    "slug": "14-pazar",
+    "title": "Pazar",
+    "path": "/pazar",
+    "ok": true,
+    "fileName": "14-pazar.png",
+    "finalUrl": "http://localhost:3000/login"
+  },
+  {
+    "slug": "15-catalog",
+    "title": "Katalog",
+    "path": "/catalog",
+    "ok": true,
+    "fileName": "15-catalog.png",
+    "finalUrl": "http://localhost:3000/catalog"
+  }
+]

@@ -129,9 +129,9 @@ export default function CatalogPage() {
             <PELogo size={44} />
             <div>
               <div className="flex items-baseline gap-1">
-                <span className="text-xl font-black tracking-tight leading-none">PRO</span>
-                <span className="text-xl font-black tracking-tight leading-none text-orange-400">SAN</span>
-                <span className="text-base font-semibold tracking-widest uppercase text-muted-foreground/60 ml-1">ENDÜSTRİ</span>
+                <span className="text-xl font-black tracking-tight leading-none">Ticarium</span>
+                <span className="text-xl font-black tracking-tight leading-none text-orange-400">365</span>
+                <span className="text-base font-semibold tracking-widest uppercase text-muted-foreground/60 ml-1">KATALOG</span>
               </div>
               <p className="text-xs text-muted-foreground/70 font-medium tracking-widest uppercase">ENDÜSTRİYEL ÜRÜNLER</p>
             </div>
@@ -141,9 +141,9 @@ export default function CatalogPage() {
               <Phone className="h-3.5 w-3.5" />
               0 262 335 55 56
             </a>
-            <a href="mailto:info@prosanendustri.com.tr" className="flex items-center gap-1.5 hover:text-orange-400 transition-colors">
+            <a href="mailto:destek@ticarium365.com" className="flex items-center gap-1.5 hover:text-orange-400 transition-colors">
               <Mail className="h-3.5 w-3.5" />
-              info@prosanendustri.com.tr
+              destek@ticarium365.com
             </a>
           </div>
         </div>
@@ -287,9 +287,9 @@ export default function CatalogPage() {
               <PELogo size={36} />
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-sm font-black text-white">PRO</span>
-                  <span className="text-sm font-black text-orange-400">SAN</span>
-                  <span className="text-xs font-semibold text-muted-foreground/70 ml-1 uppercase tracking-widest">ENDÜSTRİ</span>
+                  <span className="text-sm font-black text-white">Ticarium</span>
+                  <span className="text-sm font-black text-orange-400">365</span>
+                  <span className="text-xs font-semibold text-muted-foreground/70 ml-1 uppercase tracking-widest">KATALOG</span>
                 </div>
                 <p className="text-xs text-muted-foreground">Endüstriyel Ürünler</p>
               </div>
@@ -305,12 +305,12 @@ export default function CatalogPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-3.5 w-3.5 text-orange-400 shrink-0" />
-                <span>info@prosanendustri.com.tr</span>
+                <span>destek@ticarium365.com</span>
               </div>
             </div>
           </div>
           <div className="border-t border-slate-700 mt-6 pt-4 text-xs text-muted-foreground text-center space-y-1">
-            <div>© {new Date().getFullYear()} PROSAN ENDÜSTRİ — Tüm fiyatlar KDV hariçtir. Stok ve fiyat değişiklik hakkı saklıdır.</div>
+            <div>© {new Date().getFullYear()} Ticarium365 Demo Katalog — Tüm fiyatlar KDV hariçtir. Stok ve fiyat değişiklik hakkı saklıdır.</div>
             <div className="text-[11px] text-muted-foreground/70">Powered by <span className="font-semibold text-slate-300">Ticarium365</span></div>
           </div>
         </div>

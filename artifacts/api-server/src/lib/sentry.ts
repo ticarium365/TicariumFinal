@@ -8,8 +8,14 @@ let initialized = false;
 export async function initSentry() {
   const dsn = process.env.SENTRY_DSN;
   if (!dsn) {
+    if (process.env.NODE_ENV === "production") {
+      logger.warn("SENTRY_DSN production ortamında boş — release hata izleme devre dışı");
+    }
     logger.info("Sentry DSN ayarlanmadı — error monitoring devre dışı");
     return;
+  }
+  if (process.env.NODE_ENV === "production" && !process.env.RELEASE_VERSION) {
+    logger.warn("RELEASE_VERSION production ortamında boş — Sentry release takibi eksik kalır");
   }
   if (initialized) return;
   try {
@@ -31,7 +37,13 @@ export function captureException(err: any, ctx?: Record<string, any>) {
   if (!initialized || !SentryNs) return;
   try {
     SentryNs.withScope((scope: any) => {
-      if (ctx) for (const [k, v] of Object.entries(ctx)) scope.setExtra(k, v);
+      if (ctx) {
+        for (const [k, v] of Object.entries(ctx)) {
+          if (v === undefined || v === null) continue;
+          if (k === "companyId" || k === "requestId") scope.setTag(k, String(v));
+          else scope.setExtra(k, v);
+        }
+      }
       SentryNs.captureException(err);
     });
   } catch { /* swallow */ }

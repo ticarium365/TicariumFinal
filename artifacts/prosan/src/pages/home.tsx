@@ -20,12 +20,12 @@ import {
 } from "lucide-react";
 
 const stars = [
-  { icon: ScanLine, title: "Barkod → POS → E-Fatura", desc: "Tek tarama: stok düşer, satış kapanır, e-fatura kesilir. 30 saniye." },
-  { icon: Store, title: "11 Pazaryeri Yerleşik", desc: "Trendyol, Hepsiburada, N11, Amazon, İdeaSoft, Ticimax — tek panelden." },
-  { icon: Receipt, title: "Fiş OCR (Yapay Zeka)", desc: "Fişin fotoğrafını çek; tutar, KDV, satıcı otomatik girilsin." },
-  { icon: BarChart3, title: "Net Kâr Merkezi", desc: "Ciro − COGS − gider − maaş − amortisman = anlık net kâr." },
-  { icon: Smartphone, title: "Mobil-Doğal", desc: "iOS + Android her abonelikte dahil. Telefondan sat, say, kontrol et." },
-  { icon: ShieldCheck, title: "Çok-Kiracılı İzolasyon", desc: "Her firmanın verisi ayrı. KVKK / GDPR uyumlu mimari." },
+  { icon: ScanLine, title: "Satış ve stok aynı anda", desc: "Barkodu okut, satış kapanırken stok otomatik düşsün. Gün sonu sayım stresi azalır." },
+  { icon: Store, title: "Pazaryeri kontrolü", desc: "Trendyol, Hepsiburada, N11 ve diğer kanalları tek panelden takip etmeye hazırlanın." },
+  { icon: BarChart3, title: "Gerçek kâr takibi", desc: "Sadece ciroyu değil; maliyet, gider ve kanal kârlılığını da görün." },
+  { icon: Receipt, title: "E-belge ve operasyon", desc: "Fatura, belge ve resmi süreçleri satış akışının parçası haline getirin." },
+  { icon: Smartphone, title: "Telefondan yönetim", desc: "Mağazada, depoda veya yolda; temel işlerinizi mobil ekrandan kontrol edin." },
+  { icon: ShieldCheck, title: "Firma verisi ayrı tutulur", desc: "Her işletme kendi alanında çalışır. Oturum ve tenant sınırları production için korunur." },
 ];
 
 const flowSteps = [
@@ -83,7 +83,7 @@ export default function HomePage() {
                 data-testid="hero-badge"
               >
                 <Sparkles className="h-3 w-3 mr-1.5" />
-                KOBİ için tek platform — barkod'tan e-ticarete
+                KOBİ sahipleri için satış, stok, pazaryeri ve kâr takibi
               </Badge>
 
               <h1
@@ -91,9 +91,9 @@ export default function HomePage() {
                 style={{ fontFamily: "var(--font-display)" }}
                 data-testid="hero-title"
               >
-                <span className="block">Bir tarama,</span>
+                <span className="block">İşletmenizi tek panelden</span>
                 <span className="block bg-gradient-to-r from-cyan-300 via-indigo-300 to-violet-300 bg-clip-text text-transparent">
-                  hesabın e-ticarette.
+                  daha net yönetin.
                 </span>
               </h1>
 
@@ -101,39 +101,43 @@ export default function HomePage() {
                 className="text-lg md:text-xl text-white/70 max-w-xl mb-8 leading-relaxed"
                 data-testid="hero-subtitle"
               >
-                Stok, barkod, hızlı satış, e-fatura, 11 pazaryeri ve net kâr —
-                hepsi tek panelde. Eklenti yok, sürpriz kalem yok.
+                Satış, stok, e-belge, pazaryeri ve gerçek kârı ayrı ayrı takip etmek yerine
+                Ticarium365’te bir araya getirin. Önce işinizi toparlayın, sonra büyümeyi izleyin.
               </p>
 
-              <div className="flex flex-wrap gap-3 mb-8">
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
                 <Link href="/kayit">
                   <Button
                     size="lg"
-                    className="bg-white text-indigo-700 hover:bg-cyan-100 font-bold px-7 h-12 rounded-xl shadow-[0_8px_30px_-8px_rgba(255,255,255,0.4)]"
+                    className="w-full sm:w-auto bg-white text-indigo-700 hover:bg-cyan-100 font-bold px-7 h-12 rounded-xl shadow-[0_8px_30px_-8px_rgba(255,255,255,0.4)]"
                     data-testid="hero-cta-trial"
                   >
-                    Ücretsiz Dene
+                    Ücretsiz hesabı başlat
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </Link>
-                <Link href="/karsilastir">
+                <Link href="/iletisim">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-white/25 bg-white/5 text-white hover:bg-white/10 font-semibold px-7 h-12 rounded-xl"
+                    className="w-full sm:w-auto border-white/25 bg-white/5 text-white hover:bg-white/10 font-semibold px-7 h-12 rounded-xl"
                     data-testid="hero-cta-compare"
                   >
-                    Neden Farklıyız
+                    Satış ekibiyle konuş
                   </Button>
                 </Link>
               </div>
 
+              <p className="text-sm text-white/60 mb-8">
+                Kredi kartı şartı olmadan başlayın. Kurulumda takılırsanız ekibimiz yanınızda.
+              </p>
+
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-white/70">
                 {[
-                  "Kurulum 5 dakika",
-                  "Kredi kartı yok",
-                  "iOS + Android dahil",
-                  "Türkçe destek",
+                  "KOBİ diliyle sade kullanım",
+                  "KVKK farkındalığıyla veri ayrımı",
+                  "Pazaryeri + B2B hazırlığı",
+                  "Kârı cirodan ayıran bakış",
                 ].map((t) => (
                   <span key={t} className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-4 w-4 text-emerald-400" />
@@ -160,7 +164,7 @@ export default function HomePage() {
                 <div className="rounded-2xl bg-slate-900/70 border border-white/10 p-5 mb-5">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs uppercase tracking-wider text-cyan-300 font-semibold">
-                      Tarama anı
+                      İşletme akışı
                     </span>
                     <span className="text-xs text-white/40 font-mono">
                       8690000123456
@@ -189,7 +193,7 @@ export default function HomePage() {
                   </div>
                   <div className="flex items-center gap-2 mt-3 text-xs text-emerald-300">
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    Ürün eşleşti — Endüstriyel Vida M8 — ₺12,40
+                    Satış işlendi — stok güncellendi — kâr etkisi hesaplandı
                   </div>
                 </div>
 
@@ -250,23 +254,41 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="border-b border-slate-200/70 bg-white" data-testid="home-trust-bar">
+        <div className="container mx-auto px-4 py-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            {[
+              "Kredi kartı şartı olmadan başlangıç",
+              "Firma verisi tenant sınırlarıyla ayrılır",
+              "Kurulumda insan desteği",
+              "Satış, stok, pazaryeri ve kâr tek akışta",
+            ].map((item) => (
+              <div key={item} className="flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-3 text-slate-700">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ─── YILDIZ ÖZELLİKLER ─────────────────────────────────────────────── */}
       <section className="container mx-auto px-4 py-16 md:py-24" data-testid="home-features">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <Badge variant="outline" className="mb-3 border-primary/30">
             <Sparkles className="h-3 w-3 mr-1 text-primary" />
-            Yıldız Özellikler
+            İşletmenin günlük derdine göre
           </Badge>
           <h2
             className="text-3xl md:text-4xl font-extrabold tracking-tight mb-3"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Rakipler eklenti satar.{" "}
-            <span className="text-primary">Biz yerleşik veriyoruz.</span>
+            Satış, pazaryeri ve kârı{" "}
+            <span className="text-primary">aynı resimde görün.</span>
           </h2>
           <p className="text-muted-foreground">
-            Ön muhasebe yazılımının çok ötesinde — KOBİ'nizin tüm operasyonu
-            tek panelde, tek faturada.
+            Ticarium365’in amacı ekran çoğaltmak değil; işletme sahibinin “Bugün ne oldu?”
+            sorusuna hızlı cevap vermektir.
           </p>
         </div>
 
@@ -298,10 +320,70 @@ export default function HomePage() {
               className="rounded-xl px-8 h-12 font-bold"
               data-testid="features-cta"
             >
-              Şimdi Ücretsiz Başla
+              Ücretsiz hesabı başlat
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </Link>
+        </div>
+      </section>
+
+      <section className="container mx-auto px-4 pb-16 md:pb-24" data-testid="home-why-us">
+        <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-8 items-start">
+          <div>
+            <Badge variant="outline" className="mb-3 border-primary/30">Neden Ticarium365?</Badge>
+            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4" style={{ fontFamily: "var(--font-display)" }}>
+              İşletme sahibinin görmek istediği yerden başlıyoruz.
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">
+              Birçok araç tek bir işi iyi yapar. Ticarium365’in farkı, günlük operasyonu parçalara bölmeden
+              satıştan stoğa, pazaryerinden kâra kadar aynı hikâyede göstermeye çalışmasıdır.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {[
+              { title: "Önce netlik", desc: "Ciro güzel görünebilir; asıl karar kâr, stok ve tahsilat birlikte okununca verilir." },
+              { title: "Eklenti yorgunluğu azalsın", desc: "Her sorun için ayrı panel açmak yerine ana iş akışlarını tek yerde toplar." },
+              { title: "Büyümeye hazır", desc: "B2B, pazaryeri ve kanal kârlılığı ihtiyaçları baştan düşünülmüş bir yapıdadır." },
+              { title: "Destek konuşulabilir", desc: "KOBİ sahibinin teknik terim değil, hızlı çözüm istediğini biliyoruz." },
+            ].map((item) => (
+              <div key={item.title} className="rounded-2xl border bg-card p-5">
+                <h3 className="font-bold mb-2">{item.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-slate-50 border-y border-slate-200/70" data-testid="home-testimonials">
+        <div className="container mx-auto px-4 py-14">
+          <div className="text-center max-w-2xl mx-auto mb-8">
+            <Badge variant="outline" className="mb-3">Müşteri görüşleri alanı</Badge>
+            <h2 className="text-3xl font-extrabold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
+              Kapalı beta geri bildirimleri burada yer alacak.
+            </h2>
+            <p className="mt-3 text-muted-foreground">
+              Sahte yorum kullanmıyoruz. İlk beta işletmelerinden izinli, gerçek geri bildirim geldikçe bu alan güncellenecek.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-4">
+            {["Stok ve satış görünürlüğü", "Pazaryeri operasyonu", "Kâr ve raporlama"].map((title) => (
+              <div key={title} className="rounded-2xl border bg-white p-5">
+                <div className="text-sm font-semibold text-slate-900">{title}</div>
+                <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+                  Beta müşterisinden onaylı yorum eklenecek. Bu alan gerçek kanıt oluşana kadar placeholder olarak tutulur.
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/iletisim">
+              <Button size="lg" className="w-full sm:w-auto">15 dakikalık demo iste</Button>
+            </Link>
+            <Link href="/paketler">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto">Paketleri incele</Button>
+            </Link>
+          </div>
         </div>
       </section>
 

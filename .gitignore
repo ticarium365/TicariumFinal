@@ -1,11 +1,9 @@
 # See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
-# compiled output
+# compiled output — do not commit Vite/webpack build dirs
 dist
-# Allow committed prosan frontend build (needed for production cold starts)
-!artifacts/prosan/dist/
-!artifacts/prosan/dist/public/
-!artifacts/prosan/dist/public/**
+# Frontend: always build from source for deploy (see docs/FRONTEND_BUILD_AND_DEPLOY.md)
+artifacts/prosan/dist/
 tmp
 out-tsc
 *.tsbuildinfo
@@ -66,3 +64,6 @@ attached_assets/
 # Local one-off db migration helpers (kept out of git)
 lib/db/apply-funnel-migration.mjs
 lib/db/apply-sql-migrations.mjs
+
+# Redundant doc bundles (images live in docs/user-guide-assets*, see KULLANIM_KILAVUZU.md)
+docs/ticarium365-*.zip

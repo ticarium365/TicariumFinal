@@ -1,0 +1,666 @@
+[
+  {
+    "slug": "01-dashboard",
+    "title": "Dashboard",
+    "path": "/dashboard",
+    "ok": true,
+    "fileName": "01-dashboard.png",
+    "finalUrl": "http://localhost:3000/dashboard"
+  },
+  {
+    "slug": "02-satinalma-merkezi",
+    "title": "Satınalma Merkezi",
+    "path": "/satinalma-merkezi",
+    "ok": true,
+    "fileName": "02-satinalma-merkezi.png",
+    "finalUrl": "http://localhost:3000/satinalma-merkezi"
+  },
+  {
+    "slug": "03-satinalma",
+    "title": "Satınalma",
+    "path": "/satinalma",
+    "ok": true,
+    "fileName": "03-satinalma.png",
+    "finalUrl": "http://localhost:3000/satinalma"
+  },
+  {
+    "slug": "04-satinalma-kesfet",
+    "title": "Satınalma Keşfet",
+    "path": "/satinalma/kesfet",
+    "ok": true,
+    "fileName": "04-satinalma-kesfet.png",
+    "finalUrl": "http://localhost:3000/satinalma/kesfet"
+  },
+  {
+    "slug": "05-satinalma-rfq-yeni",
+    "title": "Yeni RFQ",
+    "path": "/satinalma/rfqs/new",
+    "ok": true,
+    "fileName": "05-satinalma-rfq-yeni.png",
+    "finalUrl": "http://localhost:3000/satinalma/rfqs/new"
+  },
+  {
+    "slug": "06-satinalma-rfq-listesi",
+    "title": "RFQ Listesi",
+    "path": "/satinalma/rfqs",
+    "ok": true,
+    "fileName": "06-satinalma-rfq-listesi.png",
+    "finalUrl": "http://localhost:3000/satinalma/rfqs"
+  },
+  {
+    "slug": "07-satinalma-gelen-kutusu",
+    "title": "Satınalma Gelen Kutusu",
+    "path": "/satinalma/inbox",
+    "ok": true,
+    "fileName": "07-satinalma-gelen-kutusu.png",
+    "finalUrl": "http://localhost:3000/satinalma/inbox"
+  },
+  {
+    "slug": "08-urunler",
+    "title": "Ürünler",
+    "path": "/products",
+    "ok": true,
+    "fileName": "08-urunler.png",
+    "finalUrl": "http://localhost:3000/products"
+  },
+  {
+    "slug": "09-yeni-urun",
+    "title": "Yeni Ürün",
+    "path": "/products/new",
+    "ok": true,
+    "fileName": "09-yeni-urun.png",
+    "finalUrl": "http://localhost:3000/products/new"
+  },
+  {
+    "slug": "10-barkod-tarayici",
+    "title": "Barkod Tarayıcı",
+    "path": "/barcode",
+    "ok": true,
+    "fileName": "10-barkod-tarayici.png",
+    "finalUrl": "http://localhost:3000/barcode"
+  },
+  {
+    "slug": "11-satis",
+    "title": "Satış",
+    "path": "/sales",
+    "ok": true,
+    "fileName": "11-satis.png",
+    "finalUrl": "http://localhost:3000/sales"
+  },
+  {
+    "slug": "12-satis-gecmisi",
+    "title": "Satış Geçmişi",
+    "path": "/sales/history",
+    "ok": true,
+    "fileName": "12-satis-gecmisi.png",
+    "finalUrl": "http://localhost:3000/sales/history"
+  },
+  {
+    "slug": "13-stok",
+    "title": "Stok",
+    "path": "/stock",
+    "ok": true,
+    "fileName": "13-stok.png",
+    "finalUrl": "http://localhost:3000/stock"
+  },
+  {
+    "slug": "14-raporlar",
+    "title": "Raporlar",
+    "path": "/reports",
+    "ok": true,
+    "fileName": "14-raporlar.png",
+    "finalUrl": "http://localhost:3000/reports"
+  },
+  {
+    "slug": "15-gunluk-ozet",
+    "title": "Günlük Özet",
+    "path": "/reports/daily-summary",
+    "ok": true,
+    "fileName": "15-gunluk-ozet.png",
+    "finalUrl": "http://localhost:3000/reports/daily-summary"
+  },
+  {
+    "slug": "16-musteriler",
+    "title": "Müşteriler",
+    "path": "/customers",
+    "ok": true,
+    "fileName": "16-musteriler.png",
+    "finalUrl": "http://localhost:3000/customers"
+  },
+  {
+    "slug": "17-tedarikciler",
+    "title": "Tedarikçiler",
+    "path": "/suppliers",
+    "ok": true,
+    "fileName": "17-tedarikciler.png",
+    "finalUrl": "http://localhost:3000/suppliers"
+  },
+  {
+    "slug": "18-alislar",
+    "title": "Alışlar",
+    "path": "/purchases",
+    "ok": true,
+    "fileName": "18-alislar.png",
+    "finalUrl": "http://localhost:3000/purchases"
+  },
+  {
+    "slug": "19-yeni-alis",
+    "title": "Yeni Alış",
+    "path": "/purchases/new",
+    "ok": true,
+    "fileName": "19-yeni-alis.png",
+    "finalUrl": "http://localhost:3000/purchases/new"
+  },
+  {
+    "slug": "20-barkodlar",
+    "title": "Barkodlar",
+    "path": "/barcodes",
+    "ok": true,
+    "fileName": "20-barkodlar.png",
+    "finalUrl": "http://localhost:3000/barcodes"
+  },
+  {
+    "slug": "21-stok-sayimlari",
+    "title": "Stok Sayımları",
+    "path": "/stock-counts",
+    "ok": true,
+    "fileName": "21-stok-sayimlari.png",
+    "finalUrl": "http://localhost:3000/stock-counts"
+  },
+  {
+    "slug": "22-finans",
+    "title": "Finans",
+    "path": "/finance",
+    "ok": true,
+    "fileName": "22-finans.png",
+    "finalUrl": "http://localhost:3000/finance"
+  },
+  {
+    "slug": "23-subeler",
+    "title": "Şubeler",
+    "path": "/branches",
+    "ok": true,
+    "fileName": "23-subeler.png",
+    "finalUrl": "http://localhost:3000/branches"
+  },
+  {
+    "slug": "24-entegrasyon-ayarlari",
+    "title": "Entegrasyon Ayarları",
+    "path": "/settings/integrations",
+    "ok": true,
+    "fileName": "24-entegrasyon-ayarlari.png",
+    "finalUrl": "http://localhost:3000/settings/integrations"
+  },
+  {
+    "slug": "25-abonelik",
+    "title": "Abonelik",
+    "path": "/settings/subscription",
+    "ok": true,
+    "fileName": "25-abonelik.png",
+    "finalUrl": "http://localhost:3000/settings/subscription"
+  },
+  {
+    "slug": "26-kontor-yukleme",
+    "title": "Kontör Yükleme",
+    "path": "/settings/credit-topup",
+    "ok": true,
+    "fileName": "26-kontor-yukleme.png",
+    "finalUrl": "http://localhost:3000/settings/credit-topup"
+  },
+  {
+    "slug": "27-belgeler",
+    "title": "Belgeler",
+    "path": "/documents",
+    "ok": true,
+    "fileName": "27-belgeler.png",
+    "finalUrl": "http://localhost:3000/documents"
+  },
+  {
+    "slug": "28-finans-belgeleri",
+    "title": "Finans Belgeleri",
+    "path": "/finance-documents",
+    "ok": true,
+    "fileName": "28-finans-belgeleri.png",
+    "finalUrl": "http://localhost:3000/finance-documents"
+  },
+  {
+    "slug": "29-bankacilik",
+    "title": "Bankacılık",
+    "path": "/banking",
+    "ok": true,
+    "fileName": "29-bankacilik.png",
+    "finalUrl": "http://localhost:3000/banking"
+  },
+  {
+    "slug": "30-e-fatura",
+    "title": "E-Fatura",
+    "path": "/einvoice",
+    "ok": true,
+    "fileName": "30-e-fatura.png",
+    "finalUrl": "http://localhost:3000/einvoice"
+  },
+  {
+    "slug": "31-magazalar",
+    "title": "Mağazalar",
+    "path": "/magaza",
+    "ok": true,
+    "fileName": "31-magazalar.png",
+    "finalUrl": "http://localhost:3000/magaza"
+  },
+  {
+    "slug": "32-fiyat-motoru",
+    "title": "Fiyat Motoru",
+    "path": "/fiyat-motoru",
+    "ok": true,
+    "fileName": "32-fiyat-motoru.png",
+    "finalUrl": "http://localhost:3000/fiyat-motoru"
+  },
+  {
+    "slug": "33-kargo",
+    "title": "Kargo",
+    "path": "/kargo",
+    "ok": true,
+    "fileName": "33-kargo.png",
+    "finalUrl": "http://localhost:3000/kargo"
+  },
+  {
+    "slug": "34-kanal-karliligi",
+    "title": "Kanal Karlılığı",
+    "path": "/karlilik-kanal",
+    "ok": true,
+    "fileName": "34-kanal-karliligi.png",
+    "finalUrl": "http://localhost:3000/karlilik-kanal"
+  },
+  {
+    "slug": "35-eticarium-merkezi",
+    "title": "E-Ticarium Merkezi",
+    "path": "/eticarium-merkezi",
+    "ok": true,
+    "fileName": "35-eticarium-merkezi.png",
+    "finalUrl": "http://localhost:3000/eticarium-merkezi"
+  },
+  {
+    "slug": "36-marketplace",
+    "title": "Marketplace",
+    "path": "/marketplace",
+    "ok": true,
+    "fileName": "36-marketplace.png",
+    "finalUrl": "http://localhost:3000/marketplace"
+  },
+  {
+    "slug": "37-profit",
+    "title": "Profit",
+    "path": "/profit",
+    "ok": true,
+    "fileName": "37-profit.png",
+    "finalUrl": "http://localhost:3000/profit"
+  },
+  {
+    "slug": "38-muhasebeci",
+    "title": "Muhasebeci",
+    "path": "/muhasebeci",
+    "ok": true,
+    "fileName": "38-muhasebeci.png",
+    "finalUrl": "http://localhost:3000/muhasebeci"
+  },
+  {
+    "slug": "39-butce",
+    "title": "Bütçe",
+    "path": "/butce",
+    "ok": true,
+    "fileName": "39-butce.png",
+    "finalUrl": "http://localhost:3000/butce"
+  },
+  {
+    "slug": "40-reklam-butce",
+    "title": "Reklam Bütçe",
+    "path": "/reklam-butce",
+    "ok": true,
+    "fileName": "40-reklam-butce.png",
+    "finalUrl": "http://localhost:3000/reklam-butce"
+  },
+  {
+    "slug": "41-aggregator",
+    "title": "Aggregator",
+    "path": "/aggregator",
+    "ok": true,
+    "fileName": "41-aggregator.png",
+    "finalUrl": "http://localhost:3000/aggregator"
+  },
+  {
+    "slug": "42-ice-aktarim",
+    "title": "İçe Aktarım",
+    "path": "/ice-aktarim",
+    "ok": true,
+    "fileName": "42-ice-aktarim.png",
+    "finalUrl": "http://localhost:3000/ice-aktarim"
+  },
+  {
+    "slug": "43-pos",
+    "title": "POS",
+    "path": "/pos",
+    "ok": true,
+    "fileName": "43-pos.png",
+    "finalUrl": "http://localhost:3000/pos"
+  },
+  {
+    "slug": "44-uretim",
+    "title": "Üretim",
+    "path": "/uretim",
+    "ok": true,
+    "fileName": "44-uretim.png",
+    "finalUrl": "http://localhost:3000/uretim"
+  },
+  {
+    "slug": "45-sadakat",
+    "title": "Sadakat",
+    "path": "/sadakat",
+    "ok": true,
+    "fileName": "45-sadakat.png",
+    "finalUrl": "http://localhost:3000/sadakat"
+  },
+  {
+    "slug": "46-doviz",
+    "title": "Döviz",
+    "path": "/doviz",
+    "ok": true,
+    "fileName": "46-doviz.png",
+    "finalUrl": "http://localhost:3000/doviz"
+  },
+  {
+    "slug": "47-finans-dashboard",
+    "title": "Finans Dashboard",
+    "path": "/finance-dashboard",
+    "ok": true,
+    "fileName": "47-finans-dashboard.png",
+    "finalUrl": "http://localhost:3000/finance-dashboard"
+  },
+  {
+    "slug": "48-bildirim-ayarlari",
+    "title": "Bildirim Ayarları",
+    "path": "/settings/notifications",
+    "ok": true,
+    "fileName": "48-bildirim-ayarlari.png",
+    "finalUrl": "http://localhost:3000/settings/notifications"
+  },
+  {
+    "slug": "49-menu-tercihleri",
+    "title": "Menü Tercihleri",
+    "path": "/settings/menu",
+    "ok": true,
+    "fileName": "49-menu-tercihleri.png",
+    "finalUrl": "http://localhost:3000/settings/menu"
+  },
+  {
+    "slug": "50-bildirimler",
+    "title": "Bildirimler",
+    "path": "/bildirimler",
+    "ok": true,
+    "fileName": "50-bildirimler.png",
+    "finalUrl": "http://localhost:3000/bildirimler"
+  },
+  {
+    "slug": "51-personel",
+    "title": "Personel",
+    "path": "/personnel",
+    "ok": true,
+    "fileName": "51-personel.png",
+    "finalUrl": "http://localhost:3000/personnel"
+  },
+  {
+    "slug": "52-kampanyalar",
+    "title": "Kampanyalar",
+    "path": "/campaigns",
+    "ok": true,
+    "fileName": "52-kampanyalar.png",
+    "finalUrl": "http://localhost:3000/campaigns"
+  },
+  {
+    "slug": "53-network",
+    "title": "Network",
+    "path": "/network",
+    "ok": true,
+    "fileName": "53-network.png",
+    "finalUrl": "http://localhost:3000/network"
+  },
+  {
+    "slug": "54-network-profilim",
+    "title": "Network Profilim",
+    "path": "/network/my-profile",
+    "ok": true,
+    "fileName": "54-network-profilim.png",
+    "finalUrl": "http://localhost:3000/network/my-profile"
+  },
+  {
+    "slug": "55-b2b-teklifler",
+    "title": "B2B Teklifler",
+    "path": "/b2b/quotes",
+    "ok": true,
+    "fileName": "55-b2b-teklifler.png",
+    "finalUrl": "http://localhost:3000/b2b/quotes"
+  },
+  {
+    "slug": "56-b2b-yeni-teklif",
+    "title": "B2B Yeni Teklif",
+    "path": "/b2b/quotes/new",
+    "ok": true,
+    "fileName": "56-b2b-yeni-teklif.png",
+    "finalUrl": "http://localhost:3000/network"
+  },
+  {
+    "slug": "57-b2b-siparisler",
+    "title": "B2B Siparişler",
+    "path": "/b2b/orders",
+    "ok": true,
+    "fileName": "57-b2b-siparisler.png",
+    "finalUrl": "http://localhost:3000/b2b/orders"
+  },
+  {
+    "slug": "58-b2b-katalog",
+    "title": "B2B Katalog",
+    "path": "/b2b/catalog",
+    "ok": true,
+    "fileName": "58-b2b-katalog.png",
+    "finalUrl": "http://localhost:3000/b2b/catalog"
+  },
+  {
+    "slug": "59-b2b-vitrin",
+    "title": "B2B Vitrin",
+    "path": "/b2b/vitrin",
+    "ok": true,
+    "fileName": "59-b2b-vitrin.png",
+    "finalUrl": "http://localhost:3000/b2b/vitrin"
+  },
+  {
+    "slug": "60-kanallar",
+    "title": "Kanallar",
+    "path": "/channels",
+    "ok": true,
+    "fileName": "60-kanallar.png",
+    "finalUrl": "http://localhost:3000/channels"
+  },
+  {
+    "slug": "61-toplu-kanal",
+    "title": "Toplu Kanal",
+    "path": "/channels/bulk",
+    "ok": true,
+    "fileName": "61-toplu-kanal.png",
+    "finalUrl": "http://localhost:3000/channels/bulk"
+  },
+  {
+    "slug": "62-kullanicilar",
+    "title": "Kullanıcılar",
+    "path": "/users",
+    "ok": true,
+    "fileName": "62-kullanicilar.png",
+    "finalUrl": "http://localhost:3000/users"
+  },
+  {
+    "slug": "63-ayarlar",
+    "title": "Ayarlar",
+    "path": "/settings",
+    "ok": true,
+    "fileName": "63-ayarlar.png",
+    "finalUrl": "http://localhost:3000/settings"
+  },
+  {
+    "slug": "64-firma-profili",
+    "title": "Firma Profili",
+    "path": "/firma-profili",
+    "ok": true,
+    "fileName": "64-firma-profili.png",
+    "finalUrl": "http://localhost:3000/firma-profili"
+  },
+  {
+    "slug": "65-kurulum-skoru",
+    "title": "Kurulum Skoru",
+    "path": "/kurulum-skoru",
+    "ok": true,
+    "fileName": "65-kurulum-skoru.png",
+    "finalUrl": "http://localhost:3000/kurulum-skoru"
+  },
+  {
+    "slug": "66-admin-musteri-doluluk",
+    "title": "Admin Müşteri Doluluk",
+    "path": "/admin/musteri-doluluk",
+    "ok": true,
+    "fileName": "66-admin-musteri-doluluk.png",
+    "finalUrl": "http://localhost:3000/admin/musteri-doluluk"
+  },
+  {
+    "slug": "67-admin-firmalar",
+    "title": "Admin Firmalar",
+    "path": "/admin/companies",
+    "ok": true,
+    "fileName": "67-admin-firmalar.png",
+    "finalUrl": "http://localhost:3000/admin/companies"
+  },
+  {
+    "slug": "68-admin-odemeler",
+    "title": "Admin Ödemeler",
+    "path": "/admin/payments",
+    "ok": true,
+    "fileName": "68-admin-odemeler.png",
+    "finalUrl": "http://localhost:3000/admin/payments"
+  },
+  {
+    "slug": "69-admin-platform-ayarlari",
+    "title": "Admin Platform Ayarları",
+    "path": "/admin/platform-settings",
+    "ok": true,
+    "fileName": "69-admin-platform-ayarlari.png",
+    "finalUrl": "http://localhost:3000/admin/platform-settings"
+  },
+  {
+    "slug": "70-admin-faturalama",
+    "title": "Admin Faturalama",
+    "path": "/admin/billing",
+    "ok": true,
+    "fileName": "70-admin-faturalama.png",
+    "finalUrl": "http://localhost:3000/admin/billing"
+  },
+  {
+    "slug": "71-admin-runtime-flags",
+    "title": "Admin Runtime Flags",
+    "path": "/admin/runtime-flags",
+    "ok": true,
+    "fileName": "71-admin-runtime-flags.png",
+    "finalUrl": "http://localhost:3000/admin/runtime-flags"
+  },
+  {
+    "slug": "72-admin-planlar",
+    "title": "Admin Planlar",
+    "path": "/admin/planlar",
+    "ok": true,
+    "fileName": "72-admin-planlar.png",
+    "finalUrl": "http://localhost:3000/admin/planlar"
+  },
+  {
+    "slug": "73-super-admin-talepler",
+    "title": "Super Admin Talepler",
+    "path": "/super-admin/talepler",
+    "ok": true,
+    "fileName": "73-super-admin-talepler.png",
+    "finalUrl": "http://localhost:3000/super-admin/talepler"
+  },
+  {
+    "slug": "74-super-admin-audit-logs",
+    "title": "Super Admin Audit Logs",
+    "path": "/super-admin/audit-logs",
+    "ok": true,
+    "fileName": "74-super-admin-audit-logs.png",
+    "finalUrl": "http://localhost:3000/super-admin/audit-logs"
+  },
+  {
+    "slug": "75-super-admin-yeni-firma",
+    "title": "Super Admin Yeni Firma",
+    "path": "/super-admin/yeni-firma",
+    "ok": true,
+    "fileName": "75-super-admin-yeni-firma.png",
+    "finalUrl": "http://localhost:3000/super-admin/yeni-firma"
+  },
+  {
+    "slug": "76-super-admin-sistem-saglik",
+    "title": "Super Admin Sistem Sağlık",
+    "path": "/super-admin/sistem-saglik",
+    "ok": true,
+    "fileName": "76-super-admin-sistem-saglik.png",
+    "finalUrl": "http://localhost:3000/super-admin/sistem-saglik"
+  },
+  {
+    "slug": "77-super-admin-pazaryeri-saglik",
+    "title": "Super Admin Pazaryeri Sağlık",
+    "path": "/super-admin/pazaryeri-saglik",
+    "ok": true,
+    "fileName": "77-super-admin-pazaryeri-saglik.png",
+    "finalUrl": "http://localhost:3000/super-admin/pazaryeri-saglik"
+  },
+  {
+    "slug": "78-super-admin",
+    "title": "Super Admin",
+    "path": "/super-admin",
+    "ok": true,
+    "fileName": "78-super-admin.png",
+    "finalUrl": "http://localhost:3000/super-admin"
+  },
+  {
+    "slug": "79-pricing",
+    "title": "Pricing",
+    "path": "/pricing",
+    "ok": true,
+    "fileName": "79-pricing.png",
+    "finalUrl": "http://localhost:3000/pricing"
+  },
+  {
+    "slug": "80-gercek-kar",
+    "title": "Gerçek Kâr",
+    "path": "/gercek-kar",
+    "ok": true,
+    "fileName": "80-gercek-kar.png",
+    "finalUrl": "http://localhost:3000/gercek-kar"
+  },
+  {
+    "slug": "81-gercek-kar-ayarlar",
+    "title": "Gerçek Kâr Ayarlar",
+    "path": "/gercek-kar/ayarlar",
+    "ok": true,
+    "fileName": "81-gercek-kar-ayarlar.png",
+    "finalUrl": "http://localhost:3000/gercek-kar/ayarlar"
+  },
+  {
+    "slug": "82-gercek-kar-oneriler",
+    "title": "Gerçek Kâr Öneriler",
+    "path": "/gercek-kar/oneriler",
+    "ok": true,
+    "fileName": "82-gercek-kar-oneriler.png",
+    "finalUrl": "http://localhost:3000/gercek-kar/oneriler"
+  },
+  {
+    "slug": "83-onboarding",
+    "title": "Onboarding",
+    "path": "/onboarding",
+    "ok": true,
+    "fileName": "83-onboarding.png",
+    "finalUrl": "http://localhost:3000/onboarding"
+  }
+]

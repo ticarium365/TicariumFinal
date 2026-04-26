@@ -8,7 +8,7 @@ const items = [
   { href: "/hakkimizda", label: "Hakkımızda" },
   { href: "/amacimiz", label: "Amacımız" },
   { href: "/paketler", label: "Paketler" },
-  { href: "/karsilastir", label: "Neden Farklıyız" },
+  { href: "/karsilastir", label: "Karşılaştır" },
   { href: "/iletisim", label: "İletişim" },
 ];
 
@@ -141,7 +141,7 @@ export function PublicNav() {
               boxShadow: "0 6px 20px -6px rgba(79,70,229,0.55)",
             }}
           >
-            Kayıt Ol
+            Ücretsiz Başla
             <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -174,7 +174,7 @@ export function PublicNav() {
               boxShadow: "0 4px 14px -4px rgba(79,70,229,0.45)",
             }}
           >
-            Kayıt Ol
+            Başla
           </Button>
           <button
             className="p-2 rounded-md"
@@ -257,19 +257,30 @@ export function PublicNav() {
 
 export function PublicFooter() {
   return (
-    <footer
-      className="py-12 mt-16 relative overflow-hidden"
-      style={{
-        borderTop: "1px solid rgba(99,102,241,0.10)",
-        background:
-          "linear-gradient(180deg,#F8FAFC 0%, #F1F5FB 100%)",
-      }}
-    >
-      <div
-        className="absolute -top-32 left-1/4 w-[28rem] h-[28rem] rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(closest-side, rgba(79,70,229,0.08), transparent 70%)" }}
-      />
-      <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm relative">
+    <>
+      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden px-3 pb-3 pointer-events-none">
+        <div className="pointer-events-auto rounded-2xl border border-slate-200 bg-white/95 shadow-2xl backdrop-blur p-2 grid grid-cols-2 gap-2">
+          <Button asChild className="h-11 font-semibold">
+            <Link href="/kayit">Ücretsiz başla</Link>
+          </Button>
+          <Button asChild variant="outline" className="h-11 font-semibold">
+            <Link href="/iletisim">Demo iste</Link>
+          </Button>
+        </div>
+      </div>
+      <footer
+        className="py-12 pb-24 md:pb-12 mt-16 relative overflow-hidden"
+        style={{
+          borderTop: "1px solid rgba(99,102,241,0.10)",
+          background:
+            "linear-gradient(180deg,#F8FAFC 0%, #F1F5FB 100%)",
+        }}
+      >
+        <div
+          className="absolute -top-32 left-1/4 w-[28rem] h-[28rem] rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(closest-side, rgba(79,70,229,0.08), transparent 70%)" }}
+        />
+        <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm relative">
         <div>
           <div className="flex items-center gap-2.5 mb-3">
             <BrandLogo size={32} />
@@ -291,7 +302,10 @@ export function PublicFooter() {
             </div>
           </div>
           <p style={{ color: "#64748B", lineHeight: 1.6 }}>
-            365 gün işinin yanında. KOBİ'ler için bulut tabanlı işletim sistemi.
+            KOBİ’lerin satış, stok, pazaryeri ve kâr takibini sadeleştirmek için geliştirilen yerli işletme platformu.
+          </p>
+          <p className="mt-3 text-xs" style={{ color: "#64748B", lineHeight: 1.6 }}>
+            Firma verisi ayrı tutulur. Kart bilgisi sistemde saklanmaz. Kurulumda gerçek insan desteği hedeflenir.
           </p>
         </div>
         <div>
@@ -327,15 +341,16 @@ export function PublicFooter() {
           </p>
         </div>
       </div>
-      <div
-        className="container mx-auto px-4 mt-10 pt-6 text-xs text-center"
-        style={{
-          color: "#94A3B8",
-          borderTop: "1px solid rgba(99,102,241,0.08)",
-        }}
-      >
-        © {new Date().getFullYear()} Ticarium365 · Tüm hakları saklıdır.
-      </div>
-    </footer>
+        <div
+          className="container mx-auto px-4 mt-10 pt-6 text-xs text-center"
+          style={{
+            color: "#94A3B8",
+            borderTop: "1px solid rgba(99,102,241,0.08)",
+          }}
+        >
+          © {new Date().getFullYear()} Ticarium365 · Tüm hakları saklıdır. · KVKK ve güvenli oturum prensipleriyle geliştirilir.
+        </div>
+      </footer>
+    </>
   );
 }

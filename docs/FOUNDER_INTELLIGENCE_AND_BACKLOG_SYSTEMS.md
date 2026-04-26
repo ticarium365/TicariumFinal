@@ -8,7 +8,7 @@ Internal reference for revenue/cash/retention/B2B executive surfaces built on Ti
 |--------|------|------|---------|
 | GET | `/api/subscriptions/admin/billing/metrics` | Super admin session | MRR/ARR, plan breakdown, layered `founderSignals*` payloads, attribution, copilot, expansion, overnight pack |
 
-**UI:** `artifacts/prosan/src/pages/super-admin/index.tsx` (billing metrics query `staleTime: 180_000`).
+**UI:** `artifacts/prosan/src/pages/super-admin/index.tsx` (legacy frontend workspace path; billing metrics query `staleTime: 180_000`).
 
 ## Response payload (key blocks)
 
@@ -77,5 +77,5 @@ The overnight pack and prior v10/v11/copilot/attribution layers **intentionally 
 
 ## Build / quality
 
-- `pnpm run build` in `artifacts/api-server` and `artifacts/prosan` after changes.
+- `pnpm run build` in `artifacts/api-server` and `artifacts/prosan` after changes (`artifacts/prosan` is the legacy frontend workspace path).
 - Avoid destructive migrations without review; new indexes only with measured need.

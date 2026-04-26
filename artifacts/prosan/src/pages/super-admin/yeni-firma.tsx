@@ -126,7 +126,7 @@ export default function NewTenantWizard() {
                 <Input
                   value={form.subdomain}
                   onChange={(e) => set("subdomain", e.target.value.toLowerCase())}
-                  placeholder="prosan"
+                  placeholder="ornek-firma"
                   className="flex-1"
                 />
                 <span className="text-sm text-muted-foreground whitespace-nowrap">.ticarium365.com</span>

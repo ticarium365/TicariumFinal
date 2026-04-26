@@ -7062,6 +7062,68 @@ describe("Sprint M+ — Sales Type (wholesale/retail)", () => {
   });
 });
 
+// =============================================================================
+// Marketplace Autopilot — Safety & permission harness (migration, RBAC, confirm)
+// =============================================================================
+describe("Marketplace Autopilot — Safety", () => {
+  test("GET /marketplace/autopilot/safety-status — admin; migration + routeMatrix", async () => {
+    const { jar, status } = await login("talha", "talha123", "prosan");
+    if (status !== 200) return;
+    const r = await api("GET", "/marketplace/autopilot/safety-status", { jar });
+    if (r.status === 402 || r.status === 403) return;
+    assert.equal(r.status, 200, `safety-status ${r.status} ${JSON.stringify(r.json)}`);
+    assert.equal(r.json.version, 1);
+    assert.ok(typeof r.json.migration006?.ok === "boolean", "migration006.ok");
+    assert.ok(Array.isArray(r.json.routeMatrix), "routeMatrix[]");
+    assert.ok(r.json.rollbackByActionType?.stale_resync_enqueue, "rollback doc stale");
+    assert.equal(r.json.rollbackByActionType.stale_resync_enqueue.rollbackable, false);
+  });
+
+  test("staff — POST apply ve rollback 403 (tenant marketplace açıksa)", async () => {
+    const { jar, status } = await login("goruntule", "staff123", "prosan");
+    if (status !== 200) return;
+    const probe = await api("GET", "/marketplace/autopilot/safety-status", { jar });
+    if (probe.status !== 200) return;
+    const a = await api("POST", "/marketplace/autopilot/apply/repricing", {
+      jar,
+      body: { mappingIds: [1], confirm: true },
+    });
+    assert.equal(a.status, 403, "staff apply 403");
+    const b = await api("POST", "/marketplace/autopilot/rollback", { jar, body: { logId: 1, confirm: true } });
+    assert.equal(b.status, 403, "staff rollback 403");
+  });
+
+  test("tenant admin — GET founder-roi-summary asla 200 dönmemeli", async () => {
+    const { jar, status } = await login("talha", "talha123", "prosan");
+    if (status !== 200) return;
+    const r = await api("GET", "/marketplace/autopilot/founder-roi-summary", { jar });
+    assert.notEqual(r.status, 200, `cross-tenant founder tenant admin'e kapalı olmalı (status=${r.status})`);
+  });
+
+  test("super_admin — GET founder-roi-summary 200 veya plan kapısı", async () => {
+    const { jar, status } = await login("superadmin", "superadmin123", "prosan");
+    if (status !== 200) return;
+    const r = await api("GET", "/marketplace/autopilot/founder-roi-summary", { jar });
+    assert.ok(r.status === 200 || r.status === 402 || r.status === 403, `founder ${r.status}`);
+    if (r.status === 200) {
+      assert.ok(Array.isArray(r.json.rows), "founder rows[]");
+    }
+  });
+
+  test("strict confirm — string \"true\" apply reddi (400)", async () => {
+    const { jar, status } = await login("talha", "talha123", "prosan");
+    if (status !== 200) return;
+    const gate = await api("GET", "/marketplace/autopilot/safety-status", { jar });
+    if (gate.status !== 200) return;
+    const r = await api("POST", "/marketplace/autopilot/apply/repricing", {
+      jar,
+      body: { mappingIds: [1], confirm: "true" },
+    });
+    assert.equal(r.status, 400);
+    assert.equal(r.json?.error, "confirm_required");
+  });
+});
+
 
 // =============================================================================
 // Dalga 13 — Mobile Theme Token Drift Prevention

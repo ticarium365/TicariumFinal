@@ -8,28 +8,13 @@ import { seedDemoDataInTx, type DemoSector } from "../lib/demo-data.js";
 
 const router = Router();
 
-/**
- * Defansif tenant cross-check (architect bulgu #1).
- * req.companyId tenant resolver middleware'inden gelir; req.session.user.companyId
- * login sırasında set edilir. İkisi farklıysa istek reddedilir — bu, ileride
- * tenant header spoof'una karşı belt-and-suspenders koruması sağlar.
- */
-function assertTenantBoundary(req: Request, res: Response): boolean {
-  const sessionCid = (req.session as any)?.user?.companyId;
-  const reqCid = req.companyId;
-  if (sessionCid && reqCid && sessionCid !== reqCid) {
-    res.status(403).json({ message: "Tenant uyuşmazlığı" });
-    return false;
-  }
-  return true;
-}
+/** Kiracı–oturum hizası: `enforceTenantSessionAlignment` (app.ts) global uygulanır. */
 
 /**
  * GET /api/onboarding/status
  * Mevcut tenant için onboarding ve demo seed durumunu döner.
  */
 router.get("/status", requireAuth, async (req: Request, res: Response) => {
-  if (!assertTenantBoundary(req, res)) return;
   try {
     const cid = req.companyId!;
     const [c] = await db
@@ -61,7 +46,6 @@ router.post(
   requireAuth,
   requireRole(["admin"]),
   async (req: Request, res: Response) => {
-    if (!assertTenantBoundary(req, res)) return;
     try {
       const cid = req.companyId!;
       const { sector } = req.body as { sector?: DemoSector | "other" };
@@ -116,7 +100,6 @@ router.post(
   requireAuth,
   requireRole(["admin"]),
   async (req: Request, res: Response) => {
-    if (!assertTenantBoundary(req, res)) return;
     const cid = req.companyId!;
     const uid = (req.session as any)?.user?.id ?? null;
     const { sector } = req.body as { sector?: DemoSector };

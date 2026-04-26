@@ -58,6 +58,10 @@ export const companySettingsTable = pgTable("company_settings", {
 
   // Onboarding
   onboardingCompleted: boolean("onboarding_completed").default(false),
+
+  /** Pazaryeri closed-loop: promote/suppress action types (sıralama); otomatik apply yok */
+  autopilotClosedLoop: jsonb("autopilot_closed_loop").$type<Record<string, unknown>>().notNull().default({}),
+
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

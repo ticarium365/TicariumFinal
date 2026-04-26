@@ -220,3 +220,42 @@ export const marketplaceOrdersTable = pgTable("marketplace_orders", {
 
 export type MarketplaceOrder = typeof marketplaceOrdersTable.$inferSelect;
 export type InsertMarketplaceOrder = typeof marketplaceOrdersTable.$inferInsert;
+
+/** Manuel onaylı pazaryeri autopilot aksiyonları — rollback için snapshot saklar */
+export const marketplaceAutopilotActionLogsTable = pgTable("marketplace_autopilot_action_logs", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companiesTable.id, { onDelete: "cascade" }),
+  userId: integer("user_id").references(() => usersTable.id),
+  actionType: text("action_type").notNull(),
+  status: text("status").notNull().default("applied"),
+  targets: jsonb("targets").$type<unknown[]>().notNull().default([]),
+  beforeSnapshot: jsonb("before_snapshot").$type<Record<string, unknown>>().notNull().default({}),
+  afterSnapshot: jsonb("after_snapshot").$type<Record<string, unknown>>(),
+  estimatedImpact: jsonb("estimated_impact").$type<Record<string, unknown>>(),
+  notes: text("notes"),
+  appliedAt: timestamp("applied_at", { withTimezone: true }).defaultNow().notNull(),
+  rolledBackAt: timestamp("rolled_back_at", { withTimezone: true }),
+  rolledBackByUserId: integer("rolled_back_by_user_id").references(() => usersTable.id),
+  outcomeComputedAt: timestamp("outcome_computed_at", { withTimezone: true }),
+  outcomeMetrics: jsonb("outcome_metrics").$type<Record<string, unknown>>(),
+}, (t) => [
+  index("mp_autopilot_company_applied_idx").on(t.companyId, t.appliedAt),
+  index("mp_autopilot_status_idx").on(t.status, t.appliedAt),
+]);
+
+export type MarketplaceAutopilotActionLog = typeof marketplaceAutopilotActionLogsTable.$inferSelect;
+
+/** Preview / intent telemetry — acceptance & usage (no writes to catalog). */
+export const marketplaceAutopilotIntentEventsTable = pgTable("marketplace_autopilot_intent_events", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companiesTable.id, { onDelete: "cascade" }),
+  userId: integer("user_id").references(() => usersTable.id),
+  intentKind: text("intent_kind").notNull(),
+  scopeJson: jsonb("scope_json").$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index("mp_autopilot_intent_company_created_idx").on(t.companyId, t.createdAt),
+  index("mp_autopilot_intent_kind_idx").on(t.intentKind, t.createdAt),
+]);
+
+export type MarketplaceAutopilotIntentEvent = typeof marketplaceAutopilotIntentEventsTable.$inferSelect;

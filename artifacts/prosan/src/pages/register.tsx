@@ -30,10 +30,10 @@ export default function RegisterPage() {
   const upd = (k: keyof typeof form, v: any) => setForm((s) => ({ ...s, [k]: v }));
 
   const isBusiness = mode === "business";
-  const title = isBusiness ? "İşletme Hesabı Oluştur" : "Satınalmacı Hesabı Oluştur";
+  const title = isBusiness ? "İşletme hesabınızı açalım" : "Satınalma hesabınızı açalım";
   const subtitle = isBusiness
-    ? "Deneme süresi ve kapsam hesap politikasına göredir; güncel koşullar için Paketler sayfasına bakın."
-    : "Satınalma vitrinine erişim; tedarikçi keşfi paket ve yetkilere bağlıdır.";
+    ? "Önce temel bilgileri alıyoruz. Kurulumda takılırsanız destek ekibi yardımcı olur."
+    : "Tedarikçi keşfi ve teklif sürecine başlamak için kısa bir kayıt yeterli.";
   const endpoint = isBusiness ? "/api/auth/register/business" : "/api/auth/register/buyer";
   const successPath = isBusiness ? "/dashboard?welcome=1" : "/satinalma-merkezi?welcome=1";
 
@@ -61,8 +61,8 @@ export default function RegisterPage() {
       const data = await r.json();
       if (!r.ok) {
         toast({
-          title: "Kayıt başarısız",
-          description: data?.error?.message || data?.message || "Bilgilerinizi kontrol edin.",
+          title: "Kayıt tamamlanamadı",
+          description: data?.error?.message || data?.message || "Lütfen e-posta, telefon ve şifre alanlarını kontrol edin.",
           variant: "destructive",
         });
         setSubmitting(false);
@@ -76,7 +76,7 @@ export default function RegisterPage() {
       // Doğrulama kodu zaten gönderildi; ana panele yönlendir, banner üstte uyaracak.
       setTimeout(() => window.location.replace(successPath), 600);
     } catch {
-      toast({ title: "Bağlantı hatası", description: "Lütfen tekrar deneyin.", variant: "destructive" });
+      toast({ title: "Bağlantı kurulamadı", description: "İnternet bağlantınızı kontrol edip tekrar deneyin. Bilgileriniz kaybolmadı.", variant: "destructive" });
       setSubmitting(false);
     }
   };
@@ -110,20 +110,20 @@ export default function RegisterPage() {
                   }}
                 >
                   <Sparkles className="w-3 h-3" />
-                  Hızlı Kayıt
+                  2 dakikalık başlangıç
                 </span>
                 <h1
                   className="text-3xl md:text-4xl font-bold tracking-tight mb-2"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
-                  Hangi hesap türünü <span style={{
+                  Önce ne yapmak istediğinizi <span style={{
                     background: "linear-gradient(135deg,#2563eb,#0EA5A4)",
                     WebkitBackgroundClip: "text",
                     backgroundClip: "text",
                     color: "transparent",
-                  }}>oluşturmak</span> istersiniz?
+                  }}>seçelim</span>
                 </h1>
-                <p className="text-slate-600 mt-2">İhtiyacınıza en uygun seçeneği belirleyin.</p>
+                <p className="text-slate-600 mt-2">Yanlış seçerseniz sorun değil; ekip ve yetkiler sonradan düzenlenebilir.</p>
               </div>
 
               <div className="grid md:grid-cols-2 gap-5">
@@ -153,12 +153,12 @@ export default function RegisterPage() {
                       className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
                       style={{ background: "#DCFCE7", color: "#166534" }}
                     >
-                      21 Gün Ücretsiz
+                      İşletme yönetimi
                     </span>
                   </div>
-                  <h3 className="text-xl font-bold mb-1.5">İşletme Hesabı</h3>
+                  <h3 className="text-xl font-bold mb-1.5">Satış yapan işletmeyim</h3>
                   <p className="text-sm text-slate-600 leading-relaxed">
-                    Stok, satış, e-fatura, raporlama ve daha fazlası. KOBİ'niz için tam sürüm.
+                    Stok, satış, e-belge, pazaryeri ve kâr takibini tek yerden yönetmek istiyorum.
                   </p>
                   <div className="mt-4 flex items-center gap-1.5 text-sm font-semibold" style={{ color: "#4F46E5" }}>
                     Devam Et <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -194,9 +194,9 @@ export default function RegisterPage() {
                       B2B Satınalma
                     </span>
                   </div>
-                  <h3 className="text-xl font-bold mb-1.5">Satınalmacı Portalı</h3>
+                  <h3 className="text-xl font-bold mb-1.5">Satınalma yapıyorum</h3>
                   <p className="text-sm text-slate-600 leading-relaxed">
-                    Tedarikçi keşfedin, teklif isteyin, B2B satınalma süreçlerinizi tek panelden yönetin.
+                    Tedarikçi bulmak, teklif toplamak ve B2B satınalma sürecini sadeleştirmek istiyorum.
                   </p>
                   <div className="mt-4 flex items-center gap-1.5 text-sm font-semibold" style={{ color: "#0EA5A4" }}>
                     Devam Et <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -234,7 +234,7 @@ export default function RegisterPage() {
                 className="text-sm flex items-center gap-1.5 text-slate-500 hover:text-slate-700 mb-4"
                 data-testid="btn-back-select"
               >
-                <ArrowLeft className="w-4 h-4" /> Geri dön
+                <ArrowLeft className="w-4 h-4" /> Hesap türünü değiştir
               </button>
 
               <div className="mb-5">
@@ -329,7 +329,7 @@ export default function RegisterPage() {
                   />
                   <span>
                     <a href="/kvkk" target="_blank" className="underline hover:text-blue-700">KVKK Aydınlatma Metni</a>'ni
-                    okudum, kişisel verilerimin işlenmesini kabul ediyorum.
+                    okudum; bilgilerimin hesap açılışı, güvenli oturum ve benimle iletişim için kullanılmasını kabul ediyorum.
                   </span>
                 </label>
 
@@ -337,7 +337,7 @@ export default function RegisterPage() {
                   type="submit"
                   data-testid="btn-submit-register"
                   disabled={!canSubmit || submitting}
-                  className="md:col-span-2 h-11 text-base font-semibold mt-2"
+                  className="md:col-span-2 h-12 text-base font-semibold mt-2"
                   style={{
                     background: "linear-gradient(135deg,#2563eb 0%,#5E5CE6 50%,#0EA5A4 100%)",
                     color: "white",
@@ -346,9 +346,9 @@ export default function RegisterPage() {
                   }}
                 >
                   {submitting ? (
-                    <><Loader2 className="mr-2 w-4 h-4 animate-spin" /> Hesabınız oluşturuluyor…</>
+                    <><Loader2 className="mr-2 w-4 h-4 animate-spin" /> Hesap açılıyor…</>
                   ) : (
-                    <><CheckCircle2 className="mr-2 w-4 h-4" /> {isBusiness ? "21 Günlük Ücretsiz Hesabımı Aç" : "Satınalmacı Hesabı Oluştur"}</>
+                    <><CheckCircle2 className="mr-2 w-4 h-4" /> Hesabı aç ve panele geç</>
                   )}
                 </Button>
               </form>
@@ -356,7 +356,7 @@ export default function RegisterPage() {
               {isBusiness && (
                 <div className="mt-5 flex items-center gap-2 text-xs text-slate-500">
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  KVKK uyumlu • Kart bilgisi gerekmez • Dilediğiniz zaman iptal edebilirsiniz.
+                  Firma veriniz ayrı tutulur • Kart bilgisi gerekmez • Kurulumda destek alabilirsiniz.
                 </div>
               )}
             </div>

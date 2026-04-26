@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, RefreshCw, Activity, Trash2, ShoppingCart, ListChecks, Settings as SettingsIcon, Package, CheckCircle2, AlertCircle, Clock, AlertOctagon, Hourglass, Loader2, Store, WifiOff, PackageOpen, ChevronRight } from "lucide-react";
+import { Plus, RefreshCw, Activity, Trash2, ShoppingCart, ListChecks, Settings as SettingsIcon, Package, CheckCircle2, AlertCircle, Clock, AlertOctagon, Hourglass, Loader2, Store, WifiOff, PackageOpen, ChevronRight, Rocket } from "lucide-react";
+import { MarketplaceAutopilotPanel } from "./MarketplaceAutopilotPanel";
 import { useToast } from "@/hooks/use-toast";
 
 type Provider = { key: string; label: string; needs: string[] };
@@ -364,6 +365,7 @@ export default function MarketplacePage() {
           <TabsTrigger value="orders" data-testid="tab-orders"><Package className="h-4 w-4 mr-1" />Siparişler ({orders.length})</TabsTrigger>
           <TabsTrigger value="jobs" data-testid="tab-jobs"><ListChecks className="h-4 w-4 mr-1" />İşler ({jobs.length})</TabsTrigger>
           <TabsTrigger value="logs" data-testid="tab-logs"><Activity className="h-4 w-4 mr-1" />Loglar</TabsTrigger>
+          <TabsTrigger value="autopilot" data-testid="tab-autopilot"><Rocket className="h-4 w-4 mr-1" />Autopilot</TabsTrigger>
         </TabsList>
 
         <TabsContent value="accounts" className="space-y-3 mt-4">
@@ -528,6 +530,10 @@ export default function MarketplacePage() {
               </tbody>
             </table>
           </CardContent></Card>
+        </TabsContent>
+
+        <TabsContent value="autopilot" className="mt-4">
+          <MarketplaceAutopilotPanel />
         </TabsContent>
       </Tabs>
     </div>

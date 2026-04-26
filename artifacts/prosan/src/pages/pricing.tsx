@@ -34,6 +34,13 @@ const FEATURE_LABELS = SHARED_FEATURE_LABELS;
 // Dalga 25 — Yetki temizliği: eski `pkg_trade` slug'ı katalogdan kalktı.
 // HIGHLIGHTED orta-üst paket olarak `pkg_business_v3` (mevcut katalogda 3.).
 const HIGHLIGHTED = "pkg_business_v3";
+const planDisplayName = (slug: string, fallback: string): string => {
+  if (slug.includes("starter")) return "Başlangıç";
+  if (slug.includes("pro")) return "Büyüyen İşletme";
+  if (slug.includes("business")) return "Pazaryeri Odaklı";
+  if (slug.includes("enterprise")) return "Çok Şubeli / Kurumsal";
+  return fallback;
+};
 
 export default function PricingPage() {
   const { toast } = useToast();
@@ -254,9 +261,9 @@ export default function PricingPage() {
       </Dialog>
 
       <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold mb-3">Ticarium365 Paketleri</h1>
+        <h1 className="text-4xl font-bold mb-3">İşletmenize uygun paketi seçin</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          İşletmenizin büyüklüğüne göre {plans.length} net paket. İlk 30 gün deneme — koşullar hesabınız politikasına göre (kart zorunlu olmayabilir).
+          Küçük ekipten çok şubeli yapıya kadar {plans.length} net seçenek. Kararsızsanız önce öneri aracından başlayın.
         </p>
 
         {featData && (
@@ -269,7 +276,7 @@ export default function PricingPage() {
             )}
             {featData.status === "active" && (
               <Badge variant="default" className="text-base px-3 py-1">
-                Aktif Plan: {plans.find((p) => p.slug === featData.planSlug)?.name ?? featData.planSlug}
+                Aktif Plan: {planDisplayName(featData.planSlug, plans.find((p) => p.slug === featData.planSlug)?.name ?? featData.planSlug)}
               </Badge>
             )}
             {featData.status === "expired" && (
@@ -309,14 +316,14 @@ export default function PricingPage() {
             onClick={() => trackProductEvent("pricing_help_nav", { target: "wizard" })}
           >
             <HelpCircle className="h-4 w-4 shrink-0" />
-            Hangi paket bana uygun? (kısa sorular)
+            Hangi paket bana uygun? 4 kısa soru
           </Link>
           <Link
             href="/karsilastir"
             className="inline-flex items-center gap-1.5 text-primary hover:underline font-medium"
             onClick={() => trackProductEvent("pricing_compare_nav", { source: "hero" })}
           >
-            Paketleri yan yana karşılaştır
+            Public karşılaştırmayı aç
           </Link>
         </div>
       </div>
@@ -338,7 +345,7 @@ export default function PricingPage() {
                 <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">Önerilen</Badge>
               )}
               <CardHeader>
-                <CardTitle className="text-xl">{plan.name}</CardTitle>
+                <CardTitle className="text-xl">{planDisplayName(plan.slug, plan.name)}</CardTitle>
                 <CardDescription className="text-xs h-10">{plan.description}</CardDescription>
                 <div className="pt-2">
                   <div className="text-3xl font-bold">
@@ -375,7 +382,7 @@ export default function PricingPage() {
                   data-testid={`subscribe-${plan.slug}`}
                 >
                   {isCurrent ? "Mevcut planınız" : (
-                    <>{isHighlighted ? "Bu planla devam et" : "Seç ve ödemeye geç"} <ArrowRight className="w-4 h-4 ml-1" /></>
+                    <>{isHighlighted ? "Önerilen planla devam et" : "Bu paketi seç"} <ArrowRight className="w-4 h-4 ml-1" /></>
                   )}
                 </Button>
               </CardContent>
@@ -385,13 +392,18 @@ export default function PricingPage() {
       </div>
 
       <div className="mt-12 text-center bg-muted/50 rounded-lg p-6">
-        <h3 className="font-semibold mb-2">Hangi paket size uygun emin değil misiniz?</h3>
+        <h3 className="font-semibold mb-2">Hâlâ emin değil misiniz?</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Özellikleri yan yana görmek ve rakiplerle konumumuzu incelemek için karşılaştırma sayfamıza göz atın.
+          Önce ihtiyaçlarınızı netleştirin; sonra paketi büyütmek kolay. Satış ekibinden de yardım alabilirsiniz.
         </p>
-        <Link href="/karsilastir" onClick={() => trackProductEvent("pricing_compare_nav", { source: "footer_cta" })}>
-          <Button variant="outline">Rakip Karşılaştırma</Button>
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Link href="/paketler" onClick={() => trackProductEvent("pricing_help_nav", { source: "footer_cta" })}>
+            <Button>Öneri aracını aç</Button>
+          </Link>
+          <Link href="/iletisim" onClick={() => trackProductEvent("pricing_contact_nav", { source: "footer_cta" })}>
+            <Button variant="outline">Beni arasınlar</Button>
+          </Link>
+        </div>
       </div>
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-muted-foreground">

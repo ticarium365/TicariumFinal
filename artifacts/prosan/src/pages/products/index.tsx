@@ -329,7 +329,7 @@ export default function ProductsList() {
       XLSX.utils.book_append_sheet(wb, ws, "Ürünler");
 
       const date = new Date().toISOString().slice(0, 10);
-      XLSX.writeFile(wb, `prosan-urunler-${date}.xlsx`);
+      XLSX.writeFile(wb, `ticarium365-urunler-${date}.xlsx`);
 
       toast({ title: "Excel indirildi", description: `${rows.length} ürün dışa aktarıldı.` });
     } catch {

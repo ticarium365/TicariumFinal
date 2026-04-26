@@ -13,12 +13,12 @@ import {
 } from "lucide-react";
 
 const STEPS = [
-  { id: 1, title: "Firma", icon: Building2, desc: "Temel bilgiler" },
-  { id: 2, title: "Logo", icon: ImageUp, desc: "İsteğe bağlı" },
-  { id: 3, title: "Tema", icon: Palette, desc: "Marka rengi" },
-  { id: 4, title: "Sektör", icon: Factory, desc: "İş kolu" },
-  { id: 5, title: "Demo", icon: Database, desc: "Örnek veri" },
-  { id: 6, title: "Başla", icon: Sparkles, desc: "Panele geç" },
+  { id: 1, title: "İşletme", icon: Building2, desc: "Adınızı yazın" },
+  { id: 2, title: "Logo", icon: ImageUp, desc: "Sonra da olur" },
+  { id: 3, title: "Renk", icon: Palette, desc: "Marka hissi" },
+  { id: 4, title: "Sektör", icon: Factory, desc: "Size göre örnekler" },
+  { id: 5, title: "Demo", icon: Database, desc: "Dolu panel görün" },
+  { id: 6, title: "Hazır", icon: Sparkles, desc: "İşe başlayın" },
 ];
 
 const PRESET_COLORS = [
@@ -221,9 +221,9 @@ export default function OnboardingPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary text-white mb-3 shadow-lg">
             <Sparkles className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold">Ticarium365&apos;e hoş geldiniz</h1>
+          <h1 className="text-2xl font-bold">Panelinizi birkaç adımda hazır edelim</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Birkaç dakikada firma bilgilerinizi ve tercihlerinizi kaydedin; isterseniz örnek veriyle panele alışın.
+            Hepsini şimdi doldurmak zorunda değilsiniz. Gerekli olanı alıp sizi hızlıca panele taşıyalım.
           </p>
         </div>
 
@@ -243,7 +243,11 @@ export default function OnboardingPage() {
           ))}
         </div>
         <p className="text-center text-xs text-muted-foreground mb-4">
-          Adım {step} / {STEPS.length} — çoğu kullanıcı yaklaşık 2 dakikada tamamlar. İstemediğiniz adımları atlayabilirsiniz.
+          {step <= 2
+            ? "Başlangıç iyi gidiyor; sadece temel bilgileri netleştiriyoruz."
+            : step <= 4
+              ? "Panel artık size benzemeye başladı."
+              : "Son dokunuşlar kaldı; isterseniz örnek veriyle dolu panel açabiliriz."}
         </p>
 
         <Card className="shadow-xl border-0">
@@ -256,7 +260,7 @@ export default function OnboardingPage() {
                     <Building2 className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <h2 className="font-semibold text-lg">Firma Bilgileri</h2>
+                    <h2 className="font-semibold text-lg">Önce tabeladaki adı yazalım</h2>
                     <p className="text-sm text-muted-foreground">
                       Yalnızca firma adı zorunlu; telefon ve e-postayı şimdi veya daha sonra Ayarlar&apos;dan ekleyebilirsiniz.
                     </p>
@@ -523,9 +527,9 @@ export default function OnboardingPage() {
                   <CheckCircle2 className="h-9 w-9" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-xl">Kurulum Tamamlandı!</h2>
+                  <h2 className="font-bold text-xl">Paneliniz hazır</h2>
                   <p className="text-muted-foreground text-sm mt-1">
-                    <strong>{companyName}</strong> hesabınız hazır.
+                    <strong>{companyName}</strong> için ilk çalışma alanını oluşturduk. Şimdi gerçek verilerle ilerleyebilirsiniz.
                   </p>
                 </div>
 
@@ -546,10 +550,10 @@ export default function OnboardingPage() {
 
                 <div className="grid grid-cols-2 gap-3 text-left mt-4">
                   {[
-                    { icon: "📦", label: "Ürün Ekle", desc: "Stok girişi yapın" },
-                    { icon: "🛒", label: "Satış Yap", desc: "Kasa ve satış ekranı" },
-                    { icon: "📊", label: "Raporlar", desc: "Günlük kapanış özeti" },
-                    { icon: "📷", label: "Barkod", desc: "Kamera ile tarama" },
+                    { icon: "📦", label: "İlk ürünü ekle", desc: "Stok takibini başlatın" },
+                    { icon: "🛒", label: "İlk satışı gir", desc: "Kasa akışını görün" },
+                    { icon: "📊", label: "Günün durumuna bak", desc: "Rapor ekranını açın" },
+                    { icon: "📷", label: "Barkodu dene", desc: "Kamerayla taramayı test edin" },
                   ].map((item) => (
                     <div key={item.label} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border">
                       <span className="text-xl">{item.icon}</span>
@@ -585,11 +589,11 @@ export default function OnboardingPage() {
               >
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                 {step === 6 ? (
-                  <><Sparkles className="h-4 w-4" /> Başla</>
+                  <><Sparkles className="h-4 w-4" /> Panele geç</>
                 ) : step === 5 && demoChoice && demoChoice !== "skip" ? (
-                  <>Yükle ve İlerle <ChevronRight className="h-4 w-4" /></>
+                  <>Örnek veriyi yükle <ChevronRight className="h-4 w-4" /></>
                 ) : (
-                  <>İleri <ChevronRight className="h-4 w-4" /></>
+                  <>Devam et <ChevronRight className="h-4 w-4" /></>
                 )}
               </Button>
             </div>
@@ -598,7 +602,7 @@ export default function OnboardingPage() {
 
         {step < 6 && (
           <p className="text-center text-xs text-muted-foreground mt-4">
-            Adım {step} / 5 — daha sonra ayarlardan güncelleyebilirsiniz
+            Her şeyi şimdi mükemmel yapmak zorunda değilsiniz; daha sonra ayarlardan değiştirebilirsiniz.
           </p>
         )}
       </div>

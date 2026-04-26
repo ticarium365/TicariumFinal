@@ -46,13 +46,14 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 async function seedDefaultCompanyIfMissing() {
-  // Production bootstrap: companies tablosu boşsa varsayılan "Prosan" işletmesi oluştur.
+  // Production bootstrap: companies tablosu boşsa legacy demo tenant oluştur.
+  // Not: "prosan" burada ürün adı değil, test/demo tenant seed'idir; davranış ve test uyumu için korunur.
   // Bu, çoklu işletme sisteminin tek-deployment senaryosunda da çalışmasını garanti eder
   // (custom domain bağlanana kadar default tenant olarak hizmet verir).
   const { companiesTable: co } = await import("@workspace/db");
   const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(co);
   if (count > 0) return;
-  logger.info("No companies found, seeding default 'Prosan' company...");
+  logger.info("No companies found, seeding default legacy demo company...");
   const now = new Date();
   await db.insert(co).values({
     name: "Prosan Endüstri",
@@ -133,7 +134,7 @@ async function seedDefaultUsers() {
     { username: "goruntule",   password: "staff123",       fullName: "Görüntüleyici",  role: "viewer"     as const },
   ];
 
-  // İlk şirketi bul (prosan = co1) — hem ilk seed hem upsert dalı için ortak
+  // İlk şirketi bul — hem ilk seed hem upsert dalı için ortak
   const { eq: eql } = await import("drizzle-orm");
   const { companiesTable: co } = await import("@workspace/db");
   const [firstCompany] = await db.select({ id: co.id }).from(co).orderBy(co.id).limit(1);

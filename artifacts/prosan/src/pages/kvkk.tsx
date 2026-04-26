@@ -3,12 +3,18 @@ export default function KvkkPage() {
     <div className="mx-auto max-w-3xl px-4 py-8 prose prose-zinc dark:prose-invert">
       <h1>KVKK Aydınlatma Metni</h1>
       <p className="text-sm text-zinc-500">Versiyon: v1.2026.04 — Yürürlük: Nisan 2026</p>
+      <p>
+        Bu metin, Ticarium365’i kullanırken hangi verilerin neden işlendiğini sade bir dille
+        açıklamak için hazırlanmıştır. Amacımız verinizi toplamak değil; hesabınızı güvenli
+        çalıştırmak, işletme kayıtlarınızı doğru tutmak ve talep ettiğiniz hizmeti sunmaktır.
+      </p>
 
       <h2>1. Veri Sorumlusu</h2>
       <p>
-        Ticarium365 SaaS platformu kapsamında işlenen kişisel veriler için veri sorumlusu,
-        platformu kullandığınız tenant şirkettir. Ticarium365 yalnızca veri işleyen
-        sıfatıyla teknik altyapıyı sağlar.
+        Ticarium365 SaaS platformu kapsamında işlenen müşteri/tedarikçi ve operasyon verileri
+        için veri sorumlusu çoğunlukla platformu kullanan tenant şirkettir. Ticarium365 teknik
+        altyapıyı sağlayan veri işleyen rolündedir. Kendi iletişim formlarımız ve destek
+        taleplerimiz için Ticarium365 ilgili süreçte veri sorumlusu olarak hareket edebilir.
       </p>
 
       <h2>2. İşlenen Kişisel Veriler</h2>
@@ -30,9 +36,9 @@ export default function KvkkPage() {
 
       <h2>4. Aktarım</h2>
       <p>
-        Verileriniz; pazaryeri (Trendyol, Hepsiburada, N11), e-fatura entegratörleri (Paraşüt),
-        SMS sağlayıcı (NetGSM), barındırma (Replit/Neon DB) ve resmi kurumlara (GİB) hizmet
-        gereği veya hukuki yükümlülük çerçevesinde aktarılabilir.
+        Verileriniz; yalnızca hizmeti çalıştırmak için gerekli olduğunda pazaryeri sağlayıcıları,
+        e-belge/e-fatura entegratörleri, SMS/e-posta sağlayıcıları, güvenli barındırma altyapısı
+        ve resmi kurumlarla paylaşılabilir. Bu aktarım ticari amaçla veri satışı anlamına gelmez.
       </p>
 
       <h2>5. Saklama Süresi</h2>
@@ -64,9 +70,17 @@ export default function KvkkPage() {
 
       <h2>8. Veri Güvenliği</h2>
       <p>
-        Veriler TLS 1.2+ ile şifrelenir, hassas alanlar AES-256-GCM ile saklanır,
-        çoklu kiracı izolasyonu (tenant scoping + Row Level Security) uygulanır.
-        İhlal durumunda 72 saat içinde KVKK Kuruluna ve etkilenen kişilere bildirim yapılır.
+        Veriler TLS ile aktarılır, hassas alanlar şifreli saklanır ve her firmanın verisi
+        kendi tenant alanı içinde tutulacak şekilde tasarlanır. Yetkisiz erişim riski için
+        oturum, rol ve tenant sınırı kontrolleri uygulanır. İhlal durumunda yasal bildirim
+        süreçleri işletilir.
+      </p>
+      <h2>9. Destek ve Başvuru</h2>
+      <p>
+        KVKK veya veri güvenliğiyle ilgili sorularınız için{" "}
+        <a href="mailto:kvkk@ticarium365.com">kvkk@ticarium365.com</a> adresinden bize ulaşabilirsiniz.
+        Destek taleplerinde kimliğinizi doğrulamak için ek bilgi isteyebiliriz; bu bilgi yalnızca
+        talebinizi sonuçlandırmak için kullanılır.
       </p>
     </div>
   );

@@ -6,7 +6,7 @@
 
 ## İstemci önbelleği
 
-- Prosan super-admin hub: `staleTime` varsayılan **180 saniye** (`billingMetricsPerformanceBundleV1.clientStaleTimeSuggestionSeconds` ile uyumlu).
+- Ticarium365 super-admin hub: `staleTime` varsayılan **180 saniye** (`billingMetricsPerformanceBundleV1.clientStaleTimeSuggestionSeconds` ile uyumlu).
 - Ağır payload tek round-trip’ta gelir; daha sık yenilemek sunucu ve tarayıcıyı gereksiz yükler.
 
 ## Performans alanı

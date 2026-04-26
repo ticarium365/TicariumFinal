@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { db, companiesTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import type { Company } from "@workspace/db";
+import { logger } from "../lib/logger.js";
 
 declare global {
   namespace Express {
@@ -94,6 +95,17 @@ export async function tenantMiddleware(req: Request, res: Response, next: NextFu
         return;
       }
       company = await getDefaultCompany();
+      if (IS_PRODUCTION && company) {
+        logger.error(
+          {
+            host,
+            companyId: company.id,
+            subdomain: company.subdomain,
+            replitFallback: isReplitDeployHost,
+          },
+          "tenant_default_company_fallback_used",
+        );
+      }
     }
 
     if (!company) {
@@ -133,7 +145,7 @@ export async function tenantMiddleware(req: Request, res: Response, next: NextFu
 
     next();
   } catch (err) {
-    console.error("Tenant middleware error:", err);
+    logger.error({ err }, "tenant_middleware_error");
     next(err);
   }
 }

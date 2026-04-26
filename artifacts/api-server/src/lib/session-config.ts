@@ -1,7 +1,21 @@
 import type { SessionOptions } from "express-session";
 import type { Express } from "express";
+import { logger } from "./logger.js";
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
+/**
+ * Oturum depolama mimarisi
+ * -------------------------
+ * `buildSessionOptions` bir **store** set etmez → express-session varsayılanı **MemoryStore** (süreç
+ * belleği) kullanılır. Aynı kullanıcı isteği her zaman aynı Node sürecine düşerse çalışır.
+ *
+ * **Yatay ölçekleme (birden çok API replikası) veya zero-downtime deploy** için, launch sonrası
+ * aynı değerle paylaşılan bir store (ör. Redis, `connect-pg-simple` + PostgreSQL) seçilmelidir;
+ * aksi halde oturum çerezi olsa da sunucu tarafı oturum verisi farklı replikada bulunmayabilir.
+ * Bu, operasyonel bir gereksinimdir; uygulama kodunda ayrı bir `store` atanmadığı sürece
+ * tek süreç / tek replika varsayılır.
+ */
 
 /**
  * Express `trust proxy` — Cloudflare tek atlama için genelde `1`.
@@ -55,6 +69,12 @@ export function buildSessionOptions(sessionSecret: string): SessionOptions {
   const sameSite = parseSameSite();
   const domainRaw = (process.env.SESSION_COOKIE_DOMAIN || "").trim();
   const domain = domainRaw.length > 0 ? domainRaw : undefined;
+  if (IS_PRODUCTION && domain && domain.startsWith(".")) {
+    logger.warn(
+      { SESSION_COOKIE_DOMAIN: domain },
+      "session_cookie_parent_domain_set",
+    );
+  }
   const pathRaw = (process.env.SESSION_COOKIE_PATH || "/").trim();
   const cookiePath = pathRaw.length > 0 ? pathRaw : "/";
 

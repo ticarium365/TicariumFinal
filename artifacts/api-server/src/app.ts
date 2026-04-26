@@ -17,6 +17,7 @@ import featureFlagsRuntimeRouter from "./routes/feature-flags-runtime.js";
 import webhookReceiversRouter from "./routes/webhook-receivers.js";
 import { logger } from "./lib/logger.js";
 import { tenantMiddleware } from "./middlewares/tenant.js";
+import { enforceTenantSessionAlignment } from "./middlewares/tenant-boundary.js";
 import { initSentry, Sentry } from "./lib/sentry.js";
 import { applyTrustProxy, buildSessionOptions } from "./lib/session-config.js";
 import crypto from "node:crypto";
@@ -155,6 +156,10 @@ app.use(cors({
   maxAge: 600,
 }));
 
+// Liveness/readiness — session, tenant ve JSON body'den önce (monitörler; oturum yazılmaz)
+app.use("/api", healthzRouter);
+app.use("/api/v1", healthzRouter);
+
 // İstek gövdesi boyut sınırı (Sprint 25)
 app.use(express.json({
   limit: "5mb",
@@ -263,13 +268,46 @@ app.use("/api/contact", contactRateLimit);
 // Contact router — anonim form POST + super-admin yönetim, tenant middleware'i bypass eder
 app.use("/api/contact", contactRouter);
 
-// Healthz / readyz — tenant middleware bypass, monitor için
-app.use("/api", healthzRouter);
-app.use("/api/v1", healthzRouter);
-
 // KVKK consent endpoint'i — anonim kullanıcılar da onay verebilir (cookie consent)
 app.use("/api/kvkk", kvkkRouter);
 app.use("/api/v1/kvkk", kvkkRouter);
+
+// Iyzico billing uçları — imza/HMAC ile doğrulanır; IP flood katmanı (ana router + tenant’tan önce)
+const billingWebhookRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 240,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too Many Requests", message: "Çok fazla webhook isteği." },
+  skip: () => !IS_PRODUCTION,
+  keyGenerator: (req) => ipKeyGenerator(req.ip ?? ""),
+});
+const billingReturnRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 90,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too Many Requests", message: "Çok fazla ödeme dönüş isteği." },
+  skip: () => !IS_PRODUCTION,
+  keyGenerator: (req) => ipKeyGenerator(req.ip ?? ""),
+});
+app.use("/api/billing/webhook", billingWebhookRateLimit);
+app.use("/api/billing/return", billingReturnRateLimit);
+app.use("/api/v1/billing/webhook", billingWebhookRateLimit);
+app.use("/api/v1/billing/return", billingReturnRateLimit);
+
+// Inbound marketplace webhooks — HMAC zorunlu (prod); handler’dan önce IP üst sınırı
+const inboundWebhookRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 400,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too Many Requests", message: "Çok fazla webhook isteği." },
+  skip: () => !IS_PRODUCTION,
+  keyGenerator: (req) => ipKeyGenerator(req.ip ?? ""),
+});
+app.use("/api/webhooks", inboundWebhookRateLimit);
+app.use("/api/v1/webhooks", inboundWebhookRateLimit);
 
 // Inbound webhook receiver — tenant middleware ÖNCE mount edilir, raw body parsing ister
 app.use("/api", webhookReceiversRouter);
@@ -319,6 +357,9 @@ app.use("/api", publicApiRouter);
 // Tenant middleware — session tabanlı rotalar için
 app.use("/api", tenantMiddleware);
 app.use("/api/v1", tenantMiddleware);
+// P0 — Oturumdaki companyId ile Host kiracısı hizalaması (PSP webhook'ları hariç)
+app.use("/api", enforceTenantSessionAlignment);
+app.use("/api/v1", enforceTenantSessionAlignment);
 app.use("/api", router);
 app.use("/api/v1", router);
 
@@ -341,7 +382,13 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   }, "unhandled_error");
 
   if (status >= 500) {
-    try { Sentry?.captureException?.(err); } catch { /* sentry off */ }
+    try {
+      Sentry?.captureException?.(err, {
+        companyId: (req as any).companyId,
+        requestId: (req as any).id,
+        path: req.url?.split("?")[0],
+      });
+    } catch { /* sentry off */ }
   }
 
   if (res.headersSent) return;

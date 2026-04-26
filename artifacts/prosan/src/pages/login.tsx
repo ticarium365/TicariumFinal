@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Loader2, Lock, User, Eye, EyeOff,
-  Building2, ShoppingCart,
+  Building2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BrandLogo, BrandWordmark } from "@/components/brand-logo";
@@ -15,7 +15,6 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loginMode, setLoginMode] = useState<"business" | "buyer">("business");
   const login = useLogin();
   const { toast } = useToast();
 
@@ -28,8 +27,8 @@ export default function Login() {
     } catch (error: any) {
       const apiMessage = error?.response?.data?.message || error?.data?.message;
       toast({
-        title: "Giriş yapılamadı",
-        description: apiMessage || "Kullanıcı adı veya şifrenizi tekrar kontrol edin.",
+        title: "Giriş bilgilerini kontrol edelim",
+        description: apiMessage || "Kullanıcı adı veya şifre eşleşmedi. Büyük/küçük harf ve boşlukları kontrol edip tekrar deneyin.",
         variant: "destructive",
       });
     }
@@ -83,49 +82,22 @@ export default function Login() {
               Hoş geldiniz
             </h1>
             <p className="text-sm mt-1" style={{ color: "#64748B" }}>
-              {loginMode === "business"
-                ? "İşletme hesabınızla giriş yapın."
-                : "Satınalma portalına giriş yapın."}
+              İşletme ya da satınalma hesabınızla güvenli şekilde giriş yapın.
             </p>
           </div>
 
-          {/* İşletme / Satınalmacı seçimi */}
+          {/* Hesap türü bilgi kutusu — seçim zorunluluğu yok */}
           <div
-            className="grid grid-cols-2 gap-1 p-1 rounded-xl mb-5"
+            className="rounded-xl mb-5 px-4 py-3 text-sm"
             style={{
               background: "rgba(99,102,241,0.06)",
               border: "1px solid rgba(99,102,241,0.10)",
             }}
-            role="tablist"
-            aria-label="Giriş türü"
           >
-            {([
-              { v: "business", icon: Building2, label: "İşletme" },
-              { v: "buyer", icon: ShoppingCart, label: "Satınalmacı" },
-            ] as const).map(({ v, icon: Icon, label }) => {
-              const active = loginMode === v;
-              return (
-                <button
-                  key={v}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setLoginMode(v)}
-                  data-testid={`tab-login-${v}`}
-                  className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-sm font-semibold transition-all"
-                  style={{
-                    background: active
-                      ? "linear-gradient(135deg,#2563eb 0%,#0EA5A4 100%)"
-                      : "transparent",
-                    color: active ? "white" : "#475569",
-                    boxShadow: active ? "0 6px 18px -8px rgba(79,70,229,0.45)" : "none",
-                  }}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span>{label}</span>
-                </button>
-              );
-            })}
+            <div className="flex items-start gap-2 text-slate-600">
+              <Building2 className="w-4 h-4 mt-0.5 text-blue-600" />
+              <span>Tek giriş ekranı: işletme, satınalmacı ve yönetici hesapları buradan devam eder.</span>
+            </div>
           </div>
 
           <form
@@ -259,7 +231,7 @@ export default function Login() {
                   color: "transparent",
                 }}
               >
-                Hemen kayıt olun
+                Ücretsiz hesap oluşturun
               </Link>
             </p>
           </div>
@@ -270,7 +242,7 @@ export default function Login() {
           className="text-center text-[11px] mt-5 leading-relaxed px-2"
           style={{ color: "#64748B" }}
         >
-          Bu siteye girerek{" "}
+          Giriş yaparak verilerinizin güvenli oturum ve firma sınırları içinde işlendiğini kabul edersiniz.{" "}
           <a href="/kvkk" className="underline hover:text-blue-700">
             KVKK Aydınlatma Metni
           </a>{" "}
