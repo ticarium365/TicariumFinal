@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from "react";
+import { Suspense } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -128,26 +128,6 @@ installFeatureLockInterceptor();
 
 const queryClient = new QueryClient();
 
-/**
- * Sprint I — kök rotada accountType'a göre yönlendirme.
- * - purchasing → /satinalma-merkezi (sade B2B vitrin)
- * - diğerleri  → /dashboard
- */
-function HomeRedirect() {
-  const { user, isAuthenticated, isLoading } = useAuth();
-  const [, navigate] = useLocation();
-
-  useEffect(() => {
-    if (isLoading || !isAuthenticated || !user) return;
-    const at = ((user as any)?.accountType ?? "seller") as string;
-    navigate(at === "purchasing" ? "/satinalma-merkezi" : "/dashboard", { replace: true });
-  }, [isLoading, isAuthenticated, user, navigate]);
-
-  if (isLoading) return null;
-  if (!isAuthenticated) return <HomePage />;
-  return null;
-}
-
 function ProtectedRoute({
   component: Component,
   roles,
@@ -221,9 +201,7 @@ function AuthenticatedRouter() {
         <Route path="/iletisim" component={IletisimPage} />
         <Route path="/kvkk" component={KvkkPage} />
 
-        <Route path="/">
-          {() => <HomeRedirect />}
-        </Route>
+        <Route path="/" component={HomePage} />
 
         <Route path="/dashboard">
           {() => <ProtectedRoute component={Dashboard} />}
