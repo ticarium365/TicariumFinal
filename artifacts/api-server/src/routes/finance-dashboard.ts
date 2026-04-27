@@ -13,18 +13,13 @@ import {
 } from "@workspace/db";
 import { and, eq, desc, sql, gte, lte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
-import OpenAI from "openai";
 import * as XLSX from "xlsx";
 // Sprint 65 — canonical finance ledger
 import { getSummary as ledgerSummary, getExpenseByCategory } from "../services/finance/ledger.js";
+import { aiFeatureDisabledBody, getOpenAIClient } from "../lib/openai-client.js";
 
 const router: IRouter = Router();
 router.use(requireAuth);
-
-const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-});
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SPRINT 61 — FİNANS DASHBOARD (Cashflow + Borç/Alacak yaşlandırma + KPI'lar)
@@ -236,6 +231,8 @@ router.get("/accountant-export", async (req: Request, res: Response) => {
 router.post("/ai-cfo/analyze", async (req: Request, res: Response) => {
   try {
     const companyId = req.companyId!;
+    const openai = getOpenAIClient();
+    if (!openai) return res.status(503).json(aiFeatureDisabledBody());
     const { question } = req.body ?? {};
 
     // KPI'ları topla (summary'i içerden çağırmak yerine inline minimal sorgu)

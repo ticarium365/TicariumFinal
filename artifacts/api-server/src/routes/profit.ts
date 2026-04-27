@@ -5,20 +5,15 @@ import {
   expensesTable, expenseCategoriesTable,
 } from "@workspace/db";
 import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
-import OpenAI from "openai";
 import multer from "multer";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { assertWithinUsageLimit, incrementUsageSafe } from "../services/usage.js";
+import { aiFeatureDisabledBody, getOpenAIClient } from "../lib/openai-client.js";
 
 const router = Router();
 router.use(requireAuth);
 const requireWriter = requireRole(["admin", "staff", "super_admin"]);
 const upload = multer({ limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB
-
-const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FIŞ / FATURA OCR — Image upload → GPT-5.2 vision → yapısal veri
@@ -44,9 +39,8 @@ KDV dahil/hariç ayırımı yap. Fiş okunamıyorsa amount=0 ve confidence=0 dö
 
 router.post("/receipt-ocr", requireWriter, upload.single("file"), async (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ error: "Görsel dosyası gerekli (file)" });
-  if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
-    return res.status(503).json({ error: "AI servisi yapılandırılmamış" });
-  }
+  const openai = getOpenAIClient();
+  if (!openai) return res.status(503).json(aiFeatureDisabledBody());
   // Dalga 23 — OCR kontör gating: limit aşıldıysa 402 + ek kontör daveti
   try {
     await assertWithinUsageLimit(req.companyId!, "ocr", 1);

@@ -22,7 +22,7 @@ import { and, eq, desc, sql, gte, lte, ilike, or, count } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { assertWithinUsageLimit, incrementUsageSafe } from "../services/usage.js";
 import { ObjectStorageService } from "../lib/objectStorage.js";
-import OpenAI from "openai";
+import { aiFeatureDisabledBody, getOpenAIClient } from "../lib/openai-client.js";
 // pdf-parse: tree-shake için lazy import (CJS, runtime)
 async function pdfParseLazy(buffer: Buffer): Promise<{ text: string }> {
   // @ts-ignore
@@ -830,10 +830,6 @@ router.put("/mailbox/config", async (req: Request, res: Response) => {
 // ═══════════════════════════════════════════════════════════════════════════
 // SPRINT 57 — OCR (GPT-5.2 Vision + pdf-parse fallback)
 // ═══════════════════════════════════════════════════════════════════════════
-const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-});
 
 const OCR_SYSTEM_PROMPT = `Sen bir Türk fatura / dekont / gider belgesi analiz uzmanısın.
 Verilen belgeden YALNIZCA aşağıdaki JSON şemasını döndür (markdown yok, açıklama yok):
@@ -861,6 +857,8 @@ async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
 router.post("/:id/ocr", async (req: Request, res: Response) => {
   try {
     const companyId = req.companyId!;
+    const openai = getOpenAIClient();
+    if (!openai) return res.status(503).json(aiFeatureDisabledBody());
     const id = Number(req.params.id);
     // Dalga 23 — OCR kontör gating
     try {
