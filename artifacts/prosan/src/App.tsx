@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -123,10 +123,20 @@ import {
 } from "@/routes/lazy-pages";
 import { UpgradeModal, installFeatureLockInterceptor } from "@/components/upgrade-modal";
 import CookieConsentBanner from "@/components/cookie-consent-banner";
+import { loginUrlWithCurrentLocationNext } from "@/lib/login-redirect";
+import { Loader2 } from "lucide-react";
 
 installFeatureLockInterceptor();
 
 const queryClient = new QueryClient();
+
+function FullScreenBlockingLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-label="Yükleniyor" />
+    </div>
+  );
+}
 
 function ProtectedRoute({
   component: Component,
@@ -142,11 +152,23 @@ function ProtectedRoute({
   const { user, isAuthenticated, isLoading, needsOnboarding } = useAuth();
   const [, navigate] = useLocation();
 
-  if (isLoading) return null;
+  const role = user ? ((user as { role?: string }).role as string | undefined) : undefined;
 
-  if (!isAuthenticated) {
-    navigate("/login", { replace: true });
-    return null;
+  const mustSignInAgain =
+    !isLoading &&
+    (!isAuthenticated || !user || (roles?.length ? !role : false));
+
+  useEffect(() => {
+    if (!mustSignInAgain) return;
+    navigate(loginUrlWithCurrentLocationNext(), { replace: true });
+  }, [mustSignInAgain, navigate]);
+
+  if (isLoading) {
+    return <FullScreenBlockingLoader />;
+  }
+
+  if (!isAuthenticated || !user || (roles?.length && !role)) {
+    return <FullScreenBlockingLoader />;
   }
 
   if (!skipOnboardingCheck && needsOnboarding) {
@@ -154,7 +176,7 @@ function ProtectedRoute({
     return null;
   }
 
-  if (roles && user && !roles.includes((user as any).role)) {
+  if (roles?.length && role && !roles.includes(role)) {
     return (
       <Layout>
         <div className="p-8 text-center">

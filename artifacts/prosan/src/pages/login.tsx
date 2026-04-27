@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BrandLogo, BrandWordmark } from "@/components/brand-logo";
+import { safePathAfterLogin } from "@/lib/login-redirect";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -23,7 +24,8 @@ export default function Login() {
     if (!username || !password) return;
     try {
       await login.mutateAsync({ data: { username, password } });
-      window.location.replace("/dashboard");
+      const next = new URLSearchParams(window.location.search).get("next");
+      window.location.replace(safePathAfterLogin(next));
     } catch (error: any) {
       const apiMessage = error?.response?.data?.message || error?.data?.message;
       toast({
