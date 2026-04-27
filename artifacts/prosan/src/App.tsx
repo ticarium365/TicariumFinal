@@ -149,25 +149,17 @@ function ProtectedRoute({
   skipOnboardingCheck?: boolean;
   noLayout?: boolean;
 }) {
-  const { user, isAuthenticated, isLoading, needsOnboarding } = useAuth();
+  const { user, isAuthenticated, needsOnboarding } = useAuth();
   const [, navigate] = useLocation();
 
-  const role = user ? ((user as { role?: string }).role as string | undefined) : undefined;
-
-  const mustSignInAgain =
-    !isLoading &&
-    (!isAuthenticated || !user || (roles?.length ? !role : false));
+  const role = user?.role;
 
   useEffect(() => {
-    if (!mustSignInAgain) return;
+    if (isAuthenticated) return;
     navigate(loginUrlWithCurrentLocationNext(), { replace: true });
-  }, [mustSignInAgain, navigate]);
+  }, [isAuthenticated, navigate]);
 
-  if (isLoading) {
-    return <FullScreenBlockingLoader />;
-  }
-
-  if (!isAuthenticated || !user || (roles?.length && !role)) {
+  if (!isAuthenticated || !user) {
     return <FullScreenBlockingLoader />;
   }
 

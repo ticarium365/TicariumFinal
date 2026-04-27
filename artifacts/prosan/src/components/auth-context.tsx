@@ -1,9 +1,26 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useCallback } from "react";
 import { useGetMe, User } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetMeQueryKey } from "@workspace/api-client-react";
+import { loginUrlWithCurrentLocationNext } from "@/lib/login-redirect";
+
+const SESSION_ROLES = ["admin", "staff", "viewer", "super_admin"] as const;
+
+/** `/me` başarılı ama gövde eksik / bozuksa oturum geçersiz sayılır */
+export function isVerifiedSessionUser(u: unknown): u is User {
+  if (!u || typeof u !== "object") return false;
+  const o = u as Record<string, unknown>;
+  return (
+    typeof o.id === "number" &&
+    Number.isFinite(o.id) &&
+    typeof o.username === "string" &&
+    o.username.length > 0 &&
+    typeof o.role === "string" &&
+    (SESSION_ROLES as readonly string[]).includes(o.role)
+  );
+}
 
 // ─── Dalga 18B: Aktif plan + limit + isTrial bilgileri ─────────────────────
 export interface PlanLimits {
@@ -59,25 +76,42 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
-  const { data: user, isLoading, error } = useGetMe({
-    query: { queryKey: getGetMeQueryKey(), retry: false },
+  const { data: rawMe, isLoading, error } = useGetMe({
+    query: {
+      queryKey: getGetMeQueryKey(),
+      retry: false,
+      staleTime: 0,
+    },
   });
 
   const [, setLocation] = useLocation();
 
+  /** Hata veya şüpheli gövde — önceki başarılı cache'i kullanma (RQ stale-on-error) */
+  const user =
+    error ? null : rawMe && isVerifiedSessionUser(rawMe) ? rawMe : null;
+
+  useEffect(() => {
+    if (error) {
+      queryClient.setQueryData(getGetMeQueryKey(), undefined);
+      return;
+    }
+    if (rawMe != null && !isVerifiedSessionUser(rawMe)) {
+      queryClient.setQueryData(getGetMeQueryKey(), undefined);
+    }
+  }, [error, rawMe, queryClient]);
+
   const needsOnboarding =
     !!user &&
-    (user as any).role === "admin" &&
+    user.role === "admin" &&
     (user as any).onboardingCompleted === false;
 
   useEffect(() => {
-    if (!isLoading && error) {
-      // Public routes — auth gerekmez, /login'e yönlendirme
-      const publicPaths = ["/", "/login", "/kayit", "/verify", "/sifremi-unuttum", "/forgot-password", "/karsilastir", "/neden-ticarium365", "/hakkimizda", "/amacimiz", "/paketler", "/iletisim", "/kvkk", "/kullanim-kosullari"];
-      const here = window.location.pathname.replace(/\/$/, "") || "/";
-      if (!publicPaths.some((p) => here === p || (p !== "/" && here.startsWith(p + "/")))) {
-        setLocation("/login");
-      }
+    if (isLoading) return;
+    if (!error) return;
+    const publicPaths = ["/", "/login", "/kayit", "/verify", "/sifremi-unuttum", "/forgot-password", "/karsilastir", "/neden-ticarium365", "/hakkimizda", "/amacimiz", "/paketler", "/iletisim", "/kvkk", "/kullanim-kosullari", "/odeme/sonuc"];
+    const here = window.location.pathname.replace(/\/$/, "") || "/";
+    if (!publicPaths.some((p) => here === p || (p !== "/" && here.startsWith(p + "/")))) {
+      setLocation(loginUrlWithCurrentLocationNext());
     }
   }, [isLoading, error, setLocation]);
 
@@ -96,12 +130,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: (user as any) || null,
+        user,
         isLoading,
         isAuthenticated: !!user,
         needsOnboarding,
-        plan: ((user as any)?.plan as PlanInfo | null) ?? null,
-        usage: ((user as any)?.usage as UsageInfo | null) ?? null,
+        plan: (user ? ((user as any)?.plan as PlanInfo | null) : null) ?? null,
+        usage: (user ? ((user as any)?.usage as UsageInfo | null) : null) ?? null,
         checkAuth,
       }}
     >
