@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Building2, CheckCircle, XCircle, Package, Users, ShoppingCart, Calendar, Settings, ChevronLeft, ChevronRight } from "lucide-react";
+import { initialLetter } from "@/lib/display-initial";
 
 interface Company {
   id: number;
@@ -290,7 +291,7 @@ export default function CompaniesAdmin() {
           {pagedCompanies.map((company) => (
             <div key={company.id} className="bg-card border rounded-xl p-5 flex items-center gap-4">
               <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0" style={{ background: company.primaryColor ?? "#2563eb" }}>
-                {company.name.charAt(0).toUpperCase()}
+                {initialLetter(company.name)}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">

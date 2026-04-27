@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-context";
 import { apiBase } from "@/lib/api";
+import { initialLetter } from "@/lib/display-initial";
 
 interface Review {
   id: number;
@@ -180,7 +181,7 @@ export default function CompanyProfilePage({ subdomain }: Props) {
               <img src={profile.companyLogo} alt={profile.companyName} className="h-20 w-20 rounded-xl object-contain border shrink-0" />
             ) : (
               <div className="h-20 w-20 rounded-xl flex items-center justify-center text-white font-bold text-3xl shrink-0" style={{ backgroundColor: profile.companyColor }}>
-                {profile.companyName.charAt(0)}
+                {initialLetter(profile.companyName)}
               </div>
             )}
             <div className="flex-1 min-w-0">

@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -135,13 +135,16 @@ const queryClient = new QueryClient();
  */
 function HomeRedirect() {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    if (isLoading || !isAuthenticated || !user) return;
+    const at = ((user as any)?.accountType ?? "seller") as string;
+    navigate(at === "purchasing" ? "/satinalma-merkezi" : "/dashboard", { replace: true });
+  }, [isLoading, isAuthenticated, user, navigate]);
+
   if (isLoading) return null;
-  // Public landing page — giriş yapmamış kullanıcı için
-  if (!isAuthenticated) {
-    return <HomePage />;
-  }
-  const at = ((user as any)?.accountType ?? "seller") as string;
-  window.location.href = at === "purchasing" ? "/satinalma-merkezi" : "/dashboard";
+  if (!isAuthenticated) return <HomePage />;
   return null;
 }
 
@@ -162,12 +165,12 @@ function ProtectedRoute({
   if (isLoading) return null;
 
   if (!isAuthenticated) {
-    window.location.href = "/login";
+    navigate("/login", { replace: true });
     return null;
   }
 
   if (!skipOnboardingCheck && needsOnboarding) {
-    navigate("/onboarding");
+    navigate("/onboarding", { replace: true });
     return null;
   }
 

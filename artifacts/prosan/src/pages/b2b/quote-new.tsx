@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiBase } from "@/lib/api";
+import { initialLetter } from "@/lib/display-initial";
 
 interface CompanyInfo {
   companyName: string;
@@ -154,7 +155,7 @@ export default function QuoteNewPage() {
             <img src={seller.companyLogo} alt="" className="h-14 w-14 rounded-xl object-contain border" />
           ) : (
             <div className="h-14 w-14 rounded-xl flex items-center justify-center text-white font-bold text-2xl" style={{ backgroundColor: seller.companyColor }}>
-              {seller.companyName.charAt(0)}
+              {initialLetter(seller.companyName)}
             </div>
           )}
           <div>

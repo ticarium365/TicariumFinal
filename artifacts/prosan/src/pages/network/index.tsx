@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiBase } from "@/lib/api";
+import { initialLetter } from "@/lib/display-initial";
 import { useToast } from "@/hooks/use-toast";
 
 interface NetworkCompany {
@@ -65,7 +66,7 @@ function CompanyCard({ company }: { company: NetworkCompany }) {
               <img src={company.companyLogo} alt={company.companyName} className="h-10 w-10 rounded-lg object-contain border" />
             ) : (
               <div className="h-10 w-10 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0" style={{ backgroundColor: company.companyColor }}>
-                {company.companyName.charAt(0)}
+                {initialLetter(company.companyName)}
               </div>
             )}
             <div>

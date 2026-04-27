@@ -88,6 +88,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { trackProductEvent } from "@/lib/product-analytics";
+import { initialLetter } from "@/lib/display-initial";
 
 function TrialBanner() {
   const { user } = useAuth();
@@ -330,6 +331,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
 
   const companyName = company?.name ?? "Ticarium365";
+
+  const username = user ? (user as { username?: string | null }).username?.trim() : undefined;
+  const sidebarDisplayName =
+    user?.fullName?.trim() || username || "Kullanıcı";
+  const sidebarInitial = initialLetter(user?.fullName?.trim() || username);
 
   const accountType = ((user as any)?.accountType ?? "seller") as "buyer" | "seller" | "both" | "purchasing";
   const isPurchasing = accountType === "purchasing";
@@ -606,10 +612,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <div className="p-4 mt-auto border-t border-slate-200 bg-white">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="h-9 w-9 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0 bg-gradient-to-br from-blue-600 to-teal-600 shadow-sm">
-                    {user.fullName.charAt(0).toUpperCase()}
+                    {sidebarInitial}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{user.fullName}</p>
+                    <p className="text-sm font-semibold text-slate-900 truncate">{sidebarDisplayName}</p>
                     <div className="flex items-center gap-1 text-[11px] text-slate-500 truncate">
                       <Building2 className="h-3 w-3 shrink-0" />
                       <span className="truncate">{companyName}</span>
@@ -696,10 +702,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="p-3 mt-auto border-t border-slate-200 bg-white">
           <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-slate-50 transition-colors">
             <div className="h-9 w-9 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0 bg-gradient-to-br from-blue-600 to-teal-600 shadow-sm">
-              {user.fullName.charAt(0).toUpperCase()}
+              {sidebarInitial}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 truncate" data-testid="sidebar-user-name">{user.fullName}</p>
+              <p className="text-sm font-semibold text-slate-900 truncate" data-testid="sidebar-user-name">{sidebarDisplayName}</p>
               <div className="flex items-center gap-1 text-[11px] text-slate-500 truncate">
                 <Building2 className="h-3 w-3 shrink-0" />
                 <span className="truncate" data-testid="sidebar-tenant-name">{companyName}</span>

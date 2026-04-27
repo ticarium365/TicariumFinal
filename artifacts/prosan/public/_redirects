@@ -1,0 +1,2 @@
+# Cloudflare Pages — SPA fallback so every path serves index.html (client router owns /)
+/*    /index.html   200

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRoute } from "wouter";
 import { Loader2, ShoppingCart, Plus, Minus, X, Check, AlertCircle, Store } from "lucide-react";
+import { initialLetter } from "@/lib/display-initial";
 
 type Storefront = {
   id: number;
@@ -98,7 +99,7 @@ export default function PublicStorefrontPage() {
               <img src={storefront.themeConfig.logoUrl} alt="" className="h-10 w-10 rounded object-cover" />
             ) : (
               <div className="h-10 w-10 rounded flex items-center justify-center text-white font-bold" style={{ background: primary }}>
-                {storefront.name.charAt(0)}
+                {initialLetter(storefront.name)}
               </div>
             )}
             <div className="min-w-0">
