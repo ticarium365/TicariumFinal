@@ -3,8 +3,10 @@
   "version": "0.0.0",
   "license": "MIT",
   "engines": {
-    "node": ">=20.10.0 <25"
+    "node": ">=20.10.0 <25",
+    "pnpm": ">=10.33.1"
   },
+  "packageManager": "pnpm@10.33.1",
   "scripts": {
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
