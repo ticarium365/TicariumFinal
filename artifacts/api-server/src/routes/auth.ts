@@ -634,7 +634,7 @@ function validateRegisterInput(b: any): { ok: true; data: RegisterCommonInput } 
 }
 
 /**
- * Public business registration — 21 günlük tam sürüm trial başlatır.
+ * Public business registration — `TRIAL_DAYS` (30) günlük tam sürüm trial başlatır.
  * Subdomain otomatik slug + collision suffix; pkg_trial_enterprise/yearly seedlenir.
  */
 router.post("/register/business", async (req: Request, res: Response) => {
@@ -714,7 +714,7 @@ router.post("/register/business", async (req: Request, res: Response) => {
         startedAt: now,
         expiresAt: trialEndsAt,
         autoRenew: false,
-        notes: "21-day trial — auto-seeded on registration",
+        notes: "30-day trial — auto-seeded on registration",
       });
 
       const [vt] = await tx.insert(verificationTokensTable).values({
@@ -763,7 +763,7 @@ router.post("/register/business", async (req: Request, res: Response) => {
       subdomain,
       trialEndsAt,
       redirect: "/dashboard?welcome=1",
-      message: "Hesabınız oluşturuldu. 21 gün boyunca tüm özelliklere erişebilirsiniz.",
+      message: "Hesabınız oluşturuldu. Deneme süreniz boyunca tanımlı paket kapsamındaki özelliklere erişebilirsiniz.",
     });
   } catch (err: any) {
     if (err?.code === "23505") {
