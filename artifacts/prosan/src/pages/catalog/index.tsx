@@ -3,8 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Search, Package, Phone, Mail, MapPin, Filter, X } from "lucide-react";
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+import { apiBase } from "@/lib/api";
 
 interface CatalogProduct {
   id: number;
@@ -107,7 +106,7 @@ export default function CatalogPage() {
     });
 
     setLoading(true);
-    fetch(`${API_BASE}/api/catalog?${params}`)
+    fetch(`${apiBase}/catalog?${params}`)
       .then((r) => r.json())
       .then((d) => setData(d))
       .catch(console.error)

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { apiUrl } from "@/lib/api";
 import {
   Inbox, Upload, Search, FolderPlus, Folder, FolderOpen, Filter,
   FileText, Receipt, FileSpreadsheet, FileSignature, FileCheck2,
@@ -330,7 +331,7 @@ export default function FinanceDocumentsPage() {
   };
 
   const downloadDoc = (id: number) => {
-    window.open(`${API}/${id}/download`, "_blank");
+    window.open(apiUrl(`${API}/${id}/download`), "_blank");
   };
 
   // ─────── Sprint 57 — OCR ───────

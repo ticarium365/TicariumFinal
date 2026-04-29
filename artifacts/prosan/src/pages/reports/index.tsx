@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/components/auth-context";
+import { apiUrl } from "@/lib/api";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // YARDIMCI
@@ -141,7 +142,7 @@ function SalesTab({ startDate, endDate }: { startDate: string; endDate: string }
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Ürün Bazlı Satışlar (İlk 20)</h3>
           <Button size="sm" variant="outline" className="gap-1 h-7 text-xs"
-            onClick={() => window.open(`/api/reports/export/sales?startDate=${startDate}&endDate=${endDate}`, "_blank")}>
+            onClick={() => window.open(apiUrl(`/api/reports/export/sales?startDate=${startDate}&endDate=${endDate}`), "_blank")}>
             <Download className="h-3 w-3" /> CSV İndir
           </Button>
         </div>
@@ -339,7 +340,7 @@ function SupplierTab({ startDate, endDate }: { startDate: string; endDate: strin
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">En Çok Alış Yapılan Tedarikçiler</h3>
           <Button size="sm" variant="outline" className="gap-1 h-7 text-xs"
-            onClick={() => window.open(`/api/reports/export/purchases?startDate=${startDate}&endDate=${endDate}`, "_blank")}>
+            onClick={() => window.open(apiUrl(`/api/reports/export/purchases?startDate=${startDate}&endDate=${endDate}`), "_blank")}>
             <Download className="h-3 w-3" /> CSV İndir
           </Button>
         </div>
@@ -397,7 +398,7 @@ function StockTab() {
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Kategori Bazlı Stok</h3>
           <Button size="sm" variant="outline" className="gap-1 h-7 text-xs"
-            onClick={() => window.open("/api/reports/export/stock", "_blank")}>
+            onClick={() => window.open(apiUrl("/api/reports/export/stock"), "_blank")}>
             <Download className="h-3 w-3" /> CSV İndir
           </Button>
         </div>

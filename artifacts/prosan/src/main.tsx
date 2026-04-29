@@ -1,3 +1,4 @@
+import "./lib/api-runtime-bootstrap";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";

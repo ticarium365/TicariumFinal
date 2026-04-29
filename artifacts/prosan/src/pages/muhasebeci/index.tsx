@@ -16,6 +16,7 @@ import {
   UserPlus, Lock, Unlock, FileText, Download, Calculator, Calendar,
   TrendingUp, TrendingDown, Receipt, Building2,
 } from "lucide-react";
+import { apiUrl } from "@/lib/api";
 
 const fmtTRY = (n: number | null | undefined) =>
   new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 2 }).format(Number(n || 0));
@@ -109,7 +110,7 @@ export default function MuhasebeciPage() {
   }
 
   const downloadBABS = () => {
-    window.open(`/api/reports-official/ba-bs.csv?period=${period}&threshold=5000`, "_blank");
+    window.open(apiUrl(`/api/reports-official/ba-bs.csv?period=${period}&threshold=5000`), "_blank");
   };
 
   const periodOptions = useMemo(() => {

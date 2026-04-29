@@ -11,6 +11,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { BrandLogo, BrandWordmark } from "@/components/brand-logo";
 import { safePathAfterLogin } from "@/lib/login-redirect";
+import { apiBase } from "@/lib/api";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -106,7 +107,7 @@ export default function Login() {
             onSubmit={handleSubmit}
             className="space-y-4"
             method="post"
-            action="/api/auth/login"
+            action={`${apiBase}/auth/login`}
           >
             <div className="space-y-1.5">
               <Label htmlFor="username" style={{ color: "#334155", fontWeight: 500 }}>
