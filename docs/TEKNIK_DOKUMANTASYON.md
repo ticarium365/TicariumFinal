@@ -2,6 +2,8 @@
 
 Bu doküman, Ticarium365 projesinin teknik yapısını, geliştirme ortamını, ana modüllerini ve canlıya çıkışta dikkat edilmesi gereken noktaları özetler.
 
+**Hızlı giriş:** kökte [`dokümantasyon/`](../dokümantasyon/README.md) — yeni geliştirici özeti ([`yeni-gelistirici.md`](../dokümantasyon/yeni-gelistirici.md)) ve API envanteri ([`api-yuzeyi.md`](../dokümantasyon/api-yuzeyi.md)).
+
 ## 1. Genel Mimari
 
 Ticarium365 monorepo yapısında geliştirilmiştir.
@@ -227,6 +229,23 @@ Davranış:
 - `/billing/webhook` ve `/webhooks/*` gibi dış imzalı uçlar bu kontrolden hariç tutulur.
 
 Bu yapı production tenant izolasyonu için kritiktir.
+
+### 6.3 Frontend oturum doğrulama (Prosan)
+
+Web arayüzü backend ile aynı **cookie tabanlı session** modelini kullanır; kimlik bilgisi **`GET /api/auth/me`** (veya eşdeğer OpenAPI hook: `useGetMe`) ile doğrulanır.
+
+Önemli dosyalar:
+
+- `artifacts/prosan/src/components/auth-context.tsx` — `AuthProvider`, oturum gövdesinin doğrulanması
+- `artifacts/prosan/src/App.tsx` — `ProtectedRoute`, korumalı sayfa sarmalayıcısı
+- `artifacts/prosan/src/lib/login-redirect.ts` — giriş sonrası güvenli yönlendirme (`next` parametresi)
+
+Davranış özeti:
+
+1. **Doğrulanmış kullanıcı:** Son başarılı `/me` yanıtında; sayısal ve sonlu `id`, boş olmayan `username`, izin verilen `role` (`admin` | `staff` | `viewer` | `super_admin`) olmalıdır. Eksik veya bozuk gövde oturum yok sayılır.
+2. **React Query ve hata:** `/me` refetch **hata** verdiğinde (ör. süresi dolmuş çerez), önceki başarılı cache güvenilmez; cache temizlenir ve kullanıcı **oturumsuz** kabul edilir (stale-on-error sızıntısının önü).
+3. **Korumalı rotalar:** `ProtectedRoute` yalnızca doğrulanmış `user` varken içerik (ve `Layout`) render eder; aksi halde tam ekran yükleyici gösterilir ve uygulama `loginUrlWithCurrentLocationNext()` ile `/login?next=...` adresine yönlendirir (ör. `/dashboard` için `next=/dashboard`).
+4. **Halka açık sayfalar:** Ana sayfa, giriş/kayıt, ödeme dönüşü (`/odeme/sonuc`) vb. üzerindeyken `/me` hatası kullanıcıyı otomatik login’e atmaz.
 
 ## 7. Route Organizasyonu
 
