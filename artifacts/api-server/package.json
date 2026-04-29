@@ -12,7 +12,8 @@
     "start": "dotenv -e ../../.env -- node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test tests/integration.test.mjs",
-    "create-super-admin": "dotenv -e ../../.env -- node scripts/create-super-admin.mjs"
+    "create-super-admin": "dotenv -e ../../.env -- node scripts/create-super-admin.mjs",
+    "reset-super-admin-password": "dotenv -e ../../.env -- node scripts/reset-super-admin-password.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.787.0",

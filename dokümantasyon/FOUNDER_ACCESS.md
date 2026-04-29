@@ -60,12 +60,34 @@ pnpm -C artifacts/api-server run create-super-admin -- "kurucu@firma.com" "Guclu
 - E-posta başka kullanıcıda kayıtlı olmamalı.
 - Şifre **en az 12 karakter**.
 
+## 3) Mevcut super_admin — şifre sıfırlama (hotfix, API yok)
+
+**Kim:** Yalnızca rolü `super_admin` olan ve **username veya e-posta** ile eşleşen **tek** kullanıcı güncellenir; yeni kullanıcı oluşturulmaz, diğer satırlara dokunulmaz.
+
+**Nasıl** (repo kökünde `.env` → `DATABASE_URL`):
+
+```bash
+pnpm -C artifacts/api-server run reset-super-admin-password -- "superadmin" "YENI_GÜÇLÜ_SIFRE_12+"
+```
+
+veya e-posta ile:
+
+```bash
+pnpm -C artifacts/api-server run reset-super-admin-password -- "ticarium365@gmail.com" "YENI_GÜÇLÜ_SIFRE_12+"
+```
+
+- Parola **loglara veya stdout’a yazılmaz**; yalnızca başarıda `user id` ve `username` özetlenir.
+- Eşleşme yoksa veya `super_admin` değilse script **güvenli şekilde çıkar** (çıkış kodu ≠ 0).
+- Hash: **bcryptjs, 10 round** — `auth` ile aynı.
+
+Script dosyası: `artifacts/api-server/scripts/reset-super-admin-password.mjs`
+
 ## Kurtarma senaryoları
 
 | Durum | Ne yapın |
 |--------|-----------|
-| Şifre unutuldu, SMTP çalışıyor | `/sifremi-unuttum` — kullanıcıda telefon/e-posta akışı tanımlıysa sıfırlama. |
-| Şifre unutuldu, erişim şart | Neon / DB’de `users.password_hash` için yeni bcrypt hash (veya script ile yeni super_admin **yok** — önce eski super_admin’i devre dışı bırakın / silin; iş kurallarına göre). En temizi: **tek** super_admin hesabına şifre reset maili veya güvenli kanaldan hash güncellemesi. |
+| Şifre unutuldu, SMTP çalışıyor | `/sifremi-unuttum` — kullanıcıda telefon/e-posta akışı tanımlıysa sıfırlama. **Not:** Akış şu an **SMS** tabanlı; super_admin için hızlı çözüm: **bölüm 3 script**. |
+| Şifre unutuldu, erişim şart | **`reset-super-admin-password`** (bölüm 3) veya Neon üzerinden dikkatli manuel müdahale. |
 | Hiç super_admin yok | `FOUNDER_BOOTSTRAP=1` **veya** `create-super-admin.mjs`. |
 | Yanlışlıkla iki yöntem | İlki çalışır; ikincisi “zaten super_admin var” diye **durur**. |
 
@@ -81,3 +103,4 @@ pnpm -C artifacts/api-server run create-super-admin -- "kurucu@firma.com" "Guclu
 - Seed çağrı sırası: `artifacts/api-server/src/index.ts` (`runSeeds`)
 - Giriş (e-posta ile super_admin): `artifacts/api-server/src/routes/auth.ts` (`POST /login`)
 - Script: `artifacts/api-server/scripts/create-super-admin.mjs`
+- Şifre sıfırlama (mevcut super_admin): `artifacts/api-server/scripts/reset-super-admin-password.mjs`
