@@ -711,7 +711,7 @@ Kullanıcı rehberi ve ekran görüntüleri için bölüm 18’e bakın.
 
 Özet; tam tablolar: `docs/PRODUCTION_READINESS_CHECKLIST.md`.
 
-- **Oturum:** `express-session` + `buildSessionOptions`; harici `store` yok → **MemoryStore** (çok replikada paylaşımlı store planlanmalı). Ayrıntı: `artifacts/api-server/src/lib/session-config.ts` JSDoc.
+- **Oturum:** `express-session` + `buildSessionOptions` + **`connect-pg-simple`** (`DATABASE_URL` ile Neon/PostgreSQL, tablo varsayılan `session`). Ayrıntı: `artifacts/api-server/src/lib/session-config.ts`.
 - **Log:** Pino → stdout (prod’da JSON); retention uygulama dışı (platform + kurumsal politika). `LOG_LEVEL` ile seviye.
 - **Sağlık:** `GET /api/healthz` ve `GET /api/readyz`, tenant ve session **öncesi** (canlı yük / monitör). Derin: `/api/healthz/deep` (tenant sonrası).
 - **Oran sınırları:** Tam rota listesi bölüm 5 (aynı doc).

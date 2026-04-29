@@ -1,21 +1,49 @@
 import type { SessionOptions } from "express-session";
 import type { Express } from "express";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import pg from "pg";
 import { logger } from "./logger.js";
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
+const PgSessionStore = connectPgSimple(session);
+
+/** `connect-pg-simple` varsayılan tablo adı; gerekiyorsa `SESSION_STORE_TABLE` ile değiştirilir. */
+const SESSION_TABLE = (process.env.SESSION_STORE_TABLE || "session").trim() || "session";
+
+let sessionPool: pg.Pool | null = null;
+
+function getSessionPool(): pg.Pool {
+  if (sessionPool) return sessionPool;
+  const connectionString = (process.env.DATABASE_URL || "").trim();
+  if (!connectionString) {
+    throw new Error("DATABASE_URL gerekli — PostgreSQL session store (connect-pg-simple) için bağlantı yok.");
+  }
+  sessionPool = new pg.Pool({
+    connectionString,
+    max: Math.min(parseInt(process.env.SESSION_PG_POOL_MAX || "10", 10) || 10, 50),
+  });
+  sessionPool.on("error", (err: unknown) => {
+    logger.error({ err }, "session_pg_pool_error");
+  });
+  return sessionPool;
+}
+
 /**
- * Oturum depolama mimarisi
- * -------------------------
- * `buildSessionOptions` bir **store** set etmez → express-session varsayılanı **MemoryStore** (süreç
- * belleği) kullanılır. Aynı kullanıcı isteği her zaman aynı Node sürecine düşerse çalışır.
+ * Oturum depolama: **PostgreSQL** (`connect-pg-simple` + `DATABASE_URL`).
+ * Aynı tablo tüm API replikaları tarafından paylaşılır; deploy / süreç yenilemesinde oturum korunur.
  *
- * **Yatay ölçekleme (birden çok API replikası) veya zero-downtime deploy** için, launch sonrası
- * aynı değerle paylaşılan bir store (ör. Redis, `connect-pg-simple` + PostgreSQL) seçilmelidir;
- * aksi halde oturum çerezi olsa da sunucu tarafı oturum verisi farklı replikada bulunmayabilir.
- * Bu, operasyonel bir gereksinimdir; uygulama kodunda ayrı bir `store` atanmadığı sürece
- * tek süreç / tek replika varsayılır.
+ * İlk açılışta `createTableIfMissing` ile `session` tablosu yoksa oluşturulur (Neon uyumlu).
  */
+function createPgSessionStore(): InstanceType<typeof PgSessionStore> {
+  const createTable = process.env.SESSION_STORE_CREATE_TABLE !== "0";
+  return new PgSessionStore({
+    pool: getSessionPool(),
+    tableName: SESSION_TABLE,
+    createTableIfMissing: createTable,
+  });
+}
 
 /**
  * Express `trust proxy` — Cloudflare tek atlama için genelde `1`.
@@ -88,6 +116,7 @@ export function buildSessionOptions(sessionSecret: string): SessionOptions {
 
   return {
     secret: sessionSecret,
+    store: createPgSessionStore(),
     resave: false,
     saveUninitialized: false,
     proxy: trustFwd,

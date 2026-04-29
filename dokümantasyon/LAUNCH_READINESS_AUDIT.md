@@ -7,7 +7,7 @@
 
 ## 1. EXECUTIVE SUMMARY
 
-Ürün **fonksiyonel olarak zengin** ve süper-admin tarafında **faturalama / trial / lead metrikleri** için ciddi bir cockpit var. Gerçek “custom domain + trafik” lansmanı öncesi **iki sert risk** var: (1) **oturum deposu = MemoryStore** → Railway’de replika veya süreç yenilemesinde oturum kaybı / rastgele logout; (2) **e-posta = yalnızca SMTP** ve birçok akış **SMTP yoksa sessizce düşüyor** → güven ve destek maliyeti.
+Ürün **fonksiyonel olarak zengin** ve süper-admin tarafında **faturalama / trial / lead metrikleri** için ciddi bir cockpit var. Gerçek “custom domain + trafik” lansmanı öncesi **asıl operasyonel risk** (lansman öncesi): **e-posta = yalnızca SMTP** ve birçok akış **SMTP yoksa sessizce düşüyor** → güven ve destek maliyeti. **Oturumlar** artık **PostgreSQL (`connect-pg-simple`)** ile paylaşımlı; deploy sonrası çerez aynı kalırsa oturum korunur.
 
 Ödeme tarafında kod, **production’da mock Iyzico’yu varsayılan olarak kapatıyor**; canlıda `IYZICO_*` dolu değilse checkout **bilinçli olarak kırılır** — bu iyi bir güvenlik kararı ama lansman öncesi env teyidi şart.
 
@@ -28,16 +28,15 @@
 
 | # | Blokaj | Gerekçe |
 |---|--------|---------|
-| H1 | **SESSION_BLOCKER** | `express-session` için **store atanmıyor** → `MemoryStore`. Çok replika veya deploy sırasında oturum sapması. Lansman trafiği / güven için **Redis veya `connect-pg-simple`** şart. |
-| H2 | **Ödeme env** | Production’da `IYZICO_API_KEY` + `IYZICO_SECRET_KEY` yoksa **gerçek tahsilat kapalı** (`billing-iyzico-flow.ts`). Lansman geliri için blokaj. |
-| H3 | **Bootstrap süper admin** | Prod’da varsayılan kullanıcı seed **kapalı** (`SEED_DEFAULT_USERS` olmadan). İlk `superadmin` yoksa **kurucu paneline girilemaz** — tek seferlik bootstrap gerekir. |
+| H1 | **Ödeme env** | Production’da `IYZICO_API_KEY` + `IYZICO_SECRET_KEY` yoksa **gerçek tahsilat kapalı** (`billing-iyzico-flow.ts`). Lansman geliri için blokaj. |
+| H2 | **Bootstrap süper admin** | Prod’da varsayılan kullanıcı seed **kapalı** (`SEED_DEFAULT_USERS` olmadan). İlk `superadmin` yoksa **kurucu paneline girilemaz** — tek seferlik bootstrap gerekir. |
 
 ---
 
 ## 4. FIX TODAY (highest ROI)
 
 1. **Neon + Railway env:** `IYZICO_*`, `SMTP_*`, `SENTRY_DSN`, `SESSION_SECRET`, `SESSION_COOKIE_*` (app + api subdomain), `CORS_ALLOWED_ORIGINS`, `DATABASE_URL`.
-2. **Stres testi:** Aynı kullanıcı ile iki paralel API instance (mümkünse) veya arka arkaya deploy → oturum kopuyorsa **H1 doğrulanmış** olur → session store’u aynı gün planlayın.
+2. **Deploy sonrası oturum:** İlk deploy’da Neon’da `session` tablosunun oluştuğunu doğrula (`connect-pg-simple`). Eski MemoryStore oturumları geçersiz kalır — kullanıcılar bir kez yeniden giriş yapar.
 3. **Super admin varlığı:** Neon’da `users` tablosunda `role = 'super_admin'` ve aktif hesap; yoksa `SEED_DEFAULT_USERS=1` **tek deploy** veya manuel INSERT + şifre rotate runbook.
 4. **Talha girişi:** Aşağıdaki “Talha” bölümü — Neon’da `username`, `company_id`, `is_active`, tenant subdomain eşleşmesi kontrolü (5 dk).
 
@@ -45,10 +44,9 @@
 
 ## 5. FIX THIS WEEK
 
-- PostgreSQL veya Redis **session store** implementasyonu + Railway’de URL’ler.
 - **Resend** (veya Postmark): SMTP relay veya HTTP API — domain doğrulama, SPF/DKIM.
 - **Frontend Sentry** (`@sentry/react` + `VITE_*`) — şu an prosan paketinde **Sentry yok**; sadece backend.
-- **connect-pg-simple** migration notları `session-config.ts` JSDoc ile hizalı — PR’da trust proxy + `SESSION_COOKIE_SAMESITE=none` + parent domain testi.
+- İsterseniz `session` tablosunu tamamen migration ile yönetmek için `SESSION_STORE_CREATE_TABLE=0` + SQL migration (üretim disiplini).
 
 ---
 
@@ -96,7 +94,7 @@
 
 ## 8. RISKS IF WE IGNORE
 
-- **MemoryStore:** Müşteri “neden sürekli atılıyorum?” — güven zedelenir, dönüşüm düşer.
+- **Neon `session` tablosu:** Oluşmazsa veya yetki yoksa API açılışta hata verir; deploy sonrası log ve DB kontrolü yapın.
 - **E-posta yok:** Şifre sıfırlama ve doğrulama kodu gitmez; destek yükü patlar.
 - **Iyzico eksik:** Ödeme butonu hata verir veya mock kapalıysa 503 — lansman günü gelir sıfır.
 - **Super admin yok:** Şirket / lead / faturalama operasyonu kilitlenir.
@@ -187,9 +185,10 @@ Kod gerçekleri:
 
 ---
 
-### 7) SESSION STORE — **SESSION_BLOCKER**
+### 7) SESSION STORE — **SESSION_OK**
 
-- `buildSessionOptions` **store set etmiyor** → MemoryStore. Lansman öncesi **paylaşımlı store** önerilir (`connect-pg-simple` veya Redis).
+- `connect-pg-simple` + `DATABASE_URL` (Neon). Cookie ayarları değişmedi (`buildSessionOptions`).
+- Varsayılan tablo: `session`. `SESSION_STORE_CREATE_TABLE=0` ile yalnızca migration ile tablo oluşturma (ileri seviye).
 
 ---
 
