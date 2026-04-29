@@ -9,6 +9,7 @@ Bu klasör, repoda gezinmeyi kolaylaştırmak için **özet**, **içe giriş** v
 | [yeni-gelistirici.md](./yeni-gelistirici.md) | İlk gün: araçlar, komutlar, mimari özeti, sık dosya yolları |
 | [api-yuzeyi.md](./api-yuzeyi.md) | HTTP API önekleri, halka açık vs tenant sonrası, feature notları |
 | [LAUNCH_READINESS_AUDIT.md](./LAUNCH_READINESS_AUDIT.md) | **Lansman öncesi/sonrası** — gelir, güven, operasyon odaklı kod + env denetimi (Phases 1–2) |
+| [FOUNDER_ACCESS.md](./FOUNDER_ACCESS.md) | **Kurucu / super_admin** girişi, env bootstrap, manuel script, kurtarma |
 
 ## Ana kaynaklar (`docs/` — tam metin)
 

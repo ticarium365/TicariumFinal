@@ -1,6 +1,7 @@
 import app from "./app";
 import { logProductionAuthHints } from "./lib/env-validation.js";
 import { logger } from "./lib/logger";
+import { runFounderBootstrapIfRequested } from "./lib/founder-bootstrap.js";
 
 logProductionAuthHints();
 import { db, usersTable, productsTable } from "@workspace/db";
@@ -293,6 +294,12 @@ async function runSeeds() {
     await seedDefaultUsers();
   } catch (err) {
     logger.error({ err }, "Failed to seed users");
+  }
+
+  try {
+    await runFounderBootstrapIfRequested();
+  } catch (err) {
+    logger.error({ err }, "Founder bootstrap failed");
   }
 
   try {

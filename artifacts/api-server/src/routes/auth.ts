@@ -48,18 +48,36 @@ router.post("/login", async (req: Request, res: Response) => {
     }
 
     const companyId = req.companyId;
+    const loginId = String(username).trim();
 
-    const [user] = await db
+    let user: typeof usersTable.$inferSelect | undefined;
+    const [byUsername] = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.username, username));
+      .where(eq(usersTable.username, loginId))
+      .limit(1);
+    user = byUsername;
+    // Kurucu kolaylığı: super_admin için e-posta ile giriş (kullanıcı adı alanına email yazılabilir)
+    if (!user && loginId.includes("@")) {
+      const [byEmail] = await db
+        .select()
+        .from(usersTable)
+        .where(
+          and(
+            eq(usersTable.role, "super_admin"),
+            sql`lower(${usersTable.email}) = ${loginId.toLowerCase()}`,
+          ),
+        )
+        .limit(1);
+      user = byEmail;
+    }
 
     // Super admin her şirketten giriş yapabilir; diğerleri kendi şirketinden
     if (!user || (user.role !== "super_admin" && user.companyId !== companyId)) {
       await audit({
         req,
         action: "LOGIN_FAILED",
-        details: { username, reason: "user_not_found_or_wrong_company" },
+        details: { username: loginId, reason: "user_not_found_or_wrong_company" },
       });
       res.status(401).json(Errors.unauthorized("Kullanıcı adı veya şifre hatalı"));
       return;
@@ -69,7 +87,7 @@ router.post("/login", async (req: Request, res: Response) => {
       await audit({
         req,
         action: "LOGIN_FAILED",
-        details: { username, reason: "account_disabled" },
+        details: { username: loginId, reason: "account_disabled" },
       });
       res.status(401).json(Errors.unauthorized("Hesabınız devre dışı bırakılmış"));
       return;
@@ -80,7 +98,7 @@ router.post("/login", async (req: Request, res: Response) => {
       await audit({
         req,
         action: "LOGIN_FAILED",
-        details: { username, reason: "wrong_password" },
+        details: { username: loginId, reason: "wrong_password" },
       });
       res.status(401).json(Errors.unauthorized("Kullanıcı adı veya şifre hatalı"));
       return;

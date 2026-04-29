@@ -82,4 +82,10 @@ export function logProductionAuthHints(): void {
     sameSite: same,
     cookieDomainConfigured: Boolean(domain),
   }, "Production env validation OK");
+
+  if (process.env.FOUNDER_BOOTSTRAP === "1") {
+    logger.warn(
+      "FOUNDER_BOOTSTRAP=1 aktif — ilk başarılı kurucu oluşturma sonrası env'den kaldırın (dokümantasyon/FOUNDER_ACCESS.md)",
+    );
+  }
 }

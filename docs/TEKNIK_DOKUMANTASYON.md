@@ -217,6 +217,8 @@ Ana kontroller:
 - `requireRole([...])`
 - `requireSuperAdmin`
 
+**Kurucu erişimi (`super_admin`):** İlk prod ortamında hesap yoksa `FOUNDER_BOOTSTRAP=1` + e-posta/şifre env (`runSeeds` içinde) veya `artifacts/api-server/scripts/create-super-admin.mjs` ile oluşturulur; çift kurucu engellenir. Tam kullanım: repo kökü `dokümantasyon/FOUNDER_ACCESS.md`. Giriş: `POST /auth/login` — **kullanıcı adı** veya (yalnız `super_admin`) **e-posta** + şifre.
+
 ### 6.2 Tenant Boundary
 
 `tenant-boundary.ts`, oturumdaki `companyId` ile host/subdomain’den çözülen `req.companyId` değerini karşılaştırır.
