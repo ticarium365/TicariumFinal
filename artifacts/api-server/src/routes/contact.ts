@@ -3,6 +3,7 @@ import { db, contactRequestsTable, companiesTable } from "@workspace/db";
 import { desc, eq, count, gte } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth, requireSuperAdmin } from "../middlewares/auth.js";
+import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();
 
@@ -27,6 +28,10 @@ router.post("/", async (req: Request, res: Response) => {
     email,
     status: "new",
   }).returning({ id: contactRequestsTable.id });
+  logger.info(
+    { event: "contact_request_stored", id: row?.id, source: "public_form" },
+    "lead_persisted_super_admin_can_review",
+  );
   return res.json({ ok: true, id: row?.id });
 });
 

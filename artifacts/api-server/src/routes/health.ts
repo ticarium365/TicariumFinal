@@ -5,6 +5,7 @@ import { Client as ObjectStorageClient } from "@replit/object-storage";
 import nodemailer from "nodemailer";
 import { resolveStorageDriver } from "../lib/storage/driver.js";
 import { probeR2Storage, r2EnvSummary } from "../lib/storage/r2.js";
+import { getMailProviderKind, isMailEnabled } from "../lib/email.js";
 
 const router: IRouter = Router();
 const startTime = Date.now();
@@ -77,9 +78,24 @@ async function checkObjectStorage(): Promise<CheckResult> {
   }
 }
 
-async function checkSmtp(): Promise<CheckResult> {
+async function checkOutboundMail(): Promise<CheckResult> {
+  const kind = getMailProviderKind();
+  if (kind === "none") {
+    return {
+      status: "disabled",
+      detail: "Giden posta yok — RESEND_API_KEY veya SMTP_HOST+SMTP_USER+SMTP_PASS ekleyin (graceful).",
+    };
+  }
+  if (kind === "resend") {
+    if (!isMailEnabled()) {
+      return {
+        status: "degraded",
+        detail: "RESEND_API_KEY var; gönderen adres eksik — RESEND_FROM veya MAIL_FROM tanımlayın.",
+      };
+    }
+    return { status: "ok", detail: "Resend API anahtarı ve gönderen adres yapılandırıldı" };
+  }
   const host = process.env.SMTP_HOST;
-  if (!host) return { status: "disabled", detail: "SMTP konfigüre değil (graceful)" };
   const t = Date.now();
   try {
     const transport = nodemailer.createTransport({
@@ -103,7 +119,7 @@ router.get("/healthz", (_req: Request, res: Response) => {
 
 router.get("/healthz/deep", async (_req: Request, res: Response) => {
   const uptime = Math.floor((Date.now() - startTime) / 1000);
-  const [dbR, storageR, smtpR] = await Promise.all([checkDb(), checkObjectStorage(), checkSmtp()]);
+  const [dbR, storageR, smtpR] = await Promise.all([checkDb(), checkObjectStorage(), checkOutboundMail()]);
   const checks = {
     db: { status: dbR.status },
     objectStorage: { status: storageR.status },
@@ -128,7 +144,7 @@ router.get("/healthz/internal", async (req: Request, res: Response) => {
     return res.status(403).json({ error: { code: "FORBIDDEN", message: "Yalnızca süper admin" } });
   }
   const uptime = Math.floor((Date.now() - startTime) / 1000);
-  const [dbR, storageR, smtpR] = await Promise.all([checkDb(), checkObjectStorage(), checkSmtp()]);
+  const [dbR, storageR, smtpR] = await Promise.all([checkDb(), checkObjectStorage(), checkOutboundMail()]);
   const checks = { db: dbR, objectStorage: storageR, smtp: smtpR };
   const downCount = Object.values(checks).filter(c => c.status === "down").length;
   const degradedCount = Object.values(checks).filter(c => c.status === "degraded").length;
