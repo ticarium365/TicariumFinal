@@ -115,17 +115,19 @@ export function DemoDataBanner() {
   };
 
   return (
-    <div className="border-b border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 px-4 md:px-6 py-3">
+    <div
+      className="border-b border-[color:color-mix(in_srgb,var(--color-brand-500)_30%,var(--color-border-subtle))] bg-gradient-to-r from-[color-mix(in_srgb,var(--color-brand-500)_10%,var(--color-surface-card))] to-[color-mix(in_srgb,var(--color-accent-violet)_8%,var(--color-surface-card))] px-4 md:px-6 py-3"
+    >
       <div className="mx-auto max-w-6xl flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="rounded-lg bg-blue-600 p-2 text-white shrink-0">
+          <div className="rounded-lg bg-[var(--color-brand-500)] p-2 text-[color:var(--color-nav-text-active)] shrink-0">
             <Database className="h-4 w-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900">
+            <p className="text-sm font-semibold text-[color:var(--color-neutral-900)]">
               Sisteminiz boş görünüyor — denemek için demo veriler yükleyelim mi?
             </p>
-            <p className="text-xs text-slate-600 mt-0.5">
+            <p className="text-xs text-[color:var(--color-neutral-600)] mt-0.5">
               Tek tıkla örnek ürünler, müşteriler ve satışlarla dolu bir görünüm; istediğinizde silebilirsiniz.
             </p>
           </div>

@@ -5,16 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Modal } from "@/components/ui/modal";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import {
   ScanLine, Trash2, Plus, Minus, ShoppingCart, CheckCircle2,
-  CreditCard, Banknote, Smartphone, Search,
+  CreditCard, Banknote, Smartphone, Search, Package,
 } from "lucide-react";
 
 type Product = {
@@ -30,6 +29,32 @@ const PAYMENT_METHODS = [
   { value: "transfer", label: "Havale", icon: Smartphone },
   { value: "credit", label: "Veresiye", icon: ShoppingCart },
 ];
+
+function SwipeableCartRow({
+  children,
+  onSwipeRemove,
+}: {
+  children: React.ReactNode;
+  onSwipeRemove: () => void;
+}) {
+  const touchStartX = useRef<number | null>(null);
+  return (
+    <div
+      className="touch-pan-y"
+      onTouchStart={(e) => {
+        touchStartX.current = e.touches[0].clientX;
+      }}
+      onTouchEnd={(e) => {
+        if (touchStartX.current == null) return;
+        const dx = touchStartX.current - e.changedTouches[0].clientX;
+        touchStartX.current = null;
+        if (dx > 56) onSwipeRemove();
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 export default function POSPage() {
   const { toast } = useToast();
@@ -61,7 +86,6 @@ export default function POSPage() {
     },
   });
 
-  // Auto-focus barcode input
   useEffect(() => { scanInputRef.current?.focus(); }, []);
 
   const filteredProducts = useMemo(() => {
@@ -137,7 +161,6 @@ export default function POSPage() {
     setBusy(true);
     const errors: string[] = [];
     let ok = 0;
-    // Pro-rata discount per line
     const discountRatio = subtotal > 0 ? discount / subtotal : 0;
     for (const item of cart) {
       try {
@@ -178,21 +201,25 @@ export default function POSPage() {
   }
 
   return (
-    <div className="container mx-auto py-4 px-2 md:px-4" data-testid="page-pos">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* SOL: ürünler */}
-        <div className="lg:col-span-2 space-y-3">
+    <div className="container mx-auto px-2 py-4 md:px-4" data-testid="page-pos">
+      <PageHeader
+        className="pb-4"
+        title="Hızlı Satış (POS)"
+        subtitle="Barkod veya ızgaradan ürün ekleyin; sepeti sağda yönetin."
+      />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="space-y-3 lg:col-span-2">
           <Card>
-            <CardContent className="pt-4 space-y-3">
+            <CardContent className="space-y-3 pt-4">
               <form onSubmit={handleScan} className="flex gap-2">
-                <div className="flex-1 relative">
-                  <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
+                <div className="relative flex-1">
+                  <ScanLine className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[color:var(--color-brand-600)]" />
                   <Input
                     ref={scanInputRef}
                     value={scan}
                     onChange={(e) => setScan(e.target.value)}
                     placeholder="Barkod tara veya ürün kodu yaz..."
-                    className="pl-10 text-lg font-mono h-12"
+                    className="h-12 pl-10 font-mono text-lg"
                     data-testid="input-scan"
                     autoComplete="off"
                   />
@@ -200,7 +227,7 @@ export default function POSPage() {
                 <Button type="submit" size="lg" data-testid="btn-scan-add">Ekle</Button>
               </form>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--color-neutral-500)]" />
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -212,70 +239,77 @@ export default function POSPage() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
             {filteredProducts.map((p) => (
-              <button
+              <Card
                 key={p.id}
-                onClick={() => addToCart(p)}
-                disabled={p.stock <= 0}
-                className="text-left border rounded-md p-3 hover:bg-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                variant="flat"
+                className={`cursor-pointer transition-shadow hover:shadow-[var(--shadow-sm)] ${p.stock <= 0 ? "pointer-events-none opacity-40" : ""}`}
                 data-testid={`product-card-${p.id}`}
               >
-                <div className="font-semibold text-sm truncate">{p.name}</div>
-                <div className="text-xs text-muted-foreground truncate">{p.productCode}</div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="font-bold text-primary">₺{p.salePrice.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</span>
-                  <Badge variant={p.stock > 5 ? "secondary" : "destructive"} className="text-xs">{p.stock}</Badge>
-                </div>
-              </button>
+                <CardContent className="p-3" onClick={() => addToCart(p)}>
+                  <div className="truncate text-sm font-[var(--font-weight-semibold)] text-[color:var(--color-neutral-900)]">{p.name}</div>
+                  <div className="truncate text-xs text-[color:var(--color-neutral-600)]">{p.productCode}</div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="font-[var(--font-weight-bold)] text-[color:var(--color-brand-700)]">₺{p.salePrice.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</span>
+                    <Badge variant={p.stock > 5 ? "secondary" : "danger"} className="text-xs">{p.stock}</Badge>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
             {filteredProducts.length === 0 && (
-              <div className="col-span-full text-center text-muted-foreground py-8">Ürün bulunamadı</div>
+              <div className="col-span-full flex flex-col items-center gap-3 py-10 text-center text-[color:var(--color-neutral-600)]">
+                <Package className="h-12 w-12 text-[color:var(--color-neutral-400)]" />
+                <p className="text-sm">Ürün bulunamadı.</p>
+              </div>
             )}
           </div>
         </div>
 
-        {/* SAĞ: sepet */}
         <div className="space-y-3 lg:sticky lg:top-4 lg:self-start">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-base">
                 <ShoppingCart className="h-5 w-5" /> Sepet ({cart.length})
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
+            <CardContent className="max-h-[400px] space-y-2 overflow-y-auto">
               {cart.length === 0 && (
-                <div className="text-sm text-muted-foreground text-center py-6">
-                  Sepet boş. Barkod tarayın veya ürüne tıklayın.
+                <div className="flex flex-col items-center gap-3 py-8 text-center text-[color:var(--color-neutral-600)]">
+                  <Package className="h-10 w-10 text-[color:var(--color-neutral-400)]" />
+                  <p className="text-sm">Sepet boş. Barkod tarayın veya ürüne tıklayın.</p>
+                  <p className="text-[length:var(--font-size-xs)] text-[color:var(--color-neutral-500)] lg:hidden">Mobilde satırı sola kaydırarak silebilirsiniz.</p>
                 </div>
               )}
               {cart.map((c) => (
-                <div key={c.product.id} className="border rounded p-2 space-y-2" data-testid={`cart-item-${c.product.id}`}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="text-sm font-medium flex-1 truncate">{c.product.name}</div>
-                    <button onClick={() => removeFromCart(c.product.id)} className="text-destructive hover:text-destructive/80" data-testid={`btn-remove-${c.product.id}`}>
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                <SwipeableCartRow key={c.product.id} onSwipeRemove={() => removeFromCart(c.product.id)}>
+                  <div className="space-y-2 rounded-[var(--radius-md)] border border-[color:var(--color-border-subtle)] p-2" data-testid={`cart-item-${c.product.id}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 truncate text-sm font-[var(--font-weight-medium)]">{c.product.name}</div>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-[color:var(--color-semantic-danger)]" onClick={() => removeFromCart(c.product.id)} data-testid={`btn-remove-${c.product.id}`}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button type="button" size="icon" variant="secondary" className="h-7 w-7" onClick={() => updateQty(c.product.id, -1)} data-testid={`btn-minus-${c.product.id}`}><Minus className="h-3 w-3" /></Button>
+                      <span className="w-8 text-center font-mono" data-testid={`qty-${c.product.id}`}>{c.quantity}</span>
+                      <Button type="button" size="icon" variant="secondary" className="h-7 w-7" onClick={() => updateQty(c.product.id, 1)} data-testid={`btn-plus-${c.product.id}`}><Plus className="h-3 w-3" /></Button>
+                      <Input
+                        type="number" step="0.01" min="0"
+                        value={c.unitPrice}
+                        onChange={(e) => setItemPrice(c.product.id, Number(e.target.value) || 0)}
+                        className="h-7 flex-1 text-sm"
+                      />
+                      <span className="w-20 text-right text-sm font-[var(--font-weight-semibold)]">₺{(c.unitPrice * c.quantity).toFixed(2)}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQty(c.product.id, -1)} data-testid={`btn-minus-${c.product.id}`}><Minus className="h-3 w-3" /></Button>
-                    <span className="w-8 text-center font-mono" data-testid={`qty-${c.product.id}`}>{c.quantity}</span>
-                    <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQty(c.product.id, 1)} data-testid={`btn-plus-${c.product.id}`}><Plus className="h-3 w-3" /></Button>
-                    <Input
-                      type="number" step="0.01" min="0"
-                      value={c.unitPrice}
-                      onChange={(e) => setItemPrice(c.product.id, Number(e.target.value) || 0)}
-                      className="h-7 text-sm flex-1"
-                    />
-                    <span className="text-sm font-semibold w-20 text-right">₺{(c.unitPrice * c.quantity).toFixed(2)}</span>
-                  </div>
-                </div>
+                </SwipeableCartRow>
               ))}
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="pt-4 space-y-3">
+            <CardContent className="space-y-3 pt-4">
               <div>
                 <Label className="text-xs">Müşteri</Label>
                 <Select value={customerId} onValueChange={setCustomerId}>
@@ -288,36 +322,43 @@ export default function POSPage() {
               </div>
               <div>
                 <Label className="text-xs">Satış Tipi</Label>
-                <div className="grid grid-cols-2 gap-1 mt-1">
-                  <button
+                <div className="mt-1 grid grid-cols-2 gap-1">
+                  <Button
                     type="button"
+                    size="sm"
+                    variant={saleType === "retail" ? "primary" : "secondary"}
+                    className="h-auto py-2 text-xs"
                     onClick={() => setSaleType("retail")}
-                    className={`p-2 border rounded text-xs font-medium transition-colors ${saleType === "retail" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}
                     data-testid="saletype-retail"
-                  >Perakende</button>
-                  <button
+                  >Perakende</Button>
+                  <Button
                     type="button"
+                    size="sm"
+                    variant={saleType === "wholesale" ? "primary" : "secondary"}
+                    className="h-auto py-2 text-xs"
                     onClick={() => setSaleType("wholesale")}
-                    className={`p-2 border rounded text-xs font-medium transition-colors ${saleType === "wholesale" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}
                     data-testid="saletype-wholesale"
-                  >Toptan</button>
+                  >Toptan</Button>
                 </div>
               </div>
               <div>
                 <Label className="text-xs">Ödeme Yöntemi</Label>
-                <div className="grid grid-cols-4 gap-1 mt-1">
+                <div className="mt-1 grid grid-cols-4 gap-1">
                   {PAYMENT_METHODS.map((p) => {
                     const Icon = p.icon;
                     return (
-                      <button
+                      <Button
                         key={p.value}
+                        type="button"
+                        size="sm"
+                        variant={paymentMethod === p.value ? "primary" : "secondary"}
+                        className="flex h-auto flex-col gap-1 py-2 text-xs"
                         onClick={() => setPaymentMethod(p.value)}
-                        className={`flex flex-col items-center gap-1 p-2 border rounded text-xs ${paymentMethod === p.value ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}
                         data-testid={`pay-${p.value}`}
                       >
                         <Icon className="h-4 w-4" />
                         {p.label}
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
@@ -326,35 +367,37 @@ export default function POSPage() {
                 <Label className="text-xs">İndirim (₺)</Label>
                 <Input type="number" min="0" step="0.01" value={discount} onChange={(e) => setDiscount(Number(e.target.value) || 0)} data-testid="input-discount" />
               </div>
-              <div className="border-t pt-3 space-y-1 text-sm">
+              <div className="space-y-1 border-t border-[color:var(--color-border-subtle)] pt-3 text-sm">
                 <div className="flex justify-between"><span>Ara Toplam:</span><span data-testid="subtotal">₺{subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between text-muted-foreground"><span>İndirim:</span><span>-₺{discount.toFixed(2)}</span></div>
-                <div className="flex justify-between text-lg font-bold pt-1 border-t"><span>Toplam:</span><span data-testid="total" className="text-primary">₺{total.toFixed(2)}</span></div>
+                <div className="flex justify-between text-[color:var(--color-neutral-600)] text-[length:var(--font-size-sm)]"><span>İndirim:</span><span>-₺{discount.toFixed(2)}</span></div>
+                <div className="flex justify-between border-t border-[color:var(--color-border-subtle)] pt-1 text-lg font-[var(--font-weight-bold)]"><span>Toplam:</span><span data-testid="total" className="text-[color:var(--color-brand-700)]">₺{total.toFixed(2)}</span></div>
               </div>
-              <Button onClick={checkout} disabled={busy || cart.length === 0} className="w-full h-12 text-base" data-testid="btn-checkout">
-                {busy ? "Kaydediliyor..." : `Satışı Tamamla (${cart.length})`}
+              <Button onClick={checkout} disabled={busy || cart.length === 0} className="h-12 w-full text-base" data-testid="btn-checkout" loading={busy}>
+                {busy ? null : `Satışı Tamamla (${cart.length})`}
               </Button>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      <Dialog open={!!success} onOpenChange={(o) => !o && setSuccess(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-emerald-600">
-              <CheckCircle2 className="h-6 w-6" /> Satış Başarılı
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4 text-center">
-            <div className="text-4xl font-bold text-primary" data-testid="success-total">₺{success?.total.toFixed(2)}</div>
-            <div className="text-muted-foreground mt-2">{success?.count} satır eklendi</div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setSuccess(null)} className="w-full" data-testid="btn-success-ok">Yeni Satışa Başla</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        open={!!success}
+        onOpenChange={(o) => { if (!o) setSuccess(null); }}
+        size="lg"
+        title={
+          <span className="flex items-center gap-2 text-[color:var(--color-semantic-success)]">
+            <CheckCircle2 className="h-6 w-6" /> Satış Başarılı
+          </span>
+        }
+        footer={
+          <Button className="w-full sm:w-auto" onClick={() => setSuccess(null)} data-testid="btn-success-ok">Yeni Satışa Başla</Button>
+        }
+      >
+        <div className="py-4 text-center">
+          <div className="text-4xl font-[var(--font-bold)] text-[color:var(--color-brand-700)]" data-testid="success-total">₺{success?.total.toFixed(2)}</div>
+          <div className="mt-2 text-[color:var(--color-neutral-600)]">{success?.count} satır eklendi</div>
+        </div>
+      </Modal>
     </div>
   );
 }

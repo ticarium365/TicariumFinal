@@ -10,7 +10,7 @@ const router = Router();
 // ─── Müşteri tarafı ───────────────────────────────────────────────────────────
 
 // GET /api/payment/status — Bu kiracının plan durumu
-router.get("/status", async (req: Request, res: Response) => {
+router.get("/status", requireAuth, async (req: Request, res: Response) => {
   try {
     const company = req.company;
     const now = new Date();

@@ -206,7 +206,7 @@ export default function OrderDetailPage() {
             ) : (
               <div
                 className="h-14 w-14 rounded-lg flex items-center justify-center text-white font-bold text-xl"
-                style={{ backgroundColor: counterparty?.primaryColor ?? "#666" }}
+                style={{ backgroundColor: counterparty?.primaryColor ?? "var(--color-neutral-500)" }}
               >
                 {counterparty?.name?.charAt(0) ?? "?"}
               </div>

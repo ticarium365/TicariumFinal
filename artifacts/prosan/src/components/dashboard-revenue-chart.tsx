@@ -61,12 +61,12 @@ export default function DashboardRevenueChart({ data }: { data: RevenueChartRow[
           <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#2563eb" stopOpacity={0.22} />
-                <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                <stop offset="5%" stopColor="var(--color-brand-500)" stopOpacity={0.22} />
+                <stop offset="95%" stopColor="var(--color-brand-500)" stopOpacity={0} />
               </linearGradient>
               <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                <stop offset="5%" stopColor="var(--color-chart-mint)" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="var(--color-chart-mint)" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -89,8 +89,8 @@ export default function DashboardRevenueChart({ data }: { data: RevenueChartRow[
               wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
               formatter={(v) => (v === "revenue" ? "Ciro" : "Kâr")}
             />
-            <Area type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} fill="url(#colorRevenue)" dot={false} />
-            <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} fill="url(#colorProfit)" dot={false} />
+            <Area type="monotone" dataKey="revenue" stroke="var(--color-brand-500)" strokeWidth={2} fill="url(#colorRevenue)" dot={false} />
+            <Area type="monotone" dataKey="profit" stroke="var(--color-chart-mint)" strokeWidth={2} fill="url(#colorProfit)" dot={false} />
           </AreaChart>
         </ResponsiveContainer>
       </CardContent>

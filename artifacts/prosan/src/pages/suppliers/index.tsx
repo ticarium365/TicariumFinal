@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useAuth } from "@/components/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -19,6 +19,7 @@ import {
   AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { SupplierModal } from "./supplier-modal";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import type { Supplier } from "./types";
 
 async function apiFetch(method: string, path: string, body?: unknown) {
@@ -264,14 +265,14 @@ export default function SuppliersList() {
 
       <div className="bg-card border rounded-xl overflow-hidden shadow-sm">
         {isLoading ? (
-          <div className="flex items-center justify-center py-16 text-muted-foreground">Yükleniyor...</div>
+          <SkeletonTable rows={8} columns={7} rowHeight={40} className="border-0 rounded-none" />
         ) : suppliers.length === 0 ? (
           <div className="p-6">
             <EmptyState
               icon={Truck}
               title={search ? "Aramaya uyan tedarikçi bulunamadı" : "Henüz tedarikçi eklenmemiş"}
               description={search ? "Farklı bir kelime deneyin veya filtreleri temizleyin." : "Tedarikçilerinizi ekleyerek alış faturalarını ve borç bakiyesini takip edin."}
-              primaryAction={isAdmin && !search ? { label: "İlk Tedarikçiyi Oluştur", onClick: () => setModalOpen(true), testId: "empty-add-supplier" } : undefined}
+              action={isAdmin && !search ? { label: "İlk Tedarikçiyi Oluştur", onClick: () => setModalOpen(true), testId: "empty-add-supplier" } : undefined}
             />
           </div>
         ) : (

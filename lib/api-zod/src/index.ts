@@ -1,2 +1,3 @@
 export * from "./generated/api";
-export * from "./generated/types";
+/** `@generated/types` barrel overlaps schema exports from `./generated/api`; import `./generated/types/*` directly when needed. */
+export * from "./contract-schemas";

@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Megaphone, TrendingUp, Wallet, Target, BarChart3 } from "lucide-react";
+import { OnlineSalesFeatureGate } from "@/components/online-sales-feature-gate";
 
 const fmt = (n: number | null | undefined) =>
   new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(Number(n || 0));
@@ -117,6 +118,7 @@ export default function AdBudgetPage() {
   const totals = summary?.totals;
 
   return (
+    <OnlineSalesFeatureGate title="Reklam bütçesi paketinizde kapalı">
     <div className="container mx-auto py-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -296,5 +298,6 @@ export default function AdBudgetPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </OnlineSalesFeatureGate>
   );
 }

@@ -29,14 +29,16 @@ export function PublicNav() {
       className="sticky top-0 z-40 transition-all duration-300"
       style={{
         background: scrolled
-          ? "rgba(255,255,255,0.78)"
-          : "rgba(255,255,255,0.55)",
+          ? "color-mix(in srgb, var(--color-surface-card) 78%, transparent)"
+          : "color-mix(in srgb, var(--color-surface-card) 55%, transparent)",
         borderBottom: scrolled
-          ? "1px solid rgba(99,102,241,0.12)"
-          : "1px solid rgba(15,23,42,0.04)",
+          ? "1px solid color-mix(in srgb, var(--color-accent-violet) 12%, transparent)"
+          : "1px solid color-mix(in srgb, var(--color-neutral-900) 4%, transparent)",
         backdropFilter: "saturate(160%) blur(16px)",
         WebkitBackdropFilter: "saturate(160%) blur(16px)",
-        boxShadow: scrolled ? "0 8px 30px -16px rgba(15,23,42,0.10)" : "none",
+        boxShadow: scrolled
+          ? "0 8px 30px -16px color-mix(in srgb, var(--color-neutral-900) 10%, transparent)"
+          : "none",
       }}
       data-testid="public-nav"
     >
@@ -51,12 +53,12 @@ export function PublicNav() {
           </span>
           <span
             className="font-bold text-lg tracking-tight"
-            style={{ fontFamily: "var(--font-display)", color: "#0F172A" }}
+            style={{ fontFamily: "var(--font-display)", color: "var(--color-neutral-900)" }}
           >
             Ticarium
             <span
               style={{
-                background: "linear-gradient(135deg,#2563eb 0%,#0EA5A4 100%)",
+                background: "linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-accent-teal) 100%)",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
                 color: "transparent",
@@ -77,9 +79,9 @@ export function PublicNav() {
                 href={it.href}
                 className="relative px-3.5 py-2 text-sm font-medium rounded-full transition-all duration-200"
                 style={{
-                  color: active ? "#0F172A" : "#475569",
+                  color: active ? "var(--color-neutral-900)" : "var(--color-neutral-600)",
                   background: active
-                    ? "linear-gradient(135deg, rgba(99,102,241,0.10), rgba(14,165,164,0.08))"
+                    ? "linear-gradient(135deg, color-mix(in srgb, var(--color-accent-violet) 10%, transparent), color-mix(in srgb, var(--color-accent-teal) 8%, transparent))"
                     : "transparent",
                 }}
                 data-testid={`nav-${it.href.slice(1)}`}
@@ -89,8 +91,8 @@ export function PublicNav() {
                   <span
                     className="absolute left-1/2 -translate-x-1/2 -bottom-0.5 h-[3px] w-7 rounded-full"
                     style={{
-                      background: "linear-gradient(90deg,#6366F1,#0EA5A4)",
-                      boxShadow: "0 0 12px rgba(99,102,241,0.5)",
+                      background: "linear-gradient(90deg, var(--color-accent-violet), var(--color-accent-teal))",
+                      boxShadow: "0 0 12px color-mix(in srgb, var(--color-accent-violet) 50%, transparent)",
                     }}
                   />
                 )}
@@ -107,9 +109,9 @@ export function PublicNav() {
             data-testid="nav-cta-call"
             className="gap-1.5"
             style={{
-              background: "rgba(255,255,255,0.7)",
-              borderColor: "rgba(99,102,241,0.20)",
-              color: "#334155",
+              background: "color-mix(in srgb, var(--color-surface-card) 70%, transparent)",
+              borderColor: "color-mix(in srgb, var(--color-accent-violet) 20%, transparent)",
+              color: "var(--color-neutral-700)",
             }}
           >
             <Phone className="w-3.5 h-3.5" />
@@ -122,9 +124,9 @@ export function PublicNav() {
             data-testid="nav-cta-login"
             className="gap-1.5"
             style={{
-              background: "rgba(255,255,255,0.7)",
-              borderColor: "rgba(99,102,241,0.20)",
-              color: "#334155",
+              background: "color-mix(in srgb, var(--color-surface-card) 70%, transparent)",
+              borderColor: "color-mix(in srgb, var(--color-accent-violet) 20%, transparent)",
+              color: "var(--color-neutral-700)",
             }}
           >
             Giriş Yap
@@ -135,10 +137,10 @@ export function PublicNav() {
             data-testid="nav-cta-register"
             className="gap-1.5"
             style={{
-              background: "linear-gradient(135deg,#2563eb 0%,#0EA5A4 100%)",
-              color: "#FFFFFF",
+              background: "linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-accent-teal) 100%)",
+              color: "var(--color-nav-text-active)",
               border: 0,
-              boxShadow: "0 6px 20px -6px rgba(79,70,229,0.55)",
+              boxShadow: "0 6px 20px -6px color-mix(in srgb, var(--color-accent-indigo) 55%, transparent)",
             }}
           >
             Ücretsiz Başla
@@ -155,9 +157,9 @@ export function PublicNav() {
             data-testid="nav-cta-login-mobile"
             className="h-8 px-3 text-xs font-semibold"
             style={{
-              background: "rgba(255,255,255,0.85)",
-              borderColor: "rgba(99,102,241,0.25)",
-              color: "#334155",
+              background: "color-mix(in srgb, var(--color-surface-card) 85%, transparent)",
+              borderColor: "color-mix(in srgb, var(--color-accent-violet) 25%, transparent)",
+              color: "var(--color-neutral-700)",
             }}
           >
             Giriş
@@ -168,17 +170,17 @@ export function PublicNav() {
             data-testid="nav-cta-register-mobile"
             className="h-8 px-3 text-xs font-semibold"
             style={{
-              background: "linear-gradient(135deg,#2563eb 0%,#0EA5A4 100%)",
-              color: "#FFFFFF",
+              background: "linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-accent-teal) 100%)",
+              color: "var(--color-nav-text-active)",
               border: 0,
-              boxShadow: "0 4px 14px -4px rgba(79,70,229,0.45)",
+              boxShadow: "0 4px 14px -4px color-mix(in srgb, var(--color-accent-indigo) 45%, transparent)",
             }}
           >
             Başla
           </Button>
           <button
             className="p-2 rounded-md"
-            style={{ color: "#334155" }}
+            style={{ color: "var(--color-neutral-700)" }}
             onClick={() => setOpen((v) => !v)}
             aria-label="Menüyü aç"
             data-testid="nav-burger"
@@ -193,8 +195,8 @@ export function PublicNav() {
         <div
           className="md:hidden"
           style={{
-            background: "rgba(255,255,255,0.96)",
-            borderTop: "1px solid rgba(99,102,241,0.12)",
+            background: "color-mix(in srgb, var(--color-surface-card) 96%, transparent)",
+            borderTop: "1px solid color-mix(in srgb, var(--color-accent-violet) 12%, transparent)",
             backdropFilter: "blur(16px)",
             WebkitBackdropFilter: "blur(16px)",
           }}
@@ -205,7 +207,7 @@ export function PublicNav() {
                 key={it.href}
                 href={it.href}
                 className="px-3 py-2.5 text-sm font-medium rounded-lg"
-                style={{ color: "#334155" }}
+                style={{ color: "var(--color-neutral-700)" }}
                 onClick={() => setOpen(false)}
                 data-testid={`nav-mob-${it.href.slice(1)}`}
               >
@@ -214,7 +216,7 @@ export function PublicNav() {
             ))}
             <div
               className="grid grid-cols-2 gap-2 pt-2 mt-2"
-              style={{ borderTop: "1px solid rgba(99,102,241,0.10)" }}
+              style={{ borderTop: "1px solid color-mix(in srgb, var(--color-accent-violet) 10%, transparent)" }}
             >
               <Button
                 variant="outline"
@@ -225,9 +227,9 @@ export function PublicNav() {
                   setLocation("/iletisim");
                 }}
                 style={{
-                  background: "#FFFFFF",
-                  borderColor: "rgba(99,102,241,0.20)",
-                  color: "#334155",
+                  background: "var(--color-surface-card)",
+                  borderColor: "color-mix(in srgb, var(--color-accent-violet) 20%, transparent)",
+                  color: "var(--color-neutral-700)",
                 }}
               >
                 Sizi Arayalım
@@ -240,8 +242,8 @@ export function PublicNav() {
                   setLocation("/kayit");
                 }}
                 style={{
-                  background: "linear-gradient(135deg,#2563eb 0%,#0EA5A4 100%)",
-                  color: "#FFFFFF",
+                  background: "linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-accent-teal) 100%)",
+                  color: "var(--color-nav-text-active)",
                   border: 0,
                 }}
               >
@@ -259,7 +261,7 @@ export function PublicFooter() {
   return (
     <>
       <div className="fixed inset-x-0 bottom-0 z-50 md:hidden px-3 pb-3 pointer-events-none">
-        <div className="pointer-events-auto rounded-2xl border border-slate-200 bg-white/95 shadow-2xl backdrop-blur p-2 grid grid-cols-2 gap-2">
+        <div className="pointer-events-auto rounded-2xl border border-[color:var(--color-border-subtle)] bg-[color-mix(in_srgb,var(--color-surface-card)_95%,transparent)] shadow-2xl backdrop-blur p-2 grid grid-cols-2 gap-2">
           <Button asChild className="h-11 font-semibold">
             <Link href="/kayit">Ücretsiz başla</Link>
           </Button>
@@ -271,14 +273,16 @@ export function PublicFooter() {
       <footer
         className="py-12 pb-24 md:pb-12 mt-16 relative overflow-hidden"
         style={{
-          borderTop: "1px solid rgba(99,102,241,0.10)",
-          background:
-            "linear-gradient(180deg,#F8FAFC 0%, #F1F5FB 100%)",
+          borderTop: "1px solid color-mix(in srgb, var(--color-accent-violet) 10%, transparent)",
+          background: "linear-gradient(180deg, var(--color-neutral-50) 0%, var(--color-neutral-100) 100%)",
         }}
       >
         <div
           className="absolute -top-32 left-1/4 w-[28rem] h-[28rem] rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(closest-side, rgba(79,70,229,0.08), transparent 70%)" }}
+          style={{
+            background:
+              "radial-gradient(closest-side, color-mix(in srgb, var(--color-accent-indigo) 8%, transparent), transparent 70%)",
+          }}
         />
         <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm relative">
         <div>
@@ -286,12 +290,12 @@ export function PublicFooter() {
             <BrandLogo size={32} />
             <div
               className="font-bold text-base"
-              style={{ fontFamily: "var(--font-display)", color: "#0F172A" }}
+              style={{ fontFamily: "var(--font-display)", color: "var(--color-neutral-900)" }}
             >
               Ticarium
               <span
                 style={{
-                  background: "linear-gradient(135deg,#2563eb,#0EA5A4)",
+                  background: "linear-gradient(135deg, var(--color-brand-500), var(--color-accent-teal))",
                   WebkitBackgroundClip: "text",
                   backgroundClip: "text",
                   color: "transparent",
@@ -301,35 +305,51 @@ export function PublicFooter() {
               </span>
             </div>
           </div>
-          <p style={{ color: "#64748B", lineHeight: 1.6 }}>
+          <p style={{ color: "var(--color-neutral-500)", lineHeight: 1.6 }}>
             KOBİ’lerin satış, stok, pazaryeri ve kâr takibini sadeleştirmek için geliştirilen yerli işletme platformu.
           </p>
-          <p className="mt-3 text-xs" style={{ color: "#64748B", lineHeight: 1.6 }}>
+          <p className="mt-3 text-xs" style={{ color: "var(--color-neutral-500)", lineHeight: 1.6 }}>
             Firma verisi ayrı tutulur. Kart bilgisi sistemde saklanmaz. Kurulumda gerçek insan desteği hedeflenir.
           </p>
         </div>
         <div>
-          <div className="font-semibold mb-3" style={{ color: "#0F172A" }}>
+          <div className="font-semibold mb-3" style={{ color: "var(--color-neutral-900)" }}>
             Şirket
           </div>
-          <ul className="space-y-2" style={{ color: "#64748B" }}>
-            <li><Link href="/hakkimizda" className="hover:text-blue-600 transition-colors">Hakkımızda</Link></li>
-            <li><Link href="/amacimiz" className="hover:text-blue-600 transition-colors">Amacımız</Link></li>
-            <li><Link href="/paketler" className="hover:text-blue-600 transition-colors">Paketler</Link></li>
-            <li><Link href="/iletisim" className="hover:text-blue-600 transition-colors">İletişim</Link></li>
+          <ul className="space-y-2" style={{ color: "var(--color-neutral-500)" }}>
+            <li>
+              <Link href="/hakkimizda" className="hover:text-[color:var(--color-brand-700)] transition-colors">
+                Hakkımızda
+              </Link>
+            </li>
+            <li>
+              <Link href="/amacimiz" className="hover:text-[color:var(--color-brand-700)] transition-colors">
+                Amacımız
+              </Link>
+            </li>
+            <li>
+              <Link href="/paketler" className="hover:text-[color:var(--color-brand-700)] transition-colors">
+                Paketler
+              </Link>
+            </li>
+            <li>
+              <Link href="/iletisim" className="hover:text-[color:var(--color-brand-700)] transition-colors">
+                İletişim
+              </Link>
+            </li>
           </ul>
         </div>
         <div>
-          <div className="font-semibold mb-3" style={{ color: "#0F172A" }}>
+          <div className="font-semibold mb-3" style={{ color: "var(--color-neutral-900)" }}>
             İletişim
           </div>
-          <p style={{ color: "#64748B", lineHeight: 1.6 }}>
+          <p style={{ color: "var(--color-neutral-500)", lineHeight: 1.6 }}>
             Soruların ya da deneme hesabı için{" "}
             <Link
               href="/iletisim"
               className="font-medium hover:underline"
               style={{
-                background: "linear-gradient(135deg,#2563eb,#0EA5A4)",
+                background: "linear-gradient(135deg, var(--color-brand-500), var(--color-accent-teal))",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
                 color: "transparent",
@@ -344,8 +364,8 @@ export function PublicFooter() {
         <div
           className="container mx-auto px-4 mt-10 pt-6 text-xs text-center"
           style={{
-            color: "#94A3B8",
-            borderTop: "1px solid rgba(99,102,241,0.08)",
+            color: "var(--color-neutral-400)",
+            borderTop: "1px solid color-mix(in srgb, var(--color-accent-violet) 8%, transparent)",
           }}
         >
           © {new Date().getFullYear()} Ticarium365 · Tüm hakları saklıdır. · KVKK ve güvenli oturum prensipleriyle geliştirilir.

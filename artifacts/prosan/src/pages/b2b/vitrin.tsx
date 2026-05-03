@@ -28,8 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { LazyImage } from "@/components/lazy-image";
 import { PageHeader } from "@/components/page-header";
+import { OnlineSalesFeatureGate } from "@/components/online-sales-feature-gate";
 import { apiBase } from "@/lib/api";
+import type { BadgeTone } from "@/components/ui/badge";
 
 interface MarketplaceItem {
   id: number;
@@ -56,6 +59,13 @@ interface CompanyChip {
 }
 
 const PAGE_SIZE = 24;
+
+function segmentTone(seed: string): BadgeTone {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h + seed.charCodeAt(i) * (i + 1)) % 2147483647;
+  const tones: BadgeTone[] = ["brand", "info", "success", "warning", "neutral"];
+  return tones[Math.abs(h) % tones.length];
+}
 
 function formatPrice(price: number | null, currency: string) {
   if (price == null || price <= 0) return null;
@@ -167,6 +177,7 @@ export default function B2BVitrinPage() {
   };
 
   return (
+    <OnlineSalesFeatureGate title="B2B vitrin paketinizde kapalı">
     <div className="space-y-6">
       <PageHeader
         title="B2B Vitrin"
@@ -300,7 +311,7 @@ export default function B2BVitrinPage() {
                 <div className="md:col-span-1 shrink-0">
                   <div className="h-14 w-14 rounded-lg bg-muted/40 border border-border/60 flex items-center justify-center overflow-hidden shrink-0">
                     {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
+                      <LazyImage src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
                     ) : (
                       <Package className="h-6 w-6 text-muted-foreground/50" />
                     )}
@@ -319,6 +330,21 @@ export default function B2BVitrinPage() {
                     </span>
                   )}
                 </div>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {item.category && (
+                    <Badge tone={segmentTone(`cat:${item.category}`)} size="sm">
+                      {item.category}
+                    </Badge>
+                  )}
+                  <Badge tone={segmentTone(`co:${item.companyId}`)} size="sm" variant="outline">
+                    Grup {String.fromCharCode(65 + (item.companyId % 5))}
+                  </Badge>
+                  {item.minOrderQty > 1 && (
+                    <Badge tone="warning" size="sm" variant="outline">
+                      Min {item.minOrderQty}+
+                    </Badge>
+                  )}
+                </div>
                 {item.description && (
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                     {item.description}
@@ -332,11 +358,6 @@ export default function B2BVitrinPage() {
                     <span className="inline-flex items-center gap-1">
                       <Clock className="h-3 w-3" /> {item.leadDays} gün teslim
                     </span>
-                  )}
-                  {item.category && (
-                    <Badge variant="outline" className="h-5 text-[10px] font-normal border-border/70">
-                      <Tag className="h-2.5 w-2.5 mr-1" /> {item.category}
-                    </Badge>
                   )}
                 </div>
                 </div>
@@ -426,5 +447,6 @@ export default function B2BVitrinPage() {
         </div>
       )}
     </div>
+    </OnlineSalesFeatureGate>
   );
 }

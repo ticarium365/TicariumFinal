@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { OnlineSalesFeatureGate } from "@/components/online-sales-feature-gate";
 import { apiBase } from "@/lib/api";
 
 interface ChannelDef {
@@ -121,6 +122,7 @@ export default function ChannelsBulkPage() {
   }
 
   return (
+    <OnlineSalesFeatureGate>
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
       <Link href="/channels">
         <Button variant="ghost" size="sm" className="-ml-2">
@@ -338,5 +340,6 @@ export default function ChannelsBulkPage() {
         </Card>
       )}
     </div>
+    </OnlineSalesFeatureGate>
   );
 }

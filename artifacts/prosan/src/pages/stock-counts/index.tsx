@@ -8,8 +8,9 @@ import {
   ChevronRight, Package2, TrendingDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DirtySubmitButton } from "@/components/ui/save-submit-button";
 import { Input } from "@/components/ui/input";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/hooks/use-toast";
 
 interface StockCountSession {
@@ -110,12 +111,14 @@ export default function StockCountsPage() {
             onChange={e => setNotes(e.target.value)}
           />
           <div className="flex gap-2">
-            <Button
+            <DirtySubmitButton
+              type="button"
+              dirty={name.trim().length > 0 || notes.trim().length > 0}
               onClick={() => createMutation.mutate({ name: name.trim(), notes: notes.trim() || undefined })}
-              disabled={!name.trim() || createMutation.isPending}
+              disabled={createMutation.isPending || !name.trim()}
             >
               {createMutation.isPending ? "Açılıyor..." : "Oturumu Aç"}
-            </Button>
+            </DirtySubmitButton>
             <Button variant="outline" onClick={() => { setShowForm(false); setName(""); setNotes(""); }}>
               İptal
             </Button>
@@ -131,7 +134,7 @@ export default function StockCountsPage() {
           icon={ClipboardList}
           title="Henüz stok sayımı yapılmamış"
           description="Düzenli sayım stok güvenirliğini artırır, fire ve fark raporları üretir. Hemen ilk sayımı başlatın."
-          primaryAction={{ label: "İlk Sayımı Başlat", onClick: () => setShowForm(true), testId: "empty-start-count" }}
+          action={{ label: "İlk Sayımı Başlat", onClick: () => setShowForm(true), testId: "empty-start-count" }}
         />
       ) : (
         <div className="space-y-2">

@@ -62,7 +62,7 @@ function ScoreGauge({ value }: { value: number }) {
   return (
     <div className="relative w-44 h-44">
       <svg viewBox="0 0 160 160" className="w-full h-full -rotate-90">
-        <circle cx="80" cy="80" r={r} fill="none" stroke="#e2e8f0" strokeWidth="14" />
+        <circle cx="80" cy="80" r={r} fill="none" stroke="var(--color-border-subtle)" strokeWidth="14" />
         <circle
           cx="80" cy="80" r={r} fill="none" strokeWidth="14"
           strokeDasharray={c} strokeDashoffset={off} strokeLinecap="round"

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { endOfMonth, startOfMonth } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -18,9 +19,11 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, TrendingUp, TrendingDown, Wallet, Calendar, Save, AlertTriangle, BarChart3, Bell, RefreshCw, Sparkles } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { PageHeader } from "@/components/ui/page-header";
+import { DateRangePicker, type FinanceDateRangeValue } from "@/components/ui/date-range-picker";
+import { formatTryCurrency } from "@/lib/finance-intl";
 
-const fmt = (n: number | null | undefined) =>
-  new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(Number(n || 0));
+const fmt = (n: number | null | undefined) => formatTryCurrency(Number(n || 0), 2);
 const pct = (n: number) => `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
 
 function curPeriod() {
@@ -248,7 +251,14 @@ function ScenarioCard({ title, subtitle, tone, data, baseline, highlighted }: {
 export default function BudgetsPage() {
   const { toast } = useToast();
   const [tab, setTab] = useState("plan");
-  const [period, setPeriod] = useState(curPeriod());
+  const [range, setRange] = useState<FinanceDateRangeValue>(() => {
+    const d = new Date();
+    return { from: startOfMonth(d), to: endOfMonth(d) };
+  });
+  const period = useMemo(
+    () => `${range.from.getFullYear()}-${String(range.from.getMonth() + 1).padStart(2, "0")}`,
+    [range.from]
+  );
   const [budgets, setBudgets] = useState<any[]>([]);
   const [comparison, setComparison] = useState<any>(null);
   const [forecast, setForecast] = useState<any>(null);
@@ -353,22 +363,36 @@ export default function BudgetsPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6" data-testid="page-butce">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <TrendingUp className="h-7 w-7 text-primary" />
-            Bütçe & Tahmin
-          </h1>
-          <p className="text-muted-foreground">Aylık bütçe, gerçekleşme, ciro tahmini ve nakit akışı planı.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Label className="text-sm">Dönem:</Label>
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-32" data-testid="select-period"><SelectValue /></SelectTrigger>
-            <SelectContent>{periodOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-      </div>
+      <PageHeader
+        title="Bütçe & Tahmin"
+        subtitle="Aylık bütçe, gerçekleşme, ciro tahmini ve nakit akışı planı. Dönem, aralığın başlangıç ayına göre seçilir."
+        right={
+          <div className="flex flex-wrap items-center gap-2">
+            <DateRangePicker
+              value={range}
+              onChange={(r) => {
+                const y = r.from.getFullYear();
+                const m = r.from.getMonth();
+                setRange({ from: startOfMonth(new Date(y, m)), to: endOfMonth(new Date(y, m)) });
+              }}
+              useShortLabel
+            />
+            <Select
+              value={period}
+              onValueChange={(p) => {
+                const [y, mo] = p.split("-").map(Number);
+                setRange({
+                  from: startOfMonth(new Date(y, mo - 1)),
+                  to: endOfMonth(new Date(y, mo - 1)),
+                });
+              }}
+            >
+              <SelectTrigger className="w-36" data-testid="select-period"><SelectValue /></SelectTrigger>
+              <SelectContent>{periodOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+        }
+      />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-4 md:grid-cols-7">
@@ -493,7 +517,11 @@ export default function BudgetsPage() {
                         <TableCell className="text-right">{fmt(l.budget)}</TableCell>
                         <TableCell className="text-right">{fmt(l.actual)}</TableCell>
                         <TableCell className="w-40">
-                          <Progress value={Math.min(100, usage)} className={danger ? "[&>*]:bg-red-500" : ""} />
+                          <Progress
+                            value={Math.min(100, usage)}
+                            className="h-2 rounded-[4px] bg-[var(--color-neutral-200)] dark:bg-[var(--color-neutral-800)]"
+                            indicatorClassName={danger ? "bg-[var(--color-semantic-danger)]" : "bg-[var(--color-brand-500)]"}
+                          />
                           <div className="text-xs text-muted-foreground mt-1">{usage.toFixed(0)}%</div>
                         </TableCell>
                         <TableCell className={`text-right font-medium ${danger ? "text-red-600" : "text-emerald-600"}`}>{fmt(l.variance)}</TableCell>

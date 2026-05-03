@@ -45,7 +45,7 @@ router.get("/daily-stats", requireAuth, async (req: Request, res: Response) => {
     res.json(result);
   } catch (err) {
     req.log?.error({ err }, "Get daily stats error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -76,7 +76,7 @@ router.get("/today", requireAuth, async (req: Request, res: Response) => {
     res.json({ totalSales: sales.length, totalQuantity, grossRevenue, netRevenue, totalProfit, profitPercent, sales });
   } catch (err) {
     req.log?.error({ err }, "Get today sales error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -171,7 +171,7 @@ router.get("/day-summary", requireAuth, async (req: Request, res: Response) => {
     });
   } catch (err) {
     req.log?.error({ err }, "Day summary error");
-    return res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json(Errors.internal());
   }
 });
 
@@ -212,7 +212,7 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
     });
   } catch (err) {
     req.log?.error({ err }, "List sales error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -272,28 +272,48 @@ router.post("/", requireAuth, idempotencyMiddleware, async (req: Request, res: R
       else saleType = customer ? "wholesale" : "retail";
     }
 
-    const [sale] = await db.insert(salesTable).values({
-      companyId: cid,
-      productId: product.id,
-      productName: product.name,
-      productCode: product.productCode,
-      barcode: product.barcode,
-      quantity: qty,
-      unitPrice: parseFloat(unitPrice),
-      totalPrice,
-      purchasePrice: product.purchasePrice,
-      profit,
-      userId: req.session.user?.id,
-      soldBy: req.session.user?.fullName,
-      paymentMethod: pm,
-      customerId: customer ? customer.id : null,
-      channelKey: channelKey ? String(channelKey) : null,
-      saleType,
-    }).returning();
+    const sale = await db.transaction(async (tx) => {
+      const [inserted] = await tx.insert(salesTable).values({
+        companyId: cid,
+        productId: product.id,
+        productName: product.name,
+        productCode: product.productCode,
+        barcode: product.barcode,
+        quantity: qty,
+        unitPrice: parseFloat(unitPrice),
+        totalPrice,
+        purchasePrice: product.purchasePrice,
+        profit,
+        userId: req.session.user?.id,
+        soldBy: req.session.user?.fullName,
+        paymentMethod: pm,
+        customerId: customer ? customer.id : null,
+        channelKey: channelKey ? String(channelKey) : null,
+        saleType,
+      }).returning();
+      if (!inserted) {
+        throw new Error("Satış kaydı oluşturulamadı");
+      }
 
-    await db.update(productsTable)
-      .set({ stock: product.stock - qty, updatedAt: new Date() })
-      .where(eq(productsTable.id, product.id));
+      await tx
+        .update(productsTable)
+        .set({ stock: product.stock - qty, updatedAt: new Date() })
+        .where(eq(productsTable.id, product.id));
+
+      await tx.insert(stockMovementsTable).values({
+        companyId: cid,
+        productId: product.id,
+        productName: product.name,
+        productCode: product.productCode,
+        type: "sale",
+        quantity: -qty,
+        note: customer ? `Satış (cari): ${product.name} x${qty}` : `Satış: ${product.name} x${qty}`,
+        refId: inserted.id,
+        createdBy: req.session.user?.fullName || req.session.user?.username,
+      });
+
+      return inserted;
+    });
 
     // Müşteriye bağlıysa cari debit kaydı
     if (customer && sale) {
@@ -328,7 +348,7 @@ router.post("/", requireAuth, idempotencyMiddleware, async (req: Request, res: R
       req,
       action: "SALE_CREATE",
       entity: "sale",
-      entityId: sale!.id,
+      entityId: sale.id,
       details: { productId: product.id, productName: product.name, quantity: qty, unitPrice, totalPrice, customerId: customer?.id },
     });
 

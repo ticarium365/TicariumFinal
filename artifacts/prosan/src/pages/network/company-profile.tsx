@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-context";
 import { apiBase } from "@/lib/api";
+import { OnlineSalesFeatureGate } from "@/components/online-sales-feature-gate";
 import { initialLetter } from "@/lib/display-initial";
 
 interface Review {
@@ -153,10 +154,12 @@ export default function CompanyProfilePage({ subdomain }: Props) {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-4">
-        <div className="h-8 bg-muted rounded animate-pulse w-40" />
-        <div className="h-48 bg-muted rounded animate-pulse" />
-      </div>
+      <OnlineSalesFeatureGate>
+        <div className="max-w-4xl mx-auto px-4 py-8 space-y-4">
+          <div className="h-8 bg-muted rounded animate-pulse w-40" />
+          <div className="h-48 bg-muted rounded animate-pulse" />
+        </div>
+      </OnlineSalesFeatureGate>
     );
   }
 
@@ -165,6 +168,7 @@ export default function CompanyProfilePage({ subdomain }: Props) {
   const { profile, reviews } = profileData;
 
   return (
+    <OnlineSalesFeatureGate>
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
       <Link href="/network">
         <Button variant="ghost" size="sm" className="-ml-2">
@@ -388,5 +392,6 @@ export default function CompanyProfilePage({ subdomain }: Props) {
         </Card>
       </div>
     </div>
+    </OnlineSalesFeatureGate>
   );
 }

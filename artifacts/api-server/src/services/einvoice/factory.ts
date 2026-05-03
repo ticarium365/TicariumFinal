@@ -8,6 +8,7 @@ import {
   QnbEFinansProvider, ForibaProvider,
   LogoEFlowProvider, MikroProvider,
 } from "./stub-providers.js";
+import { logger } from "../../lib/logger.js";
 
 export const PROVIDER_REGISTRY: Record<string, new (cfg: EInvoiceProviderConfig) => EInvoiceProvider> = {
   mock: MockEInvoiceProvider,
@@ -72,6 +73,6 @@ export async function logEvent(opts: {
       inboxId: opts.inboxId || null,
     });
   } catch (e) {
-    console.error("[einvoice/logEvent]", e);
+    logger.error({ err: e }, "[einvoice/logEvent]");
   }
 }

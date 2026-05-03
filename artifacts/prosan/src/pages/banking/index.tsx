@@ -6,11 +6,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PageHeader } from "@/components/ui/page-header";
+import { DateRangePicker, financeRangeToApiStrings } from "@/components/ui/date-range-picker";
+import { formatTryCurrency, formatTrDate } from "@/lib/finance-intl";
 import { useToast } from "@/hooks/use-toast";
 import {
   Banknote, Plus, Upload, Search, Loader2, Link2, Eye, CheckCircle2, X, RefreshCw,
   Wallet, AlertTriangle, TrendingUp, ChevronRight as ChevronRightIcon,
 } from "lucide-react";
+import { endOfMonth, startOfMonth } from "date-fns";
 const API = "/api/banking";
 
 type Account = {
@@ -47,11 +51,12 @@ type Suggestions = {
   purchases: any[];
 };
 
-const fmtTL = (n: number) =>
-  new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 2 }).format(n);
-
 export default function BankingPage() {
   const { toast } = useToast();
+  const [range, setRange] = useState(() => ({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
+  }));
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [activeAccountId, setActiveAccountId] = useState<number | "all">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "unmatched" | "matched" | "ignored">("all");
@@ -82,15 +87,18 @@ export default function BankingPage() {
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
+      const { startDate: dateFrom, endDate: dateTo } = financeRangeToApiStrings(range);
       const params = new URLSearchParams();
       if (activeAccountId !== "all") params.set("accountId", String(activeAccountId));
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (search.trim()) params.set("search", search.trim());
+      params.set("dateFrom", dateFrom);
+      params.set("dateTo", dateTo);
       params.set("limit", "200");
       const res = await fetch(`${API}/transactions?${params.toString()}`, { credentials: "include" });
       if (res.ok) setTransactions(await res.json());
     } finally { setLoading(false); }
-  }, [activeAccountId, statusFilter, search]);
+  }, [activeAccountId, statusFilter, search, range]);
 
   useEffect(() => { fetchAccounts(); }, [fetchAccounts]);
   useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
@@ -102,11 +110,7 @@ export default function BankingPage() {
   const fetchKpiData = useCallback(async () => {
     setKpiLoading(true);
     try {
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-      const dateFrom = monthStart.toISOString().slice(0, 10);
-      const dateTo = monthEnd.toISOString().slice(0, 10);
+      const { startDate: dateFrom, endDate: dateTo } = financeRangeToApiStrings(range);
       const [unmRes, monRes] = await Promise.all([
         fetch(`${API}/transactions?status=unmatched&limit=500`, { credentials: "include" }),
         fetch(`${API}/transactions?dateFrom=${dateFrom}&dateTo=${dateTo}&limit=500`, { credentials: "include" }),
@@ -114,7 +118,7 @@ export default function BankingPage() {
       if (unmRes.ok) setGlobalUnmatched(await unmRes.json());
       if (monRes.ok) setMonthlyTx(await monRes.json());
     } finally { setKpiLoading(false); }
-  }, []);
+  }, [range]);
   useEffect(() => { fetchKpiData(); }, [fetchKpiData]);
 
   const createAccount = async () => {
@@ -216,29 +220,28 @@ export default function BankingPage() {
   return (
     <>
       <div className="space-y-6 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Banknote className="h-7 w-7" /> Bankacılık
-            </h1>
-            <p className="text-muted-foreground">Hesaplar, ekstre import ve ödeme eşleştirme</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setAccountDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" /> Hesap Ekle
-            </Button>
-            <Button onClick={() => { setCsvAccountId(accounts[0]?.id || null); setCsvDialog(true); }}>
-              <Upload className="h-4 w-4 mr-2" /> CSV İçe Aktar
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          title="Banka Hareketleri"
+          subtitle="Hesaplar, ekstre import ve ödeme eşleştirme"
+          right={
+            <div className="flex flex-wrap items-center gap-2">
+              <DateRangePicker value={range} onChange={setRange} useShortLabel />
+              <Button variant="secondary" onClick={() => setAccountDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" /> Hesap Ekle
+              </Button>
+              <Button onClick={() => { setCsvAccountId(accounts[0]?.id || null); setCsvDialog(true); }}>
+                <Upload className="h-4 w-4 mr-2" /> CSV İçe Aktar
+              </Button>
+            </div>
+          }
+        />
 
         {/* ─── Dalga 30 — KPI Strip (independent global) ─────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" data-testid="banking-kpi-strip">
           <Card data-testid="kpi-try-balance">
             <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1.5"><Wallet className="h-4 w-4" /> TRY Bakiye</CardTitle></CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{kpiLoading ? "—" : fmtTL(tryActiveBalance)}</div>
+              <div className="text-2xl font-bold">{kpiLoading ? "—" : formatTryCurrency(tryActiveBalance, 2)}</div>
               <div className="text-xs text-muted-foreground">{accounts.filter(a => a.isActive && a.currency === "TRY").length} aktif TRY hesap</div>
             </CardContent>
           </Card>
@@ -260,7 +263,7 @@ export default function BankingPage() {
             <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1.5"><TrendingUp className="h-4 w-4" /> Bu Ay Net</CardTitle></CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${monthlyNet >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                {kpiLoading ? "—" : fmtTL(monthlyNet)}
+                {kpiLoading ? "—" : formatTryCurrency(monthlyNet, 2)}
               </div>
               <div className="text-xs text-muted-foreground">{monthlyTx.length} hareket</div>
             </CardContent>
@@ -293,11 +296,11 @@ export default function BankingPage() {
                         <ChevronRightIcon className="h-3 w-3 text-muted-foreground" />
                       </div>
                       <div className={`text-sm font-bold ${tx.txType === "credit" ? "text-emerald-600" : "text-red-600"}`}>
-                        {tx.txType === "credit" ? "+" : "−"}{fmtTL(Math.abs(Number(tx.amount)))}
+                        {tx.txType === "credit" ? "+" : "−"}{formatTryCurrency(Math.abs(Number(tx.amount)), 2)}
                       </div>
                       <div className="text-xs text-muted-foreground truncate" title={tx.description}>{tx.description || "—"}</div>
                       <div className="text-[10px] text-muted-foreground mt-0.5">
-                        {new Date(tx.txDate).toLocaleDateString("tr-TR")} · {acc?.bankName ?? "—"}
+                        {formatTrDate(tx.txDate)} · {acc?.bankName ?? "—"}
                       </div>
                     </div>
                   );
@@ -311,7 +314,7 @@ export default function BankingPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <Card className="border-2 border-primary/30">
             <CardHeader className="pb-2"><CardTitle className="text-sm">Toplam Bakiye</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold">{fmtTL(totalBalance)}</div>
+            <CardContent><div className="text-2xl font-bold">{formatTryCurrency(totalBalance, 2)}</div>
               <div className="text-xs text-muted-foreground">{accounts.length} hesap</div></CardContent>
           </Card>
           {accounts.slice(0, 3).map(a => (
@@ -320,7 +323,7 @@ export default function BankingPage() {
                 {a.bankName} <Badge variant="outline" className="text-xs">{a.currency}</Badge>
               </CardTitle></CardHeader>
               <CardContent>
-                <div className="text-xl font-bold">{fmtTL(Number(a.currentBalance))}</div>
+                <div className="text-xl font-bold">{formatTryCurrency(Number(a.currentBalance), 2)}</div>
                 <div className="text-xs text-muted-foreground truncate">{a.accountName}</div>
               </CardContent>
             </Card>
@@ -375,16 +378,16 @@ export default function BankingPage() {
                   <tbody>
                     {transactions.map(tx => (
                       <tr key={tx.id} className="border-t hover:bg-muted/30">
-                        <td className="px-4 py-2 whitespace-nowrap">{new Date(tx.txDate).toLocaleDateString("tr-TR")}</td>
+                        <td className="px-4 py-2 whitespace-nowrap">{formatTrDate(tx.txDate)}</td>
                         <td className="px-4 py-2">
                           <div>{tx.description}</div>
                           {tx.counterparty && <div className="text-xs text-muted-foreground">{tx.counterparty}</div>}
                         </td>
                         <td className={`px-4 py-2 text-right font-medium ${tx.txType === "credit" ? "text-emerald-600" : "text-red-600"}`}>
-                          {fmtTL(Number(tx.amount))}
+                          {formatTryCurrency(Number(tx.amount), 2)}
                         </td>
                         <td className="px-4 py-2 text-right text-muted-foreground">
-                          {tx.balance ? fmtTL(Number(tx.balance)) : "—"}
+                          {tx.balance ? formatTryCurrency(Number(tx.balance), 2) : "—"}
                         </td>
                         <td className="px-4 py-2 text-center">
                           {tx.status === "matched" && <Badge className="bg-emerald-500/15 text-emerald-300">Eşleşti</Badge>}
@@ -467,14 +470,14 @@ export default function BankingPage() {
         <Dialog open={!!matchTx} onOpenChange={(o) => !o && setMatchTx(null)}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
-              <DialogTitle>Hareket Eşleştir — {matchTx && fmtTL(Number(matchTx.amount))}</DialogTitle>
+              <DialogTitle>Hareket Eşleştir — {matchTx && formatTryCurrency(Number(matchTx.amount), 2)}</DialogTitle>
             </DialogHeader>
             {matchTx && (
               <div className="space-y-3">
                 <div className="text-sm bg-muted/30 p-3 rounded">
                   <div><strong>{matchTx.description}</strong></div>
                   <div className="text-muted-foreground text-xs">
-                    {new Date(matchTx.txDate).toLocaleDateString("tr-TR")} · {matchTx.counterparty || "—"} · ref: {matchTx.reference || "—"}
+                    {formatTrDate(matchTx.txDate)} · {matchTx.counterparty || "—"} · ref: {matchTx.reference || "—"}
                   </div>
                 </div>
 
@@ -489,7 +492,7 @@ export default function BankingPage() {
                           <div key={d.id} className="flex items-center justify-between border rounded p-2 mb-1">
                             <div className="text-sm">
                               <div>{d.title || d.originalName}</div>
-                              <div className="text-xs text-muted-foreground">{d.docType} · {d.partyName || "—"} · {fmtTL(Number(d.totalAmount))}</div>
+                              <div className="text-xs text-muted-foreground">{d.docType} · {d.partyName || "—"} · {formatTryCurrency(Number(d.totalAmount), 2)}</div>
                             </div>
                             <Button size="sm" onClick={() => doMatch({ docId: d.id })} disabled={matchBusy}>
                               <CheckCircle2 className="h-3 w-3 mr-1" /> Eşle
@@ -505,7 +508,7 @@ export default function BankingPage() {
                           <div key={p.id} className="flex items-center justify-between border rounded p-2 mb-1">
                             <div className="text-sm">
                               <div>Fatura #{p.invoiceNo || p.id}</div>
-                              <div className="text-xs text-muted-foreground">{new Date(p.invoiceDate).toLocaleDateString("tr-TR")} · {fmtTL(Number(p.totalAmount))}</div>
+                              <div className="text-xs text-muted-foreground">{formatTrDate(p.invoiceDate)} · {formatTryCurrency(Number(p.totalAmount), 2)}</div>
                             </div>
                             <Button size="sm" onClick={() => doMatch({ purchaseId: p.id })} disabled={matchBusy}>
                               <CheckCircle2 className="h-3 w-3 mr-1" /> Eşle (Ödendi işaretle)
@@ -521,7 +524,7 @@ export default function BankingPage() {
                           <div key={e.id} className="flex items-center justify-between border rounded p-2 mb-1">
                             <div className="text-sm">
                               <div>{e.description}</div>
-                              <div className="text-xs text-muted-foreground">{new Date(e.expenseDate).toLocaleDateString("tr-TR")} · {fmtTL(Number(e.amount))}</div>
+                              <div className="text-xs text-muted-foreground">{formatTrDate(e.expenseDate)} · {formatTryCurrency(Number(e.amount), 2)}</div>
                             </div>
                             <Button size="sm" onClick={() => doMatch({ expenseId: e.id })} disabled={matchBusy}>
                               <CheckCircle2 className="h-3 w-3 mr-1" /> Eşle

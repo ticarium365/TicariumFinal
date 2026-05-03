@@ -1,23 +1,23 @@
 import { useEffect, useState, useCallback, lazy, Suspense } from "react";
+import { endOfMonth, startOfMonth } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
+import { DateRangePicker, financeRangeToApiStrings } from "@/components/ui/date-range-picker";
+import { FinanceKpiCard } from "@/components/finance-kpi-card";
+import { formatTryCurrency } from "@/lib/finance-intl";
 import { useToast } from "@/hooks/use-toast";
 import {
-  TrendingUp, Banknote, Receipt, FileText, AlertTriangle,
-  Loader2, Bot, Send, Download, RefreshCw, ArrowUpRight, ArrowDownRight,
+  AlertTriangle,
+  Loader2, Bot, Send, Download, RefreshCw,
 } from "lucide-react";
 const FinanceDashboardCashflowChart = lazy(() =>
   import("@/components/finance-dashboard-cashflow-chart").then((m) => ({
     default: m.FinanceDashboardCashflowChart,
   })),
 );
-
-const fmtTL = (n: number) =>
-  new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(n || 0);
-const fmtTLp = (n: number) =>
-  new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 2 }).format(n || 0);
 
 type CashflowDay = { date: string; inflow?: number; outflow?: number; net: number; in?: number; out?: number };
 type Summary = {
@@ -47,6 +47,10 @@ export default function FinanceDashboardPage() {
   const { toast } = useToast();
   const [data, setData] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState(() => ({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
+  }));
 
   // AI CFO chat
   const [cfoInput, setCfoInput] = useState("");
@@ -57,8 +61,10 @@ export default function FinanceDashboardPage() {
   const fetchSummary = useCallback(async () => {
     setLoading(true);
     try {
+      const { startDate, endDate } = financeRangeToApiStrings(range);
+      const sumUrl = `/api/finance-dashboard/summary?from=${encodeURIComponent(startDate)}&to=${encodeURIComponent(endDate)}`;
       const [sumRes, agingRes] = await Promise.all([
-        fetch("/api/finance-dashboard/summary", { credentials: "include" }),
+        fetch(sumUrl, { credentials: "include" }),
         fetch("/api/finance-dashboard/aging", { credentials: "include" }),
       ]);
       if (!sumRes.ok) {
@@ -86,7 +92,7 @@ export default function FinanceDashboardPage() {
     } catch (e: any) {
       toast({ title: "Hata", description: String(e?.message || e), variant: "destructive" });
     } finally { setLoading(false); }
-  }, [toast]);
+  }, [toast, range]);
 
   useEffect(() => { fetchSummary(); }, [fetchSummary]);
 
@@ -116,7 +122,8 @@ export default function FinanceDashboardPage() {
   const exportXlsx = async () => {
     setExportBusy(true);
     try {
-      const url = "/api/finance-dashboard/accountant-export";
+      const { startDate, endDate } = financeRangeToApiStrings(range);
+      const url = `/api/finance-dashboard/accountant-export?from=${encodeURIComponent(startDate)}&to=${encodeURIComponent(endDate)}`;
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) {
         toast({ title: "Export başarısız", variant: "destructive" });
@@ -139,8 +146,11 @@ export default function FinanceDashboardPage() {
     recentDocs: data.recentDocs || [],
   } : null;
 
-  if (loading || !safeData) {
+  if (loading && !safeData) {
     return <div className="p-12 text-center"><Loader2 className="inline h-8 w-8 animate-spin" /></div>;
+  }
+  if (!safeData) {
+    return <div className="p-12 text-center text-muted-foreground">Veri yok</div>;
   }
 
   const k = safeData.kpis;
@@ -149,80 +159,79 @@ export default function FinanceDashboardPage() {
   return (
     <>
       <div className="space-y-6 p-6">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <TrendingUp className="h-7 w-7" /> Finans Paneli
-            </h1>
-            <p className="text-muted-foreground">Nakit, alacak, borç ve AI CFO analizi</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={fetchSummary}>
-              <RefreshCw className="h-4 w-4 mr-2" /> Yenile
-            </Button>
-            <Button onClick={exportXlsx} disabled={exportBusy}>
-              {exportBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-              Muhasebeci için Export (XLSX)
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          title="Finans Özeti"
+          subtitle="Nakit, alacak, borç ve AI CFO analizi"
+          right={
+            <div className="flex flex-wrap items-center gap-2">
+              <DateRangePicker value={range} onChange={setRange} useShortLabel className="min-w-[200px]" />
+              <Button variant="secondary" onClick={fetchSummary} disabled={loading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Yenile
+              </Button>
+              <Button onClick={exportXlsx} disabled={exportBusy}>
+                {exportBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                Muhasebeci için Export (XLSX)
+              </Button>
+            </div>
+          }
+        />
 
         {/* Top KPI Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Banknote className="h-4 w-4" /> Toplam Banka Bakiyesi</CardTitle></CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{fmtTLp(k.totalBankBalance)}</div>
-            </CardContent>
-          </Card>
-          <Card className={isHealthy ? "border-emerald-500/20" : "border-red-500/20"}>
-            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2">
-              {isHealthy ? <ArrowUpRight className="h-4 w-4 text-emerald-600" /> : <ArrowDownRight className="h-4 w-4 text-red-600" />}
-              Bu Ay Net Nakit
-            </CardTitle></CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${isHealthy ? "text-emerald-600" : "text-red-600"}`}>{fmtTLp(k.netMonthCash)}</div>
-              <div className="text-xs text-muted-foreground">Satış − (Alış + Gider)</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Receipt className="h-4 w-4" /> Müşteri Alacakları</CardTitle></CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-300">{fmtTL(k.customersBalance)}</div>
-              <div className="text-xs text-muted-foreground">Tahsil edilecek toplam</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4" /> Tedarikçi Borçları</CardTitle></CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-300">{fmtTL(k.suppliersBalance)}</div>
-              <div className="text-xs text-muted-foreground">{k.unpaidPurchasesCount} ödenmemiş alış</div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <FinanceKpiCard
+            label="Toplam banka bakiyesi"
+            value={formatTryCurrency(k.totalBankBalance, 2)}
+            sublabel="Tüm aktif hesaplar"
+          />
+          <FinanceKpiCard
+            label="Dönem net nakit"
+            value={formatTryCurrency(k.netMonthCash, 2)}
+            sublabel={
+              <span className={isHealthy ? "text-[var(--color-semantic-success)]" : "text-[var(--color-semantic-danger)]"}>
+                Satış − (Alış + Gider)
+              </span>
+            }
+          />
+          <FinanceKpiCard
+            label="Müşteri alacakları"
+            value={formatTryCurrency(k.customersBalance, 0)}
+            sublabel="Tahsil edilecek toplam"
+          />
+          <FinanceKpiCard
+            label="Tedarikçi borçları"
+            value={formatTryCurrency(k.suppliersBalance, 0)}
+            sublabel={`${k.unpaidPurchasesCount} ödenmemiş alış`}
+          />
         </div>
 
         {/* Secondary stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card><CardContent className="p-4">
-            <div className="text-xs text-muted-foreground">Bu Ay Satış</div>
-            <div className="text-xl font-bold">{fmtTL(k.monthSales)}</div>
-            <div className="text-xs text-muted-foreground">{k.monthSalesCount} adet</div>
-          </CardContent></Card>
-          <Card><CardContent className="p-4">
-            <div className="text-xs text-muted-foreground">Bu Ay Alış</div>
-            <div className="text-xl font-bold">{fmtTL(k.monthPurchases)}</div>
-            <div className="text-xs text-muted-foreground">{k.monthPurchasesCount} adet</div>
-          </CardContent></Card>
-          <Card><CardContent className="p-4">
-            <div className="text-xs text-muted-foreground">Bu Ay Gider</div>
-            <div className="text-xl font-bold">{fmtTL(k.monthExpenses)}</div>
-            <div className="text-xs text-muted-foreground">{k.monthExpensesCount} adet</div>
-          </CardContent></Card>
-          <Card className={(k.pendingDocs + k.unmatchedTx) > 0 ? "border-amber-500/30" : ""}>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Card variant="flat" className="border border-[color:var(--color-border-subtle)] shadow-none">
+            <CardContent className="p-4">
+              <div className="text-xs text-muted-foreground">Dönem satış</div>
+              <div className="text-xl font-bold">{formatTryCurrency(k.monthSales, 0)}</div>
+              <div className="text-xs text-muted-foreground">{k.monthSalesCount} adet</div>
+            </CardContent>
+          </Card>
+          <Card variant="flat" className="border border-[color:var(--color-border-subtle)] shadow-none">
+            <CardContent className="p-4">
+              <div className="text-xs text-muted-foreground">Dönem alış</div>
+              <div className="text-xl font-bold">{formatTryCurrency(k.monthPurchases, 0)}</div>
+              <div className="text-xs text-muted-foreground">{k.monthPurchasesCount} adet</div>
+            </CardContent>
+          </Card>
+          <Card variant="flat" className="border border-[color:var(--color-border-subtle)] shadow-none">
+            <CardContent className="p-4">
+              <div className="text-xs text-muted-foreground">Dönem gider</div>
+              <div className="text-xl font-bold">{formatTryCurrency(k.monthExpenses, 0)}</div>
+              <div className="text-xs text-muted-foreground">{k.monthExpensesCount} adet</div>
+            </CardContent>
+          </Card>
+          <Card variant="flat" className={`border shadow-none ${(k.pendingDocs + k.unmatchedTx) > 0 ? "border-amber-500/30" : "border-[color:var(--color-border-subtle)]"}`}>
             <CardContent className="p-4">
               <div className="text-xs text-muted-foreground flex items-center gap-1">
                 {(k.pendingDocs + k.unmatchedTx) > 0 && <AlertTriangle className="h-3 w-3 text-amber-600" />}
-                İşlem Bekleyen
+                İşlem bekleyen
               </div>
               <div className="text-xl font-bold">{k.pendingDocs + k.unmatchedTx}</div>
               <div className="text-xs text-muted-foreground">{k.pendingDocs} belge · {k.unmatchedTx} hareket</div>
@@ -231,38 +240,40 @@ export default function FinanceDashboardPage() {
         </div>
 
         {/* Charts row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Cashflow */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Card className="lg:col-span-2">
-            <CardHeader><CardTitle className="text-base">Son 30 Gün Nakit Akışı</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Nakit akışı (banka hareketleri)</CardTitle></CardHeader>
             <CardContent>
-              <Suspense fallback={<div className="flex h-[260px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
-                <FinanceDashboardCashflowChart data={safeData.cashflow30d} />
-              </Suspense>
+              <div className="w-full min-h-[300px] rounded-[var(--radius-md)] border border-[color:var(--color-border-subtle)] bg-[var(--color-surface-card)] p-2">
+                <Suspense fallback={<div className="flex min-h-[300px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+                  <FinanceDashboardCashflowChart data={safeData.cashflow30d} />
+                </Suspense>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Aging summary */}
           <Card>
             <CardHeader><CardTitle className="text-base">Yaşlandırma</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <div className="text-xs font-semibold text-muted-foreground mb-2">ALACAKLAR</div>
-                {safeData.agingReceivables.map(a => (
-                  <div key={a.bucket} className="flex justify-between text-sm py-1 border-b last:border-b-0">
-                    <span>{a.bucket}</span>
-                    <span className="font-medium text-emerald-300">{fmtTL(a.total)}</span>
-                  </div>
-                ))}
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-muted-foreground mb-2">BORÇLAR</div>
-                {safeData.agingPayables.map(a => (
-                  <div key={a.bucket} className="flex justify-between text-sm py-1 border-b last:border-b-0">
-                    <span>{a.bucket}</span>
-                    <span className="font-medium text-red-300">{fmtTL(a.total)}</span>
-                  </div>
-                ))}
+              <div className="w-full min-h-[300px] rounded-[var(--radius-md)] border border-[color:var(--color-border-subtle)] p-3">
+                <div>
+                  <div className="mb-2 text-xs font-semibold text-muted-foreground">ALACAKLAR</div>
+                  {safeData.agingReceivables.map(a => (
+                    <div key={a.bucket} className="flex justify-between border-b py-1 text-sm last:border-b-0">
+                      <span>{a.bucket}</span>
+                      <span className="font-medium text-emerald-600">{formatTryCurrency(a.total, 0)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4">
+                  <div className="mb-2 text-xs font-semibold text-muted-foreground">BORÇLAR</div>
+                  {safeData.agingPayables.map(a => (
+                    <div key={a.bucket} className="flex justify-between border-b py-1 text-sm last:border-b-0">
+                      <span>{a.bucket}</span>
+                      <span className="font-medium text-red-600">{formatTryCurrency(a.total, 0)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -273,7 +284,7 @@ export default function FinanceDashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bot className="h-5 w-5" /> AI CFO — Yapay Zeka Mali Müşaviriniz
-              <Badge variant="outline" className="ml-2">Beta</Badge>
+              <Badge tone="neutral" className="ml-2">Beta</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">

@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LazyImage } from "@/components/lazy-image";
 import { ShoppingBasket, Search, Store, Package } from "lucide-react";
 
 const fmt = (n: number | null | undefined) =>
@@ -68,7 +69,7 @@ export default function PazarPage() {
             <Card key={it.id} className="overflow-hidden hover:shadow-lg transition">
               <div className="aspect-square bg-muted flex items-center justify-center">
                 {it.imageUrl ? (
-                  <img src={it.imageUrl} alt={it.name} className="w-full h-full object-cover" />
+                  <LazyImage src={it.imageUrl} alt={it.name} className="w-full h-full object-cover" />
                 ) : (
                   <Package className="h-12 w-12 text-muted-foreground/40" />
                 )}

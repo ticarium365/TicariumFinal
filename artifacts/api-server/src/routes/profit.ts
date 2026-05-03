@@ -9,11 +9,38 @@ import multer from "multer";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { assertWithinUsageLimit, incrementUsageSafe } from "../services/usage.js";
 import { aiFeatureDisabledBody, getOpenAIClient } from "../lib/openai-client.js";
+import { z } from "zod";
 
 const router = Router();
 router.use(requireAuth);
 const requireWriter = requireRole(["admin", "staff", "super_admin"]);
 const upload = multer({ limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB
+
+// Zod schemas for validation
+const fixedAssetUpdateSchema = z.object({
+  name: z.string().max(200).optional(),
+  category: z.string().max(100).optional(),
+  serialNo: z.string().max(100).optional(),
+  vendor: z.string().max(200).optional(),
+  invoiceUrl: z.string().url().optional().nullable(),
+  photoUrl: z.string().url().optional().nullable(),
+  warrantyEnd: z.string().optional().nullable(),
+  depreciationMonths: z.number().int().positive().optional(),
+  salvageValue: z.number().optional(),
+  branchId: z.number().optional(),
+  notes: z.string().max(1000).optional(),
+  status: z.string().optional(),
+  purchasePrice: z.number().optional(),
+});
+
+const employeeCostUpdateSchema = z.object({
+  grossSalary: z.number().optional(),
+  sgkEmployer: z.number().optional(),
+  mealAllowance: z.number().optional(),
+  transportAllowance: z.number().optional(),
+  bonus: z.number().optional(),
+  paidAmount: z.number().optional(),
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FIŞ / FATURA OCR — Image upload → GPT-5.2 vision → yapısal veri
@@ -183,12 +210,13 @@ router.post("/fixed-assets", requireWriter, async (req, res) => {
 
 router.put("/fixed-assets/:id", requireWriter, async (req, res) => {
   const id = Number(req.params.id);
+  const body = fixedAssetUpdateSchema.parse(req.body);
   const patch: any = { updatedAt: new Date() };
   for (const k of ["name", "category", "serialNo", "vendor", "invoiceUrl", "photoUrl",
     "warrantyEnd", "depreciationMonths", "salvageValue", "branchId", "notes", "status"]) {
-    if (req.body?.[k] !== undefined) patch[k] = req.body[k];
+    if (body[k as keyof typeof body] !== undefined) patch[k] = body[k as keyof typeof body];
   }
-  if (req.body?.purchasePrice != null) patch.purchasePrice = Number(req.body.purchasePrice);
+  if (body.purchasePrice != null) patch.purchasePrice = Number(body.purchasePrice);
   const [row] = await db.update(fixedAssetsTable).set(patch)
     .where(and(eq(fixedAssetsTable.id, id), eq(fixedAssetsTable.companyId, req.companyId!)))
     .returning();
@@ -323,8 +351,9 @@ router.post("/employee-costs", requireWriter, async (req, res) => {
 
 router.put("/employee-costs/:id", requireWriter, async (req, res) => {
   const id = Number(req.params.id);
-  const patch: any = { ...req.body, updatedAt: new Date() };
-  if (req.body?.paidAmount != null) patch.paidAmount = Number(req.body.paidAmount);
+  const body = employeeCostUpdateSchema.parse(req.body);
+  const patch: any = { ...body, updatedAt: new Date() };
+  if (body.paidAmount != null) patch.paidAmount = Number(body.paidAmount);
   if (patch.grossSalary != null || patch.sgkEmployer != null) {
     patch.totalEmployerCost = Number(patch.grossSalary || 0) + Number(patch.sgkEmployer || 0)
       + Number(patch.mealAllowance || 0) + Number(patch.transportAllowance || 0) + Number(patch.bonus || 0);
@@ -351,13 +380,28 @@ router.get("/dashboard", async (req, res) => {
   const companyId = req.companyId!;
   const granularity = (req.query.granularity as string) || "today"; // today | month
   const now = new Date();
-  let from: Date, to: Date;
-  if (granularity === "month") {
+  const fromQ = typeof req.query.from === "string" ? req.query.from : "";
+  const toQ = typeof req.query.to === "string" ? req.query.to : "";
+  const ymd = /^\d{4}-\d{2}-\d{2}$/;
+  let from: Date;
+  let to: Date;
+  /** Full period payroll + depreciation vs prorated by day count */
+  let useFullPeriodBurden = false;
+
+  if (ymd.test(fromQ) && ymd.test(toQ)) {
+    from = new Date(`${fromQ}T00:00:00`);
+    to = new Date(`${toQ}T23:59:59`);
+    const daySpan =
+      Math.max(1, Math.ceil((to.getTime() - from.getTime()) / 86_400_000) + 1);
+    useFullPeriodBurden = daySpan >= 25;
+  } else if (granularity === "month") {
     from = new Date(now.getFullYear(), now.getMonth(), 1);
     to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    useFullPeriodBurden = true;
   } else {
     from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    useFullPeriodBurden = false;
   }
 
   // Ciro & COGS — sales tablosu satır başına purchase_price + profit içeriyor
@@ -386,14 +430,15 @@ router.get("/dashboard", async (req, res) => {
   const expensesByCategory = expRows.rows as any[];
   const totalExpenses = expensesByCategory.reduce((s, r) => s + Number(r.total || 0), 0);
 
-  // Personel maliyeti (bu ay)
+  // Personel maliyeti — aralığın bitiş ayına göre
+  const ref = to;
   const payrollRow = await db.execute<{ payroll: number }>(sql`
     SELECT COALESCE(SUM(total_employer_cost), 0)::float AS payroll
     FROM employee_costs
     WHERE company_id = ${companyId}
-      AND period_year = ${now.getFullYear()} AND period_month = ${now.getMonth() + 1}
+      AND period_year = ${ref.getFullYear()} AND period_month = ${ref.getMonth() + 1}
   `);
-  const payroll = Number((payrollRow.rows[0] as any)?.payroll || 0);
+  const payrollFull = Number((payrollRow.rows[0] as any)?.payroll || 0);
 
   // Amortisman — aktif demirbaşların aylık toplamı
   const depRow = await db.execute<{ dep: number }>(sql`
@@ -402,10 +447,22 @@ router.get("/dashboard", async (req, res) => {
     WHERE company_id = ${companyId} AND status = 'active'
   `);
   const depreciation = Number((depRow.rows[0] as any)?.dep || 0);
-  const monthlyDepShare = granularity === "today" ? depreciation / 30 : depreciation;
+
+  const dayCount =
+    Math.max(1, Math.ceil((to.getTime() - from.getTime()) / 86_400_000) + 1);
+  let payrollApplied: number;
+  let depApplied: number;
+  if (useFullPeriodBurden) {
+    payrollApplied = payrollFull;
+    depApplied = depreciation;
+  } else {
+    const f = Math.min(dayCount, 30) / 30;
+    payrollApplied = payrollFull * f;
+    depApplied = (depreciation / 30) * Math.min(dayCount, 30);
+  }
 
   const grossProfit = Number((salesRow.rows[0] as any)?.gross || (revenue - cogs));
-  const netProfit = grossProfit - totalExpenses - (granularity === "month" ? payroll : payroll / 30) - monthlyDepShare;
+  const netProfit = grossProfit - totalExpenses - payrollApplied - depApplied;
   const marginPct = revenue > 0 ? (netProfit / revenue) * 100 : 0;
 
   res.json({
@@ -413,8 +470,8 @@ router.get("/dashboard", async (req, res) => {
     revenue, cogs, grossProfit,
     expensesByCategory,
     totalExpenses,
-    payroll: granularity === "month" ? payroll : payroll / 30,
-    depreciation: monthlyDepShare,
+    payroll: payrollApplied,
+    depreciation: depApplied,
     netProfit: Math.round(netProfit * 100) / 100,
     marginPct: Math.round(marginPct * 100) / 100,
   });

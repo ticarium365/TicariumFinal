@@ -8,16 +8,21 @@
   },
   "packageManager": "pnpm@10.33.1",
   "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
+    "preinstall": "node scripts/preinstall.cjs",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "ci:gate": "pnpm exec tsc -p lib/db && pnpm -C artifacts/api-server run build && node scripts/verify-production-schema.mjs && node scripts/verify-no-committed-prosan-dist.mjs",
     "ci:deploy": "node scripts/verify-production-env.mjs && pnpm exec tsc -p lib/db && pnpm -C artifacts/api-server run build && node scripts/verify-production-schema.mjs && node scripts/verify-no-committed-prosan-dist.mjs",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
-    "smoke:staging": "node scripts/staging-smoke.mjs"
+    "smoke:staging": "node scripts/staging-smoke.mjs",
+    "docs:cursor-playbook": "node scripts/generate-cursor-prompt-playbook.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "private": true,
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@playwright/test": "^1.59.1",
     "pg": "^8.20.0",
     "dotenv-cli": "^11.0.0",
     "playwright": "^1.59.1",

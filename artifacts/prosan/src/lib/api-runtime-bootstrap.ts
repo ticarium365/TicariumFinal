@@ -1,5 +1,24 @@
-import { setBaseUrl } from "@workspace/api-client-react";
+import {
+  setBaseUrl,
+  setResponseValidationFailureHandler,
+  type ResponseValidationFailureContext,
+} from "@workspace/api-client-react";
 import { getApiOrigin } from "./api";
+import { captureException } from "./sentry";
+
+setResponseValidationFailureHandler((ctx: ResponseValidationFailureContext) => {
+  const err = new Error(
+    `API response validation failed: ${ctx.method} ${ctx.pathname}`,
+  );
+  err.name = "ApiResponseValidationFailed";
+  captureException(err, {
+    pathname: ctx.pathname,
+    url: ctx.url,
+    method: ctx.method,
+    zodIssues: ctx.zodError.flatten(),
+    received: ctx.received,
+  });
+});
 
 function installApiFetch(): void {
   if (typeof window === "undefined" || typeof window.fetch !== "function") return;

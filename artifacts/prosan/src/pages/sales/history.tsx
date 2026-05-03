@@ -1,13 +1,17 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useListSales, getListSalesQueryKey } from "@workspace/api-client-react";
+import type { Sale } from "@workspace/api-client-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { SkeletonTable } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from "@/components/ui/dialog";
@@ -194,14 +198,14 @@ export default function SalesHistory() {
   }, [selectedSales]);
   const selectedTotal = selectedSales.reduce((s, r) => s + r.totalPrice, 0);
 
-  const toggleSale = (id: number) => {
+  const toggleSale = useCallback((id: number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+  }, []);
 
   const handleInvoice = async () => {
     if (selectedSales.length === 0) return;
@@ -232,67 +236,209 @@ export default function SalesHistory() {
     }
   };
 
+  const salesList = data?.sales ?? [];
+
+  const columns: DataTableColumn<Sale>[] = [
+    {
+      id: "sel",
+      header: "",
+      headerClassName: "w-12",
+      cell: (sale) => {
+        const isReturned = (sale as { returned?: boolean }).returned === true;
+        const hasCustomer = (sale as { customerId?: number | null }).customerId != null;
+        if (isReturned || !hasCustomer) return <span className="inline-block w-4" />;
+        return (
+          <Checkbox
+            checked={selectedIds.has(sale.id)}
+            onCheckedChange={() => toggleSale(sale.id)}
+            aria-label={`Satış #${sale.id} seç`}
+            data-testid={`select-sale-${sale.id}`}
+            className="border-[color:var(--color-border-subtle)] data-[state=checked]:border-[var(--color-brand-500)] data-[state=checked]:bg-[var(--color-brand-500)]"
+          />
+        );
+      },
+    },
+    {
+      id: "time",
+      header: "Saat",
+      sortable: true,
+      sortValue: (s) => s.createdAt,
+      cell: (sale) => (
+        <span className="font-mono text-sm text-[color:var(--color-neutral-600)]">
+          {new Date(sale.createdAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+        </span>
+      ),
+    },
+    {
+      id: "product",
+      header: "Ürün",
+      sortable: true,
+      sortValue: (s) => s.productName,
+      cell: (sale) => {
+        const isReturned = (sale as { returned?: boolean }).returned === true;
+        return (
+          <div>
+            <div className="flex flex-wrap items-center gap-2 font-[var(--font-weight-medium)]">
+              {sale.productName}
+              {isReturned ? <Badge variant="secondary" className="h-4 px-1 text-[10px]">İade</Badge> : null}
+            </div>
+            <div className="font-mono text-xs text-[color:var(--color-neutral-600)]">{sale.productCode}</div>
+          </div>
+        );
+      },
+    },
+    {
+      id: "unitPrice",
+      header: "Birim",
+      headerClassName: "text-right",
+      sortable: true,
+      sortValue: (s) => s.unitPrice,
+      className: "text-right tabular-nums",
+      cell: (sale) => `${sale.unitPrice.toFixed(2)} TL`,
+    },
+    {
+      id: "quantity",
+      header: "Adet",
+      headerClassName: "text-center",
+      sortable: true,
+      sortValue: (s) => s.quantity,
+      className: "text-center font-[var(--font-weight-bold)]",
+      cell: (sale) => `×${sale.quantity}`,
+    },
+    {
+      id: "totalPrice",
+      header: "Toplam",
+      headerClassName: "text-right",
+      sortable: true,
+      sortValue: (s) => s.totalPrice,
+      className: "text-right font-[var(--font-weight-bold)] text-[color:var(--color-brand-700)]",
+      cell: (sale) => {
+        const isReturned = (sale as { returned?: boolean }).returned === true;
+        if (isReturned) {
+          return <span className="text-[color:var(--color-neutral-500)] line-through">{sale.totalPrice.toFixed(2)} TL</span>;
+        }
+        return `${sale.totalPrice.toFixed(2)} TL`;
+      },
+    },
+    {
+      id: "profit",
+      header: "Kâr",
+      headerClassName: "hidden text-right md:table-cell",
+      className: "hidden text-right md:table-cell",
+      sortable: true,
+      sortValue: (s) => s.profit,
+      cell: (sale) => (
+        <span className="font-[var(--font-weight-medium)] text-[color:var(--color-semantic-success)]">+{sale.profit.toFixed(2)} TL</span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "",
+      headerClassName: "w-[96px]",
+      cell: (sale) => {
+        const isReturned = (sale as { returned?: boolean }).returned === true;
+        const hasCustomer = (sale as { customerId?: number | null }).customerId != null;
+        if (isReturned) return null;
+        return (
+          <div className="flex flex-col gap-1">
+            {hasCustomer ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-[color:var(--color-brand-700)]"
+                onClick={() => openQuickInvoice(sale.id)}
+                data-testid={`quick-invoice-${sale.id}`}
+              >
+                <FileText className="mr-1 h-3.5 w-3.5" />
+                E-Fatura
+              </Button>
+            ) : null}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-[color:var(--color-neutral-600)] hover:text-[color:var(--color-semantic-danger)]"
+              onClick={() => {
+                setReturnNote("");
+                setReturnDialog({ id: sale.id, name: sale.productName, qty: sale.quantity });
+              }}
+            >
+              <RotateCcw className="mr-1 h-3.5 w-3.5" />
+              İade
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
+
   return (
     <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <History className="h-6 w-6 text-primary" />
-          Satış Geçmişi
-        </h1>
-        <div className="flex items-center gap-2">
-          <Label className="whitespace-nowrap font-medium" htmlFor="dateFilter">Tarih:</Label>
-          <Input
-            id="dateFilter"
-            type="date"
-            value={dateStr}
-            onChange={e => { setDateStr(e.target.value); setPage(1); }}
-            className="w-auto"
-          />
-        </div>
-        <div className="flex items-center gap-1 ml-auto" data-testid="saletype-filter">
-          {([
-            { v: "all", label: "Tümü" },
-            { v: "retail", label: "Perakende" },
-            { v: "wholesale", label: "Toptan" },
-          ] as const).map(opt => (
-            <button
-              key={opt.v}
-              type="button"
-              onClick={() => { setSaleTypeFilter(opt.v); setPage(1); }}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
-                saleTypeFilter === opt.v
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background hover:bg-accent border-border"
-              }`}
-              data-testid={`saletype-chip-${opt.v}`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PageHeader
+        title="Satış Geçmişi"
+        subtitle="Günlük satış kayıtları, iade ve toplu e-fatura seçimi."
+        right={
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2">
+              <Label className="whitespace-nowrap font-[var(--font-weight-medium)]" htmlFor="dateFilter">Tarih</Label>
+              <Input
+                id="dateFilter"
+                type="date"
+                value={dateStr}
+                onChange={(e) => { setDateStr(e.target.value); setPage(1); }}
+                className="w-auto"
+              />
+            </div>
+            <div className="flex flex-wrap gap-1" data-testid="saletype-filter">
+              {([
+                { v: "all" as const, label: "Tümü" },
+                { v: "retail" as const, label: "Perakende" },
+                { v: "wholesale" as const, label: "Toptan" },
+              ]).map((opt) => (
+                <Button
+                  key={opt.v}
+                  type="button"
+                  variant={saleTypeFilter === opt.v ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() => { setSaleTypeFilter(opt.v); setPage(1); }}
+                  data-testid={`saletype-chip-${opt.v}`}
+                >
+                  {opt.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        }
+      />
 
-      {/* Özet kartlar — gün toplamı sunucu özeti; liste sayfalı */}
+      {/* Özet kartlar */}
       {kpiCount > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-card border rounded-lg p-3">
-            <p className="text-xs text-muted-foreground">Satış Adedi</p>
-            <p className="text-xl font-bold tabular-nums">{kpiCount}</p>
-          </div>
-          <div className="bg-card border rounded-lg p-3">
-            <p className="text-xs text-muted-foreground">Toplam Ciro</p>
-            <p className="text-xl font-bold text-primary tabular-nums">{kpiRevenue.toFixed(2)} TL</p>
-          </div>
-          <div className="bg-card border rounded-lg p-3">
-            <p className="text-xs text-muted-foreground">Toplam Kâr</p>
-            <p className="text-xl font-bold text-emerald-600 tabular-nums">{kpiProfit.toFixed(2)} TL</p>
-          </div>
-          <div className="bg-card border rounded-lg p-3">
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Receipt className="h-3 w-3" /> Ortalama Sepet
-            </p>
-            <p className="text-xl font-bold text-indigo-600 tabular-nums">{kpiAvgTicket.toFixed(2)} TL</p>
-          </div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Card>
+            <CardContent className="p-3">
+              <p className="text-xs text-[color:var(--color-neutral-600)]">Satış Adedi</p>
+              <p className="text-xl font-[var(--font-weight-bold)] tabular-nums">{kpiCount}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3">
+              <p className="text-xs text-[color:var(--color-neutral-600)]">Toplam Ciro</p>
+              <p className="text-xl font-[var(--font-weight-bold)] tabular-nums text-[color:var(--color-brand-700)]">{kpiRevenue.toFixed(2)} TL</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3">
+              <p className="text-xs text-[color:var(--color-neutral-600)]">Toplam Kâr</p>
+              <p className="text-xl font-[var(--font-weight-bold)] tabular-nums text-[color:var(--color-semantic-success)]">{kpiProfit.toFixed(2)} TL</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3">
+              <p className="flex items-center gap-1 text-xs text-[color:var(--color-neutral-600)]">
+                <Receipt className="h-3 w-3" /> Ortalama Sepet
+              </p>
+              <p className="text-xl font-[var(--font-weight-bold)] tabular-nums text-[color:var(--color-brand-700)]">{kpiAvgTicket.toFixed(2)} TL</p>
+            </CardContent>
+          </Card>
         </div>
       )}
 
@@ -424,101 +570,44 @@ export default function SalesHistory() {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="w-[40px]"></TableHead>
-                <TableHead>Saat</TableHead>
-                <TableHead>Ürün</TableHead>
-                <TableHead className="text-right">Birim</TableHead>
-                <TableHead className="text-center">Adet</TableHead>
-                <TableHead className="text-right">Toplam</TableHead>
-                <TableHead className="text-right hidden md:table-cell">Kâr</TableHead>
-                <TableHead className="w-[90px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Yükleniyor...</TableCell>
-                </TableRow>
-              ) : !data?.sales?.length ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Bu tarihte satış bulunmamaktadır.</TableCell>
-                </TableRow>
-              ) : (
-                data.sales.map(sale => {
-                  const isReturned = (sale as any).returned as boolean;
-                  const hasCustomer = (sale as any).customerId != null;
-                  const isSelected = selectedIds.has(sale.id);
-                  return (
-                  <TableRow key={sale.id} className={isReturned ? "opacity-50 bg-muted/20" : ""}>
-                    <TableCell>
-                      {!isReturned && hasCustomer ? (
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggleSale(sale.id)}
-                          aria-label={`Satış #${sale.id} seç`}
-                          data-testid={`select-sale-${sale.id}`}
-                        />
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm text-muted-foreground">
-                      {new Date(sale.createdAt).toLocaleTimeString("tr-TR", { hour: '2-digit', minute: '2-digit' })}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {sale.productName}
-                        {isReturned && <Badge variant="secondary" className="text-[10px] h-4 px-1">İade</Badge>}
-                      </div>
-                      <div className="text-xs text-muted-foreground font-mono">{sale.productCode}</div>
-                    </TableCell>
-                    <TableCell className="text-right">{sale.unitPrice.toFixed(2)} TL</TableCell>
-                    <TableCell className="text-center font-bold">x{sale.quantity}</TableCell>
-                    <TableCell className="text-right font-bold text-primary">
-                      {isReturned ? <span className="line-through text-muted-foreground">{sale.totalPrice.toFixed(2)} TL</span> : `${sale.totalPrice.toFixed(2)} TL`}
-                    </TableCell>
-                    <TableCell className="text-right hidden md:table-cell">
-                      <span className="text-emerald-600 font-medium">+{sale.profit.toFixed(2)} TL</span>
-                    </TableCell>
-                    <TableCell>
-                      {!isReturned && (
-                        <div className="flex flex-col gap-1">
-                          {hasCustomer && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              onClick={() => openQuickInvoice(sale.id)}
-                              data-testid={`quick-invoice-${sale.id}`}
-                            >
-                              <FileText className="h-3.5 w-3.5 mr-1" />E-Fatura
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => { setReturnNote(""); setReturnDialog({ id: sale.id, name: sale.productName, qty: sale.quantity }); }}
-                          >
-                            <RotateCcw className="h-3.5 w-3.5 mr-1" />İade
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                  );
-                })
+          {isLoading ? (
+            <SkeletonTable rows={10} columns={8} rowHeight={40} />
+          ) : (
+            <DataTable<Sale>
+              columns={columns}
+              data={salesList}
+              getRowId={(row) => String(row.id)}
+              enableRowSelection={false}
+              showFooterPagination={false}
+              emptyState={(
+                <div className="px-4 py-6">
+                  <EmptyState
+                    icon={Receipt}
+                    title="Henüz satış yok"
+                    description="İlk satışınızı yapmak için Satış Ekranı'nı kullanın."
+                    action={{ label: "Satış Yap", href: "/sales" }}
+                    secondaryAction={
+                      dateStr !== new Date().toISOString().split("T")[0]
+                        ? {
+                            label: "Bugüne git",
+                            onClick: () => {
+                              setDateStr(new Date().toISOString().split("T")[0]);
+                              setPage(1);
+                            },
+                          }
+                        : undefined
+                    }
+                  />
+                </div>
               )}
-            </TableBody>
-          </Table>
-
-          {data && data.totalPages > 1 && (
-            <div className="p-4 border-t flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Sayfa {page} / {data.totalPages}</span>
+            />
+          )}
+          {!isLoading && data && data.totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-[color:var(--color-border-subtle)] p-4">
+              <span className="text-sm text-[color:var(--color-neutral-600)]">Sayfa {page} / {data.totalPages}</span>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>Önceki</Button>
-                <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page === data.totalPages}>Sonraki</Button>
+                <Button variant="secondary" size="sm" onClick={() => setPage((p) => p - 1)} disabled={page === 1}>Önceki</Button>
+                <Button variant="secondary" size="sm" onClick={() => setPage((p) => p + 1)} disabled={page === data.totalPages}>Sonraki</Button>
               </div>
             </div>
           )}

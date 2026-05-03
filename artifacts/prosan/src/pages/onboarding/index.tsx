@@ -1,78 +1,63 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/components/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { trackProductEvent } from "@/lib/product-analytics";
 import {
-  Building2, Palette, ImageUp, CheckCircle2, ChevronRight,
-  Loader2, X, ArrowLeft, Sparkles, Factory, Store, Database,
+  Building2,
+  Package,
+  CheckCircle2,
+  Loader2,
+  Sparkles,
+  Factory,
+  Store,
+  MapPin,
+  Hash,
+  ArrowRight,
 } from "lucide-react";
-
-const STEPS = [
-  { id: 1, title: "İşletme", icon: Building2, desc: "Adınızı yazın" },
-  { id: 2, title: "Logo", icon: ImageUp, desc: "Sonra da olur" },
-  { id: 3, title: "Renk", icon: Palette, desc: "Marka hissi" },
-  { id: 4, title: "Sektör", icon: Factory, desc: "Size göre örnekler" },
-  { id: 5, title: "Demo", icon: Database, desc: "Dolu panel görün" },
-  { id: 6, title: "Hazır", icon: Sparkles, desc: "İşe başlayın" },
-];
-
-const PRESET_COLORS = [
-  "#2563eb", "#7c3aed", "#059669", "#dc2626",
-  "#d97706", "#0891b2", "#be185d", "#374151",
-];
+import { cn } from "@/lib/utils";
 
 type Sector = "industrial" | "retail" | "other";
-type DemoChoice = "industrial" | "retail" | "skip" | null;
+
+const STEPS = 3;
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const { user, checkAuth } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const fileRef = useRef<HTMLInputElement>(null);
 
-  const [companyName, setCompanyName] = useState((user as any)?.companyName || "");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [address, setAddress] = useState("");
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [primaryColor, setPrimaryColor] = useState("#2563eb");
+  const [companyName, setCompanyName] = useState("");
+  const [city, setCity] = useState("");
+  const [taxNumber, setTaxNumber] = useState("");
   const [sector, setSector] = useState<Sector | null>(null);
-  const [demoChoice, setDemoChoice] = useState<DemoChoice>(null);
-  const [demoSummary, setDemoSummary] = useState<{
-    products: number; customers: number; suppliers: number; sales: number; purchases: number;
-  } | null>(null);
+
+  const [productName, setProductName] = useState("");
+  const [sku, setSku] = useState("");
+  const [price, setPrice] = useState("");
+  const [stock, setStock] = useState("");
+
   const [saving, setSaving] = useState(false);
 
-  // Architect bulgu #4: sektör değişirse demo seçimi sıfırla,
-  // önceki sektöre ait demo seti yanlışlıkla yüklenmesin.
   useEffect(() => {
-    setDemoChoice(null);
-    setDemoSummary(null);
-  }, [sector]);
+    const cn = (user as { companyName?: string })?.companyName;
+    if (cn) setCompanyName((prev) => prev || cn);
+  }, [user]);
 
-  const canNext =
-    step === 1 ? companyName.trim().length > 0
-    : step === 4 ? sector !== null
-    : step === 5 ? demoChoice !== null
-    : true;
+  const canStep1 =
+    companyName.trim().length >= 2 && city.trim().length >= 1 && sector !== null;
 
-  const handleLogoFile = (f: File) => {
-    if (f.size > 2 * 1024 * 1024) {
-      toast({ title: "Dosya çok büyük", description: "Logo en fazla 2 MB olabilir.", variant: "destructive" });
-      return;
-    }
-    setLogoFile(f);
-    const reader = new FileReader();
-    reader.onload = (e) => setLogoPreview(e.target?.result as string);
-    reader.readAsDataURL(f);
-  };
+  const wantsProduct = productName.trim().length > 0;
+  const canStep2Submit =
+    !wantsProduct ||
+    (productName.trim().length >= 1 &&
+      price.trim() !== "" &&
+      !Number.isNaN(parseFloat(price)) &&
+      stock.trim() !== "" &&
+      !Number.isNaN(parseInt(stock, 10)));
 
   const saveStep1 = async (): Promise<boolean> => {
     setSaving(true);
@@ -81,74 +66,65 @@ export default function OnboardingPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ companyName, phone, email, address }),
+        body: JSON.stringify({
+          companyName: companyName.trim(),
+          taxNumber: taxNumber.trim() || undefined,
+          city: city.trim(),
+        }),
       });
       if (!res.ok) {
         trackProductEvent("onboarding_step_error", { step: "1", code: String(res.status) });
-        toast({ title: "Kaydedilemedi", description: "Firma bilgileri sunucuya yazılamadı. Bağlantınızı kontrol edip tekrar deneyin.", variant: "destructive" });
+        toast({
+          title: "Kaydedilemedi",
+          description: "Firma bilgileri kaydedilemedi. Tekrar deneyin.",
+          variant: "destructive",
+        });
         return false;
       }
       return true;
     } catch {
       trackProductEvent("onboarding_step_error", { step: "1", code: "network" });
-      toast({ title: "Bağlantı hatası", description: "İnternet bağlantınızı kontrol edin.", variant: "destructive" });
+      toast({ title: "Bağlantı hatası", variant: "destructive" });
       return false;
     } finally {
       setSaving(false);
     }
   };
 
-  const saveStep2 = async () => {
-    if (!logoFile) return;
+  const saveProductIfNeeded = async (): Promise<boolean> => {
+    if (!wantsProduct) return true;
     setSaving(true);
     try {
-      const fd = new FormData();
-      fd.append("logo", logoFile);
-      await fetch("/api/settings/logo", { method: "POST", credentials: "include", body: fd });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const saveStep3 = async () => {
-    setSaving(true);
-    try {
-      await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ primaryColor }),
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  /** Adım 5 — kullanıcı bir demo seti seçtiyse onu seed et. */
-  const seedDemoIfRequested = async (): Promise<boolean> => {
-    if (demoChoice === null || demoChoice === "skip") return true;
-    setSaving(true);
-    try {
-      const res = await fetch("/api/onboarding/seed-demo", {
+      const sale = parseFloat(price.replace(",", "."));
+      const st = parseInt(stock, 10);
+      const code = sku.trim() || `URN-${Date.now()}`;
+      const res = await fetch("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ sector: demoChoice }),
+        body: JSON.stringify({
+          productCode: code,
+          name: productName.trim(),
+          stock: st,
+          minStock: 0,
+          purchasePrice: sale,
+          salePrice: sale,
+        }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        // 409 = zaten seed edilmiş (idempotent kabul edilir, akış devam etsin)
-        if (res.status === 409) return true;
         toast({
-          title: "Demo veriler yüklenemedi",
-          description: j?.message ?? "Lütfen tekrar deneyin.",
+          title: "Ürün eklenemedi",
+          description: j?.message || j?.error?.message || "Alanları kontrol edin.",
           variant: "destructive",
         });
         return false;
       }
-      const j = await res.json();
-      setDemoSummary(j.summary ?? null);
+      trackProductEvent("onboarding_first_product", { ok: true });
       return true;
+    } catch {
+      toast({ title: "Ürün eklenemedi", variant: "destructive" });
+      return false;
     } finally {
       setSaving(false);
     }
@@ -157,27 +133,20 @@ export default function OnboardingPage() {
   const completeOnboarding = async () => {
     setSaving(true);
     try {
-      // (1) Firma seviyesi onboarding flag (sektör + audit log).
-      // Architect re-review bulgusu: bu çağrı sessizce swallow edilemez —
-      // başarısızsa kullanıcı seviyesinde flag'i de set etmeyiz, akış tutarsız kalmasın.
-      // Demo seed yolundan gelinmişse companies tablosunda flag zaten set edildi (idempotent — tekrar set zararsız).
       const completeRes = await fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ sector: sector ?? "other" }),
       });
-      if (!completeRes.ok) {
-        throw new Error("complete failed");
-      }
-      // (2) Kullanıcı seviyesi mevcut flag (auth-context buna bakıyor)
+      if (!completeRes.ok) throw new Error("complete failed");
+
       const userRes = await fetch("/api/settings/onboarding-complete", {
         method: "POST",
         credentials: "include",
       });
-      if (!userRes.ok) {
-        throw new Error("user complete failed");
-      }
+      if (!userRes.ok) throw new Error("user complete failed");
+
       await checkAuth();
       trackProductEvent("onboarding_completed", { sector: sector ?? "other" });
       localStorage.setItem("show_welcome_tour", "1");
@@ -189,423 +158,301 @@ export default function OnboardingPage() {
     }
   };
 
-  const next = async () => {
-    if (step === 1) {
-      const ok = await saveStep1();
-      if (!ok) return;
-    }
-    if (step === 2 && logoFile) await saveStep2();
-    if (step === 3) await saveStep3();
-    if (step === 5) {
-      const ok = await seedDemoIfRequested();
-      if (!ok) return; // hata varsa adımda kal
-    }
-    trackProductEvent("onboarding_step_done", { step: String(step) });
-    if (step < 6) setStep((s) => s + 1);
-    else await completeOnboarding();
+  const goNextFrom1 = async () => {
+    const ok = await saveStep1();
+    if (!ok) return;
+    trackProductEvent("onboarding_step_done", { step: "1" });
+    setStep(2);
   };
 
-  const skip = () => {
-    trackProductEvent("onboarding_step_skipped", { step: String(step) });
-    if (step === 4) setSector("other");
-    if (step === 5) setDemoChoice("skip");
-    if (step < 6) setStep((s) => s + 1);
-    else completeOnboarding();
+  const goNextFrom2 = async () => {
+    if (!canStep2Submit) return;
+    const ok = await saveProductIfNeeded();
+    if (!ok) return;
+    trackProductEvent("onboarding_step_done", { step: "2" });
+    setStep(3);
+  };
+
+  const skipStep2 = () => {
+    trackProductEvent("onboarding_step_skipped", { step: "2" });
+    setStep(3);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-xl">
-        {/* Logo / başlık */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary text-white mb-3 shadow-lg">
-            <Sparkles className="h-7 w-7" />
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-background to-blue-50/40 flex flex-col">
+      <header className="shrink-0 border-b border-border/60 bg-card/80 backdrop-blur-sm px-4 py-4">
+        <div className="max-w-5xl mx-auto flex flex-col items-center gap-3">
+          <div className="flex items-center justify-center gap-2">
+            {Array.from({ length: STEPS }, (_, i) => i + 1).map((n) => (
+              <div key={n} className="flex items-center gap-2">
+                <div
+                  className={cn(
+                    "w-2.5 h-2.5 rounded-full transition-all",
+                    step === n
+                      ? "bg-[var(--color-brand-500)] ring-4 ring-[var(--color-brand-500)]/20 scale-110"
+                      : step > n
+                        ? "bg-emerald-500"
+                        : "bg-muted"
+                  )}
+                  aria-current={step === n ? "step" : undefined}
+                />
+                {n < STEPS && (
+                  <div className={cn("w-10 sm:w-14 h-0.5 rounded-full", step > n ? "bg-emerald-500" : "bg-muted")} />
+                )}
+              </div>
+            ))}
           </div>
-          <h1 className="text-2xl font-bold">Panelinizi birkaç adımda hazır edelim</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Hepsini şimdi doldurmak zorunda değilsiniz. Gerekli olanı alıp sizi hızlıca panele taşıyalım.
+          <p className="text-xs text-muted-foreground font-medium">
+            Kurulum — Adım {step} / {STEPS}
           </p>
         </div>
+      </header>
 
-        {/* Adım göstergesi */}
-        <div className="flex items-center justify-center gap-1.5 mb-6">
-          {STEPS.map((s, i) => (
-            <div key={s.id} className="flex items-center gap-1.5" title={`${s.title}: ${s.desc}`}>
-              <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold transition-colors ${
-                step > s.id ? "bg-green-500 text-white" : step === s.id ? "bg-primary text-white" : "bg-muted text-muted-foreground"
-              }`}>
-                {step > s.id ? <CheckCircle2 className="h-3.5 w-3.5" /> : s.id}
-              </div>
-              {i < STEPS.length - 1 && (
-                <div className={`w-6 h-0.5 transition-colors ${step > s.id ? "bg-green-500" : "bg-muted"}`} />
-              )}
-            </div>
-          ))}
-        </div>
-        <p className="text-center text-xs text-muted-foreground mb-4">
-          {step <= 2
-            ? "Başlangıç iyi gidiyor; sadece temel bilgileri netleştiriyoruz."
-            : step <= 4
-              ? "Panel artık size benzemeye başladı."
-              : "Son dokunuşlar kaldı; isterseniz örnek veriyle dolu panel açabiliriz."}
-        </p>
+      <main className="flex-1 flex items-center justify-center p-4 md:p-8">
+        <div className="w-full max-w-5xl grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+          {/* Illustration / icon panel */}
+          <div className="hidden md:flex flex-col items-center justify-center text-center p-8 rounded-2xl border border-border/60 bg-card/50 min-h-[280px]">
+            {step === 1 && (
+              <>
+                <div className="w-20 h-20 rounded-2xl bg-[color-mix(in_srgb,var(--color-brand-500)_15%,transparent)] flex items-center justify-center mb-4">
+                  <Building2 className="h-10 w-10 text-[var(--color-brand-500)]" />
+                </div>
+                <h2 className="text-lg font-semibold text-foreground">Firmanızı tanıyalım</h2>
+                <p className="text-sm text-muted-foreground mt-2 max-w-xs">
+                  Vergi numarası ve şehir raporlar ile entegrasyonlar için kullanılır.
+                </p>
+              </>
+            )}
+            {step === 2 && (
+              <>
+                <div className="w-20 h-20 rounded-2xl bg-[color-mix(in_srgb,var(--color-accent-teal)_18%,transparent)] flex items-center justify-center mb-4">
+                  <Package className="h-10 w-10 text-teal-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-foreground">İlk ürününüz</h2>
+                <p className="text-sm text-muted-foreground mt-2 max-w-xs">
+                  İsterseniz bu adımı atlayıp daha sonra stoktan ekleyebilirsiniz.
+                </p>
+              </>
+            )}
+            {step === 3 && (
+              <>
+                <div className="w-20 h-20 rounded-2xl bg-emerald-500/15 flex items-center justify-center mb-4">
+                  <CheckCircle2 className="h-10 w-10 text-emerald-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-foreground">Hazırsınız</h2>
+                <p className="text-sm text-muted-foreground mt-2 max-w-xs">
+                  Ana panelden satış, stok ve raporlara geçebilirsiniz.
+                </p>
+              </>
+            )}
+          </div>
 
-        <Card className="shadow-xl border-0">
-          <CardContent className="p-7">
-            {/* Adım 1 — Firma Bilgileri */}
+          {/* Mobile illustration */}
+          <div className="md:hidden flex justify-center mb-2">
+            {step === 1 && <Building2 className="h-12 w-12 text-[var(--color-brand-500)]" />}
+            {step === 2 && <Package className="h-12 w-12 text-teal-600" />}
+            {step === 3 && <CheckCircle2 className="h-12 w-12 text-emerald-600" />}
+          </div>
+
+          {/* Form column */}
+          <div className="space-y-6">
             {step === 1 && (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Building2 className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="font-semibold text-lg">Önce tabeladaki adı yazalım</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Yalnızca firma adı zorunlu; telefon ve e-postayı şimdi veya daha sonra Ayarlar&apos;dan ekleyebilirsiniz.
-                    </p>
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
+                    Firma bilgileri
+                  </h1>
+                  <p className="text-sm text-muted-foreground mt-1">Şirket adı, sektör ve konum</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="onb-co">Firma adı *</Label>
+                  <Input
+                    id="onb-co"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="Örn. ABC Ticaret A.Ş."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Sektör *</Label>
+                  <div className="grid gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSector("industrial")}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all",
+                        sector === "industrial" ? "border-[var(--color-brand-500)] bg-muted/40" : "border-border"
+                      )}
+                    >
+                      <Factory className="h-5 w-5 shrink-0 text-[var(--color-brand-500)]" />
+                      <span className="text-sm font-medium">Endüstriyel / B2B</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSector("retail")}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all",
+                        sector === "retail" ? "border-[var(--color-brand-500)] bg-muted/40" : "border-border"
+                      )}
+                    >
+                      <Store className="h-5 w-5 shrink-0 text-[var(--color-brand-500)]" />
+                      <span className="text-sm font-medium">Perakende</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSector("other")}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all",
+                        sector === "other" ? "border-[var(--color-brand-500)] bg-muted/40" : "border-border"
+                      )}
+                    >
+                      <Sparkles className="h-5 w-5 shrink-0 text-[var(--color-brand-500)]" />
+                      <span className="text-sm font-medium">Diğer</span>
+                    </button>
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <div>
-                    <Label htmlFor="companyName">Firma Adı *</Label>
-                    <Input
-                      id="companyName"
-                      placeholder="Örn: ABC Ticaret A.Ş."
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="phone">Telefon</Label>
-                      <Input id="phone" placeholder="05xx xxx xx xx" value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1" />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">E-posta</Label>
-                      <Input id="email" type="email" placeholder="info@firma.com" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1" />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="onb-city">İl *</Label>
+                    <div className="relative">
+                      <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="onb-city"
+                        className="pl-9"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="İstanbul"
+                      />
                     </div>
                   </div>
-                  <div>
-                    <Label htmlFor="address">Adres</Label>
-                    <Input id="address" placeholder="Firma adresi" value={address} onChange={(e) => setAddress(e.target.value)} className="mt-1" />
+                  <div className="space-y-2">
+                    <Label htmlFor="onb-tax">Vergi no</Label>
+                    <div className="relative">
+                      <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="onb-tax"
+                        className="pl-9"
+                        value={taxNumber}
+                        onChange={(e) => setTaxNumber(e.target.value)}
+                        placeholder="İsteğe bağlı"
+                      />
+                    </div>
                   </div>
                 </div>
+
+                <Button
+                  type="button"
+                  className="w-full h-11 gap-2"
+                  disabled={!canStep1 || saving}
+                  onClick={() => void goNextFrom1()}
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  Devam et
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
               </div>
             )}
 
-            {/* Adım 2 — Logo */}
             {step === 2 && (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <ImageUp className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="font-semibold text-lg">Logo Yükle</h2>
-                    <p className="text-sm text-muted-foreground">İsteğe bağlı — daha sonra ekleyebilirsiniz</p>
-                  </div>
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
+                    İlk ürünü ekleyin
+                  </h1>
+                  <p className="text-sm text-muted-foreground mt-1">İsteğe bağlı — stok ve fiyatı sonra da girebilirsiniz</p>
                 </div>
 
-                <div
-                  className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-                    logoPreview ? "border-green-400 bg-green-500/10" : "border-border hover:border-primary/50 hover:bg-muted/30"
-                  }`}
-                  onClick={() => fileRef.current?.click()}
-                >
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoFile(f); }}
+                <div className="space-y-2">
+                  <Label htmlFor="onb-pn">Ürün adı</Label>
+                  <Input
+                    id="onb-pn"
+                    value={productName}
+                    onChange={(e) => setProductName(e.target.value)}
+                    placeholder="Örn. Civata M8 x 25"
                   />
-                  {logoPreview ? (
-                    <div className="relative inline-block">
-                      <img src={logoPreview} alt="logo önizleme" className="max-h-28 max-w-full mx-auto rounded-lg object-contain" />
-                      <button
-                        className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-0.5"
-                        onClick={(e) => { e.stopPropagation(); setLogoPreview(null); setLogoFile(null); }}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <ImageUp className="h-10 w-10 mx-auto text-muted-foreground" />
-                      <p className="text-sm font-medium">Logo yüklemek için tıkla veya sürükle</p>
-                      <p className="text-xs text-muted-foreground">PNG, JPG, SVG — maks. 2 MB</p>
-                    </div>
-                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="onb-sku">SKU / kod</Label>
+                    <Input id="onb-sku" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="Otomatik" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="onb-st">Stok</Label>
+                    <Input
+                      id="onb-st"
+                      inputMode="numeric"
+                      value={stock}
+                      onChange={(e) => setStock(e.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="onb-pr">Satış fiyatı (₺)</Label>
+                  <Input
+                    id="onb-pr"
+                    inputMode="decimal"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="0,00"
+                  />
+                </div>
+
+                {wantsProduct && !canStep2Submit && (
+                  <p className="text-sm text-destructive">Ürün adı girildiğinde fiyat ve stok da zorunludur.</p>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-2 sm:justify-between sm:items-center pt-2">
+                  <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={skipStep2}>
+                    Şimdilik atla
+                  </Button>
+                  <Button
+                    type="button"
+                    className="gap-2 sm:min-w-[140px]"
+                    disabled={saving || !canStep2Submit}
+                    onClick={() => void goNextFrom2()}
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    Devam et
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             )}
 
-            {/* Adım 3 — Tema Rengi */}
             {step === 3 && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Palette className="h-5 w-5 text-primary" />
+              <div className="space-y-6 text-center md:text-left">
+                <div className="inline-flex md:hidden justify-center w-full">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                    <CheckCircle2 className="h-9 w-9 text-emerald-600" />
                   </div>
-                  <div>
-                    <h2 className="font-semibold text-lg">Tema Rengi</h2>
-                    <p className="text-sm text-muted-foreground">Markanızın rengini seçin</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 gap-3">
-                  {PRESET_COLORS.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => setPrimaryColor(c)}
-                      className={`h-12 rounded-xl transition-all ${primaryColor === c ? "ring-2 ring-offset-2 ring-current scale-105" : "hover:scale-105"}`}
-                      style={{ backgroundColor: c, color: c }}
-                      title={c}
-                    />
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-3 mt-3">
-                  <Label className="shrink-0">Özel renk:</Label>
-                  <div className="flex items-center gap-2 flex-1">
-                    <input
-                      type="color"
-                      value={primaryColor}
-                      onChange={(e) => setPrimaryColor(e.target.value)}
-                      className="h-9 w-14 rounded cursor-pointer border border-border"
-                    />
-                    <Input value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="font-mono" placeholder="#2563eb" />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 rounded-lg border mt-2" style={{ borderColor: primaryColor + "40", backgroundColor: primaryColor + "10" }}>
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: primaryColor }} />
-                  <span className="text-sm font-medium">Örnek menü öğesi</span>
-                  <div className="ml-auto px-3 py-1 rounded text-xs text-white font-medium" style={{ backgroundColor: primaryColor }}>Buton</div>
-                </div>
-              </div>
-            )}
-
-            {/* Adım 4 — Sektör */}
-            {step === 4 && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Factory className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="font-semibold text-lg">İş Kolunuz</h2>
-                    <p className="text-sm text-muted-foreground">Raporları ve demo verileri buna göre hazırlarız</p>
-                  </div>
-                </div>
-
-                <div className="grid gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSector("industrial")}
-                    className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
-                      sector === "industrial" ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <Factory className="h-6 w-6 text-primary mt-0.5 shrink-0" />
-                    <div className="flex-1">
-                      <p className="font-semibold">Endüstriyel / B2B</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">Vida-cıvata, yedek parça, makine, KDV'li B2B faturalama</p>
-                    </div>
-                    {sector === "industrial" && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSector("retail")}
-                    className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
-                      sector === "retail" ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <Store className="h-6 w-6 text-primary mt-0.5 shrink-0" />
-                    <div className="flex-1">
-                      <p className="font-semibold">Perakende / Bakkal-Market</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">FMCG, gıda-içecek, barkod ile POS satışı</p>
-                    </div>
-                    {sector === "retail" && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSector("other")}
-                    className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
-                      sector === "other" ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <Sparkles className="h-6 w-6 text-primary mt-0.5 shrink-0" />
-                    <div className="flex-1">
-                      <p className="font-semibold">Diğer / Karma</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">Yukarıdakilere uymuyorsa</p>
-                    </div>
-                    {sector === "other" && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Adım 5 — Demo Veri */}
-            {step === 5 && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Database className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="font-semibold text-lg">Demo Veri Seti</h2>
-                    <p className="text-sm text-muted-foreground">Sistemi denemek için örnek kayıtlarla başlayın</p>
-                  </div>
-                </div>
-
-                <div className="grid gap-3">
-                  {sector !== "retail" && (
-                    <button
-                      type="button"
-                      onClick={() => setDemoChoice("industrial")}
-                      className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
-                        demoChoice === "industrial" ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"
-                      }`}
-                    >
-                      <Factory className="h-6 w-6 text-primary mt-0.5 shrink-0" />
-                      <div className="flex-1">
-                        <p className="font-semibold">Endüstriyel demo seti</p>
-                        <p className="text-sm text-muted-foreground mt-0.5">12 ürün, 5 müşteri, 3 tedarikçi, 7 satış, 2 alış faturası</p>
-                      </div>
-                      {demoChoice === "industrial" && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
-                    </button>
-                  )}
-
-                  {sector !== "industrial" && (
-                    <button
-                      type="button"
-                      onClick={() => setDemoChoice("retail")}
-                      className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
-                        demoChoice === "retail" ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"
-                      }`}
-                    >
-                      <Store className="h-6 w-6 text-primary mt-0.5 shrink-0" />
-                      <div className="flex-1">
-                        <p className="font-semibold">Perakende demo seti</p>
-                        <p className="text-sm text-muted-foreground mt-0.5">15 ürün, 6 müşteri, 3 tedarikçi, 9 POS satışı, 2 alış faturası</p>
-                      </div>
-                      {demoChoice === "retail" && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setDemoChoice("skip")}
-                    className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
-                      demoChoice === "skip" ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <X className="h-6 w-6 text-muted-foreground mt-0.5 shrink-0" />
-                    <div className="flex-1">
-                      <p className="font-semibold">Boş başla</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">Verileri kendim gireceğim</p>
-                    </div>
-                    {demoChoice === "skip" && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
-                  </button>
-                </div>
-
-                <p className="text-xs text-muted-foreground mt-2">
-                  ℹ️ Demo veriler bir kez yüklenir; istediğiniz zaman kayıtları silebilirsiniz.
-                </p>
-              </div>
-            )}
-
-            {/* Adım 6 — Tamamlandı */}
-            {step === 6 && (
-              <div className="text-center space-y-4 py-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/15 text-green-600">
-                  <CheckCircle2 className="h-9 w-9" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-xl">Paneliniz hazır</h2>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    <strong>{companyName}</strong> için ilk çalışma alanını oluşturduk. Şimdi gerçek verilerle ilerleyebilirsiniz.
+                  <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
+                    Tamamlandı
+                  </h1>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    <strong className="text-foreground">{companyName || "İşletmeniz"}</strong> için panel hazır.
                   </p>
                 </div>
-
-                {demoSummary && (
-                  <div className="rounded-lg border bg-green-500/5 border-green-500/30 p-4 text-left">
-                    <p className="text-sm font-semibold text-green-700 mb-2 flex items-center gap-2">
-                      <Database className="h-4 w-4" /> Demo veriler yüklendi:
-                    </p>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div><span className="font-bold">{demoSummary.products}</span> ürün</div>
-                      <div><span className="font-bold">{demoSummary.customers}</span> müşteri</div>
-                      <div><span className="font-bold">{demoSummary.suppliers}</span> tedarikçi</div>
-                      <div><span className="font-bold">{demoSummary.sales}</span> satış</div>
-                      <div><span className="font-bold">{demoSummary.purchases}</span> alış</div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-3 text-left mt-4">
-                  {[
-                    { icon: "📦", label: "İlk ürünü ekle", desc: "Stok takibini başlatın" },
-                    { icon: "🛒", label: "İlk satışı gir", desc: "Kasa akışını görün" },
-                    { icon: "📊", label: "Günün durumuna bak", desc: "Rapor ekranını açın" },
-                    { icon: "📷", label: "Barkodu dene", desc: "Kamerayla taramayı test edin" },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border">
-                      <span className="text-xl">{item.icon}</span>
-                      <div>
-                        <p className="font-medium text-sm">{item.label}</p>
-                        <p className="text-xs text-muted-foreground">{item.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <Button
+                  type="button"
+                  size="lg"
+                  className="w-full sm:w-auto h-12 px-8 gap-2 bg-[var(--color-brand-500)] hover:bg-[var(--color-brand-700)] text-[color:var(--color-nav-text-active)]"
+                  disabled={saving}
+                  onClick={() => void completeOnboarding()}
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  Ana Panele Git
+                </Button>
               </div>
             )}
-
-            {/* Footer butonları */}
-            <div className="flex items-center justify-between mt-7 pt-5 border-t">
-              <div className="flex items-center gap-2">
-                {step > 1 && step < 6 && (
-                  <Button variant="ghost" size="sm" onClick={() => setStep((s) => s - 1)} disabled={saving}>
-                    <ArrowLeft className="h-4 w-4 mr-1" /> Geri
-                  </Button>
-                )}
-                {step < 6 && step !== 1 && (
-                  <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={skip} disabled={saving}>
-                    Atla
-                  </Button>
-                )}
-              </div>
-
-              <Button
-                onClick={next}
-                disabled={!canNext || saving}
-                className="gap-2 min-w-32"
-              >
-                {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                {step === 6 ? (
-                  <><Sparkles className="h-4 w-4" /> Panele geç</>
-                ) : step === 5 && demoChoice && demoChoice !== "skip" ? (
-                  <>Örnek veriyi yükle <ChevronRight className="h-4 w-4" /></>
-                ) : (
-                  <>Devam et <ChevronRight className="h-4 w-4" /></>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {step < 6 && (
-          <p className="text-center text-xs text-muted-foreground mt-4">
-            Her şeyi şimdi mükemmel yapmak zorunda değilsiniz; daha sonra ayarlardan değiştirebilirsiniz.
-          </p>
-        )}
-      </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

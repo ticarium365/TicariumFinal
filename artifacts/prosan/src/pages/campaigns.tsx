@@ -4,11 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Tag, Plus, Edit, Trash2, ToggleLeft, ToggleRight, Percent, BadgeDollarSign, PackageCheck, Clock, CheckCircle2, XCircle, Calendar } from "lucide-react";
 import { apiBase } from "@/lib/api";
 
@@ -157,61 +161,100 @@ export default function CampaignsPage() {
     fetchData();
   }
 
-  function CampaignCard({ c }: { c: Campaign }) {
-    const Icon = discountIcons[c.discountType] ?? Tag;
-    const discountDisplay =
-      c.discountType === "percent" ? `%${c.discountValue}` :
-      c.discountType === "fixed" ? `₺${parseFloat(c.discountValue).toLocaleString("tr-TR")}` :
-      c.discountValue;
-
-    return (
-      <Card className={!c.isActive ? "opacity-60" : ""}>
-        <CardContent className="p-4 flex items-start justify-between gap-4">
-          <div className="flex gap-3">
+  const campaignColumns: DataTableColumn<Campaign>[] = [
+    {
+      id: "campaign",
+      header: "Kampanya",
+      sortable: true,
+      sortValue: (c) => c.name,
+      cell: (c) => {
+        const Icon = discountIcons[c.discountType] ?? Tag;
+        const discountDisplay =
+          c.discountType === "percent" ? `%${c.discountValue}` :
+          c.discountType === "fixed" ? `₺${parseFloat(c.discountValue).toLocaleString("tr-TR")}` :
+          c.discountValue;
+        return (
+          <div className={`flex gap-3 min-w-0 max-w-xl ${!c.isActive ? "opacity-60" : ""}`}>
             <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
               <Icon className="h-5 w-5 text-orange-600" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-semibold">{c.name}</span>
                 <Badge className={`text-xs ${statusColors[c.statusLabel] ?? ""}`}>{c.statusLabel}</Badge>
                 <Badge variant="outline" className="text-xs">{c.discountLabel}</Badge>
                 <Badge variant="outline" className="text-xs">{c.scopeLabel}</Badge>
               </div>
-              <div className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-2">
+              <div className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
                 <span className="font-medium text-orange-600">{discountDisplay} indirim</span>
-                <span>• {c.startDate} → {c.endDate}</span>
-                {c.couponCode && <span>• Kupon: <code className="bg-muted px-1 rounded">{c.couponCode}</code></span>}
-                {c.maxUses && <span>• Kullanım: {c.usedCount}/{c.maxUses}</span>}
+                <span className="hidden sm:inline">• {c.startDate} → {c.endDate}</span>
+                {c.couponCode && (
+                  <span>
+                    • Kupon: <code className="bg-muted px-1 rounded">{c.couponCode}</code>
+                  </span>
+                )}
+                {c.maxUses != null && <span>• Kullanım: {c.usedCount}/{c.maxUses}</span>}
               </div>
-              {c.description && <p className="text-xs text-muted-foreground/70 mt-1">{c.description}</p>}
+              {c.description && <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-2">{c.description}</p>}
             </div>
           </div>
-          {isAdmin && (
-            <div className="flex gap-1 shrink-0">
-              <Button size="sm" variant="ghost" onClick={() => openEdit(c)}><Edit className="h-4 w-4" /></Button>
-              <Button size="sm" variant="ghost" onClick={() => toggle(c)}>
-                {c.isActive ? <ToggleRight className="h-4 w-4 text-green-600" /> : <ToggleLeft className="h-4 w-4" />}
-              </Button>
-              <Button size="sm" variant="ghost" className="text-red-500" onClick={() => remove(c)}><Trash2 className="h-4 w-4" /></Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
+        );
+      },
+    },
+    {
+      id: "period",
+      header: "Dönem",
+      sortable: true,
+      sortValue: (c) => c.startDate,
+      headerClassName: "hidden lg:table-cell",
+      className: "hidden lg:table-cell text-sm text-muted-foreground whitespace-nowrap",
+      cell: (c) => <span>{c.startDate} → {c.endDate}</span>,
+    },
+    {
+      id: "uses",
+      header: "Kullanım",
+      headerClassName: "text-right hidden md:table-cell",
+      className: "text-right hidden md:table-cell text-sm tabular-nums",
+      sortable: true,
+      sortValue: (c) => c.usedCount,
+      cell: (c) => (c.maxUses != null ? `${c.usedCount}/${c.maxUses}` : "—"),
+    },
+    {
+      id: "actions",
+      header: "",
+      headerClassName: "text-right w-[108px]",
+      className: "text-right",
+      cell: (c) =>
+        isAdmin ? (
+          <div className="flex gap-0.5 justify-end">
+            <Button size="sm" variant="ghost" onClick={() => openEdit(c)} aria-label="Düzenle">
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => toggle(c)} aria-label="Aç/Kapat">
+              {c.isActive ? <ToggleRight className="h-4 w-4 text-green-600" /> : <ToggleLeft className="h-4 w-4" />}
+            </Button>
+            <Button size="sm" variant="ghost" className="text-[color:var(--color-semantic-danger)]" onClick={() => remove(c)} aria-label="Sil">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : null
+    },
+  ];
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Kampanya Yönetimi</h1>
-          <p className="text-sm text-muted-foreground mt-1">İndirim kampanyaları ve promosyonlar</p>
-        </div>
-        {isAdmin && (
-          <Button size="sm" onClick={openAdd}><Plus className="h-4 w-4 mr-2" /> Kampanya Ekle</Button>
-        )}
-      </div>
+      <PageHeader
+        title="Kampanyalar"
+        subtitle="İndirim kampanyaları ve promosyonlar"
+        right={
+          isAdmin ? (
+            <Button size="sm" className="gap-2" onClick={openAdd}>
+              <Plus className="h-4 w-4" />
+              Kampanya Ekle
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* Özet kartlar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -237,32 +280,55 @@ export default function CampaignsPage() {
         </TabsList>
 
         <TabsContent value="all">
-          {loading ? (
-            <div className="text-center py-12 text-muted-foreground/70">Yükleniyor...</div>
-          ) : campaigns.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground/70">
-              <Tag className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p>Henüz kampanya yok</p>
-              {isAdmin && <Button className="mt-4" onClick={openAdd}><Plus className="h-4 w-4 mr-2" /> Kampanya Ekle</Button>}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {campaigns.map((c) => <CampaignCard key={c.id} c={c} />)}
-            </div>
-          )}
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <DataTable<Campaign>
+                columns={campaignColumns}
+                data={campaigns}
+                getRowId={(c) => String(c.id)}
+                loading={loading}
+                enableRowSelection={false}
+                showFooterPagination={false}
+                emptyState={
+                  <EmptyState
+                    icon={Tag}
+                    title="Kampanya listesi boş"
+                    description="İndirim ve promosyon kampanyalarını oluşturup kayıtlı müşterilere uygulayın."
+                    action={
+                      isAdmin
+                        ? { label: "Kampanya ekle", onClick: openAdd }
+                        : undefined
+                    }
+                  />
+                }
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="active">
-          {activeCampaigns.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground/70">
-              <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p>Şu an aktif kampanya yok</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {activeCampaigns.map((c) => <CampaignCard key={c.id} c={c} />)}
-            </div>
-          )}
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <DataTable<Campaign>
+                columns={campaignColumns}
+                data={activeCampaigns}
+                getRowId={(c) => String(c.id)}
+                loading={loading}
+                enableRowSelection={false}
+                showFooterPagination={false}
+                emptyState={
+                  <EmptyState
+                    icon={Calendar}
+                    title="Aktif kampanya yok"
+                    description="Başlangıç ve bitiş tarihi bu döneme denk gelen açık kampanyalar burada listelenir."
+                    action={
+                      isAdmin ? { label: "Yeni kampanya", onClick: openAdd } : undefined
+                    }
+                  />
+                }
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -321,12 +387,16 @@ export default function CampaignsPage() {
             <div><Label>Kupon Kodu</Label><Input value={form.couponCode} onChange={(e) => setForm((f) => ({ ...f, couponCode: e.target.value }))} placeholder="Boş bırakırsanız kupon kodu olmaz" /></div>
 
             <div className="flex items-center gap-2">
-              <input type="checkbox" id="campActive" checked={form.isActive} onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))} />
+              <Checkbox
+                id="campActive"
+                checked={form.isActive}
+                onCheckedChange={(v) => setForm((f) => ({ ...f, isActive: v === true }))}
+              />
               <Label htmlFor="campActive">Aktif</Label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowModal(false)}>İptal</Button>
+            <Button variant="secondary" onClick={() => setShowModal(false)}>İptal</Button>
             <Button onClick={save}>{editing ? "Güncelle" : "Kaydet"}</Button>
           </DialogFooter>
         </DialogContent>

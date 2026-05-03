@@ -14,6 +14,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { OnlineSalesFeatureGate } from "@/components/online-sales-feature-gate";
 import {
   Store, Globe, Layers, Plus, Loader2, ExternalLink, Trash2,
   Settings as SettingsIcon, ShoppingBag, Sparkles,
@@ -138,6 +139,7 @@ export default function MagazaListesi() {
   };
 
   return (
+    <OnlineSalesFeatureGate title="Hazır Mağaza paketinizde kapalı">
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
@@ -341,5 +343,6 @@ export default function MagazaListesi() {
         </DialogContent>
       </Dialog>
     </div>
+    </OnlineSalesFeatureGate>
   );
 }

@@ -2,7 +2,9 @@
 
 Bu doküman, Ticarium365 projesinin teknik yapısını, geliştirme ortamını, ana modüllerini ve canlıya çıkışta dikkat edilmesi gereken noktaları özetler.
 
-**Hızlı giriş:** kökte [`dokümantasyon/`](../dokümantasyon/README.md) — yeni geliştirici özeti ([`yeni-gelistirici.md`](../dokümantasyon/yeni-gelistirici.md)) ve API envanteri ([`api-yuzeyi.md`](../dokümantasyon/api-yuzeyi.md)).
+**Son gözden geçirme:** 2026-05 — `dokümantasyon/` içeriği `docs/` altında birleştirildi; production web için `VITE_API_BASE_URL` notları eklendi.
+
+**Hızlı giriş:** [`docs/README.md`](README.md) — yeni geliştirici özeti ([`yeni-gelistirici.md`](yeni-gelistirici.md)) ve API envanteri ([`api-yuzeyi.md`](api-yuzeyi.md)).
 
 ## 1. Genel Mimari
 
@@ -110,7 +112,8 @@ http://localhost:3000
 
 Frontend Vite proxy ayarı sayesinde `/api/*` isteklerini `VITE_API_BASE_URL` değerine yönlendirir.
 
-## 4. Monorepo Klasör Yapısı
+**Production statik hosting (ör. Cloudflare Pages):** Build sırasında `VITE_API_BASE_URL` mutlaka gerçek API köküne (ör. `https://api.example.com`, sondaki `/` olmadan) set edilmelidir. Böylece üretim bundle’ında `artifacts/prosan/src/lib/api-runtime-bootstrap.ts` ve `setBaseUrl` ile göreli `/api/*` çağrıları aynı origin’e değil, Railway vb. API sunucusuna gider. Lokal geliştirmede bu değişken boş bırakılabilir; istekler Vite proxy üzerinden `localhost:8080`’e gider.
+
 
 ### 4.1 `artifacts/prosan` (legacy workspace adı)
 
@@ -122,6 +125,7 @@ Ana web uygulamasıdır. Bu klasör adı erken geliştirme döneminden kalmışt
 - `src/pages/*` — sayfa bileşenleri
 - `src/components/*` — ortak UI ve iş bileşenleri
 - `vite.config.ts` — dev server, build, proxy ayarları
+- `src/lib/api.ts`, `src/lib/api-runtime-bootstrap.ts` — production’da `VITE_API_BASE_URL` ile API kökü; `main.tsx` en üstte bootstrap import eder
 
 Önemli public sayfalar:
 
@@ -217,7 +221,7 @@ Ana kontroller:
 - `requireRole([...])`
 - `requireSuperAdmin`
 
-**Kurucu erişimi (`super_admin`):** İlk prod ortamında hesap yoksa `FOUNDER_BOOTSTRAP=1` + e-posta/şifre env (`runSeeds` içinde) veya `artifacts/api-server/scripts/create-super-admin.mjs` ile oluşturulur; çift kurucu engellenir. Tam kullanım: repo kökü `dokümantasyon/FOUNDER_ACCESS.md`. Giriş: `POST /auth/login` — **kullanıcı adı** veya (yalnız `super_admin`) **e-posta** + şifre.
+**Kurucu erişimi (`super_admin`):** İlk prod ortamında hesap yoksa `FOUNDER_BOOTSTRAP=1` + e-posta/şifre env (`runSeeds` içinde) veya `artifacts/api-server/scripts/create-super-admin.mjs` ile oluşturulur; çift kurucu engellenir. Tam kullanım: [`FOUNDER_ACCESS.md`](FOUNDER_ACCESS.md). Giriş: `POST /auth/login` — **kullanıcı adı** veya (yalnız `super_admin`) **e-posta** + şifre.
 
 ### 6.2 Tenant Boundary
 
@@ -252,6 +256,10 @@ Davranış özeti:
 ## 7. Route Organizasyonu
 
 Launch öncesi büyük route dosyaları sadeleştirilmiştir.
+
+**Hata gövdesi:** `500` yanıtlarında `../lib/errors.js` içindeki `Errors.internal()` tercih edilir; yanıt gövdesi `{ error: { code, message, details } }` biçiminde standart kalır.
+
+**Şema doğrulama (route katmanı):** `import { z } from "zod"` kullanılır. `lib/db` içindeki drizzle-zod şema dosyaları `zod/v4` ile uyumlu olabilir; bu, veritabanı katmanına özgüdür.
 
 ### 7.1 Subscriptions
 
@@ -529,6 +537,10 @@ Cloudflare ayarları:
 - Proxy: açık
 
 API cache’lenmemelidir.
+
+### 15.1 Statik site (Cloudflare Pages) + ayrı API
+
+Web uygulaması statik host’ta (ör. `*.pages.dev`) yayınlanıyorsa, tarayıcı `fetch("/api/...")` ile **aynı host’a** gider; statik sitede API yoktur. Çözüm: build-time `VITE_API_BASE_URL` + `api-runtime-bootstrap` (bkz. §3.4) ve CORS/cookie politikalarının API tarafında bu origin için tanımlı olması.
 
 ## 16. Sentry
 

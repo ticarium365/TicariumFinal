@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { OnlineSalesFeatureGate } from "@/components/online-sales-feature-gate";
 import { apiBase } from "@/lib/api";
 
 interface Product {
@@ -332,6 +333,7 @@ export default function ChannelDetailPage({ channelKey }: Props) {
   }
 
   return (
+    <OnlineSalesFeatureGate>
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-5">
       <Link href="/channels">
         <Button variant="ghost" size="sm" className="-ml-2">
@@ -822,5 +824,6 @@ export default function ChannelDetailPage({ channelKey }: Props) {
         </DialogContent>
       </Dialog>
     </div>
+    </OnlineSalesFeatureGate>
   );
 }

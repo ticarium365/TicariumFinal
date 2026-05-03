@@ -1,8 +1,14 @@
 /**
- * Ağır sayfalar — ilk yüklemede bundle’ı küçültür; Suspense ile sarılır.
- * Giriş / kayıt / ana sayfa / 404 senkron kalır (App.tsx).
+ * Route-level code splitting — App.tsx içinde Suspense ile sarılır.
  */
 import { lazy } from "react";
+
+export const LoginPage = lazy(() => import("@/pages/login"));
+export const RegisterPage = lazy(() => import("@/pages/register"));
+export const VerifyPage = lazy(() => import("@/pages/verify"));
+export const ForgotPasswordPage = lazy(() => import("@/pages/forgot-password"));
+export const HomePage = lazy(() => import("@/pages/home"));
+export const NotFoundPage = lazy(() => import("@/pages/not-found"));
 
 export const EntegrasyonlarPage = lazy(() => import("@/pages/entegrasyonlar"));
 export const KarsilastirPage = lazy(() => import("@/pages/karsilastir"));

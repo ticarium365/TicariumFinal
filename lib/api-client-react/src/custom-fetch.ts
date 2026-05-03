@@ -1,5 +1,14 @@
+import type { ZodError, ZodType } from "zod";
+
+import { lookupResponseSchema, normalizeApiPathname } from "./response-schema-registry";
+
 export type CustomFetchOptions = RequestInit & {
   responseType?: "json" | "text" | "blob" | "auto";
+  /**
+   * Successful JSON body için Zod şeması (registry girişini geçersiz kılar).
+   * Örn. `fetch("/api/billing/checkout", { ..., responseSchema: zBillingCheckoutResponse })`.
+   */
+  responseSchema?: ZodType<unknown>;
 };
 
 export type ErrorType<T = unknown> = ApiError<T>;
@@ -199,6 +208,45 @@ export class ApiError<T = unknown> extends Error {
   }
 }
 
+export type ResponseValidationFailureContext = {
+  method: string;
+  url: string;
+  pathname: string;
+  zodError: ZodError;
+  received: unknown;
+};
+
+/** Sentry vb. için — prosan `api-runtime-bootstrap` içinde ayarlanır */
+export let responseValidationFailureHandler: ((ctx: ResponseValidationFailureContext) => void) | null = null;
+
+export function setResponseValidationFailureHandler(
+  handler: typeof responseValidationFailureHandler,
+): void {
+  responseValidationFailureHandler = handler;
+}
+
+/** Sunucu yanıtı beklenen şemaya uymadığında (runtime contract drift). */
+export class ApiValidationError extends Error {
+  readonly name = "ApiValidationError";
+  readonly method: string;
+  readonly url: string;
+  readonly pathname: string;
+  readonly zodError: ZodError;
+  readonly received: unknown;
+
+  constructor(method: string, url: string, zodError: ZodError, received: unknown) {
+    super(
+      `API response validation failed: ${method} ${normalizeApiPathname(url)} — ${zodError.message}`,
+    );
+    Object.setPrototypeOf(this, new.target.prototype);
+    this.method = method;
+    this.url = url;
+    this.pathname = normalizeApiPathname(url);
+    this.zodError = zodError;
+    this.received = received;
+  }
+}
+
 export class ResponseParseError extends Error {
   readonly name = "ResponseParseError";
   readonly status: number;
@@ -327,7 +375,12 @@ export async function customFetch<T = unknown>(
   options: CustomFetchOptions = {},
 ): Promise<T> {
   input = applyBaseUrl(input);
-  const { responseType = "auto", headers: headersInit, ...init } = options;
+  const {
+    responseType = "auto",
+    responseSchema: explicitResponseSchema,
+    headers: headersInit,
+    ...init
+  } = options;
 
   const method = resolveMethod(input, init.method);
 
@@ -367,5 +420,35 @@ export async function customFetch<T = unknown>(
     throw new ApiError(response, errorData, requestInfo);
   }
 
-  return (await parseSuccessBody(response, responseType, requestInfo)) as T;
+  const body = await parseSuccessBody(response, responseType, requestInfo);
+
+  const inferred = inferResponseType(response);
+  const treatAsJson =
+    responseType === "json" || (responseType === "auto" && inferred === "json");
+
+  if (
+    treatAsJson &&
+    body !== null &&
+    typeof body === "object" &&
+    !(body instanceof Blob)
+  ) {
+    const schema = explicitResponseSchema ?? lookupResponseSchema(method, requestInfo.url);
+    if (schema) {
+      const parsed = schema.safeParse(body);
+      if (!parsed.success) {
+        const pathname = normalizeApiPathname(requestInfo.url);
+        responseValidationFailureHandler?.({
+          method,
+          url: requestInfo.url,
+          pathname,
+          zodError: parsed.error,
+          received: body,
+        });
+        throw new ApiValidationError(method, requestInfo.url, parsed.error, body);
+      }
+      return parsed.data as T;
+    }
+  }
+
+  return body as T;
 }

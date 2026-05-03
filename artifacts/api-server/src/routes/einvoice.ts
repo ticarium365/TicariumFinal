@@ -749,7 +749,16 @@ router.get("/inbox", async (req: Request, res: Response) => {
 
 router.post("/inbox/poll", requireWriter, async (req: Request, res: Response) => {
   const companyId = req.companyId!;
-  const since = req.body?.since ? new Date(req.body.since) : new Date(Date.now() - 7 * 86400000);
+  let since: Date;
+  if (req.body?.since) {
+    const parsed = new Date(req.body.since);
+    if (isNaN(parsed.getTime())) {
+      return res.status(400).json({ error: "Invalid date format for 'since'" });
+    }
+    since = parsed;
+  } else {
+    since = new Date(Date.now() - 7 * 86400000);
+  }
   try {
     const { provider, settings } = await getProviderForCompany(companyId);
     const incoming = await provider.getIncomingInvoices({ since, limit: 200 });

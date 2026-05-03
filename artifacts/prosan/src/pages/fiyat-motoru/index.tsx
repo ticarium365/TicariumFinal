@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { OnlineSalesFeatureGate } from "@/components/online-sales-feature-gate";
 import {
   Tag, Plus, Loader2, Trash2, Sparkles, Play, Save, ArrowRight,
   TrendingUp, TrendingDown, Minus, AlertCircle,
@@ -111,6 +112,7 @@ export default function FiyatMotoru() {
   };
 
   return (
+    <OnlineSalesFeatureGate title="Fiyat Motoru paketinizde kapalı">
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
@@ -158,36 +160,83 @@ export default function FiyatMotoru() {
                   )}
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {rules.map((r) => (
-                    <div key={r.id} className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/30">
-                      <div className="text-sm font-mono text-muted-foreground/70 w-12">#{r.priority}</div>
-                      <Switch checked={r.isActive} onCheckedChange={() => isAdmin && toggleActive(r)} disabled={!isAdmin} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button onClick={() => isAdmin && (setEditing(r), setOpen(true))} className="font-semibold hover:text-emerald-300">
+                    <div key={r.id} className="rounded-xl border bg-card p-4 hover:bg-muted/20 transition-colors">
+                      <div className="flex flex-wrap items-start gap-3 justify-between">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-mono text-muted-foreground tabular-nums">#{r.priority}</span>
+                          <Switch checked={r.isActive} onCheckedChange={() => isAdmin && toggleActive(r)} disabled={!isAdmin} />
+                          <button
+                            type="button"
+                            onClick={() => isAdmin && (setEditing(r), setOpen(true))}
+                            className="font-semibold text-left hover:text-emerald-600 dark:hover:text-emerald-300"
+                          >
                             {r.name}
                           </button>
-                          <Badge variant="outline">{MODE_LABEL[r.mode]}: {r.mode === "fixed_price" ? `₺${r.value}` : `${r.value}${r.mode.includes("pct") ? "%" : " TL"}`}</Badge>
-                          {r.channelKey && <Badge variant="secondary">{r.channelKey}</Badge>}
-                          {!r.channelKey && <Badge variant="secondary">Tüm kanallar</Badge>}
-                          {r.roundingMode !== "none" && <Badge variant="outline">{ROUNDING_LABEL[r.roundingMode]}</Badge>}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-2">
-                          {r.categoryFilter?.length ? <span>Kategoriler: {r.categoryFilter.join(", ")}</span> : null}
-                          {r.brandFilter?.length ? <span>· Markalar: {r.brandFilter.join(", ")}</span> : null}
-                          {r.productIds?.length ? <span>· {r.productIds.length} ürün</span> : null}
-                          {r.minPrice != null && <span>· Min: ₺{r.minPrice}</span>}
-                          {r.maxPrice != null && <span>· Max: ₺{r.maxPrice}</span>}
-                          {r.description && <span>· {r.description}</span>}
+                        {isAdmin && (
+                          <Button variant="ghost" size="sm" onClick={() => remove(r.id)}
+                                  className="text-red-600 hover:text-red-300 shrink-0">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="mt-3 grid md:grid-cols-2 gap-3">
+                        <div className="rounded-lg border border-border/80 bg-muted/30 p-3 text-sm">
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                            Koşul <span className="font-normal normal-case opacity-80">(eşleşirse)</span>
+                          </div>
+                          <ul className="space-y-1 text-foreground/90">
+                            <li>
+                              <span className="text-muted-foreground">Kanal:</span>{" "}
+                              {r.channelKey ? (
+                                <Badge variant="secondary" className="ml-1">{r.channelKey}</Badge>
+                              ) : (
+                                <span>Tüm kanallar</span>
+                              )}
+                            </li>
+                            {r.categoryFilter?.length ? (
+                              <li><span className="text-muted-foreground">Kategori:</span> {r.categoryFilter.join(", ")}</li>
+                            ) : null}
+                            {r.brandFilter?.length ? (
+                              <li><span className="text-muted-foreground">Marka:</span> {r.brandFilter.join(", ")}</li>
+                            ) : null}
+                            {r.productIds?.length ? (
+                              <li><span className="text-muted-foreground">Ürün:</span> {r.productIds.length} seçili kayıt</li>
+                            ) : null}
+                            {(r.minPrice != null || r.maxPrice != null) && (
+                              <li className="tabular-nums">
+                                <span className="text-muted-foreground">Fiyat aralığı:</span>{" "}
+                                {r.minPrice != null ? `≥ ₺${r.minPrice}` : ""}
+                                {r.minPrice != null && r.maxPrice != null ? " · " : ""}
+                                {r.maxPrice != null ? `≤ ₺${r.maxPrice}` : ""}
+                              </li>
+                            )}
+                            {r.description ? (
+                              <li className="text-xs text-muted-foreground pt-1 border-t border-border/50">{r.description}</li>
+                            ) : null}
+                          </ul>
+                        </div>
+                        <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-3 text-sm">
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-300 mb-2">
+                            Uygula <span className="font-normal normal-case opacity-80">(sonuç)</span>
+                          </div>
+                          <div className="font-medium text-foreground">
+                            {MODE_LABEL[r.mode]}{" "}
+                            <span className="tabular-nums">
+                              {r.mode === "fixed_price"
+                                ? `→ ₺${r.value}`
+                                : `→ ${r.value}${r.mode.includes("pct") ? "%" : " TL"}`}
+                            </span>
+                          </div>
+                          {r.roundingMode !== "none" && (
+                            <div className="text-xs text-muted-foreground mt-2">
+                              Yuvarlama: {ROUNDING_LABEL[r.roundingMode]}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      {isAdmin && (
-                        <Button variant="ghost" size="sm" onClick={() => remove(r.id)}
-                                className="text-red-600 hover:text-red-300 hover:bg-red-500/150/10">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -213,6 +262,7 @@ export default function FiyatMotoru() {
         />
       )}
     </div>
+    </OnlineSalesFeatureGate>
   );
 }
 

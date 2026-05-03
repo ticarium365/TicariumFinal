@@ -1,0 +1,20 @@
+{
+  "name": "@workspace/automation",
+  "version": "1.0.0",
+  "description": "Ticarium365 Claude API otomasyon araçları",
+  "type": "module",
+  "scripts": {
+    "review": "tsx code-review.ts",
+    "fix": "tsx cursor-prompts.ts",
+    "prompt": "tsx cursor-prompts.ts",
+    "prompt:k1": "tsx cursor-prompts.ts K1",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "tsx": "*",
+    "typescript": "~5.9.2"
+  }
+}

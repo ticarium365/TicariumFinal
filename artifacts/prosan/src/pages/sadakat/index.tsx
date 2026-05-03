@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -14,10 +17,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import { Award, Settings as SettingsIcon, Plus, Trophy, History } from "lucide-react";
+import { Settings as SettingsIcon, Plus, Trophy, History } from "lucide-react";
 
 type Settings = { id: number; pointsPerHundredTL: number; tlPerPoint: number; minRedeemPoints: number; isActive: number };
 type TopCustomer = { customerId: number; customerName: string; customerCode: string; balance: number };
@@ -33,7 +33,7 @@ export default function LoyaltyPage() {
     queryKey: ["/api/loyalty/settings"],
     queryFn: async () => (await fetch("/api/loyalty/settings", { credentials: "include" })).json(),
   });
-  const { data: top = [] } = useQuery<TopCustomer[]>({
+  const { data: top = [], isLoading: topLoading } = useQuery<TopCustomer[]>({
     queryKey: ["/api/loyalty/top-customers"],
     queryFn: async () => (await fetch("/api/loyalty/top-customers", { credentials: "include" })).json(),
   });
@@ -47,6 +47,41 @@ export default function LoyaltyPage() {
 
   const [form, setForm] = useState<Partial<Settings>>({});
   const cur = { ...settings, ...form } as Settings;
+
+  const topColumns = useMemo((): DataTableColumn<TopCustomer>[] => [
+    {
+      id: "rank",
+      header: "#",
+      cell: (_t, i) => <span className="font-mono text-[color:var(--color-neutral-600)]">{i + 1}</span>,
+    },
+    {
+      id: "name",
+      header: "Müşteri",
+      sortable: true,
+      sortValue: (t) => t.customerName ?? "",
+      cell: (t) => t.customerName || `#${t.customerId}`,
+    },
+    {
+      id: "code",
+      header: "Kod",
+      sortable: true,
+      sortValue: (t) => t.customerCode ?? "",
+      cell: (t) => <span className="text-xs text-muted-foreground">{t.customerCode}</span>,
+    },
+    {
+      id: "balance",
+      header: "Bakiye (puan)",
+      headerClassName: "text-right",
+      className: "text-right",
+      sortable: true,
+      sortValue: (t) => t.balance,
+      cell: (t) => (
+        <Badge variant={t.balance > 0 ? "default" : "secondary"} className="font-mono font-bold">
+          {t.balance.toLocaleString("tr-TR")}
+        </Badge>
+      ),
+    },
+  ], []);
 
   async function saveSettings() {
     const r = await fetch("/api/loyalty/settings", {
@@ -64,12 +99,16 @@ export default function LoyaltyPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6" data-testid="page-loyalty">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Award className="h-7 w-7 text-primary" /> Sadakat & Puan Sistemi
-        </h1>
-        <p className="text-muted-foreground">Müşteri puan kazanımı, harcama ve sıralaması.</p>
-      </div>
+      <PageHeader
+        title="Sadakat & Puan"
+        subtitle="Müşteri puan kazanımı, harcama ve sıralaması."
+        right={
+          <Button className="gap-2" onClick={() => setAdjustOpen(true)} data-testid="btn-adjust">
+            <Plus className="h-4 w-4" />
+            Manuel Puan İşlemi
+          </Button>
+        }
+      />
 
       <Tabs defaultValue="leaderboard">
         <TabsList>
@@ -78,39 +117,25 @@ export default function LoyaltyPage() {
         </TabsList>
 
         <TabsContent value="leaderboard" className="space-y-3">
-          <div className="flex justify-end">
-            <Button onClick={() => setAdjustOpen(true)} data-testid="btn-adjust">
-              <Plus className="h-4 w-4 mr-1" /> Manuel Puan İşlemi
-            </Button>
-          </div>
           <Card>
             <CardHeader><CardTitle>En Çok Puanlı Müşteriler</CardTitle></CardHeader>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>#</TableHead>
-                    <TableHead>Müşteri</TableHead>
-                    <TableHead>Kod</TableHead>
-                    <TableHead className="text-right">Bakiye (puan)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {top.length === 0 && (
-                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Henüz puan hareketi yok.</TableCell></TableRow>
-                  )}
-                  {top.map((t, i) => (
-                    <TableRow key={t.customerId} data-testid={`top-row-${t.customerId}`}>
-                      <TableCell className="font-mono">{i + 1}</TableCell>
-                      <TableCell>{t.customerName || `#${t.customerId}`}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{t.customerCode}</TableCell>
-                      <TableCell className="text-right font-mono font-bold">
-                        <Badge variant={t.balance > 0 ? "default" : "secondary"}>{t.balance.toLocaleString("tr-TR")}</Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <DataTable<TopCustomer>
+                columns={topColumns}
+                data={top}
+                getRowId={(t) => String(t.customerId)}
+                loading={topLoading}
+                enableRowSelection={false}
+                showFooterPagination={false}
+                emptyState={
+                  <EmptyState
+                    icon={Trophy}
+                    title="Sıralama için veri yok"
+                    description="Satışlarınızla puan biriktikçe müşteriler burada listelenir."
+                    action={{ label: "Manuel puan işlemi", onClick: () => setAdjustOpen(true), testId: "btn-adjust-empty" }}
+                  />
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -148,7 +173,9 @@ export default function LoyaltyPage() {
                   onChange={(e) => setForm({ ...form, minRedeemPoints: Number(e.target.value) })}
                   data-testid="input-min-redeem" />
               </div>
-              <Button onClick={saveSettings} data-testid="btn-save-settings">Kaydet</Button>
+              <Button onClick={saveSettings} data-testid="btn-save-settings">
+                Kaydet
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

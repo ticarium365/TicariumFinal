@@ -1,15 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BrowserMultiFormatReader as ZXingBrowserReader } from "@zxing/browser";
 import { useListProducts, useCreateSale, useGetTodaySales, useGetProductByBarcode, getGetTodaySalesQueryKey, getListProductsQueryKey, getGetProductByBarcodeQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Package, ScanBarcode, X, Loader2, Camera, CameraOff, SwitchCamera, Banknote, CreditCard, ArrowLeftRight } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Search, ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Package, ScanBarcode, X, Loader2, Camera, CameraOff, SwitchCamera, Banknote, CreditCard, ArrowLeftRight, ChevronsUpDown, User } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import type { Customer } from "@/pages/customers/types";
 
 interface CartItem {
   productId: number;
@@ -20,6 +30,141 @@ interface CartItem {
   stock: number;
 }
 
+function CartLineRow({
+  item,
+  onDec,
+  onInc,
+  onRemove,
+}: {
+  item: CartItem;
+  onDec: () => void;
+  onInc: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div
+      className="flex gap-2 border-b border-[color:var(--color-border-subtle)] py-3 last:border-b-0"
+      data-testid={`cart-line-${item.productId}`}
+    >
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-[var(--font-weight-medium)] leading-tight text-[color:var(--color-neutral-900)]">{item.name}</p>
+        <p className="mt-0.5 font-mono text-[length:var(--font-size-xs)] text-[color:var(--color-neutral-500)]">
+          {item.productCode} · {Number(item.unitPrice).toFixed(2)} TL
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-1 rounded-[var(--radius-md)] border border-[color:var(--color-border-subtle)] bg-[var(--color-neutral-100)] p-1">
+        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={onDec} aria-label="Azalt">
+          <Minus className="h-3 w-3" />
+        </Button>
+        <span className="w-7 text-center font-mono text-sm font-[var(--font-weight-bold)]">{item.quantity}</span>
+        <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={onInc} aria-label="Arttır">
+          <Plus className="h-3 w-3" />
+        </Button>
+      </div>
+      <div className="shrink-0 text-right">
+        <p className="text-sm font-[var(--font-weight-bold)] text-[color:var(--color-brand-700)]">
+          {(item.quantity * item.unitPrice).toFixed(2)} TL
+        </p>
+        <Button type="button" variant="ghost" size="icon" className="mt-1 h-7 w-7 text-[color:var(--color-semantic-danger)]" onClick={onRemove} aria-label="Kaldır">
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CustomerCombobox({
+  customers,
+  value,
+  onChange,
+}: {
+  customers: Customer[];
+  value: number | null;
+  onChange: (id: number | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = value != null ? customers.find((c) => c.id === value) : undefined;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="secondary"
+          fullWidth
+          className="justify-between font-normal"
+          aria-expanded={open}
+          data-testid="sales-customer-combobox"
+        >
+          {selected ? (
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-full)] bg-[var(--color-brand-500)] text-sm font-[var(--font-weight-bold)] text-[color:var(--color-semantic-info-fg)]">
+                {selected.name.charAt(0).toUpperCase()}
+              </span>
+              <span className="min-w-0 text-left">
+                <span className="block truncate font-[var(--font-weight-medium)] text-[color:var(--color-neutral-900)]">{selected.name}</span>
+                <span className="block truncate font-mono text-[length:var(--font-size-xs)] text-[color:var(--color-neutral-500)]">
+                  VN: {selected.taxNumber?.trim() || "—"}
+                </span>
+              </span>
+            </span>
+          ) : (
+            <span className="flex items-center gap-2 text-[color:var(--color-neutral-600)]">
+              <User className="h-4 w-4 shrink-0" />
+              Müşteri seç (isteğe bağlı)
+            </span>
+          )}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[min(calc(100vw-2rem),22rem)] p-0"
+        align="start"
+        side="bottom"
+      >
+        <Command>
+          <CommandInput placeholder="İsim, kod veya vergi no ara…" />
+          <CommandList>
+            <CommandEmpty>Kayıt bulunamadı.</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                value="__walkin"
+                onSelect={() => {
+                  onChange(null);
+                  setOpen(false);
+                }}
+              >
+                Perakende (müşterisiz)
+              </CommandItem>
+              {customers.map((c) => (
+                <CommandItem
+                  key={c.id}
+                  value={`${c.name} ${c.code} ${c.taxNumber ?? ""}`}
+                  onSelect={() => {
+                    onChange(c.id);
+                    setOpen(false);
+                  }}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-full)] bg-[var(--color-neutral-200)] text-xs font-[var(--font-weight-bold)] text-[color:var(--color-neutral-800)]">
+                      {c.name.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-[var(--font-weight-medium)]">{c.name}</span>
+                      <span className="block truncate font-mono text-[length:var(--font-size-xs)] text-[color:var(--color-neutral-500)]">
+                        {c.code} · VN {c.taxNumber?.trim() || "—"}
+                      </span>
+                    </span>
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function SalesScreen() {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 300);
@@ -28,7 +173,18 @@ export default function SalesScreen() {
   const createSale = useCreateSale();
 
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [customerId, setCustomerId] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "transfer" | "other">("cash");
+
+  const { data: customersList = [] } = useQuery<Customer[]>({
+    queryKey: ["/api/customers", "sales-screen"],
+    queryFn: async () => {
+      const r = await fetch("/api/customers?limit=500", { credentials: "include" });
+      const d = await r.json();
+      return Array.isArray(d) ? d : (d.customers ?? d.items ?? d.data ?? []);
+    },
+    staleTime: 60_000,
+  });
 
   // Barkod kamera state
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -156,7 +312,13 @@ export default function SalesScreen() {
     try {
       await Promise.all(cart.map(item =>
         createSale.mutateAsync({
-          data: { productId: item.productId, quantity: item.quantity, unitPrice: item.unitPrice, paymentMethod }
+          data: {
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            paymentMethod,
+            customerId: customerId ?? undefined,
+          },
         })
       ));
       toast({ title: "Başarılı", description: "Satış tamamlandı." });
@@ -171,22 +333,26 @@ export default function SalesScreen() {
   const totalItems = cart.reduce((a, c) => a + c.quantity, 0);
 
   return (
+    <div className="flex flex-col gap-4 pb-28 lg:pb-6">
+      <PageHeader
+        title="Satış Ekranı"
+        subtitle="Barkod veya arama ile ürün ekleyin; müşteri ve ödeme yöntemini seçerek satışı tamamlayın."
+      />
     <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
       {/* Sol Panel */}
       <div className="flex-1 flex flex-col gap-4">
 
         {/* Barkod Kamera Paneli */}
-        <Card className={`overflow-hidden transition-all ${cameraOpen ? "border-primary shadow-md" : ""}`}>
-          <CardHeader className="pb-3 pt-4 px-4 border-b bg-zinc-950 text-white">
+        <Card className={`overflow-hidden transition-all ${cameraOpen ? "ring-2 ring-[color:color-mix(in_srgb,var(--color-brand-500)_45%,transparent)]" : ""}`}>
+          <CardHeader className="border-b border-[color:var(--color-nav-800)] bg-[var(--color-nav-900)] pb-3 pt-4 text-[color:var(--color-nav-text-active)]">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <ScanBarcode className="h-5 w-5 text-primary" />
+              <CardTitle className="flex items-center gap-2 text-base text-[color:var(--color-nav-text-active)]">
+                <ScanBarcode className="h-5 w-5 text-[color:var(--color-brand-200)]" />
                 Barkod ile Ürün Ekle
               </CardTitle>
               <Button
-                variant={cameraOpen ? "destructive" : "outline"}
+                variant={cameraOpen ? "danger" : "secondary"}
                 size="sm"
-                className={cameraOpen ? "" : "bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"}
                 onClick={() => setCameraOpen(v => !v)}
               >
                 {cameraOpen ? (
@@ -205,7 +371,7 @@ export default function SalesScreen() {
                 <video
                   ref={videoRef}
                   className="w-full object-cover"
-                  style={{ maxHeight: 280, background: "#000" }}
+                  style={{ maxHeight: 280, background: "var(--color-neutral-900)" }}
                   playsInline
                   muted
                 />
@@ -218,13 +384,16 @@ export default function SalesScreen() {
                   </div>
                 )}
                 {/* Kamera çevir butonu */}
-                <button
-                  className="absolute bottom-2 right-2 bg-zinc-900/80 hover:bg-zinc-700/90 text-white rounded-full p-2 z-20 transition-colors"
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute bottom-2 right-2 z-20 rounded-[var(--radius-full)] bg-[color:color-mix(in_srgb,var(--color-neutral-900)_55%,transparent)] text-[color:var(--color-nav-text-active)] hover:bg-[color:color-mix(in_srgb,var(--color-neutral-900)_72%,transparent)]"
                   onClick={() => setFacingMode(m => m === "environment" ? "user" : "environment")}
                   title={facingMode === "environment" ? "Ön kameraya geç" : "Arka kameraya geç"}
                 >
                   <SwitchCamera className="h-5 w-5" />
-                </button>
+                </Button>
                 {cameraError && (
                   <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/90">
                     <p className="text-sm text-destructive text-center px-4">{cameraError}</p>
@@ -291,7 +460,8 @@ export default function SalesScreen() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
-                className="pl-10 h-12 text-base"
+                id="sales-product-search"
+                className="h-12 pl-10 text-base"
                 placeholder="Ürün adı, kod veya barkod ara..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
@@ -336,103 +506,107 @@ export default function SalesScreen() {
           </CardHeader>
           <CardContent className="flex-1 p-0 overflow-y-auto">
             {cart.length === 0 ? (
-              <div className="flex flex-col items-center justify-center text-muted-foreground p-8 gap-3 min-h-[120px]">
-                <Package className="h-12 w-12 opacity-20" />
-                <p className="text-sm">Sepet boş. Barkod okutun veya ürün arayın.</p>
+              <div className="flex min-h-[140px] flex-col items-center justify-center gap-4 px-6 py-10 text-center">
+                <div className="flex h-20 w-20 items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-[color:var(--color-border-subtle)] bg-[var(--color-neutral-50)]">
+                  <Package className="h-10 w-10 text-[color:var(--color-neutral-400)]" aria-hidden />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-[var(--font-weight-medium)] text-[color:var(--color-neutral-800)]">Sepet boş</p>
+                  <p className="text-[length:var(--font-size-xs)] text-[color:var(--color-neutral-600)]">
+                    Barkod okutun veya ürün arayarak satıra ekleyin.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    const el = document.getElementById("sales-product-search");
+                    el?.focus();
+                  }}
+                >
+                  Ürün ara
+                </Button>
               </div>
             ) : (
-              <Table>
-                <TableHeader className="bg-background sticky top-0">
-                  <TableRow>
-                    <TableHead>Ürün</TableHead>
-                    <TableHead className="text-center w-[120px]">Adet</TableHead>
-                    <TableHead className="text-right">Toplam</TableHead>
-                    <TableHead className="w-8"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cart.map(item => (
-                    <TableRow key={item.productId}>
-                      <TableCell className="py-2">
-                        <p className="font-medium text-sm leading-tight">{item.name}</p>
-                        <p className="text-[10px] text-muted-foreground font-mono">{item.productCode} · {Number(item.unitPrice).toFixed(2)} TL</p>
-                      </TableCell>
-                      <TableCell className="py-2">
-                        <div className="flex items-center justify-center gap-1 bg-muted/50 rounded-md p-1 border">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.productId, -1)}>
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-7 text-center font-bold font-mono text-sm">{item.quantity}</span>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.productId, 1)}>
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-sm py-2">{(item.quantity * item.unitPrice).toFixed(2)} TL</TableCell>
-                      <TableCell className="py-2">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => removeFromCart(item.productId)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="px-4 py-2">
+                {cart.map((item) => (
+                  <CartLineRow
+                    key={item.productId}
+                    item={item}
+                    onDec={() => updateQuantity(item.productId, -1)}
+                    onInc={() => updateQuantity(item.productId, 1)}
+                    onRemove={() => removeFromCart(item.productId)}
+                  />
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Sağ Panel — Ödeme & Özet */}
-      <div className="w-full lg:w-72 flex flex-col gap-4">
-        <Card className="bg-zinc-950 text-white border-zinc-800 shadow-xl">
-          <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-zinc-400 text-xs font-medium uppercase tracking-wider">Ödenecek Tutar</CardTitle>
+      {/* Sağ Panel — Ödeme & Özet (masaüstü) */}
+      <div className="hidden w-full flex-col gap-4 lg:flex lg:w-72">
+        <Card className="border-[color:var(--color-nav-800)] bg-[var(--color-nav-900)] text-[color:var(--color-nav-text-active)] shadow-[var(--shadow-lg)]">
+          <CardHeader className="px-4 pb-2 pt-4">
+            <CardTitle className="text-xs font-[var(--font-weight-medium)] uppercase tracking-wider text-[color:var(--color-nav-text)]">
+              Ödenecek Tutar
+            </CardTitle>
           </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="text-4xl font-bold tracking-tighter text-primary">
-              {totalAmount.toFixed(2)}
-              <span className="text-xl ml-1 text-zinc-300">TL</span>
+          <CardContent className="space-y-4 px-4 pb-4">
+            <div>
+              <p className="mb-2 text-[length:var(--font-size-xs)] text-[color:var(--color-nav-text)]">Müşteri</p>
+              <CustomerCombobox customers={customersList} value={customerId} onChange={setCustomerId} />
+            </div>
+            <div>
+              <span className="text-4xl font-[var(--font-weight-bold)] tracking-tight text-[color:var(--color-brand-200)]">
+                {totalAmount.toFixed(2)}
+              </span>
+              <span className="ml-1 text-xl text-[color:var(--color-nav-text)]">TL</span>
             </div>
 
-            {/* Ödeme Yöntemi */}
-            <div className="mt-4 grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-3 gap-1.5">
               {([
-                { value: "cash", label: "Nakit", Icon: Banknote },
-                { value: "card", label: "Kart", Icon: CreditCard },
-                { value: "transfer", label: "Havale", Icon: ArrowLeftRight },
-              ] as const).map(({ value, label, Icon }) => (
-                <button
+                { value: "cash" as const, label: "Nakit", Icon: Banknote },
+                { value: "card" as const, label: "Kart", Icon: CreditCard },
+                { value: "transfer" as const, label: "Havale", Icon: ArrowLeftRight },
+              ]).map(({ value, label, Icon }) => (
+                <Button
                   key={value}
-                  onClick={() => setPaymentMethod(value)}
-                  className={`flex flex-col items-center gap-1 rounded-lg border py-2 px-1 text-xs font-medium transition-colors ${
+                  type="button"
+                  variant={paymentMethod === value ? "primary" : "ghost"}
+                  size="sm"
+                  className={
                     paymentMethod === value
-                      ? "border-primary bg-primary text-white"
-                      : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
-                  }`}
+                      ? "flex h-auto flex-col gap-1 py-2"
+                      : "flex h-auto flex-col gap-1 border border-[color:var(--color-nav-700)] bg-transparent py-2 text-[color:var(--color-nav-text)] hover:bg-[var(--color-nav-item-hover)]"
+                  }
+                  onClick={() => setPaymentMethod(value)}
                 >
                   <Icon className="h-4 w-4" />
                   {label}
-                </button>
+                </Button>
               ))}
             </div>
 
-            <div className="mt-3 space-y-2">
+            <div className="space-y-2">
               <Button
                 size="lg"
-                className="w-full h-14 text-base font-bold shadow-lg"
+                className="h-14 w-full text-base font-[var(--font-weight-bold)]"
                 disabled={cart.length === 0 || createSale.isPending}
                 onClick={completeSale}
               >
-                {createSale.isPending
-                  ? <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  : <CheckCircle2 className="mr-2 h-5 w-5" />}
+                {createSale.isPending ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="mr-2 h-5 w-5" />
+                )}
                 Satışı Tamamla
               </Button>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="lg"
-                className="w-full text-zinc-950"
+                className="w-full border-[color:var(--color-border-subtle)] text-[color:var(--color-neutral-900)]"
                 disabled={cart.length === 0}
                 onClick={() => setCart([])}
               >
@@ -442,26 +616,67 @@ export default function SalesScreen() {
           </CardContent>
         </Card>
 
-        <Card className="bg-muted/30">
-          <CardHeader className="pb-2 border-b py-3 px-4">
-            <CardTitle className="text-sm font-medium">Günlük Özet</CardTitle>
+        <Card variant="flat">
+          <CardHeader className="border-b border-[color:var(--color-border-subtle)] py-3">
+            <CardTitle className="text-sm font-[var(--font-weight-medium)] text-[color:var(--color-neutral-900)]">Günlük Özet</CardTitle>
           </CardHeader>
-          <CardContent className="pt-3 pb-4 px-4 space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Satış Sayısı</span>
-              <span className="font-bold font-mono">{todaySales?.totalSales || 0}</span>
+          <CardContent className="space-y-3 px-4 pb-4 pt-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[color:var(--color-neutral-600)]">Satış Sayısı</span>
+              <span className="font-mono font-[var(--font-weight-bold)]">{todaySales?.totalSales || 0}</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Satılan Ürün</span>
-              <span className="font-bold font-mono">{todaySales?.totalQuantity || 0}</span>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[color:var(--color-neutral-600)]">Satılan Ürün</span>
+              <span className="font-mono font-[var(--font-weight-bold)]">{todaySales?.totalQuantity || 0}</span>
             </div>
-            <div className="flex justify-between items-center pt-2 border-t">
-              <span className="text-sm font-bold">Günlük Ciro</span>
-              <span className="font-bold text-primary">{(todaySales?.grossRevenue || 0).toFixed(2)} TL</span>
+            <div className="flex items-center justify-between border-t border-[color:var(--color-border-subtle)] pt-2">
+              <span className="text-sm font-[var(--font-weight-semibold)] text-[color:var(--color-neutral-900)]">Günlük Ciro</span>
+              <span className="font-[var(--font-weight-bold)] text-[color:var(--color-brand-700)]">{(todaySales?.grossRevenue || 0).toFixed(2)} TL</span>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Mobil: yapışkan özet çubuğu */}
+      <div
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--color-border-subtle)] bg-[var(--color-surface-card)] px-4 py-3 shadow-[var(--shadow-lg)] lg:hidden"
+        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      >
+        <div className="mb-2 space-y-2">
+          <p className="text-[length:var(--font-size-xs)] text-[color:var(--color-neutral-600)]">Müşteri</p>
+          <CustomerCombobox customers={customersList} value={customerId} onChange={setCustomerId} />
+        </div>
+        <div className="mb-2 flex items-end justify-between gap-3">
+          <div>
+            <p className="text-[length:var(--font-size-xs)] text-[color:var(--color-neutral-600)]">Toplam</p>
+            <p className="text-xl font-[var(--font-weight-bold)] text-[color:var(--color-brand-700)]">{totalAmount.toFixed(2)} TL</p>
+          </div>
+          <div className="flex gap-1">
+            {(["cash", "card", "transfer"] as const).map((v) => (
+              <Button
+                key={v}
+                type="button"
+                size="sm"
+                variant={paymentMethod === v ? "primary" : "secondary"}
+                className="min-w-[4rem] px-2"
+                onClick={() => setPaymentMethod(v)}
+              >
+                {v === "cash" ? "Nakit" : v === "card" ? "Kart" : "Havale"}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <Button
+          size="lg"
+          className="h-12 w-full font-[var(--font-weight-bold)]"
+          disabled={cart.length === 0 || createSale.isPending}
+          onClick={completeSale}
+        >
+          {createSale.isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
+          Satışı Tamamla
+        </Button>
+      </div>
+    </div>
     </div>
   );
 }

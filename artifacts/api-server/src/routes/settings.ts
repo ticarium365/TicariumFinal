@@ -1,10 +1,29 @@
 import { Router, Request, Response } from "express";
-import { db, companySettingsTable, auditLogsTable, productsTable, salesTable, stockMovementsTable } from "@workspace/db";
+import { db, companySettingsTable, companiesTable, auditLogsTable, productsTable, salesTable, stockMovementsTable } from "@workspace/db";
 import { eq, count as dbCount } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth.js";
 import multer from "multer";
+import { z } from "zod";
 
 const router = Router();
+
+// Zod schema for settings update
+const settingsUpdateSchema = z.object({
+  companyName: z.string().max(200).optional(),
+  iban: z.string().max(50).optional(),
+  bankName: z.string().max(100).optional(),
+  accountHolder: z.string().max(100).optional(),
+  phone: z.string().max(50).optional(),
+  email: z.string().email("Geçersiz e-posta").max(100).optional(),
+  address: z.string().max(500).optional(),
+  website: z.string().url("Geçersiz URL").max(200).optional(),
+  taxNumber: z.string().max(50).optional(),
+  taxOffice: z.string().max(100).optional(),
+  primaryColor: z.string().max(20).optional(),
+  currency: z.string().max(10).optional(),
+  taxRate: z.number().optional(),
+  vatRegime: z.string().max(50).optional(),
+});
 
 const logoUpload = multer({
   storage: multer.memoryStorage(),
@@ -38,15 +57,16 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 router.put("/", requireAuth, requireAdmin, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
+    const body = settingsUpdateSchema.parse(req.body);
     const {
       companyName, iban, bankName, accountHolder, phone, email, address,
-      website, taxNumber, primaryColor, currency, taxRate,
-    } = req.body;
+      website, taxNumber, taxOffice, primaryColor, currency, taxRate, vatRegime,
+    } = body;
 
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     const fields: Record<string, unknown> = {
       companyName, iban, bankName, accountHolder, phone, email, address,
-      website, taxNumber, primaryColor, currency, taxRate,
+      website, taxNumber, taxOffice, primaryColor, currency, taxRate, vatRegime,
     };
     for (const [k, v] of Object.entries(fields)) {
       if (v !== undefined) updateData[k] = v;
@@ -64,6 +84,20 @@ router.put("/", requireAuth, requireAdmin, async (req: Request, res: Response) =
         .set(updateData)
         .where(eq(companySettingsTable.id, s.id))
         .returning();
+    }
+
+    const cityRaw = req.body?.city;
+    if (typeof cityRaw === "string" && cityRaw.trim()) {
+      await db
+        .update(companiesTable)
+        .set({ city: cityRaw.trim(), updatedAt: new Date() })
+        .where(eq(companiesTable.id, cid));
+    }
+    if (companyName !== undefined && typeof companyName === "string" && companyName.trim()) {
+      await db
+        .update(companiesTable)
+        .set({ name: companyName.trim(), updatedAt: new Date() })
+        .where(eq(companiesTable.id, cid));
     }
 
     res.json(s);

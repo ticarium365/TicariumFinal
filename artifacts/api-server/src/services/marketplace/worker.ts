@@ -10,6 +10,7 @@ import { getProviderForAccount, logSync } from "./factory.js";
 import {
   RateLimitError, PermanentProviderError, type IncomingOrder,
 } from "./types.js";
+import { logger } from "../../lib/logger.js";
 
 const POLL_INTERVAL_MS = 5000;
 const MAX_PARALLEL = 3;
@@ -250,7 +251,7 @@ async function tick() {
     const cnt = Number((r.rows[0] as any)?.count || 0);
     if (!cnt) break;
     inFlight++;
-    processOne().catch((e) => console.error("[marketplace/worker] error", e)).finally(() => { inFlight--; });
+    processOne().catch((e) => logger.error({ err: e }, "[marketplace/worker] error")).finally(() => { inFlight--; });
     await new Promise((r) => setTimeout(r, 50));
   }
 }
@@ -258,8 +259,8 @@ async function tick() {
 export function startMarketplaceWorker() {
   if (running) return;
   running = true;
-  console.log("[marketplace/worker] started, poll every", POLL_INTERVAL_MS, "ms");
-  timer = setInterval(() => { tick().catch(console.error); }, POLL_INTERVAL_MS);
+  logger.info({ pollMs: POLL_INTERVAL_MS }, "[marketplace/worker] started");
+  timer = setInterval(() => { tick().catch((err) => logger.error({ err }, "[marketplace/worker] tick")); }, POLL_INTERVAL_MS);
 }
 
 export function stopMarketplaceWorker() {

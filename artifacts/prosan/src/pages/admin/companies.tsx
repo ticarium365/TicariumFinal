@@ -290,7 +290,7 @@ export default function CompaniesAdmin() {
         <div className="grid gap-4">
           {pagedCompanies.map((company) => (
             <div key={company.id} className="bg-card border rounded-xl p-5 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0" style={{ background: company.primaryColor ?? "#2563eb" }}>
+              <div className="h-12 w-12 rounded-lg flex items-center justify-center text-[color:var(--color-nav-text-active)] font-bold text-lg shrink-0" style={{ background: company.primaryColor ?? "var(--color-brand-500)" }}>
                 {initialLetter(company.name)}
               </div>
               <div className="flex-1 min-w-0">

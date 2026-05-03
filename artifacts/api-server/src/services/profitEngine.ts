@@ -4,6 +4,7 @@ import {
   inventoryTurnoverMetricsTable, companiesTable,
 } from "@workspace/db";
 import { and, eq, gte, sql, desc } from "drizzle-orm";
+import { logger } from "../lib/logger.js";
 
 export interface EffectiveCostInput {
   purchasePrice: number;
@@ -246,7 +247,7 @@ export async function recomputeAllSnapshots(): Promise<{ companies: number; prod
       const r = await recomputeCompanySnapshots(c.id);
       totalProducts += r.updated;
     } catch (e) {
-      console.error(`[profit-cron] company ${c.id} failed:`, e);
+      logger.error({ err: e, companyId: c.id }, "[profit-cron] company failed");
     }
   }
   return { companies: companies.length, products: totalProducts };
@@ -262,15 +263,15 @@ export function startProfitCron() {
   setTimeout(async () => {
     try {
       const r = await recomputeAllSnapshots();
-      console.log(`[profit-cron] initial run: ${r.companies} companies, ${r.products} products`);
-    } catch (e) { console.error("[profit-cron] initial failed:", e); }
+      logger.info({ companies: r.companies, products: r.products }, "[profit-cron] initial run");
+    } catch (e) { logger.error({ err: e }, "[profit-cron] initial failed"); }
   }, 60_000);
   // Sonra: her 24 saatte bir
   setInterval(async () => {
     try {
       const r = await recomputeAllSnapshots();
-      console.log(`[profit-cron] daily run: ${r.companies} companies, ${r.products} products`);
-    } catch (e) { console.error("[profit-cron] daily failed:", e); }
+      logger.info({ companies: r.companies, products: r.products }, "[profit-cron] daily run");
+    } catch (e) { logger.error({ err: e }, "[profit-cron] daily failed"); }
   }, ONE_DAY);
 }
 

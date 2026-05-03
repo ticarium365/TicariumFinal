@@ -11,6 +11,7 @@ import {
 import { TrendyolRealProvider } from "./trendyol-provider.js";
 import { HepsiburadaRealProvider } from "./hepsiburada-provider.js";
 import { N11RealProvider } from "./n11-provider.js";
+import { logger } from "../../lib/logger.js";
 
 export const MP_REGISTRY: Record<string, new (cfg: MarketplaceAccountConfig) => MarketplaceProvider> = {
   mock: MockMarketplaceProvider,
@@ -80,6 +81,6 @@ export async function logSync(opts: {
       errorPayload: opts.errorPayload || null,
     });
   } catch (e) {
-    console.error("[marketplace/logSync]", e);
+    logger.error({ err: e }, "[marketplace/logSync]");
   }
 }

@@ -7,7 +7,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@tanstack/react-query": "catalog:"
+    "@tanstack/react-query": "catalog:",
+    "@workspace/api-zod": "workspace:*",
+    "zod": "catalog:"
   },
   "peerDependencies": {
     "react": ">=18"

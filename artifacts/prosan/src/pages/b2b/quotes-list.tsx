@@ -1,13 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "wouter";
-import { Inbox, Send, FileText, Clock, CheckCircle2, XCircle, Search, ChevronRight, Plus, Hourglass, Target, TrendingUp, AlertCircle, Activity } from "lucide-react";
+import { Inbox, Send, FileText, Clock, CheckCircle2, XCircle, Search, Plus, Hourglass, Target, TrendingUp, AlertCircle, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/page-header";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/hooks/use-toast";
 import { apiBase } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 interface Quote {
   id: number;
@@ -56,53 +60,12 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function QuoteCard({ q, mode }: { q: Quote; mode: "inbox" | "outbox" }) {
-  const counterparty = mode === "inbox" ? q.fromCompany : q.toCompany;
-  return (
-    <Link href={`/b2b/quotes/${q.id}`}>
-      <Card className="cursor-pointer hover:shadow-md transition-shadow">
-        <CardContent className="p-4 flex items-center gap-4">
-          {counterparty?.logoUrl ? (
-            <img src={counterparty.logoUrl} alt="" className="h-10 w-10 rounded-lg object-contain border shrink-0" />
-          ) : (
-            <div className="h-10 w-10 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0" style={{ backgroundColor: counterparty?.primaryColor ?? "#666" }}>
-              {counterparty?.name?.charAt(0) ?? "?"}
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <code className="text-xs font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{q.code}</code>
-              <StatusBadge status={q.status} />
-            </div>
-            <h3 className="font-semibold mt-1 truncate">{q.subject}</h3>
-            <p className="text-sm text-muted-foreground truncate">
-              {mode === "inbox" ? "Gönderen: " : "Alıcı: "}
-              <span className="font-medium">{counterparty?.name ?? "—"}</span>
-            </p>
-          </div>
-          <div className="text-right shrink-0 hidden sm:block">
-            {q.quotedTotalAmount != null && q.status === "quoted" ? (
-              <p className="text-sm font-bold">
-                {q.quotedTotalAmount.toLocaleString("tr-TR")} {q.quotedCurrency}
-              </p>
-            ) : null}
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {new Date(q.createdAt).toLocaleDateString("tr-TR")}
-            </p>
-          </div>
-          <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
-
 function StatChip({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${color}`}>
+    <Card variant="flat" className={cn("!flex !flex-row !items-center !gap-2 !py-2 !px-3", color)}>
       <span className="text-xs font-medium">{label}</span>
-      <span className="text-sm font-bold">{value}</span>
-    </div>
+      <span className="text-sm font-bold tabular-nums">{value}</span>
+    </Card>
   );
 }
 
@@ -149,25 +112,105 @@ export default function QuotesListPage() {
 
   const currentStats = stats?.[tab];
 
+  const quoteColumns = useMemo((): DataTableColumn<Quote>[] => {
+    const mode = tab;
+    return [
+      {
+        id: "code",
+        header: "Kod",
+        sortable: true,
+        sortValue: (q) => q.code,
+        cell: (q) => (
+          <Link href={`/b2b/quotes/${q.id}`}>
+            <code className="text-xs font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded cursor-pointer hover:underline">{q.code}</code>
+          </Link>
+        ),
+      },
+      {
+        id: "subject",
+        header: "Konu",
+        sortable: true,
+        sortValue: (q) => q.subject,
+        cell: (q) => (
+          <Link href={`/b2b/quotes/${q.id}`}>
+            <span className="font-medium text-foreground hover:underline line-clamp-2">{q.subject}</span>
+          </Link>
+        ),
+      },
+      {
+        id: "status",
+        header: "Durum",
+        sortable: true,
+        sortValue: (q) => q.status,
+        cell: (q) => <StatusBadge status={q.status} />,
+      },
+      {
+        id: "counterparty",
+        header: mode === "inbox" ? "Gönderen" : "Alıcı",
+        sortable: true,
+        sortValue: (q) => (mode === "inbox" ? q.fromCompany?.name : q.toCompany?.name) ?? "",
+        cell: (q) => {
+          const cp = mode === "inbox" ? q.fromCompany : q.toCompany;
+          return (
+            <div className="flex items-center gap-2 min-w-0 max-w-[200px]">
+              {cp?.logoUrl ? (
+                <img src={cp.logoUrl} alt="" className="h-8 w-8 rounded-md object-contain border shrink-0" />
+              ) : (
+                <div
+                  className="h-8 w-8 rounded-md flex items-center justify-center text-[color:var(--color-nav-text-active)] text-sm font-bold shrink-0"
+                  style={{ backgroundColor: cp?.primaryColor ?? "var(--color-neutral-500)" }}
+                >
+                  {cp?.name?.charAt(0) ?? "?"}
+                </div>
+              )}
+              <span className="truncate text-sm">{cp?.name ?? "—"}</span>
+            </div>
+          );
+        },
+      },
+      {
+        id: "amount",
+        header: "Tutar",
+        headerClassName: "text-right",
+        className: "text-right",
+        sortable: true,
+        sortValue: (q) => q.quotedTotalAmount ?? 0,
+        cell: (q) =>
+          q.quotedTotalAmount != null && q.status === "quoted" ? (
+            <span className="text-sm font-bold tabular-nums">
+              {q.quotedTotalAmount.toLocaleString("tr-TR")} {q.quotedCurrency}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          ),
+      },
+      {
+        id: "createdAt",
+        header: "Tarih",
+        sortable: true,
+        sortValue: (q) => new Date(q.createdAt).getTime(),
+        headerClassName: "hidden md:table-cell",
+        className: "hidden md:table-cell text-sm text-muted-foreground",
+        cell: (q) => new Date(q.createdAt).toLocaleDateString("tr-TR"),
+      },
+    ];
+  }, [tab]);
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <FileText className="h-6 w-6 text-primary" />
-            B2B Teklifler
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Tedarik ağındaki firmalarla teklif alışverişi
-          </p>
-        </div>
-        <Link href="/network">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Yeni Teklif İste
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="Teklifler"
+        subtitle="Tedarik ağındaki firmalarla teklif alışverişi"
+        right={
+          <Link href="/network">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Yeni Teklif İste
+            </Button>
+          </Link>
+        }
+        className="!pb-4"
+      />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
         <TabsList className="grid grid-cols-2 w-full sm:w-80">
@@ -184,29 +227,29 @@ export default function QuotesListPage() {
         {pipeline && (
           <div className="flex flex-wrap gap-2 mt-3 text-xs" data-testid="b2b-pipeline-sla">
             {tab === "inbox" && pipeline.sellerInboxPendingOver48h > 0 && (
-              <div className="rounded-md border border-amber-500/50 bg-amber-500/10 px-2.5 py-1.5 text-amber-950 dark:text-amber-100">
+              <Card className="!p-2.5 border-amber-500/50 bg-amber-500/10 text-amber-950 dark:text-amber-100">
                 <span className="font-semibold tabular-nums">{pipeline.sellerInboxPendingOver48h}</span> gelen teklif 48+ saat yanıtsız
                 {pipeline.sellerInboxPendingOver72h > 0 ? (
                   <span className="block text-[11px] opacity-90 mt-0.5 tabular-nums">
                     ({pipeline.sellerInboxPendingOver72h} adet 72+ saat)
                   </span>
                 ) : null}
-              </div>
+              </Card>
             )}
             {tab === "inbox" && pipeline.sellerInboxQuotedAwaitingBuyer > 0 && (
-              <div className="rounded-md border border-blue-500/40 bg-blue-500/10 px-2.5 py-1.5 text-foreground">
+              <Card className="!p-2.5 border-blue-500/40 bg-blue-500/10 text-foreground">
                 <span className="font-semibold tabular-nums">{pipeline.sellerInboxQuotedAwaitingBuyer}</span> teklif alıcı kararında
-              </div>
+              </Card>
             )}
             {tab === "outbox" && pipeline.buyerOutboxPendingOver48h > 0 && (
-              <div className="rounded-md border border-amber-500/50 bg-amber-500/10 px-2.5 py-1.5 text-amber-950 dark:text-amber-100">
+              <Card className="!p-2.5 border-amber-500/50 bg-amber-500/10 text-amber-950 dark:text-amber-100">
                 <span className="font-semibold tabular-nums">{pipeline.buyerOutboxPendingOver48h}</span> giden talep 48+ saat satıcı yanıtı bekliyor
-              </div>
+              </Card>
             )}
             {tab === "inbox" && pipeline.sellerAcceptedQuotesLast30Days > 0 && (
-              <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-emerald-950 dark:text-emerald-100">
+              <Card className="!p-2.5 border-emerald-500/40 bg-emerald-500/10 text-emerald-950 dark:text-emerald-100">
                 Son 30 gün: <span className="font-semibold tabular-nums">{pipeline.sellerAcceptedQuotesLast30Days}</span> kabul (satıcı)
-              </div>
+              </Card>
             )}
           </div>
         )}
@@ -314,7 +357,7 @@ export default function QuotesListPage() {
                       : "bg-amber-100 text-amber-700 border-amber-200";
                     return (
                       <Link key={q.id} href={`/b2b/quotes/${q.id}`}>
-                        <div className="p-3 rounded-lg border bg-card hover:shadow-md transition-shadow cursor-pointer" data-testid={`urgent-quote-${q.id}`}>
+                        <Card className="!p-3 hover:shadow-md transition-shadow cursor-pointer h-full" data-testid={`urgent-quote-${q.id}`}>
                           <div className="flex items-start justify-between mb-1.5">
                             <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${rankColor}`}>#{i + 1}</Badge>
                             <span className={`text-[10px] font-semibold ${daysAgo >= 3 ? "text-red-600" : "text-amber-600"}`}>{daysAgo}g önce</span>
@@ -323,7 +366,7 @@ export default function QuotesListPage() {
                           <div className="text-[11px] text-muted-foreground truncate mt-0.5">
                             <code className="font-mono">{q.code}</code> · {q.fromCompany?.name ?? "—"}
                           </div>
-                        </div>
+                        </Card>
                       </Link>
                     );
                   })}
@@ -342,7 +385,7 @@ export default function QuotesListPage() {
             {["all", "pending", "quoted", "accepted", "rejected"].map((s) => (
               <Button
                 key={s}
-                variant={statusFilter === s ? "default" : "outline"}
+                variant={statusFilter === s ? "primary" : "secondary"}
                 size="sm"
                 onClick={() => setStatusFilter(s)}
               >
@@ -352,33 +395,50 @@ export default function QuotesListPage() {
           </div>
         </div>
 
-        <TabsContent value="inbox" className="space-y-3 mt-5">
-          {loading ? (
-            <div className="text-center py-12 text-muted-foreground">Yükleniyor...</div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-16">
-              <Inbox className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Henüz gelen teklif yok</p>
-            </div>
-          ) : (
-            filtered.map((q) => <QuoteCard key={q.id} q={q} mode="inbox" />)
-          )}
+        <TabsContent value="inbox" className="mt-5">
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <DataTable<Quote>
+                columns={quoteColumns}
+                data={filtered}
+                getRowId={(q) => String(q.id)}
+                loading={loading}
+                enableRowSelection={false}
+                showFooterPagination={false}
+                emptyState={
+                  <EmptyState
+                    icon={Inbox}
+                    title="Gelen teklif yok"
+                    description="İş ağınızdaki firmalardan gelen talepler burada görünür."
+                    action={{ label: "Teklif İste", href: "/network" }}
+                  />
+                }
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="outbox" className="space-y-3 mt-5">
-          {loading ? (
-            <div className="text-center py-12 text-muted-foreground">Yükleniyor...</div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-16">
-              <Send className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Henüz gönderilmiş teklif yok</p>
-              <Link href="/network">
-                <Button size="sm" className="mt-4">Ağa Göz At →</Button>
-              </Link>
-            </div>
-          ) : (
-            filtered.map((q) => <QuoteCard key={q.id} q={q} mode="outbox" />)
-          )}
+        <TabsContent value="outbox" className="mt-5">
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <DataTable<Quote>
+                columns={quoteColumns}
+                data={filtered}
+                getRowId={(q) => String(q.id)}
+                loading={loading}
+                enableRowSelection={false}
+                showFooterPagination={false}
+                emptyState={
+                  <EmptyState
+                    icon={Send}
+                    title="Gönderilen teklif yok"
+                    description="Satın alma taleplerinizi ağınızdaki satıcılara iletmek için iş ağını kullanın."
+                    action={{ label: "İş ağına git", href: "/network" }}
+                  />
+                }
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

@@ -3,6 +3,7 @@ import { db, productsTable, salesTable, productViewsTable, bankTransactionsTable
 import { and, gte, lte, count, desc, sql, eq, isNull } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { requireAdmin } from "../middlewares/auth.js";
+import { Errors } from "../lib/errors.js";
 
 const router = Router();
 
@@ -72,7 +73,7 @@ router.get("/stats", requireAuth, async (req: Request, res: Response) => {
     });
   } catch (err) {
     req.log?.error({ err }, "Dashboard stats error");
-    return res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json(Errors.internal());
   }
 });
 
@@ -133,7 +134,7 @@ router.get("/action-counts", requireAuth, async (req: Request, res: Response) =>
     });
   } catch (err) {
     req.log?.error({ err }, "Dashboard action-counts error");
-    return res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json(Errors.internal());
   }
 });
 
@@ -202,7 +203,7 @@ router.get("/top-products", requireAuth, async (req: Request, res: Response) => 
     res.json({ topSelling, topViewed });
   } catch (err) {
     req.log?.error({ err }, "Top products error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -232,7 +233,7 @@ router.get("/depleted", requireAuth, async (req: Request, res: Response) => {
     res.json(products);
   } catch (err) {
     req.log?.error({ err }, "Depleted products error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -263,7 +264,7 @@ router.get("/depleting", requireAuth, async (req: Request, res: Response) => {
     res.json(products);
   } catch (err) {
     req.log?.error({ err }, "Depleting products error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -302,7 +303,7 @@ router.get("/cost-warnings", requireAuth, async (req: Request, res: Response) =>
     res.json(result);
   } catch (err) {
     req.log?.error({ err }, "Cost warnings error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -328,7 +329,7 @@ router.get("/critical-stock", requireAuth, async (req: Request, res: Response) =
     res.json(result);
   } catch (err) {
     req.log?.error({ err }, "Critical stock error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 

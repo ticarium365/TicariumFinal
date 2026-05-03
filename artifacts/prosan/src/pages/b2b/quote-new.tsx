@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, Plus, Trash2, Send, Building2, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Body, BodySmall, Caption, Heading2 } from "@/components/ui/typography";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -159,9 +160,15 @@ export default function QuoteNewPage() {
             </div>
           )}
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Teklif İsteği — Alıcı</p>
-            <h2 className="text-lg font-bold">{seller.companyName}</h2>
-            <p className="text-sm text-muted-foreground">{seller.sector} · {seller.city}</p>
+            <Caption as="p" className="text-muted-foreground uppercase tracking-wide">
+              Teklif İsteği — Alıcı
+            </Caption>
+            <Heading2 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-bold)]">
+              {seller.companyName}
+            </Heading2>
+            <BodySmall className="text-muted-foreground">
+              {seller.sector} · {seller.city}
+            </BodySmall>
           </div>
         </CardContent>
       </Card>

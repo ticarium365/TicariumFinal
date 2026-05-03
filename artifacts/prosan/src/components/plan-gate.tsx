@@ -57,16 +57,27 @@ export function PlanGate({
   const currentPlanName = plan ? PLAN_NAMES[plan.slug] ?? plan.name : "paketinizde";
 
   return (
-    <div className="border border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg p-6 text-center space-y-3">
-      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/40">
-        <Lock className="h-5 w-5 text-amber-700 dark:text-amber-300" />
+    <div
+      className="space-y-3 rounded-lg border border-dashed p-6 text-center"
+      style={{
+        borderColor: "color-mix(in srgb, var(--color-semantic-warning) 45%, var(--color-border-subtle))",
+        backgroundColor: "color-mix(in srgb, var(--color-semantic-warning) 10%, var(--color-surface-card))",
+      }}
+    >
+      <div
+        className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full"
+        style={{
+          backgroundColor: "color-mix(in srgb, var(--color-semantic-warning) 18%, var(--color-surface-card))",
+        }}
+      >
+        <Lock className="h-5 w-5 text-[color:var(--color-semantic-warning)]" />
       </div>
       <div>
-        <h3 className="text-base font-semibold flex items-center justify-center gap-1.5 text-amber-900 dark:text-amber-100">
+        <h3 className="flex items-center justify-center gap-1.5 text-base font-semibold text-[color:var(--color-neutral-900)] dark:text-[color:var(--color-neutral-100)]">
           <Crown className="h-4 w-4" />
           {title ?? `Bu özellik ${requiredPlanName} paketine özel`}
         </h3>
-        <p className="text-sm text-amber-800/80 dark:text-amber-200/80 mt-1 max-w-md mx-auto">
+        <p className="mx-auto mt-1 max-w-md text-sm text-[color:var(--color-neutral-600)]">
           {description ?? `Şu an ${currentPlanName} paketindesiniz. Yükselterek tüm özelliklerin kilidini açın.`}
         </p>
       </div>

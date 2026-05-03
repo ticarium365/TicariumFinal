@@ -11,18 +11,56 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useNotificationsCount, useNotifications, useMarkRead, useMarkAllRead, useGenerateNotifications } from "@/hooks/use-notifications";
 
 const TYPE_CONFIG: Record<string, { icon: typeof Bell; color: string; bg: string }> = {
-  stock_zero: { icon: PackageX, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
-  low_stock: { icon: AlertTriangle, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
-  daily_summary: { icon: CheckCheck, color: "text-blue-600", bg: "bg-blue-50 dark:bg-indigo-950/30" },
-  system: { icon: Info, color: "text-muted-foreground", bg: "bg-muted/30 dark:bg-slate-900/30" },
-  // Sprint B — bütçe alarmları
-  budget_alert_critical: { icon: TrendingDown, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
-  budget_alert_warning: { icon: TrendingDown, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
-  budget_alert_info: { icon: TrendingDown, color: "text-blue-600", bg: "bg-blue-50 dark:bg-indigo-950/30" },
-  // Sprint B — e-fatura olayları
-  einvoice_sent: { icon: FileText, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
-  einvoice_failed: { icon: FileX, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
-  einvoice_cancelled: { icon: FileMinus, color: "text-slate-500", bg: "bg-slate-50 dark:bg-slate-900/30" },
+  stock_zero: {
+    icon: PackageX,
+    color: "text-[color:var(--color-semantic-danger)]",
+    bg: "bg-[color-mix(in_srgb,var(--color-semantic-danger)_12%,var(--color-surface-card))] dark:bg-[color-mix(in_srgb,var(--color-semantic-danger)_22%,transparent)]",
+  },
+  low_stock: {
+    icon: AlertTriangle,
+    color: "text-[color:var(--color-semantic-warning)]",
+    bg: "bg-[color-mix(in_srgb,var(--color-semantic-warning)_14%,var(--color-surface-card))] dark:bg-[color-mix(in_srgb,var(--color-semantic-warning)_20%,transparent)]",
+  },
+  daily_summary: {
+    icon: CheckCheck,
+    color: "text-[color:var(--color-brand-700)]",
+    bg: "bg-[color-mix(in_srgb,var(--color-brand-500)_12%,var(--color-surface-card))] dark:bg-[color-mix(in_srgb,var(--color-brand-900)_22%,transparent)]",
+  },
+  system: {
+    icon: Info,
+    color: "text-muted-foreground",
+    bg: "bg-[color-mix(in_srgb,var(--color-neutral-500)_6%,transparent)] dark:bg-[color-mix(in_srgb,var(--color-neutral-900)_40%,transparent)]",
+  },
+  budget_alert_critical: {
+    icon: TrendingDown,
+    color: "text-[color:var(--color-semantic-danger)]",
+    bg: "bg-[color-mix(in_srgb,var(--color-semantic-danger)_12%,var(--color-surface-card))] dark:bg-[color-mix(in_srgb,var(--color-semantic-danger)_22%,transparent)]",
+  },
+  budget_alert_warning: {
+    icon: TrendingDown,
+    color: "text-[color:var(--color-semantic-warning)]",
+    bg: "bg-[color-mix(in_srgb,var(--color-semantic-warning)_14%,var(--color-surface-card))] dark:bg-[color-mix(in_srgb,var(--color-semantic-warning)_20%,transparent)]",
+  },
+  budget_alert_info: {
+    icon: TrendingDown,
+    color: "text-[color:var(--color-brand-700)]",
+    bg: "bg-[color-mix(in_srgb,var(--color-brand-500)_12%,var(--color-surface-card))] dark:bg-[color-mix(in_srgb,var(--color-brand-900)_22%,transparent)]",
+  },
+  einvoice_sent: {
+    icon: FileText,
+    color: "text-[color:var(--color-semantic-success)]",
+    bg: "bg-[color-mix(in_srgb,var(--color-semantic-success)_12%,var(--color-surface-card))] dark:bg-[color-mix(in_srgb,var(--color-semantic-success)_22%,transparent)]",
+  },
+  einvoice_failed: {
+    icon: FileX,
+    color: "text-[color:var(--color-semantic-danger)]",
+    bg: "bg-[color-mix(in_srgb,var(--color-semantic-danger)_12%,var(--color-surface-card))] dark:bg-[color-mix(in_srgb,var(--color-semantic-danger)_22%,transparent)]",
+  },
+  einvoice_cancelled: {
+    icon: FileMinus,
+    color: "text-[color:var(--color-neutral-500)]",
+    bg: "bg-[color-mix(in_srgb,var(--color-neutral-500)_8%,var(--color-surface-card))] dark:bg-[color-mix(in_srgb,var(--color-neutral-900)_35%,transparent)]",
+  },
 };
 
 function timeAgo(dateStr: string) {
@@ -62,12 +100,12 @@ export function NotificationCenter() {
         <Button
           variant="ghost"
           size="icon"
-          className={`h-8 w-8 relative hover:bg-card/10 ${unread > 0 ? "text-amber-400 hover:text-amber-300" : "text-muted-foreground/70 hover:text-white"}`}
+          className={`h-8 w-8 relative hover:bg-card/10 ${unread > 0 ? "text-[color:var(--color-semantic-warning)] hover:opacity-90" : "text-muted-foreground/70 hover:text-[color:var(--color-nav-text-active)]"}`}
           title={unread > 0 ? `${unread} okunmamış bildirim` : "Bildirimler"}
         >
           <Bell className="h-4 w-4" />
           {unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">
+            <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-[var(--color-semantic-danger)] text-[color:var(--color-nav-text-active)] text-[9px] font-bold flex items-center justify-center leading-none">
               {unread > 9 ? "9+" : unread}
             </span>
           )}
@@ -134,7 +172,7 @@ export function NotificationCenter() {
               return (
                 <div
                   key={n.id}
-                  className={`flex items-start gap-3 px-4 py-3 hover:bg-muted/40 cursor-pointer transition-colors ${!n.isRead ? "bg-blue-50/30 dark:bg-indigo-950/10" : ""}`}
+                  className={`flex items-start gap-3 px-4 py-3 hover:bg-muted/40 cursor-pointer transition-colors ${!n.isRead ? "bg-[color-mix(in_srgb,var(--color-brand-500)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--color-brand-900)_12%,transparent)]" : ""}`}
                   onClick={() => !n.isRead && markRead.mutate(n.id)}
                 >
                   <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${cfg.bg}`}>
@@ -143,7 +181,7 @@ export function NotificationCenter() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <p className={`text-sm leading-snug ${!n.isRead ? "font-semibold" : "font-medium"}`}>{n.title}</p>
-                      {!n.isRead && <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />}
+                      {!n.isRead && <div className="h-2 w-2 rounded-full bg-[var(--color-brand-500)] shrink-0 mt-1.5" />}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
                     <p className="text-[10px] text-muted-foreground/70 mt-1">{timeAgo(n.createdAt)}</p>

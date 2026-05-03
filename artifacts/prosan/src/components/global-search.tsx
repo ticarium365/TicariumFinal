@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import {
   CommandDialog,
@@ -110,17 +110,6 @@ export function GlobalSearch() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((v) => !v);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
   const visible = ENTRIES.filter((e) => !e.roles || (user && e.roles.includes(user.role)));
   const actions = visible.filter((e) => e.group === "Hızlı İşlem");
   const pages = visible.filter((e) => e.group === "Sayfalar");
@@ -136,15 +125,15 @@ export function GlobalSearch() {
         variant="outline"
         size="sm"
         onClick={() => setOpen(true)}
-        className="relative h-9 w-full justify-start rounded-md bg-white text-slate-500 shadow-sm hover:bg-slate-50 hover:text-slate-700 sm:w-64 md:w-72 lg:w-80"
+        className="relative h-9 w-full justify-start rounded-md border-[color:var(--color-border-subtle)] bg-[var(--color-surface-card)] text-[color:var(--color-neutral-500)] shadow-sm hover:bg-[var(--color-neutral-100)] hover:text-[color:var(--color-neutral-700)] sm:w-64 md:w-72 lg:w-80"
         data-testid="button-global-search"
       >
         <Search className="mr-2 h-4 w-4" />
         <span className="hidden sm:inline">Ara — ürün, müşteri, sipariş…</span>
         <span className="inline sm:hidden">Ara…</span>
-        <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 select-none items-center gap-1 rounded border bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 sm:inline-flex">
-          <span className="text-xs">⌘</span>K
-        </kbd>
+        <span className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 select-none text-[10px] font-medium text-[color:var(--color-neutral-500)] sm:inline">
+          Tıkla
+        </span>
       </Button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
@@ -183,9 +172,8 @@ export function GlobalSearch() {
           <CommandSeparator />
           <CommandGroup heading="İpucu">
             <CommandItem disabled>
-              <kbd className="mr-2 rounded border bg-slate-100 px-1.5 text-[10px]">⌘K</kbd>
-              Her yerde aramayı aç
-              <CommandShortcut>Esc kapatır</CommandShortcut>
+              Üst çubuktaki bu arama her zaman tıklanabilir
+              <CommandShortcut>Komut paleti: Ctrl+K</CommandShortcut>
             </CommandItem>
           </CommandGroup>
         </CommandList>

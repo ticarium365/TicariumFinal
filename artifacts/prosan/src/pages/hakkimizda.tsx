@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PublicNav, PublicFooter } from "@/components/public-nav";
 import { Building2, Users, Rocket, Heart, ArrowRight } from "lucide-react";
 
-const NAVY = "#0F172A";
+const NAVY = "var(--color-neutral-900)";
 
 const values = [
   { icon: Heart, title: "KOBİ odaklı", desc: "Çözümlerimizi mahalle bakkalından bölgesel toptancıya kadar gerçek KOBİ'lerle birlikte tasarlıyoruz." },

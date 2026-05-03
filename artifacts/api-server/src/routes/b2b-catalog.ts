@@ -7,7 +7,7 @@ import {
 } from "@workspace/db";
 import { eq, and, desc, asc, inArray, or, ilike, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 const router = Router();
 router.use(requireAuth);

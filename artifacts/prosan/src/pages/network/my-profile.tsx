@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiBase } from "@/lib/api";
+import { OnlineSalesFeatureGate } from "@/components/online-sales-feature-gate";
 
 interface NetworkProfile {
   id: number;
@@ -125,14 +126,17 @@ export default function MyNetworkProfilePage() {
 
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-4">
-        <div className="h-8 bg-muted rounded animate-pulse w-40" />
-        <div className="h-64 bg-muted rounded animate-pulse" />
-      </div>
+      <OnlineSalesFeatureGate>
+        <div className="max-w-3xl mx-auto px-4 py-8 space-y-4">
+          <div className="h-8 bg-muted rounded animate-pulse w-40" />
+          <div className="h-64 bg-muted rounded animate-pulse" />
+        </div>
+      </OnlineSalesFeatureGate>
     );
   }
 
   return (
+    <OnlineSalesFeatureGate>
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
@@ -352,5 +356,6 @@ export default function MyNetworkProfilePage() {
         </Button>
       </div>
     </div>
+    </OnlineSalesFeatureGate>
   );
 }

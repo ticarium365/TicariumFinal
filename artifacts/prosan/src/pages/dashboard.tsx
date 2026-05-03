@@ -10,10 +10,10 @@ import {
   Banknote, ArrowRight, AlertCircle, PackageX, PackageMinus,
   Mail, Sparkles, Wallet, FileText, TrendingDown, ListChecks,
 } from "lucide-react";
-import { RouteFallback } from "@/components/route-fallback";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { trackProductEvent } from "@/lib/product-analytics";
+import { SkeletonBlock, SkeletonLine } from "@/components/ui/skeleton";
 
 const DashboardRevenueChart = lazy(() => import("@/components/dashboard-revenue-chart"));
 
@@ -67,7 +67,7 @@ function useDailyStats(days = 30) {
       if (!res.ok) throw new Error("fetch error");
       return res.json();
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
   });
 }
 
@@ -79,7 +79,7 @@ function useMiniList(path: string, key: string) {
       if (!res.ok) throw new Error("fetch error");
       return res.json();
     },
-    staleTime: 60_000,
+    staleTime: 0,
   });
 }
 
@@ -248,12 +248,12 @@ function ProductMiniCard({
 
 export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
-  const { data: topProducts } = useGetTopProducts();
-  const { data: daily30 } = useDailyStats(30);
-  const { data: depleted } = useMiniList("/api/dashboard/depleted", "depleted");
-  const { data: depleting } = useMiniList("/api/dashboard/depleting", "depleting");
-  const { data: costWarnings } = useMiniList("/api/dashboard/cost-warnings", "cost-warnings");
-  const { data: notifData } = useNotifications();
+  const { data: topProducts, isLoading: topProductsLoading } = useGetTopProducts();
+  const { data: daily30, isLoading: dailyLoading } = useDailyStats(30);
+  const { data: depleted, isLoading: depletedLoading } = useMiniList("/api/dashboard/depleted", "depleted");
+  const { data: depleting, isLoading: depletingLoading } = useMiniList("/api/dashboard/depleting", "depleting");
+  const { data: costWarnings, isLoading: costWarningsLoading } = useMiniList("/api/dashboard/cost-warnings", "cost-warnings");
+  const { data: notifData, isLoading: notifLoading } = useNotifications();
   const { data: tcmb } = useTcmbRates();
   const { data: crossActions } = useCrossModuleActions();
   const { data: subFeat } = useSubscriptionFeatures();
@@ -444,18 +444,26 @@ export default function Dashboard() {
         <Card className="border-indigo-500/30">
           <CardContent className="px-5 py-4">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Bugün — Toptan</p>
-            <p className="text-xl font-bold tracking-tight t365-numeric text-indigo-400 mt-1" data-testid="kpi-wholesale-revenue">
-              {statsLoading ? "—" : fmt(todayWholesaleRevenue)}
-            </p>
+            <div className="mt-1" data-testid="kpi-wholesale-revenue">
+              {statsLoading ? (
+                <SkeletonLine width={140} height={28} borderRadius={6} />
+              ) : (
+                <p className="text-xl font-bold tracking-tight t365-numeric text-indigo-400">{fmt(todayWholesaleRevenue)}</p>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground mt-0.5">{todayWholesaleCount} satış</p>
           </CardContent>
         </Card>
         <Card className="border-amber-500/30">
           <CardContent className="px-5 py-4">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Bugün — Perakende</p>
-            <p className="text-xl font-bold tracking-tight t365-numeric text-amber-400 mt-1" data-testid="kpi-retail-revenue">
-              {statsLoading ? "—" : fmt(todayRetailRevenue)}
-            </p>
+            <div className="mt-1" data-testid="kpi-retail-revenue">
+              {statsLoading ? (
+                <SkeletonLine width={140} height={28} borderRadius={6} />
+              ) : (
+                <p className="text-xl font-bold tracking-tight t365-numeric text-amber-400">{fmt(todayRetailRevenue)}</p>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground mt-0.5">{todayRetailCount} satış</p>
           </CardContent>
         </Card>
@@ -469,9 +477,13 @@ export default function Dashboard() {
               <CircleDollarSign className="h-3.5 w-3.5 text-primary" />
               Bugünün Cirosu
             </p>
-            <p className="text-2xl font-bold tracking-tight t365-numeric text-primary mt-1">
-              {statsLoading ? "—" : fmt(todayRevenue)}
-            </p>
+            <div className="mt-1">
+              {statsLoading ? (
+                <SkeletonLine width={160} height={32} borderRadius={6} />
+              ) : (
+                <p className="text-2xl font-bold tracking-tight t365-numeric text-primary">{fmt(todayRevenue)}</p>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground mt-0.5">{todaySales} satış</p>
           </CardContent>
         </Card>
@@ -481,10 +493,16 @@ export default function Dashboard() {
               <BarChart2 className="h-3.5 w-3.5 text-blue-400" />
               Son 30 Gün Cirosu
             </p>
-            <p className="text-2xl font-bold tracking-tight t365-numeric text-blue-400 mt-1">
-              {fmt(revenue30)}
+            <div className="mt-1">
+              {dailyLoading ? (
+                <SkeletonLine width={160} height={32} borderRadius={6} />
+              ) : (
+                <p className="text-2xl font-bold tracking-tight t365-numeric text-blue-400">{fmt(revenue30)}</p>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {dailyLoading ? <SkeletonLine width={72} height={14} /> : `${sales30} satış`}
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5">{sales30} satış</p>
           </CardContent>
         </Card>
         <Link href="/products?lowStock=true">
@@ -497,9 +515,15 @@ export default function Dashboard() {
                 </p>
                 <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
-              <p className={`text-2xl font-bold tracking-tight t365-numeric mt-1 ${criticalCount > 0 ? "text-rose-500" : "text-emerald-500"}`}>
-                {statsLoading ? "—" : criticalCount}
-              </p>
+              <div className="mt-1">
+                {statsLoading ? (
+                  <SkeletonLine width={48} height={32} borderRadius={6} />
+                ) : (
+                  <p className={`text-2xl font-bold tracking-tight t365-numeric ${criticalCount > 0 ? "text-rose-500" : "text-emerald-500"}`}>
+                    {criticalCount}
+                  </p>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {stats?.totalProducts ?? 0} ürün kayıtlı · listeyi aç
               </p>
@@ -534,13 +558,29 @@ export default function Dashboard() {
                 Son 30 Gün — Ciro & Kâr
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0 min-h-[220px] flex items-center justify-center">
-              <RouteFallback />
+            <CardContent className="pt-0 min-h-[220px] flex flex-col justify-center gap-2">
+              <SkeletonLine width="100%" height={14} />
+              <SkeletonBlock width="100%" height={180} borderRadius={8} />
             </CardContent>
           </Card>
         )}
       >
-        <DashboardRevenueChart data={chartData30} />
+        {dailyLoading ? (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <BarChart2 className="h-4 w-4 text-primary" />
+                Son 30 Gün — Ciro & Kâr
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 min-h-[220px] flex flex-col justify-center gap-2">
+              <SkeletonLine width="100%" height={14} />
+              <SkeletonBlock width="100%" height={180} borderRadius={8} />
+            </CardContent>
+          </Card>
+        ) : (
+          <DashboardRevenueChart data={chartData30} />
+        )}
       </Suspense>
 
       {/* Çok Satanlar — LİSTE + Bildirimler */}
@@ -555,7 +595,20 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-1 max-h-[380px] overflow-y-auto pr-1">
-              {topList.length > 0 ? topList.map((p, i) => (
+              {topProductsLoading ? (
+                <div className="space-y-3 py-1">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 px-2 py-2">
+                      <SkeletonBlock width={28} height={28} borderRadius={9999} />
+                      <div className="flex-1 space-y-2 min-w-0">
+                        <SkeletonLine width="75%" height={14} />
+                        <SkeletonLine width="40%" height={10} />
+                      </div>
+                      <SkeletonLine width={52} height={20} />
+                    </div>
+                  ))}
+                </div>
+              ) : topList.length > 0 ? topList.map((p, i) => (
                 <Link key={p.id} href={`/products/${p.id}`}>
                   <div className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-muted/60 cursor-pointer transition-colors group">
                     <div className="flex items-center justify-center h-7 w-7 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">
@@ -600,7 +653,20 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-1 max-h-[380px] overflow-y-auto pr-1">
-              {notifications.length > 0 ? notifications.map((n) => {
+              {notifLoading ? (
+                <div className="space-y-3 py-1">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="flex items-start gap-2.5 py-2 px-2">
+                      <SkeletonBlock width={28} height={28} borderRadius={6} />
+                      <div className="flex-1 space-y-2 min-w-0">
+                        <SkeletonLine width="50%" height={12} />
+                        <SkeletonLine width="85%" height={14} />
+                        <SkeletonLine width="70%" height={10} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : notifications.length > 0 ? notifications.map((n) => {
                 const meta = NOTIF_META[n.type] ?? NOTIF_META.system!;
                 const Icon = meta.icon;
                 return (
@@ -634,32 +700,49 @@ export default function Dashboard() {
       </div>
 
       {/* Stok Durumu — 3 Liste: Maliyet Uyarısı / Tükenmiş / Tükenmeye Yakın */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <ProductMiniCard
-          title="Maliyet Altında / Düşük Marj"
-          icon={AlertCircle}
-          accentClass="text-amber-500"
-          items={costWarnings}
-          emptyText="Marj uyarısı verilen ürün yok"
-          viewAllHref="/products?filter=cost-warning"
-        />
-        <ProductMiniCard
-          title="Tükenmiş Ürünler"
-          icon={PackageX}
-          accentClass="text-rose-500"
-          items={depleted}
-          emptyText="Tükenmiş ürün yok"
-          viewAllHref="/products?filter=out-of-stock"
-        />
-        <ProductMiniCard
-          title="Tükenmeye Yakın"
-          icon={PackageMinus}
-          accentClass="text-amber-500"
-          items={depleting}
-          emptyText="Tükenmeye yakın ürün yok"
-          viewAllHref="/products?filter=low-stock"
-        />
-      </div>
+      {depletedLoading || depletingLoading || costWarningsLoading ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <Card key={i} className="flex flex-col">
+              <CardHeader className="pb-2">
+                <SkeletonLine width="55%" height={16} />
+              </CardHeader>
+              <CardContent className="pt-0 flex-1 space-y-2">
+                {Array.from({ length: 4 }).map((_, j) => (
+                  <SkeletonLine key={j} width="100%" height={36} borderRadius={8} />
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-3">
+          <ProductMiniCard
+            title="Maliyet Altında / Düşük Marj"
+            icon={AlertCircle}
+            accentClass="text-amber-500"
+            items={costWarnings}
+            emptyText="Marj uyarısı verilen ürün yok"
+            viewAllHref="/products?filter=cost-warning"
+          />
+          <ProductMiniCard
+            title="Tükenmiş Ürünler"
+            icon={PackageX}
+            accentClass="text-rose-500"
+            items={depleted}
+            emptyText="Tükenmiş ürün yok"
+            viewAllHref="/products?filter=out-of-stock"
+          />
+          <ProductMiniCard
+            title="Tükenmeye Yakın"
+            icon={PackageMinus}
+            accentClass="text-amber-500"
+            items={depleting}
+            emptyText="Tükenmeye yakın ürün yok"
+            viewAllHref="/products?filter=low-stock"
+          />
+        </div>
+      )}
     </div>
   );
 }

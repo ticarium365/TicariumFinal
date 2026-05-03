@@ -5,21 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { BodySmall, Caption, Heading3 } from "@/components/ui/typography";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
-  UserPlus, Lock, Unlock, FileText, Download, Calculator, Calendar,
-  TrendingUp, TrendingDown, Receipt, Building2,
+  UserPlus, Lock, Unlock, Download, Table2, Mail,
+  TrendingUp, TrendingDown, Building2,
 } from "lucide-react";
 import { apiUrl } from "@/lib/api";
 
-const fmtTRY = (n: number | null | undefined) =>
-  new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 2 }).format(Number(n || 0));
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/page-header";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { formatTryCurrency, formatTrDateTime } from "@/lib/finance-intl";
+
+const fmtTRY = formatTryCurrency;
 
 function currentPeriod(): string {
   const d = new Date();
@@ -73,7 +76,7 @@ export default function MuhasebeciPage() {
       const [i, a, c] = await Promise.all([
         api("/accountant/invites"), api("/accountant/access"), api("/accountant/period-closes"),
       ]);
-      setInvites(i); setAccesses(a); setCloses(c);
+      setInvites(i); setAccesses(Array.isArray(a) ? a : []); setCloses(c);
     } catch (e: any) { /* admin değilse 403 normal */ }
   }
   useEffect(() => { loadReports(); }, [period]);
@@ -123,27 +126,117 @@ export default function MuhasebeciPage() {
     return out;
   }, []);
 
+  const baColumns: DataTableColumn<any>[] = useMemo(() => [
+    { id: "vkn", header: "VKN/TCKN", sortable: true, sortValue: (r) => r.vkn, cell: (r) => <span className="font-mono text-xs">{r.vkn}</span> },
+    { id: "name", header: "Ünvan", sortable: true, sortValue: (r) => r.name, cell: (r) => r.name },
+    { id: "netTotal", header: "Net Tutar", headerClassName: "text-right", className: "text-right", sortable: true, sortValue: (r) => r.netTotal, cell: (r) => fmtTRY(Number(r.netTotal), 2) },
+    { id: "vatTotal", header: "KDV", headerClassName: "text-right", className: "text-right", sortable: true, sortValue: (r) => r.vatTotal, cell: (r) => fmtTRY(Number(r.vatTotal), 2) },
+    { id: "invoiceCount", header: "Fatura", headerClassName: "text-right", className: "text-right", sortable: true, sortValue: (r) => r.invoiceCount, cell: (r) => r.invoiceCount },
+  ], []);
+
+  const bsColumns: DataTableColumn<any>[] = useMemo(() => [
+    { id: "vkn", header: "VKN/TCKN", sortable: true, sortValue: (r) => r.vkn, cell: (r) => <span className="font-mono text-xs">{r.vkn}</span> },
+    { id: "name", header: "Müşteri", sortable: true, sortValue: (r) => r.name, cell: (r) => r.name },
+    { id: "netTotal", header: "Net", headerClassName: "text-right", className: "text-right", sortable: true, sortValue: (r) => r.netTotal, cell: (r) => fmtTRY(Number(r.netTotal), 2) },
+    { id: "vatTotal", header: "KDV", headerClassName: "text-right", className: "text-right", sortable: true, sortValue: (r) => r.vatTotal, cell: (r) => fmtTRY(Number(r.vatTotal), 2) },
+    { id: "rows", header: "Satır", headerClassName: "text-right", className: "text-right", sortable: true, sortValue: (r) => r.rows, cell: (r) => r.rows },
+  ], []);
+
+  const mizanExpenseColumns: DataTableColumn<any>[] = useMemo(() => [
+    { id: "category", header: "Kategori", sortable: true, sortValue: (r) => r.category, cell: (r) => r.category },
+    { id: "total", header: "Toplam", headerClassName: "text-right", className: "text-right", sortable: true, sortValue: (r) => r.total, cell: (r) => fmtTRY(Number(r.total), 2) },
+    { id: "count", header: "Hareket", headerClassName: "text-right", className: "text-right", sortable: true, sortValue: (r) => r.count, cell: (r) => r.count },
+  ], []);
+
+  const inviteColumns: DataTableColumn<any>[] = useMemo(() => [
+    { id: "email", header: "E-posta", cell: (r) => r.email },
+    { id: "fullName", header: "Ad", cell: (r) => r.fullName || "—" },
+    {
+      id: "status",
+      header: "Durum",
+      cell: (r) => {
+        if (r.status === "pending") return <Badge tone="warning">Bekliyor</Badge>;
+        if (r.status === "accepted") return <Badge tone="success">Kabul edildi</Badge>;
+        if (r.status === "revoked") return <Badge tone="danger">İptal</Badge>;
+        if (r.status === "expired") return <Badge tone="neutral">Süresi doldu</Badge>;
+        return <Badge tone="neutral">{r.status}</Badge>;
+      },
+    },
+    { id: "token", header: "Token", cell: (r) => <span className="font-mono text-xs">{r.token?.slice(0, 12)}…</span> },
+    {
+      id: "actions",
+      header: "",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (r) =>
+        r.status === "pending" ? (
+          <Button variant="ghost" size="sm" onClick={() => revokeInvite(r.id)} data-testid={`btn-revoke-${r.id}`}>İptal</Button>
+        ) : null,
+    },
+  ], []);
+
+  const accessColumns: DataTableColumn<any>[] = useMemo(() => [
+    { id: "user", header: "Kullanıcı", cell: (r) => r.fullName || r.username },
+    { id: "email", header: "E-posta", cell: (r) => r.email || "—" },
+    { id: "scope", header: "Yetki", cell: (r) => <Badge tone="neutral">{r.scope}</Badge> },
+    {
+      id: "actions",
+      header: "",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (r) => (
+        <Button variant="ghost" size="sm" onClick={() => revokeAccess(r.id)} data-testid={`btn-revoke-access-${r.id}`}>Erişimi Kaldır</Button>
+      ),
+    },
+  ], []);
+
+  const closeColumns: DataTableColumn<any>[] = useMemo(() => [
+    { id: "period", header: "Dönem", cell: (r) => <span className="font-mono">{r.period}</span> },
+    {
+      id: "status",
+      header: "Durum",
+      cell: (r) => (r.status === "closed" ? <Badge tone="danger">Kapalı</Badge> : <Badge tone="neutral">Yeniden açıldı</Badge>),
+    },
+    { id: "closedAt", header: "Kapatma Tarihi", cell: (r) => formatTrDateTime(r.closedAt) },
+    { id: "note", header: "Not", cell: (r) => <span className="text-sm text-muted-foreground">{r.note || "—"}</span> },
+    {
+      id: "actions",
+      header: "",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (r) =>
+        r.status === "closed" ? (
+          <Button variant="ghost" size="sm" onClick={() => reopenPeriod(r.period)} data-testid={`btn-reopen-${r.id}`}>
+            <Unlock className="h-4 w-4 mr-1" />Aç
+          </Button>
+        ) : null,
+    },
+  ], []);
+
   return (
     <div className="container mx-auto py-6 space-y-6" data-testid="page-muhasebeci">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Calculator className="h-7 w-7 text-primary" />
-            Mali Müşavir Paneli
-          </h1>
-          <p className="text-muted-foreground">Resmi raporlar, dönem kapanışı ve mali müşavir erişimi.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Label className="text-sm">Dönem:</Label>
-          <select
-            className="border rounded-md px-3 py-2 text-sm bg-background"
-            value={period} onChange={(e) => setPeriod(e.target.value)}
-            data-testid="select-period"
-          >
-            {periodOptions.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
-        </div>
-      </div>
+      <PageHeader
+        title="Mali Müşavir Paneli"
+        subtitle="Resmi raporlar, dönem kapanışı ve mali müşavir erişimi."
+        right={
+          <div className="flex items-center gap-2">
+            <Label className="text-sm whitespace-nowrap">Dönem</Label>
+            <Select value={period} onValueChange={setPeriod}>
+              <SelectTrigger className="w-40" data-testid="select-period"><SelectValue /></SelectTrigger>
+              <SelectContent>{periodOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+        }
+      />
+
+      {accesses.length === 0 && (
+        <EmptyState
+          icon={Building2}
+          title="Bağlı mali müşavir yok"
+          description="Müşavirinizi davet ederek rapor ve belge paylaşımını başlatın."
+          action={{ label: "Müşavir Davet Et", onClick: () => setInviteOpen(true), testId: "btn-empty-invite-accountant" }}
+        />
+      )}
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-5" data-testid="muhasebeci-tabs">
@@ -198,9 +291,9 @@ export default function MuhasebeciPage() {
                   <div>KDV: <strong>{fmtTRY(kdv?.expenses?.vat)}</strong></div>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-4">
+              <Caption as="p" className="mt-4 text-muted-foreground">
                 * Bu değerler beyanname hazırlığı için referans gösterimdir; resmi beyan için mali müşavirinizle teyit ediniz.
-              </p>
+              </Caption>
             </CardContent>
           </Card>
         </TabsContent>
@@ -209,8 +302,10 @@ export default function MuhasebeciPage() {
         <TabsContent value="babs" className="mt-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold">Form Ba/Bs (5.000 TL+)</h3>
-              <p className="text-sm text-muted-foreground">{babs?.baCount || 0} BA satırı, {babs?.bsCount || 0} BS satırı.</p>
+              <Heading3>Form Ba/Bs (5.000 TL+)</Heading3>
+              <BodySmall className="text-muted-foreground">
+                {babs?.baCount || 0} BA satırı, {babs?.bsCount || 0} BS satırı.
+              </BodySmall>
             </div>
             <Button variant="outline" onClick={downloadBABS} data-testid="btn-export-babs">
               <Download className="h-4 w-4 mr-2" /> CSV indir
@@ -220,42 +315,38 @@ export default function MuhasebeciPage() {
           <Card>
             <CardHeader><CardTitle className="text-base flex items-center gap-2"><TrendingDown className="h-4 w-4 text-red-500" />Form Ba — Alımlar</CardTitle></CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader><TableRow><TableHead>VKN/TCKN</TableHead><TableHead>Ünvan</TableHead><TableHead className="text-right">Net Tutar</TableHead><TableHead className="text-right">KDV</TableHead><TableHead className="text-right">Fatura</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {(babs?.ba || []).map((r: any, i: number) => (
-                    <TableRow key={i} data-testid={`ba-row-${i}`}>
-                      <TableCell className="font-mono text-xs">{r.vkn}</TableCell>
-                      <TableCell>{r.name}</TableCell>
-                      <TableCell className="text-right">{fmtTRY(r.netTotal)}</TableCell>
-                      <TableCell className="text-right">{fmtTRY(r.vatTotal)}</TableCell>
-                      <TableCell className="text-right">{r.invoiceCount}</TableCell>
-                    </TableRow>
-                  ))}
-                  {(!babs?.ba || babs.ba.length === 0) && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">Bu dönemde 5.000 TL+ alım yok</TableCell></TableRow>}
-                </TableBody>
-              </Table>
+              <DataTable
+                columns={baColumns}
+                data={babs?.ba || []}
+                getRowId={(r, i) => `ba-${r.vkn}-${i}`}
+                enableRowSelection={false}
+                emptyState={
+                  <EmptyState
+                    icon={TrendingDown}
+                    title="Form Ba satırı yok"
+                    description="Seçili dönemde 5.000 TL ve üzeri tedarikçi alımları için üretilecek Ba satırı yok."
+                  />
+                }
+              />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-4 w-4 text-emerald-600" />Form Bs — Satışlar</CardTitle></CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader><TableRow><TableHead>VKN/TCKN</TableHead><TableHead>Müşteri</TableHead><TableHead className="text-right">Net</TableHead><TableHead className="text-right">KDV</TableHead><TableHead className="text-right">Satır</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {(babs?.bs || []).map((r: any, i: number) => (
-                    <TableRow key={i} data-testid={`bs-row-${i}`}>
-                      <TableCell className="font-mono text-xs">{r.vkn}</TableCell>
-                      <TableCell>{r.name}</TableCell>
-                      <TableCell className="text-right">{fmtTRY(r.netTotal)}</TableCell>
-                      <TableCell className="text-right">{fmtTRY(r.vatTotal)}</TableCell>
-                      <TableCell className="text-right">{r.rows}</TableCell>
-                    </TableRow>
-                  ))}
-                  {(!babs?.bs || babs.bs.length === 0) && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">Bu dönemde 5.000 TL+ kayıtlı müşteri satışı yok</TableCell></TableRow>}
-                </TableBody>
-              </Table>
+              <DataTable
+                columns={bsColumns}
+                data={babs?.bs || []}
+                getRowId={(r, i) => `bs-${r.vkn}-${i}`}
+                enableRowSelection={false}
+                emptyState={
+                  <EmptyState
+                    icon={TrendingUp}
+                    title="Form Bs satırı yok"
+                    description="Seçili dönemde 5.000 TL ve üzeri kayıtlı müşteriye satış (Bs) için satır bulunmuyor."
+                  />
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -271,19 +362,19 @@ export default function MuhasebeciPage() {
           <Card>
             <CardHeader><CardTitle>Gider Mizanı</CardTitle></CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader><TableRow><TableHead>Kategori</TableHead><TableHead className="text-right">Toplam</TableHead><TableHead className="text-right">Hareket</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {(mizan?.expenses || []).map((e: any, i: number) => (
-                    <TableRow key={i}>
-                      <TableCell>{e.category}</TableCell>
-                      <TableCell className="text-right">{fmtTRY(e.total)}</TableCell>
-                      <TableCell className="text-right">{e.count}</TableCell>
-                    </TableRow>
-                  ))}
-                  {(!mizan?.expenses || mizan.expenses.length === 0) && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">Veri yok</TableCell></TableRow>}
-                </TableBody>
-              </Table>
+              <DataTable
+                columns={mizanExpenseColumns}
+                data={mizan?.expenses || []}
+                getRowId={(_, i) => `mizan-exp-${i}`}
+                enableRowSelection={false}
+                emptyState={
+                  <EmptyState
+                    icon={Table2}
+                    title="Gider satırı yok"
+                    description="Bu dönem için gider mizanında listelenecek kalem bulunmuyor."
+                  />
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -292,8 +383,10 @@ export default function MuhasebeciPage() {
         <TabsContent value="kapanis" className="mt-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold">Dönem Kapanışları</h3>
-              <p className="text-sm text-muted-foreground">Kapatılmış dönemlere yeni kayıt eklenmemesi için hatırlatıcı.</p>
+              <Heading3>Dönem Kapanışları</Heading3>
+              <BodySmall className="text-muted-foreground">
+                Kapatılmış dönemlere yeni kayıt eklenmemesi için hatırlatıcı.
+              </BodySmall>
             </div>
             <Dialog open={closeOpen} onOpenChange={setCloseOpen}>
               <DialogTrigger asChild>
@@ -312,27 +405,20 @@ export default function MuhasebeciPage() {
 
           <Card>
             <CardContent className="pt-6">
-              <Table>
-                <TableHeader><TableRow><TableHead>Dönem</TableHead><TableHead>Durum</TableHead><TableHead>Kapatma Tarihi</TableHead><TableHead>Not</TableHead><TableHead></TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {closes.map((c: any) => (
-                    <TableRow key={c.id} data-testid={`row-close-${c.id}`}>
-                      <TableCell className="font-mono">{c.period}</TableCell>
-                      <TableCell>{c.status === "closed" ? <Badge variant="destructive">Kapalı</Badge> : <Badge variant="secondary">Yeniden açıldı</Badge>}</TableCell>
-                      <TableCell>{new Date(c.closedAt).toLocaleString("tr-TR")}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{c.note || "—"}</TableCell>
-                      <TableCell className="text-right">
-                        {c.status === "closed" && (
-                          <Button variant="ghost" size="sm" onClick={() => reopenPeriod(c.period)} data-testid={`btn-reopen-${c.id}`}>
-                            <Unlock className="h-4 w-4 mr-1" />Aç
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {closes.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">Henüz kapanış yapılmadı</TableCell></TableRow>}
-                </TableBody>
-              </Table>
+              <DataTable
+                columns={closeColumns}
+                data={closes}
+                getRowId={(c) => `close-${c.id}`}
+                enableRowSelection={false}
+                emptyState={
+                  <EmptyState
+                    icon={Lock}
+                    title="Kapanış kaydı yok"
+                    description="Dönem kapanışı yaptığınızda kayıtlar burada listelenir; yeni kayıt eklenmesini engellemek için kullanılır."
+                    action={{ label: "Dönem kapat", onClick: () => setCloseOpen(true), testId: "empty-close-period" }}
+                  />
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -341,77 +427,66 @@ export default function MuhasebeciPage() {
         <TabsContent value="musavir" className="mt-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold">Mali Müşavir Erişimi</h3>
-              <p className="text-sm text-muted-foreground">Müşavirinize davet linki gönderin; verilerinize sadece okuma yetkisiyle ulaşır.</p>
+              <Heading3>Mali Müşavir Erişimi</Heading3>
+              <BodySmall className="text-muted-foreground">
+                Müşavirinize davet linki gönderin; verilerinize sadece okuma yetkisiyle ulaşır.
+              </BodySmall>
             </div>
-            <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-              <DialogTrigger asChild>
-                <Button data-testid="btn-invite-accountant"><UserPlus className="h-4 w-4 mr-2" />Müşavir Davet Et</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>Mali Müşavir Davet</DialogTitle></DialogHeader>
-                <div className="space-y-3">
-                  <div><Label>E-posta</Label><Input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} data-testid="input-invite-email" /></div>
-                  <div><Label>Ad Soyad (opsiyonel)</Label><Input value={inviteName} onChange={(e) => setInviteName(e.target.value)} data-testid="input-invite-name" /></div>
-                </div>
-                <DialogFooter><Button onClick={sendInvite} data-testid="btn-send-invite">Davet Oluştur</Button></DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button data-testid="btn-invite-accountant" onClick={() => setInviteOpen(true)}><UserPlus className="h-4 w-4 mr-2" />Müşavir Davet Et</Button>
           </div>
 
           <Card>
             <CardHeader><CardTitle className="text-base">Davetler</CardTitle></CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader><TableRow><TableHead>E-posta</TableHead><TableHead>Ad</TableHead><TableHead>Durum</TableHead><TableHead>Token</TableHead><TableHead></TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {invites.map((i: any) => (
-                    <TableRow key={i.id} data-testid={`invite-${i.id}`}>
-                      <TableCell>{i.email}</TableCell>
-                      <TableCell>{i.fullName || "—"}</TableCell>
-                      <TableCell>
-                        {i.status === "pending" && <Badge variant="secondary">Bekliyor</Badge>}
-                        {i.status === "accepted" && <Badge>Kabul edildi</Badge>}
-                        {i.status === "revoked" && <Badge variant="destructive">İptal</Badge>}
-                        {i.status === "expired" && <Badge variant="outline">Süresi doldu</Badge>}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{i.token.slice(0, 12)}…</TableCell>
-                      <TableCell className="text-right">
-                        {i.status === "pending" && (
-                          <Button variant="ghost" size="sm" onClick={() => revokeInvite(i.id)} data-testid={`btn-revoke-${i.id}`}>İptal</Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {invites.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">Davet yok</TableCell></TableRow>}
-                </TableBody>
-              </Table>
+              <DataTable
+                columns={inviteColumns}
+                data={invites}
+                getRowId={(r) => `invite-${r.id}`}
+                enableRowSelection={false}
+                emptyState={
+                  <EmptyState
+                    icon={Mail}
+                    title="Davet geçmişi boş"
+                    description="Mali müşavirinize e-posta daveti gönderildiğinde kayıtlar burada görünür."
+                    action={{ label: "Davet gönder", onClick: () => setInviteOpen(true), testId: "empty-send-invite" }}
+                  />
+                }
+              />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader><CardTitle className="text-base flex items-center gap-2"><Building2 className="h-4 w-4" />Aktif Müşavir Erişimleri</CardTitle></CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader><TableRow><TableHead>Kullanıcı</TableHead><TableHead>E-posta</TableHead><TableHead>Yetki</TableHead><TableHead></TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {accesses.map((a: any) => (
-                    <TableRow key={a.id} data-testid={`access-${a.id}`}>
-                      <TableCell>{a.fullName || a.username}</TableCell>
-                      <TableCell>{a.email || "—"}</TableCell>
-                      <TableCell><Badge variant="outline">{a.scope}</Badge></TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => revokeAccess(a.id)} data-testid={`btn-revoke-access-${a.id}`}>Erişimi Kaldır</Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {accesses.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">Aktif müşavir yok</TableCell></TableRow>}
-                </TableBody>
-              </Table>
+              <DataTable
+                columns={accessColumns}
+                data={accesses}
+                getRowId={(r) => `access-${r.id}`}
+                enableRowSelection={false}
+                emptyState={
+                  <EmptyState
+                    icon={Building2}
+                    title="Aktif müşavir erişimi yok"
+                    description="Davet kabul edildiğinde müşaviriniz burada salt okunur erişimle görünür."
+                    action={{ label: "Müşavir davet et", onClick: () => setInviteOpen(true), testId: "empty-invite-accountant-table" }}
+                  />
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Mali Müşavir Davet</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>E-posta</Label><Input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} data-testid="input-invite-email" /></div>
+            <div><Label>Ad Soyad (opsiyonel)</Label><Input value={inviteName} onChange={(e) => setInviteName(e.target.value)} data-testid="input-invite-name" /></div>
+          </div>
+          <DialogFooter><Button onClick={sendInvite} data-testid="btn-send-invite">Davet Oluştur</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

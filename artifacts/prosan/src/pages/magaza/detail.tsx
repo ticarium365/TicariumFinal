@@ -16,6 +16,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { OnlineSalesFeatureGate } from "@/components/online-sales-feature-gate";
 import {
   ArrowLeft, Loader2, Save, ExternalLink, Plus, Trash2, Code, Globe, Store, Layers, Sparkles,
 } from "lucide-react";
@@ -80,7 +81,13 @@ export default function MagazaDetay() {
   };
 
   if (loading || !sf) {
-    return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground/70" /></div>;
+    return (
+      <OnlineSalesFeatureGate>
+        <div className="flex justify-center py-16">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground/70" />
+        </div>
+      </OnlineSalesFeatureGate>
+    );
   }
 
   const TypeIcon = sf.type === "hosted" ? Store : sf.type === "embedded" ? Layers : Globe;
@@ -89,6 +96,7 @@ export default function MagazaDetay() {
     : sf.customDomain ? `https://${sf.customDomain}` : null;
 
   return (
+    <OnlineSalesFeatureGate>
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
@@ -153,6 +161,7 @@ export default function MagazaDetay() {
         )}
       </Tabs>
     </div>
+    </OnlineSalesFeatureGate>
   );
 }
 

@@ -9,6 +9,8 @@ import {
   Download,
   Search,
   Loader2,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +26,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { OnlineSalesFeatureGate } from "@/components/online-sales-feature-gate";
 import { apiBase } from "@/lib/api";
 
 interface CatalogItem {
@@ -179,6 +182,38 @@ export default function CatalogManagePage() {
     }
   }
 
+  async function moveSort(it: CatalogItem, dir: -1 | 1) {
+    const ordered = [...items].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+    const i = ordered.findIndex((x) => x.id === it.id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= ordered.length) return;
+    const a = ordered[i];
+    const b = ordered[j];
+    setBusy(true);
+    try {
+      const [ra, rb] = await Promise.all([
+        fetch(`${apiBase}/b2b/catalog/${a.id}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sortOrder: b.sortOrder }),
+        }),
+        fetch(`${apiBase}/b2b/catalog/${b.id}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sortOrder: a.sortOrder }),
+        }),
+      ]);
+      if (!ra.ok || !rb.ok) throw new Error("sıra");
+      await load();
+    } catch {
+      toast({ title: "Sıra güncellenemedi", variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function openImport() {
     setImportOpen(true);
     setSelected(new Set());
@@ -238,6 +273,7 @@ export default function CatalogManagePage() {
     : products;
 
   return (
+    <OnlineSalesFeatureGate title="B2B katalog paketinizde kapalı">
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -281,19 +317,48 @@ export default function CatalogManagePage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((it) => (
+          {filtered
+            .slice()
+            .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+            .map((it) => (
             <Card key={it.id} className={!it.isPublished ? "opacity-60" : ""}>
               <CardContent className="p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold truncate">{it.name}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold truncate">{it.name}</h3>
+                      {!it.isPublished && (
+                        <Badge variant="outline" className="shrink-0 text-[10px]">
+                          Gizli
+                        </Badge>
+                      )}
+                    </div>
                     {it.code && <code className="text-xs text-muted-foreground font-mono">{it.code}</code>}
                   </div>
-                  {!it.isPublished && (
-                    <Badge variant="outline" className="shrink-0">
-                      Gizli
-                    </Badge>
-                  )}
+                  <div className="flex flex-col gap-0.5 shrink-0 border rounded-md p-0.5 bg-muted/30">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      disabled={busy}
+                      title="Yukarı taşı"
+                      onClick={() => moveSort(it, -1)}
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      disabled={busy}
+                      title="Aşağı taşı"
+                      onClick={() => moveSort(it, 1)}
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 {it.category && (
                   <Badge variant="secondary" className="text-xs">
@@ -472,5 +537,6 @@ export default function CatalogManagePage() {
         </DialogContent>
       </Dialog>
     </div>
+    </OnlineSalesFeatureGate>
   );
 }

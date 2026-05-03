@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import { Plus, FileText, ChevronLeft, ChevronRight, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth-context";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface Purchase {
   id: number; supplierId: number; supplierName: string; invoiceNo: string | null;
@@ -65,7 +65,7 @@ export default function PurchasesList() {
               icon={FileText}
               title="Henüz alış faturası girilmemiş"
               description="Tedarikçilerinizden gelen faturaları kaydedin; stok girişi, borç bakiyesi ve maliyet hesabı otomatik güncellensin."
-              primaryAction={(isAdmin || user?.role === "staff") ? { label: "İlk Faturayı Gir", href: "/purchases/new", testId: "empty-add-purchase" } : undefined}
+              action={(isAdmin || user?.role === "staff") ? { label: "İlk Faturayı Gir", href: "/purchases/new", testId: "empty-add-purchase" } : undefined}
               secondaryAction={isAdmin ? { label: "Tedarikçi Ekle", href: "/suppliers", testId: "empty-go-suppliers" } : undefined}
             />
           </div>

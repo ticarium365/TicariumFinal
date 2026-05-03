@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiBase } from "@/lib/api";
+import { OnlineSalesFeatureGate } from "@/components/online-sales-feature-gate";
+import type { BadgeTone } from "@/components/ui/badge";
 import { initialLetter } from "@/lib/display-initial";
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,6 +39,14 @@ interface NetworkResponse {
   total: number;
   page: number;
   totalPages: number;
+}
+
+function sectorTone(seed: string | null | undefined): BadgeTone {
+  if (!seed) return "neutral";
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h + seed.charCodeAt(i) * (i + 1)) % 2147483647;
+  const tones: BadgeTone[] = ["brand", "info", "success", "warning", "neutral"];
+  return tones[Math.abs(h) % tones.length];
 }
 
 function StarRating({ score, count }: { score: number; count: number }) {
@@ -74,7 +84,9 @@ function CompanyCard({ company }: { company: NetworkCompany }) {
                 {company.companyName}
               </h3>
               {company.sector && (
-                <span className="text-xs text-muted-foreground">{company.sector}</span>
+                <Badge tone={sectorTone(company.sector)} size="sm" className="font-normal">
+                  {company.sector}
+                </Badge>
               )}
             </div>
           </div>
@@ -116,7 +128,9 @@ function CompanyCard({ company }: { company: NetworkCompany }) {
         {company.tags && company.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {company.tags.slice(0, 4).map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+              <Badge key={tag} tone={sectorTone(tag)} size="sm" variant="outline" className="text-xs font-normal">
+                {tag}
+              </Badge>
             ))}
           </div>
         )}
@@ -198,6 +212,7 @@ export default function NetworkPage() {
     : (data?.companies ?? []);
 
   return (
+    <OnlineSalesFeatureGate title="B2B iş ortakları (paket gerektirir)">
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -323,5 +338,6 @@ export default function NetworkPage() {
         </>
       )}
     </div>
+    </OnlineSalesFeatureGate>
   );
 }

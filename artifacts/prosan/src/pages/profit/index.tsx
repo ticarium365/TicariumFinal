@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { endOfMonth, startOfMonth } from "date-fns";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,8 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { PageHeader } from "@/components/ui/page-header";
+import { DateRangePicker, financeRangeToApiStrings } from "@/components/ui/date-range-picker";
+import { FinanceKpiCard } from "@/components/finance-kpi-card";
+import { formatTryCurrency, formatTrDate } from "@/lib/finance-intl";
+import { toastError, toastSuccess } from "@/lib/app-toast";
 import {
-  TrendingUp, TrendingDown, Plus, Camera, Loader2, Package, Users, Repeat, Receipt, Trash2, RefreshCw,
+  Plus, Camera, Loader2, Package, Users, Repeat, Receipt, Trash2, RefreshCw,
 } from "lucide-react";
 
 async function api<T>(url: string, opts: RequestInit = {}): Promise<T> {
@@ -24,8 +30,6 @@ async function uploadOcr(file: File): Promise<any> {
   if (!r.ok) throw new Error("OCR başarısız");
   return r.json();
 }
-
-const fmt = (n: number) => new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 2 }).format(n || 0);
 
 type Dashboard = {
   granularity: string; revenue: number; cogs: number; grossProfit: number;
@@ -44,7 +48,10 @@ type Category = { id: number; name: string };
 
 export default function ProfitPage() {
   const [tab, setTab] = useState("dashboard");
-  const [granularity, setGranularity] = useState<"today" | "month">("month");
+  const [range, setRange] = useState(() => ({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
+  }));
   const [dash, setDash] = useState<Dashboard | null>(null);
   const [insights, setInsights] = useState<any[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -54,51 +61,63 @@ export default function ProfitPage() {
   const [categories, setCategories] = useState<Category[]>([]);
 
   async function refresh() {
+    const { startDate, endDate } = financeRangeToApiStrings(range);
+    const y = range.to.getFullYear();
+    const m = range.to.getMonth() + 1;
     const [d, ins, a, r, e, ex, c] = await Promise.all([
-      api<Dashboard>(`/profit/dashboard?granularity=${granularity}`),
+      api<Dashboard>(`/profit/dashboard?from=${encodeURIComponent(startDate)}&to=${encodeURIComponent(endDate)}`),
       api<any[]>("/profit/insights").catch(() => []),
       api<Asset[]>("/profit/fixed-assets").catch(() => []),
       api<Recurring[]>("/profit/recurring-expenses").catch(() => []),
-      api<Employee[]>(`/profit/employee-costs?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`).catch(() => []),
-      api<Expense[]>("/profit/expenses?limit=50").catch(() => []),
+      api<Employee[]>(`/profit/employee-costs?year=${y}&month=${m}`).catch(() => []),
+      api<Expense[]>(`/profit/expenses?limit=50&from=${encodeURIComponent(startDate)}&to=${encodeURIComponent(endDate)}`).catch(() => []),
       api<{ categories: Category[] }>("/finance/expense-categories").then((x) => x.categories || []).catch(() => []),
     ]);
     setDash(d); setInsights(ins); setAssets(a); setRecurring(r); setEmployees(e); setExpenses(ex); setCategories(c);
   }
-  useEffect(() => { refresh().catch(console.error); }, [granularity]);
+  useEffect(() => {
+    refresh().catch(() => {
+      toastError("Veriler yenilenemedi. Lütfen tekrar deneyin.");
+    });
+  }, [range.from.getTime(), range.to.getTime()]);
 
   return (
     <div className="container mx-auto p-6 space-y-4" data-testid="page-profit">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><TrendingUp className="h-6 w-6" /> Net Kâr Merkezi</h1>
-          <p className="text-sm text-muted-foreground">Gider takibi, demirbaş, personel ve net kar — fiş okuma ile hızlı giriş.</p>
-        </div>
-        <div className="flex gap-2">
-          <Select value={granularity} onValueChange={(v: any) => setGranularity(v)}>
-            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">Bugün</SelectItem>
-              <SelectItem value="month">Bu Ay</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="sm" onClick={refresh}><RefreshCw className="h-4 w-4 mr-1" />Yenile</Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Net Kâr Merkezi"
+        subtitle="Gider takibi, demirbaş, personel ve net kâr — fiş okuma ile hızlı giriş."
+        right={
+          <div className="flex flex-wrap items-center gap-2">
+            <DateRangePicker value={range} onChange={setRange} useShortLabel />
+            <Button variant="outline" size="sm" onClick={refresh}><RefreshCw className="h-4 w-4 mr-1" />Yenile</Button>
+          </div>
+        }
+      />
 
       {dash && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <Card><CardContent className="pt-6"><div className="text-xs text-muted-foreground">Ciro</div><div className="text-2xl font-bold" data-testid="kpi-revenue">{fmt(dash.revenue)}</div></CardContent></Card>
-          <Card><CardContent className="pt-6"><div className="text-xs text-muted-foreground">Brüt Kâr</div><div className="text-2xl font-bold text-blue-600" data-testid="kpi-gross">{fmt(dash.grossProfit)}</div><div className="text-xs">COGS: {fmt(dash.cogs)}</div></CardContent></Card>
-          <Card><CardContent className="pt-6"><div className="text-xs text-muted-foreground">Toplam Gider</div><div className="text-2xl font-bold text-orange-600" data-testid="kpi-expenses">{fmt(dash.totalExpenses + dash.payroll + dash.depreciation)}</div><div className="text-xs">Personel: {fmt(dash.payroll)} • Amortisman: {fmt(dash.depreciation)}</div></CardContent></Card>
-          <Card><CardContent className="pt-6">
-            <div className="text-xs text-muted-foreground">Net Kâr</div>
-            <div className={`text-2xl font-bold flex items-center gap-1 ${dash.netProfit >= 0 ? "text-green-600" : "text-red-600"}`} data-testid="kpi-net">
-              {dash.netProfit >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
-              {fmt(dash.netProfit)}
-            </div>
-            <div className="text-xs">Marj: %{dash.marginPct.toFixed(1)}</div>
-          </CardContent></Card>
+          <div data-testid="kpi-revenue"><FinanceKpiCard label="Ciro" value={formatTryCurrency(dash.revenue, 2)} /></div>
+          <div data-testid="kpi-gross">
+            <FinanceKpiCard
+              label="Brüt Kâr"
+              value={formatTryCurrency(dash.grossProfit, 2)}
+              sublabel={`COGS: ${formatTryCurrency(dash.cogs, 2)}`}
+            />
+          </div>
+          <div data-testid="kpi-expenses">
+            <FinanceKpiCard
+              label="Toplam Gider"
+              value={formatTryCurrency(dash.totalExpenses + dash.payroll + dash.depreciation, 2)}
+              sublabel={`Personel: ${formatTryCurrency(dash.payroll, 2)} · Amortisman: ${formatTryCurrency(dash.depreciation, 2)}`}
+            />
+          </div>
+          <div data-testid="kpi-net">
+            <FinanceKpiCard
+              label="Net Kâr"
+              value={formatTryCurrency(dash.netProfit, 2)}
+              sublabel={`Marj: %${dash.marginPct.toFixed(1)}`}
+            />
+          </div>
         </div>
       )}
 
@@ -115,15 +134,22 @@ export default function ProfitPage() {
           <Card>
             <CardHeader><CardTitle>Kategori Bazlı Giderler</CardTitle></CardHeader>
             <CardContent>
-              {dash?.expensesByCategory?.length ? dash.expensesByCategory.map((e) => {
-                const max = Math.max(...dash.expensesByCategory.map((x) => x.total));
-                return (
-                  <div key={e.category} className="space-y-1 mb-2">
-                    <div className="flex justify-between text-sm"><span>{e.category}</span><span className="font-medium">{fmt(e.total)}</span></div>
-                    <div className="h-2 bg-muted rounded"><div className="h-2 bg-primary rounded" style={{ width: `${(e.total / max) * 100}%` }} /></div>
-                  </div>
-                );
-              }) : <div className="text-sm text-muted-foreground">Bu dönemde gider yok.</div>}
+              <div className="w-full min-h-[300px] rounded-[var(--radius-md)] border border-[color:var(--color-border-subtle)] p-4">
+                {dash?.expensesByCategory?.length ? dash.expensesByCategory.map((e) => {
+                  const max = Math.max(...dash.expensesByCategory.map((x) => x.total));
+                  return (
+                    <div key={e.category} className="space-y-1 mb-3 last:mb-0">
+                      <div className="flex justify-between text-sm"><span>{e.category}</span><span className="font-medium">{formatTryCurrency(e.total, 2)}</span></div>
+                      <div className="h-2 w-full overflow-hidden rounded-[4px] bg-[var(--color-neutral-200)]">
+                        <div
+                          className="h-2 rounded-[4px] bg-[var(--color-brand-500)] transition-all"
+                          style={{ width: `${max > 0 ? (e.total / max) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                }) : <div className="text-sm text-muted-foreground py-8 text-center">Bu dönemde gider yok.</div>}
+              </div>
             </CardContent>
           </Card>
 
@@ -135,8 +161,8 @@ export default function ProfitPage() {
                 <div key={i.category} className="flex justify-between items-center py-1 border-b last:border-0 text-sm">
                   <span>{i.category}</span>
                   <div className="flex gap-3 items-center">
-                    <span className="text-muted-foreground">{fmt(i.lastMonth)} → {fmt(i.thisMonth)}</span>
-                    <Badge variant={i.severity === "warn" ? "destructive" : i.severity === "info" ? "default" : "secondary"}>
+                    <span className="text-muted-foreground">{formatTryCurrency(i.lastMonth, 2)} → {formatTryCurrency(i.thisMonth, 2)}</span>
+                    <Badge variant={i.severity === "warn" ? "danger" : i.severity === "info" ? "brand" : "neutral"}>
                       {i.deltaPct > 0 ? "+" : ""}{i.deltaPct}%
                     </Badge>
                   </div>
@@ -199,13 +225,16 @@ function ExpensesTab({ categories, expenses, onChange }: { categories: Category[
         const m = categories.find((c) => c.name.toLowerCase().includes(o.category.toLowerCase()));
         if (m) setForm((p: any) => ({ ...p, categoryId: String(m.id) }));
       }
-    } catch (e: any) {
-      alert("OCR hatası: " + e.message);
+    } catch (e: unknown) {
+      toastError("OCR hatası: " + (e instanceof Error ? e.message : String(e)));
     } finally { setOcrLoading(false); }
   }
 
   async function save() {
-    if (!form.amount || !form.description) { alert("Tutar ve açıklama zorunlu."); return; }
+    if (!form.amount || !form.description) {
+      toastError("Tutar ve açıklama zorunlu.");
+      return;
+    }
     const vatAmount = (Number(form.amount) * Number(form.vatRate || 0)) / (100 + Number(form.vatRate || 0));
     await api("/profit/expenses", {
       method: "POST",
@@ -289,7 +318,7 @@ function ExpensesTab({ categories, expenses, onChange }: { categories: Category[
                 <td className="text-xs">{e.details?.vendorName || "-"}</td>
                 <td className="text-xs">{e.paymentMethod}</td>
                 <td>{e.details?.ocrStatus === "done" ? <Badge variant="default">OCR</Badge> : "-"}</td>
-                <td className="text-right font-medium">{fmt(e.amount)}</td>
+                <td className="text-right font-medium">{formatTryCurrency(e.amount, 2)}</td>
               </tr>
             ))}
             {expenses.length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Gider yok.</td></tr>}
@@ -308,7 +337,10 @@ function AssetsTab({ assets, onChange }: { assets: Asset[]; onChange: () => void
     purchasePrice: "", vendor: "", depreciationMonths: 36, salvageValue: 0,
   });
   async function save() {
-    if (!form.name || !form.purchasePrice) { alert("Ad ve fiyat zorunlu."); return; }
+    if (!form.name || !form.purchasePrice) {
+      toastError("Ad ve fiyat zorunlu.");
+      return;
+    }
     await api("/profit/fixed-assets", {
       method: "POST",
       body: JSON.stringify({ ...form, purchasePrice: Number(form.purchasePrice), depreciationMonths: Number(form.depreciationMonths), salvageValue: Number(form.salvageValue) }),
@@ -353,11 +385,11 @@ function AssetsTab({ assets, onChange }: { assets: Asset[]; onChange: () => void
                 <tr key={a.id} className="border-t" data-testid={`asset-${a.id}`}>
                   <td className="p-2 font-medium">{a.name}</td>
                   <td>{a.category || "-"}</td>
-                  <td className="text-xs">{new Date(a.purchaseDate).toLocaleDateString("tr-TR")}</td>
+                  <td className="text-xs">{formatTrDate(a.purchaseDate)}</td>
                   <td className="text-xs">{a.depreciationMonths} ay</td>
-                  <td>{fmt(monthly)}</td>
-                  <td>{fmt(bookValue)}</td>
-                  <td className="text-right font-medium">{fmt(a.purchasePrice)}</td>
+                  <td>{formatTryCurrency(monthly, 2)}</td>
+                  <td>{formatTryCurrency(bookValue, 2)}</td>
+                  <td className="text-right font-medium">{formatTryCurrency(a.purchasePrice, 2)}</td>
                   <td><Button size="icon" variant="ghost" onClick={() => del(a.id)}><Trash2 className="h-4 w-4" /></Button></td>
                 </tr>
               );
@@ -379,7 +411,10 @@ function EmployeesTab({ employees, onChange }: { employees: Employee[]; onChange
     grossSalary: "", netSalary: "", sgkEmployer: "", mealAllowance: 0, transportAllowance: 0, bonus: 0,
   });
   async function save() {
-    if (!form.employeeName || !form.grossSalary) { alert("İsim ve brüt maaş zorunlu."); return; }
+    if (!form.employeeName || !form.grossSalary) {
+      toastError("İsim ve brüt maaş zorunlu.");
+      return;
+    }
     await api("/profit/employee-costs", { method: "POST", body: JSON.stringify({
       ...form, periodYear: Number(form.periodYear), periodMonth: Number(form.periodMonth),
       grossSalary: Number(form.grossSalary), netSalary: Number(form.netSalary || 0),
@@ -419,9 +454,9 @@ function EmployeesTab({ employees, onChange }: { employees: Employee[]; onChange
                 <td className="p-2 font-medium">{e.employeeName}</td>
                 <td>{e.department || "-"}</td>
                 <td className="text-xs">{e.periodYear}/{String(e.periodMonth).padStart(2, "0")}</td>
-                <td>{fmt(e.grossSalary)}</td>
-                <td className="font-medium">{fmt(e.totalEmployerCost)}</td>
-                <td><Badge variant={e.paymentStatus === "paid" ? "default" : "secondary"}>{e.paymentStatus}</Badge></td>
+                <td>{formatTryCurrency(e.grossSalary, 2)}</td>
+                <td className="font-medium">{formatTryCurrency(e.totalEmployerCost, 2)}</td>
+                <td><Badge tone={e.paymentStatus === "paid" ? "success" : "neutral"}>{e.paymentStatus}</Badge></td>
               </tr>
             ))}
             {employees.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Bu ay personel kaydı yok.</td></tr>}
@@ -440,7 +475,10 @@ function RecurringTab({ recurring, categories, onChange }: { recurring: Recurrin
     startDate: new Date().toISOString().slice(0, 10), dayOfMonth: 1, vatRate: 20, categoryId: "",
   });
   async function save() {
-    if (!form.name || !form.amount) { alert("Ad ve tutar zorunlu."); return; }
+    if (!form.name || !form.amount) {
+      toastError("Ad ve tutar zorunlu.");
+      return;
+    }
     await api("/profit/recurring-expenses", { method: "POST", body: JSON.stringify({
       ...form, amount: Number(form.amount), vatRate: Number(form.vatRate),
       dayOfMonth: Number(form.dayOfMonth), categoryId: form.categoryId ? Number(form.categoryId) : null,
@@ -449,7 +487,7 @@ function RecurringTab({ recurring, categories, onChange }: { recurring: Recurrin
   }
   async function runAll() {
     const r = await api<any>("/profit/recurring-expenses/run", { method: "POST" });
-    alert(`${r.created} adet otomatik gider oluşturuldu.`);
+    toastSuccess(`${r.created} adet otomatik gider oluşturuldu.`);
     onChange();
   }
   async function del(id: number) { if (!confirm("Sil?")) return; await api(`/profit/recurring-expenses/${id}`, { method: "DELETE" }); onChange(); }
@@ -500,9 +538,9 @@ function RecurringTab({ recurring, categories, onChange }: { recurring: Recurrin
               <tr key={r.id} className="border-t">
                 <td className="p-2 font-medium">{r.name}</td>
                 <td>{r.frequency}</td>
-                <td className="text-xs">{r.lastGeneratedAt ? new Date(r.lastGeneratedAt).toLocaleDateString("tr-TR") : "-"}</td>
+                <td className="text-xs">{r.lastGeneratedAt ? formatTrDate(r.lastGeneratedAt) : "-"}</td>
                 <td><Badge variant={r.isActive ? "default" : "secondary"}>{r.isActive ? "Aktif" : "Pasif"}</Badge></td>
-                <td className="text-right font-medium">{fmt(r.amount)}</td>
+                <td className="text-right font-medium">{formatTryCurrency(r.amount, 2)}</td>
                 <td><Button size="icon" variant="ghost" onClick={() => del(r.id)}><Trash2 className="h-4 w-4" /></Button></td>
               </tr>
             ))}

@@ -7,10 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { PageHeader } from "@/components/ui/page-header";
+import { formatTryCurrency, formatTrDateTime, formatTrDate } from "@/lib/finance-intl";
+import type { BadgeTone } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Loader2, RefreshCw, Send, X, Plus, FileText, Inbox, Settings as SettingsIcon, Activity, FileCode, Copy, Download } from "lucide-react";
 
 const API = "/api/einvoice";
@@ -38,15 +42,26 @@ type EventRow = {
   id: number; provider: string; event: string; level: string; message: string | null; createdAt: string;
 };
 
-const fmtTL = (n: number) =>
-  new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(Number(n) || 0);
-const fmtDate = (d: string) => new Date(d).toLocaleString("tr-TR");
+function outboxStatusDisplay(status: string): { label: string; tone: BadgeTone } {
+  const s = (status || "").toLowerCase();
+  if (s === "sent" || s === "accepted") return { label: "Gönderildi", tone: "success" };
+  if (s === "queued" || s === "new") return { label: "Beklemede", tone: "warning" };
+  if (s === "failed" || s === "rejected") return { label: "Hata", tone: "danger" };
+  if (s === "draft") return { label: "Taslak", tone: "neutral" };
+  if (s === "cancelled") return { label: "İptal", tone: "neutral" };
+  return { label: status || "—", tone: "neutral" };
+}
 
-const STATUS_BADGE: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  draft: "secondary", queued: "secondary", sent: "default",
-  accepted: "default", rejected: "destructive", cancelled: "outline", failed: "destructive",
-  new: "secondary", read: "outline", converted: "default", archived: "outline",
-};
+function inboxStatusDisplay(status: string): { label: string; tone: BadgeTone } {
+  const s = (status || "").toLowerCase();
+  if (s === "converted") return { label: "İşlendi", tone: "success" };
+  if (s === "new") return { label: "Beklemede", tone: "warning" };
+  if (s === "rejected" || s === "failed") return { label: "Hata", tone: "danger" };
+  if (s === "draft") return { label: "Taslak", tone: "neutral" };
+  if (s === "read") return { label: "Okundu", tone: "neutral" };
+  if (s === "archived") return { label: "Arşiv", tone: "neutral" };
+  return { label: status || "—", tone: "neutral" };
+}
 
 export default function EInvoicePage() {
   const { toast } = useToast();
@@ -219,30 +234,196 @@ export default function EInvoicePage() {
     await loadAll();
   };
 
+  const downloadOutboxPdf = async (row: OutboxRow) => {
+    try {
+      const res = await fetch(`${API}/outbox/${row.id}/pdf`, { credentials: "include" });
+      if (!res.ok) throw new Error(await res.text());
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `efatura-${row.externalNo || row.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast({ title: "PDF indirilemedi", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const outboxColumns: DataTableColumn<OutboxRow>[] = [
+    {
+      id: "invoiceDate",
+      header: "Tarih",
+      sortable: true,
+      sortValue: (r) => r.invoiceDate,
+      cell: (r) => <span className="text-xs">{formatTrDate(r.invoiceDate)}</span>,
+    },
+    {
+      id: "receiver",
+      header: "Alıcı",
+      cell: (r) => (
+        <>
+          <div className="font-medium">{r.receiverName}</div>
+          <div className="text-xs text-muted-foreground">{r.receiverVkn || "-"}</div>
+        </>
+      ),
+    },
+    { id: "invoiceType", header: "Tip", cell: (r) => <Badge tone="neutral">{r.invoiceType}</Badge> },
+    { id: "profile", header: "Profil", cell: (r) => <span className="text-xs">{r.profile}</span> },
+    {
+      id: "totalAmount",
+      header: "Tutar",
+      headerClassName: "text-right",
+      className: "text-right",
+      sortable: true,
+      sortValue: (r) => r.totalAmount,
+      cell: (r) => <span className="font-medium">{formatTryCurrency(r.totalAmount, 2)}</span>,
+    },
+    {
+      id: "ettn",
+      header: "ETTN / No",
+      cell: (r) => (
+        <span className="text-xs font-mono">
+          {r.externalNo || "-"}
+          <br />
+          <span className="text-muted-foreground">{r.externalId?.slice(0, 8)}…</span>
+        </span>
+      ),
+    },
+    {
+      id: "status",
+      header: "Durum",
+      cell: (r) => {
+        const st = outboxStatusDisplay(r.status);
+        return (
+          <>
+            <Badge tone={st.tone}>{st.label}</Badge>
+            {r.statusMessage ? (
+              <div className="text-xs text-muted-foreground mt-1 max-w-[200px] truncate">{r.statusMessage}</div>
+            ) : null}
+          </>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: "İşlem",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (r) => (
+        <div className="flex flex-wrap justify-end gap-1">
+          <Button size="sm" variant="ghost" title="PDF indir" onClick={() => downloadOutboxPdf(r)} data-testid={`btn-pdf-${r.id}`}>
+            <Download className="h-3 w-3" />
+          </Button>
+          <Button size="sm" variant="ghost" title="UBL-TR XML önizle" onClick={() => openXmlPreview(r)} data-testid={`btn-xml-${r.id}`}>
+            <FileCode className="h-3 w-3" />
+          </Button>
+          {(r.status === "draft" || r.status === "failed" || r.status === "queued") && (
+            <Button size="sm" variant="default" title="Gönder" onClick={() => sendOutbox(r.id)} data-testid={`btn-send-${r.id}`}>
+              <Send className="h-3 w-3" />
+            </Button>
+          )}
+          {(r.status === "sent" || r.status === "accepted") && (
+            <Button size="sm" variant="outline" title="İptal" onClick={() => cancelOutbox(r.id)} data-testid={`btn-cancel-${r.id}`}>
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  const inboxColumns: DataTableColumn<InboxRow>[] = [
+    {
+      id: "invoiceDate",
+      header: "Tarih",
+      sortable: true,
+      sortValue: (r) => r.invoiceDate,
+      cell: (r) => <span className="text-xs">{formatTrDate(r.invoiceDate)}</span>,
+    },
+    {
+      id: "sender",
+      header: "Gönderen",
+      cell: (r) => (
+        <>
+          <div className="font-medium">{r.senderName}</div>
+          <div className="text-xs text-muted-foreground">{r.senderVkn}</div>
+        </>
+      ),
+    },
+    { id: "invoiceNo", header: "Fatura No", cell: (r) => <span className="font-mono text-xs">{r.invoiceNo || r.externalId.slice(0, 12)}</span> },
+    {
+      id: "totalAmount",
+      header: "Tutar",
+      headerClassName: "text-right",
+      className: "text-right",
+      sortable: true,
+      sortValue: (r) => r.totalAmount,
+      cell: (r) => formatTryCurrency(r.totalAmount, 2),
+    },
+    {
+      id: "taxAmount",
+      header: "KDV",
+      headerClassName: "text-right",
+      className: "text-right",
+      sortable: true,
+      sortValue: (r) => r.taxAmount,
+      cell: (r) => formatTryCurrency(r.taxAmount, 2),
+    },
+    {
+      id: "status",
+      header: "Durum",
+      cell: (r) => {
+        const st = inboxStatusDisplay(r.status);
+        return <Badge tone={st.tone}>{st.label}</Badge>;
+      },
+    },
+  ];
+
+  const eventColumns: DataTableColumn<EventRow>[] = [
+    {
+      id: "createdAt",
+      header: "Tarih",
+      sortable: true,
+      sortValue: (r) => r.createdAt,
+      cell: (r) => <span className="text-xs">{formatTrDateTime(r.createdAt)}</span>,
+    },
+    { id: "provider", header: "Sağlayıcı", cell: (r) => <Badge tone="neutral">{r.provider}</Badge> },
+    { id: "event", header: "Olay", cell: (r) => <span className="font-mono text-xs">{r.event}</span> },
+    {
+      id: "level",
+      header: "Seviye",
+      cell: (r) => (
+        <Badge tone={r.level === "error" ? "danger" : r.level === "warn" ? "warning" : "neutral"}>{r.level}</Badge>
+      ),
+    },
+    { id: "message", header: "Mesaj", cell: (r) => <span className="text-xs">{r.message}</span> },
+  ];
+
   return (
     <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><FileText className="h-6 w-6" /> e-Fatura</h1>
-          <p className="text-sm text-muted-foreground">Provider-bağımsız e-Fatura / e-Arşiv yönetim merkezi.</p>
-        </div>
-        <div className="flex gap-2">
+      <PageHeader
+        title="e-Fatura / e-Arşiv"
+        subtitle="Provider-bağımsız e-Fatura ve e-Arşiv yönetim merkezi."
+        right={
           <Button variant="outline" size="sm" onClick={loadAll}><RefreshCw className="h-4 w-4 mr-1" /> Yenile</Button>
-        </div>
-      </div>
+        }
+      />
 
       {settings && (
         <Card>
           <CardContent className="pt-6 flex items-center gap-4 flex-wrap">
-            <Badge variant={settings.enabled ? "default" : "outline"}>
+            <Badge tone={settings.enabled ? "success" : "neutral"}>
               {settings.enabled ? "Aktif" : "Pasif"}
             </Badge>
-            <Badge variant="secondary">Sağlayıcı: {currentProvider?.label || settings.provider}</Badge>
-            <Badge variant={settings.sandbox ? "outline" : "default"}>
+            <Badge tone="neutral">Sağlayıcı: {currentProvider?.label || settings.provider}</Badge>
+            <Badge tone={settings.sandbox ? "warning" : "brand"}>
               {settings.sandbox ? "Sandbox" : "Canlı"}
             </Badge>
             {settings.lastHealthOk != null && (
-              <Badge variant={settings.lastHealthOk ? "default" : "destructive"}>
+              <Badge tone={settings.lastHealthOk ? "success" : "danger"}>
                 Sağlık: {settings.lastHealthOk ? "OK" : "FAIL"}
               </Badge>
             )}
@@ -275,57 +456,21 @@ export default function EInvoicePage() {
             />
           </div>
           <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tarih</TableHead>
-                    <TableHead>Alıcı</TableHead>
-                    <TableHead>Tip</TableHead>
-                    <TableHead>Profil</TableHead>
-                    <TableHead className="text-right">Tutar</TableHead>
-                    <TableHead>ETTN / No</TableHead>
-                    <TableHead>Durum</TableHead>
-                    <TableHead className="text-right">İşlem</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {outbox.length === 0 && (
-                    <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Henüz fatura yok.</TableCell></TableRow>
-                  )}
-                  {outbox.map((r) => (
-                    <TableRow key={r.id} id={`outbox-row-${r.id}`} className="transition-all duration-300">
-                      <TableCell className="text-xs">{fmtDate(r.invoiceDate)}</TableCell>
-                      <TableCell>
-                        <div className="font-medium">{r.receiverName}</div>
-                        <div className="text-xs text-muted-foreground">{r.receiverVkn || "-"}</div>
-                      </TableCell>
-                      <TableCell><Badge variant="outline">{r.invoiceType}</Badge></TableCell>
-                      <TableCell className="text-xs">{r.profile}</TableCell>
-                      <TableCell className="text-right font-medium">{fmtTL(r.totalAmount)}</TableCell>
-                      <TableCell className="text-xs font-mono">
-                        {r.externalNo || "-"}<br/>
-                        <span className="text-muted-foreground">{r.externalId?.slice(0, 8)}…</span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={STATUS_BADGE[r.status] || "secondary"}>{r.status}</Badge>
-                        {r.statusMessage && <div className="text-xs text-muted-foreground mt-1 max-w-[200px] truncate">{r.statusMessage}</div>}
-                      </TableCell>
-                      <TableCell className="text-right space-x-1">
-                        <Button size="sm" variant="ghost" title="UBL-TR XML önizle" onClick={() => openXmlPreview(r)} data-testid={`btn-xml-${r.id}`}>
-                          <FileCode className="h-3 w-3" />
-                        </Button>
-                        {(r.status === "draft" || r.status === "failed") && (
-                          <Button size="sm" variant="default" onClick={() => sendOutbox(r.id)}><Send className="h-3 w-3" /></Button>
-                        )}
-                        {(r.status === "sent" || r.status === "accepted") && (
-                          <Button size="sm" variant="outline" onClick={() => cancelOutbox(r.id)}><X className="h-3 w-3" /></Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <CardContent className="p-3">
+              <DataTable<OutboxRow>
+                columns={outboxColumns}
+                data={outbox}
+                getRowId={(r) => String(r.id)}
+                enableRowSelection={false}
+                emptyState={
+                  <EmptyState
+                    icon={FileText}
+                    title="Giden kutusu boş"
+                    description="Satış kaynaklı veya manuel oluşturulan faturalar gönderildikçe burada listelenir."
+                    action={{ label: "Fatura oluştur", onClick: () => setCreateOpen(true), testId: "empty-create-invoice" }}
+                  />
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -339,37 +484,21 @@ export default function EInvoicePage() {
             </Button>
           </div>
           <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tarih</TableHead>
-                    <TableHead>Gönderen</TableHead>
-                    <TableHead>Fatura No</TableHead>
-                    <TableHead className="text-right">Tutar</TableHead>
-                    <TableHead className="text-right">KDV</TableHead>
-                    <TableHead>Durum</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {inbox.length === 0 && (
-                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Gelen fatura yok. "Sağlayıcıdan Çek" ile başlayın.</TableCell></TableRow>
-                  )}
-                  {inbox.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="text-xs">{fmtDate(r.invoiceDate)}</TableCell>
-                      <TableCell>
-                        <div className="font-medium">{r.senderName}</div>
-                        <div className="text-xs text-muted-foreground">{r.senderVkn}</div>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{r.invoiceNo || r.externalId.slice(0, 12)}</TableCell>
-                      <TableCell className="text-right font-medium">{fmtTL(r.totalAmount)}</TableCell>
-                      <TableCell className="text-right">{fmtTL(r.taxAmount)}</TableCell>
-                      <TableCell><Badge variant={STATUS_BADGE[r.status] || "secondary"}>{r.status}</Badge></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <CardContent className="p-3">
+              <DataTable<InboxRow>
+                columns={inboxColumns}
+                data={inbox}
+                getRowId={(r) => String(r.id)}
+                enableRowSelection={false}
+                emptyState={
+                  <EmptyState
+                    icon={Inbox}
+                    title="Gelen fatura yok"
+                    description='Sağlayıcı kayıtlarınızdan gelen e-faturaları çekmek için üstteki "Sağlayıcıdan Çek" düğmesini kullanın.'
+                    action={{ label: "Sağlayıcıdan çek", onClick: () => pollInbox(), testId: "empty-poll-inbox" }}
+                  />
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -475,36 +604,20 @@ export default function EInvoicePage() {
         {/* EVENTS */}
         <TabsContent value="events">
           <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tarih</TableHead>
-                    <TableHead>Sağlayıcı</TableHead>
-                    <TableHead>Olay</TableHead>
-                    <TableHead>Seviye</TableHead>
-                    <TableHead>Mesaj</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {events.length === 0 && (
-                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Olay yok.</TableCell></TableRow>
-                  )}
-                  {events.map((e) => (
-                    <TableRow key={e.id}>
-                      <TableCell className="text-xs">{fmtDate(e.createdAt)}</TableCell>
-                      <TableCell><Badge variant="outline">{e.provider}</Badge></TableCell>
-                      <TableCell className="font-mono text-xs">{e.event}</TableCell>
-                      <TableCell>
-                        <Badge variant={e.level === "error" ? "destructive" : e.level === "warn" ? "secondary" : "default"}>
-                          {e.level}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs">{e.message}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <CardContent className="p-3">
+              <DataTable<EventRow>
+                columns={eventColumns}
+                data={events}
+                getRowId={(r) => String(r.id)}
+                enableRowSelection={false}
+                emptyState={
+                  <EmptyState
+                    icon={Activity}
+                    title="Olay kaydı yok"
+                    description="Sağlayıcıdan gelen gönderim, hata ve durum bildirimleri burada görünür."
+                  />
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -518,7 +631,7 @@ export default function EInvoicePage() {
               <FileCode className="h-5 w-5" />
               UBL-TR 1.2 XML Önizleme
               {xmlPreview?.row && (
-                <Badge variant="outline" className="ml-2">
+                <Badge tone="neutral" className="ml-2">
                   {xmlPreview.row.externalNo || `#${xmlPreview.row.id}`}
                 </Badge>
               )}

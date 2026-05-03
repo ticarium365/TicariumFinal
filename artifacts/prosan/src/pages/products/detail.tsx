@@ -86,8 +86,8 @@ export default function ProductDetail({ id }: { id: string }) {
           displayValue: true,
           fontSize: 13,
           margin: 8,
-          background: "#ffffff",
-          lineColor: "#000000",
+          background: "var(--color-surface-card)",
+          lineColor: "var(--color-neutral-900)",
         });
       } catch {
         try {

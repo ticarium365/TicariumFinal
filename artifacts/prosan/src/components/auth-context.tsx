@@ -1,10 +1,12 @@
-import { createContext, useContext, useEffect, useCallback } from "react";
+import { createContext, useContext, useEffect, useCallback, useState } from "react";
+import { setSentryUser, clearSentryUser } from "@/lib/sentry";
 import { useGetMe, User } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetMeQueryKey } from "@workspace/api-client-react";
 import { loginUrlWithCurrentLocationNext } from "@/lib/login-redirect";
+import { SessionExpiryModal } from "@/components/session-expiry-modal";
 
 const SESSION_ROLES = ["admin", "staff", "viewer", "super_admin"] as const;
 
@@ -62,6 +64,7 @@ interface AuthContextType {
   plan: PlanInfo | null;
   usage: UsageInfo | null;
   checkAuth: () => Promise<void>;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -72,6 +75,7 @@ const AuthContext = createContext<AuthContextType>({
   plan: null,
   usage: null,
   checkAuth: async () => {},
+  logout: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -85,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [, setLocation] = useLocation();
+  const [showSessionExpiryModal, setShowSessionExpiryModal] = useState(false);
 
   /** Hata veya şüpheli gövde — önceki başarılı cache'i kullanma (RQ stale-on-error) */
   const user =
@@ -93,6 +98,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (error) {
       queryClient.setQueryData(getGetMeQueryKey(), undefined);
+      
+      // 401 hatası durumunda session expiry modal'ı göster (public path'ler hariç)
+      if (error?.status === 401 || error?.response?.status === 401) {
+        const publicPaths = ["/", "/login", "/kayit", "/verify", "/sifremi-unuttum", "/forgot-password", "/karsilastir", "/neden-ticarium365", "/hakkimizda", "/amacimiz", "/paketler", "/iletisim", "/kvkk", "/kullanim-kosullari", "/odeme/sonuc", "/catalog", "/s/", "/pazar"];
+        const here = window.location.pathname.replace(/\/$/, "") || "/";
+        const isPublicPath = publicPaths.some((p) => here === p || (p !== "/" && here.startsWith(p + "/")));
+        
+        if (!isPublicPath) {
+          setShowSessionExpiryModal(true);
+        }
+      }
       return;
     }
     if (rawMe != null && !isVerifiedSessionUser(rawMe)) {
@@ -119,6 +135,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
   }, [queryClient]);
 
+  const logout = useCallback(() => {
+    // TanStack Query cache'i temizle
+    queryClient.clear();
+    
+    // localStorage ve sessionStorage temizle
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Session expiry modal'ı kapat
+    setShowSessionExpiryModal(false);
+    
+    // Sentry user context'i temizle
+    clearSentryUser();
+  }, [queryClient, setShowSessionExpiryModal]);
+
+  // Set Sentry user context when user logs in
+  useEffect(() => {
+    if (user) {
+      setSentryUser({
+        id: user.id,
+        username: (user as any).username,
+        role: user.role,
+      });
+    } else {
+      clearSentryUser();
+    }
+  }, [user]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -137,9 +181,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         plan: (user ? ((user as any)?.plan as PlanInfo | null) : null) ?? null,
         usage: (user ? ((user as any)?.usage as UsageInfo | null) : null) ?? null,
         checkAuth,
+        logout,
       }}
     >
       {children}
+      {showSessionExpiryModal && <SessionExpiryModal />}
     </AuthContext.Provider>
   );
 }

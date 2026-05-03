@@ -12,12 +12,23 @@ import {
 } from "@workspace/db";
 import { eq, and, inArray, sql, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
-import { z } from "zod/v4";
+import { z } from "zod";
 import * as XLSX from "xlsx";
 import { getAdapter, hasAdapter } from "../services/channels/adapters.js";
 
 const router = Router();
 router.use(requireAuth);
+
+function credentialsLookConfigured(creds: unknown): boolean {
+  if (!creds || typeof creds !== "object") return false;
+  return Object.values(creds as Record<string, unknown>).some((v) => {
+    if (v == null) return false;
+    const s = String(v).trim();
+    if (!s) return false;
+    if (s.includes("***")) return false;
+    return true;
+  });
+}
 
 const PRICE_MODES = ["fixed", "markup_pct", "markup_amount", "base"] as const;
 const STOCK_MODES = ["full", "buffer", "fixed", "percent"] as const;
@@ -88,6 +99,96 @@ router.get("/stats", async (req: Request, res: Response) => {
   } catch (err) {
     req.log.error({ err }, "channel stats failed");
     res.status(500).json({ error: "İstatistik alınamadı" });
+  }
+});
+
+/** Logo + bağlantı rozeti + son senkron için kanal başına özet (liste ekranı) */
+router.get("/overview", async (req: Request, res: Response) => {
+  try {
+    const companyId = req.companyId!;
+    const [statsRows, credRows, errLogs] = await Promise.all([
+      db
+        .select({
+          channelKey: productChannelListingsTable.channelKey,
+          enabled: sql<number>`COUNT(*) FILTER (WHERE ${productChannelListingsTable.isEnabled} = true)`,
+          total: sql<number>`COUNT(*)`,
+        })
+        .from(productChannelListingsTable)
+        .where(eq(productChannelListingsTable.companyId, companyId))
+        .groupBy(productChannelListingsTable.channelKey),
+      db.select().from(channelCredentialsTable).where(eq(channelCredentialsTable.companyId, companyId)),
+      db
+        .select({
+          channelKey: channelSyncLogsTable.channelKey,
+          errorMessage: channelSyncLogsTable.errorMessage,
+        })
+        .from(channelSyncLogsTable)
+        .where(and(eq(channelSyncLogsTable.companyId, companyId), eq(channelSyncLogsTable.status, "error")))
+        .orderBy(desc(channelSyncLogsTable.createdAt))
+        .limit(400),
+    ]);
+
+    const statsMap: Record<string, { enabled: number; total: number }> = {};
+    for (const r of statsRows) {
+      statsMap[r.channelKey] = { enabled: Number(r.enabled), total: Number(r.total) };
+    }
+    const credByKey = Object.fromEntries(credRows.map((c) => [c.channelKey, c]));
+
+    const latestErrByChannel: Record<string, string> = {};
+    for (const r of errLogs) {
+      if (latestErrByChannel[r.channelKey] != null) continue;
+      if (r.errorMessage) latestErrByChannel[r.channelKey] = r.errorMessage;
+    }
+
+    const items = CHANNEL_DEFINITIONS.map((def) => {
+      const stat = statsMap[def.key] ?? { enabled: 0, total: 0 };
+      const cred = credByKey[def.key];
+      const configured = cred ? credentialsLookConfigured(cred.credentials) : false;
+      const adapter = hasAdapter(def.key);
+
+      let connectionStatus: "connected" | "error" | "pending" | "n/a" = "n/a";
+      let healthMessage: string | null = null;
+
+      if (adapter) {
+        if (!cred || !configured) {
+          connectionStatus = "pending";
+          healthMessage = "API bilgileri eksik veya kayıtlı değil";
+        } else if (!cred.isActive) {
+          connectionStatus = "pending";
+          healthMessage = "Bağlantı pasif";
+        } else if (cred.lastSyncStatus === "error") {
+          connectionStatus = "error";
+          healthMessage = latestErrByChannel[def.key] ?? "Son senkronizasyon başarısız";
+        } else if (cred.lastSyncAt && (cred.lastSyncStatus === "success" || cred.lastSyncStatus === "partial")) {
+          connectionStatus = "connected";
+        } else if (!cred.lastSyncAt) {
+          connectionStatus = "pending";
+          healthMessage = "Henüz senkron tetiklenmedi";
+        } else {
+          connectionStatus = "pending";
+          healthMessage = cred.lastSyncStatus ? `Durum: ${cred.lastSyncStatus}` : null;
+        }
+      }
+
+      return {
+        key: def.key,
+        label: def.label,
+        category: def.category,
+        color: def.color,
+        listingEnabled: stat.enabled,
+        listingTotal: stat.total,
+        adapter,
+        connectionStatus,
+        lastSyncAt:
+          cred?.lastSyncAt != null ? new Date(cred.lastSyncAt as Date).toISOString() : null,
+        healthMessage,
+      };
+    });
+
+    res.json({ items });
+  } catch (err) {
+    req.log.error({ err }, "channel overview failed");
+    res.status(500).json({ error: "Özet alınamadı" });
   }
 });
 

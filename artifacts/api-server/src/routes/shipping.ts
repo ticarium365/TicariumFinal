@@ -276,16 +276,20 @@ router.post("/quote", requireAuth, async (req, res) => {
     totalDesi: z.number().nonnegative().max(10000),
     cartTotal: z.number().nonnegative().max(10_000_000),
     productId: z.number().int().positive().optional(),
+    carrier: z.enum(SHIPPING_CARRIERS).optional(),
   });
   const p = schema.safeParse(req.body);
   if (!p.success) {
-    res.status(400).json({ error: { code: "BAD_REQUEST", message: "Geçersiz quote parametreleri" } });
+    res.status(400).json({ error: { code: "BAD_REQUEST", message: "Geçersiz quote parametreleri", details: p.error.flatten() } });
     return;
   }
   const zones = await db.select().from(shippingZonesTable)
     .where(eq(shippingZonesTable.companyId, cid));
-  const rules = await db.select().from(shippingRulesTable)
+  let rules = await db.select().from(shippingRulesTable)
     .where(eq(shippingRulesTable.companyId, cid));
+  if (p.data.carrier) {
+    rules = rules.filter((r) => r.carrier === p.data.carrier);
+  }
   let override = null;
   if (p.data.productId) {
     const [o] = await db.select().from(productShippingOverridesTable)

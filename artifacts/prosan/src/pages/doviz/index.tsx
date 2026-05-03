@@ -4,14 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
+import { formatTryCurrency, formatTrDateTime } from "@/lib/finance-intl";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { DollarSign, ArrowRightLeft, Plus } from "lucide-react";
+import { ArrowRightLeft, Plus } from "lucide-react";
 
 type Rate = { id: number; currency: string; rate: number; asOf: string; source: string };
 
@@ -59,12 +61,10 @@ export default function CurrencyPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6" data-testid="page-currency">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <DollarSign className="h-7 w-7 text-primary" /> Çoklu Para Birimi
-        </h1>
-        <p className="text-muted-foreground">USD, EUR, GBP gibi para birimleri için kur yönetimi (TRY bazlı).</p>
-      </div>
+      <PageHeader
+        title="Çoklu Para Birimi"
+        subtitle="USD, EUR, GBP gibi para birimleri için kur yönetimi (TRY bazlı)."
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
@@ -86,7 +86,7 @@ export default function CurrencyPage() {
                     <TableRow key={cu} data-testid={`rate-${cu}`}>
                       <TableCell className="font-bold">{cu}</TableCell>
                       <TableCell className="text-right font-mono">{r ? r.rate.toFixed(4) : "—"}</TableCell>
-                      <TableCell className="text-xs">{r ? new Date(r.asOf).toLocaleString("tr-TR") : "—"}</TableCell>
+                      <TableCell className="text-xs">{r ? formatTrDateTime(r.asOf) : "—"}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{r?.source || "—"}</TableCell>
                     </TableRow>
                   );
@@ -151,7 +151,11 @@ export default function CurrencyPage() {
               <div className="text-right">
                 {convResult && (
                   <div data-testid="conv-result">
-                    <div className="text-2xl font-bold font-mono">{convResult.result.toLocaleString("tr-TR", { maximumFractionDigits: 2 })}</div>
+                    <div className="text-2xl font-bold font-mono">
+                      {convTo === "TRY"
+                        ? formatTryCurrency(convResult.result, 2)
+                        : convResult.result.toLocaleString("tr-TR", { maximumFractionDigits: 4 })}
+                    </div>
                     <div className="text-xs text-muted-foreground">kur: {convResult.rate.toFixed(4)}</div>
                   </div>
                 )}
@@ -177,7 +181,7 @@ export default function CurrencyPage() {
               <TableBody>
                 {data.history.slice(0, 20).map((h) => (
                   <TableRow key={h.id}>
-                    <TableCell className="text-xs">{new Date(h.asOf).toLocaleString("tr-TR")}</TableCell>
+                    <TableCell className="text-xs">{formatTrDateTime(h.asOf)}</TableCell>
                     <TableCell>{h.currency}</TableCell>
                     <TableCell className="text-right font-mono">{h.rate.toFixed(4)}</TableCell>
                     <TableCell className="text-xs">{h.source}</TableCell>

@@ -1,0 +1,148 @@
+/**
+ * Ticarium365 design tokens (P1-B).
+ * Consumed by Tailwind via theme.extend (tailwind.config.ts) and usable as var(--...).
+ */
+
+:root {
+  /* ── Nav / sidebar — deep navy (4) ───────────────────────────────────── */
+  --color-nav-950: #070d18;
+  --color-nav-900: #0f2444;
+  --color-nav-800: #132a48;
+  --color-nav-700: #1a3a5c;
+
+  /* Sidebar shell aliases */
+  --color-nav-bg: var(--color-nav-900);
+  --color-nav-border: var(--color-nav-800);
+  --color-nav-accent: var(--color-brand-500);
+  --color-nav-item-hover: rgb(255 255 255 / 0.08);
+  --color-nav-item-active-bg: rgb(255 255 255 / 0.12);
+  --color-nav-rail-muted: rgb(255 255 255 / 0.06);
+
+  /* Sidebar text (maps to common layouts) */
+  --color-nav-text: #9eb4cc;
+  --color-nav-text-active: #ffffff;
+
+  /* ── Brand blue — 5 steps (50 → 900) ─────────────────────────────────── */
+  --color-brand-50: #eff6ff;
+  --color-brand-200: #bfdbfe;
+  --color-brand-500: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-900: #1e3a8a;
+
+  /* ── Neutral — 9 steps (50 → 900) ─────────────────────────────────────── */
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+
+  /* ── Semantic ───────────────────────────────────────────────────────── */
+  --color-semantic-success: #059669;
+  --color-semantic-success-fg: #ffffff;
+  --color-semantic-warning: #d97706;
+  --color-semantic-warning-fg: #0f172a;
+  --color-semantic-danger: #dc2626;
+  --color-semantic-danger-fg: #ffffff;
+  --color-semantic-info: #2563eb;
+  --color-semantic-info-fg: #ffffff;
+
+  /* ── Surfaces ───────────────────────────────────────────────────────── */
+  --color-surface-bg: #f8fafc;
+  --color-surface-card: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-border-subtle: #e2e8f0;
+
+  /* ── Typography ───────────────────────────────────────────────────── */
+  --font-family-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-family-display: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-family-mono: ui-monospace, "JetBrains Mono", "Cascadia Code", "Source Code Pro", monospace;
+
+  --font-size-xs: 0.75rem; /* 12px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-base: 1rem; /* 16px */
+  --font-size-lg: 1.125rem; /* 18px */
+  --font-size-xl: 1.25rem; /* 20px */
+  --font-size-2xl: 1.5rem; /* 24px */
+  --font-size-3xl: 1.75rem; /* 28px */
+  --font-size-4xl: 2rem; /* 32px */
+  --font-size-5xl: 2.5rem; /* 40px */
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.4;
+  --line-height-normal: 1.6;
+  --line-height-relaxed: 1.8;
+
+  /* ── Spacing — 4px base, steps 1–16 ─────────────────────────────────── */
+  --spacing-1: 0.25rem; /* 4px */
+  --spacing-2: 0.5rem; /* 8px */
+  --spacing-3: 0.75rem; /* 12px */
+  --spacing-4: 1rem; /* 16px */
+  --spacing-5: 1.25rem; /* 20px */
+  --spacing-6: 1.5rem; /* 24px */
+  --spacing-7: 2rem; /* 32px */
+  --spacing-8: 2.5rem; /* 40px */
+  --spacing-9: 3rem; /* 48px */
+  --spacing-10: 4rem; /* 64px */
+  --spacing-11: 5rem; /* 80px */
+  --spacing-12: 6rem; /* 96px */
+  --spacing-13: 8rem; /* 128px */
+  --spacing-14: 9rem; /* 144px */
+  --spacing-15: 10rem; /* 160px */
+  --spacing-16: 12rem; /* 192px */
+
+  /* ── Border radius ─────────────────────────────────────────────────── */
+  --radius-xs: 0.25rem; /* 4px */
+  --radius-sm: 0.375rem; /* 6px */
+  --radius-md: 0.5rem; /* 8px */
+  --radius-lg: 0.75rem; /* 12px */
+  --radius-xl: 1rem; /* 16px */
+  --radius-2xl: 1.5rem; /* 24px */
+  --radius-full: 9999px;
+
+  /* ── Shadows (subtle elevations) ───────────────────────────────────── */
+  --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.04);
+  --shadow-md: 0 4px 6px -1px rgb(15 23 42 / 0.06), 0 2px 4px -2px rgb(15 23 42 / 0.04);
+  --shadow-lg: 0 10px 24px -4px rgb(15 23 42 / 0.08), 0 4px 8px -4px rgb(15 23 42 / 0.04);
+
+  /* ── P1-A — marketing, dual-brand gradients, charts (hex → token) ───── */
+  --color-accent-teal: #0ea5a4;
+  --color-accent-violet: #6366f1;
+  --color-accent-indigo: #4f46e5;
+  --color-chart-mint: #10b981;
+  --color-chart-coral: #ef4444;
+  --color-auth-wash-1: #f8faff;
+  --color-auth-wash-2: #eef2ff;
+  --color-auth-wash-3: #f1fbfb;
+  --color-catalog-navy-1: #1a2435;
+  --color-catalog-navy-2: #1f2d42;
+  --color-catalog-brand-1: #4a7fbf;
+  --color-catalog-brand-2: #2c5f9e;
+}
+
+/* Dark: surfaces + border — nav/brand neutrals stay shared unless overridden later */
+.dark {
+  --color-surface-bg: #070a14;
+  --color-surface-card: #0c1220;
+  --color-surface-elevated: #121a2e;
+  --color-border-subtle: rgb(51 65 85 / 0.35);
+  --color-nav-bg: var(--color-nav-950);
+  --color-nav-item-hover: rgb(255 255 255 / 0.06);
+  --color-nav-item-active-bg: rgb(255 255 255 / 0.1);
+  --color-nav-rail-muted: rgb(255 255 255 / 0.05);
+  --color-nav-text: #94a3b8;
+  --color-nav-text-active: #f8fafc;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.25), 0 2px 4px -2px rgb(0 0 0 / 0.15);
+  --shadow-lg: 0 10px 24px -4px rgb(0 0 0 / 0.35), 0 4px 8px -4px rgb(0 0 0 / 0.2);
+}

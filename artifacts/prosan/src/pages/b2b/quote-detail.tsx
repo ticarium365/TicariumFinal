@@ -238,7 +238,7 @@ export default function QuoteDetailPage({ id }: Props) {
             {counterparty?.logoUrl ? (
               <img src={counterparty.logoUrl} alt="" className="h-14 w-14 rounded-xl object-contain border shrink-0" />
             ) : (
-              <div className="h-14 w-14 rounded-xl flex items-center justify-center text-white font-bold text-2xl shrink-0" style={{ backgroundColor: counterparty?.primaryColor ?? "#666" }}>
+              <div className="h-14 w-14 rounded-xl flex items-center justify-center text-[color:var(--color-nav-text-active)] font-bold text-2xl shrink-0" style={{ backgroundColor: counterparty?.primaryColor ?? "var(--color-neutral-500)" }}>
                 {counterparty?.name?.charAt(0) ?? "?"}
               </div>
             )}

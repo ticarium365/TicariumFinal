@@ -6,7 +6,7 @@ import { tr } from "date-fns/locale";
 import {
   ArrowLeft, Search, X, Check, AlertTriangle, TrendingUp, TrendingDown,
   CheckCircle2, Clock, Lock, Download, Scan, ListFilter,
-  PackagePlus, Trash2, RefreshCw, ChevronDown,
+  PackagePlus, Trash2, RefreshCw, ChevronDown, Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -244,8 +244,11 @@ export default function StockCountDetail({ id }: { id: string }) {
     p.productCode.toLowerCase().includes(searchProduct.toLowerCase())
   );
 
+  const totalCountedUnits = items.reduce((s, i) => s + i.countedQty, 0);
+  const totalDiffSum = items.reduce((s, i) => s + i.diff, 0);
+
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">
+    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5 pb-36 md:pb-32">
       {/* Başlık */}
       <div className="flex items-start gap-3">
         <Link href="/stock-counts">
@@ -326,6 +329,16 @@ export default function StockCountDetail({ id }: { id: string }) {
                   placeholder="Barkod okut veya ürün kodu gir..."
                   className="pl-9"
                   autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Tab" && !e.shiftKey && displayItems.length > 0) {
+                      e.preventDefault();
+                      document
+                        .querySelector<HTMLInputElement>(
+                          `input[data-count-row="${displayItems[0].id}"]`
+                        )
+                        ?.focus();
+                    }
+                  }}
                 />
               </div>
               <Button type="submit" disabled={!barcodeInput.trim() || upsertItem.isPending}>
@@ -421,7 +434,7 @@ export default function StockCountDetail({ id }: { id: string }) {
                   const displayQty = rawQty !== undefined ? rawQty : String(item.countedQty);
                   const diff = item.diff;
                   return (
-                    <tr key={item.id} className={`hover:bg-muted/20 ${diff !== 0 && !item.isAdjusted ? "bg-amber-500/10/30" : ""}`}>
+                    <tr key={item.id} className={`hover:bg-muted/20 ${diff !== 0 && !item.isAdjusted ? "bg-amber-500/10" : ""}`}>
                       <td className="px-4 py-3">
                         <p className="font-medium">{item.productName}</p>
                         <p className="text-xs text-muted-foreground font-mono">{item.productCode}</p>
@@ -435,7 +448,21 @@ export default function StockCountDetail({ id }: { id: string }) {
                             value={displayQty}
                             onChange={e => setEditQty(prev => ({ ...prev, [item.id]: e.target.value }))}
                             onBlur={e => handleQtyBlur(item, e.target.value)}
-                            onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                            onKeyDown={e => {
+                              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                              if (e.key === "Tab" && !e.shiftKey) {
+                                const idx = displayItems.findIndex((x) => x.id === item.id);
+                                const next = displayItems[idx + 1];
+                                if (next) {
+                                  e.preventDefault();
+                                  const el = document.querySelector<HTMLInputElement>(
+                                    `input[data-count-row="${next.id}"]`
+                                  );
+                                  el?.focus();
+                                }
+                              }
+                            }}
+                            data-count-row={item.id}
                             className="w-20 mx-auto text-center h-7 text-sm font-mono"
                           />
                         ) : (
@@ -526,6 +553,30 @@ export default function StockCountDetail({ id }: { id: string }) {
       )}
 
       {/* Toplu onayla */}
+      {isOpen && items.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 border-t bg-card/95 backdrop-blur-md px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Sayılan adet</p>
+                <p className="text-xl font-bold tabular-nums">{totalCountedUnits}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Net fark Σ</p>
+                <p className={`text-xl font-bold tabular-nums ${totalDiffSum === 0 ? "text-green-600" : "text-amber-600"}`}>
+                  {totalDiffSum > 0 ? "+" : ""}
+                  {totalDiffSum}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground max-w-md">
+              Enter: miktarı kaydet · Tab: sonraki satır (liste sırasına göre). Taslak için tarayıcı oturumunu kapatmayın;
+              kesin kayıt &quot;Kapat&quot; ve ardından &quot;Onayla&quot; ile yapılır.
+            </p>
+          </div>
+        </div>
+      )}
+
       {confirmApprove && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-card rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
@@ -563,11 +614,3 @@ export default function StockCountDetail({ id }: { id: string }) {
   );
 }
 
-// Eksik import
-function Plus({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-}

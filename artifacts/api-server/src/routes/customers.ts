@@ -4,8 +4,43 @@ import { eq, and, ilike, or, desc, count, sql, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { Errors } from "../lib/errors.js";
 import { audit } from "../lib/audit.js";
+import { z } from "zod";
 
 const router = Router();
+
+// Zod schemas for validation
+const customerCreateSchema = z.object({
+  code: z.string().min(1, "Kod zorunludur").max(50),
+  name: z.string().min(1, "Ad zorunludur").max(200),
+  type: z.enum(["individual", "corporate"]).optional(),
+  phone: z.string().max(50).optional(),
+  email: z.string().email("Geçersiz e-posta").max(100).optional(),
+  city: z.string().max(100).optional(),
+  district: z.string().max(100).optional(),
+  address: z.string().max(500).optional(),
+  contactPerson: z.string().max(100).optional(),
+  taxOffice: z.string().max(100).optional(),
+  taxNumber: z.string().max(50).optional(),
+  creditLimit: z.number().optional(),
+  openingBalance: z.number().optional(),
+  notes: z.string().max(1000).optional(),
+});
+
+const customerUpdateSchema = z.object({
+  code: z.string().min(1).max(50).optional(),
+  name: z.string().min(1).max(200).optional(),
+  type: z.enum(["individual", "corporate"]).optional(),
+  phone: z.string().max(50).optional(),
+  email: z.string().email("Geçersiz e-posta").max(100).optional(),
+  city: z.string().max(100).optional(),
+  district: z.string().max(100).optional(),
+  address: z.string().max(500).optional(),
+  contactPerson: z.string().max(100).optional(),
+  taxOffice: z.string().max(100).optional(),
+  taxNumber: z.string().max(50).optional(),
+  creditLimit: z.number().optional(),
+  notes: z.string().max(1000).optional(),
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // YARDIMCI FONKSİYONLAR
@@ -119,7 +154,7 @@ router.get("/top-debtors", requireAuth, requireRole(["admin"]), async (req: Requ
 router.get("/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     if (isNaN(id)) return void res.status(400).json(Errors.badRequest("Geçersiz müşteri ID"));
 
     const [customer] = await db
@@ -143,8 +178,9 @@ router.get("/:id", requireAuth, async (req: Request, res: Response) => {
 router.post("/", requireAuth, requireRole(["admin", "staff"]), async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
+    const body = customerCreateSchema.parse(req.body);
     const { code, name, type, phone, email, city, district, address,
-            contactPerson, taxOffice, taxNumber, creditLimit, openingBalance, notes } = req.body;
+            contactPerson, taxOffice, taxNumber, creditLimit, openingBalance, notes } = body;
 
     if (!code || !name) return void res.status(400).json(Errors.badRequest("Kod ve ad zorunludur"));
 
@@ -186,7 +222,7 @@ router.post("/", requireAuth, requireRole(["admin", "staff"]), async (req: Reque
         amount: Math.abs(ob),
         referenceType: "manual",
         description: "Açılış bakiyesi",
-        createdBy: req.session.user.id,
+        createdBy: req.session.user?.id,
       });
     }
 
@@ -205,8 +241,9 @@ router.post("/", requireAuth, requireRole(["admin", "staff"]), async (req: Reque
 router.put("/:id", requireAuth, requireRole(["admin", "staff"]), async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     if (isNaN(id)) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
+    const body = customerUpdateSchema.parse(req.body);
 
     const [existing] = await db.select().from(customersTable)
       .where(and(eq(customersTable.id, id), eq(customersTable.companyId, cid)));
@@ -214,9 +251,9 @@ router.put("/:id", requireAuth, requireRole(["admin", "staff"]), async (req: Req
     if (!existing.isActive) return void res.status(400).json(Errors.badRequest("Pasif müşteri düzenlenemez"));
 
     // code değişiyorsa duplicate check
-    if (req.body.code && req.body.code !== existing.code) {
+    if (body.code && body.code !== existing.code) {
       const dup = await db.select({ id: customersTable.id }).from(customersTable)
-        .where(and(eq(customersTable.companyId, cid), eq(customersTable.code, req.body.code)));
+        .where(and(eq(customersTable.companyId, cid), eq(customersTable.code, body.code)));
       if (dup.length) return void res.status(409).json(Errors.conflict("DUPLICATE_CODE", "Bu kod zaten kullanılıyor"));
     }
 
@@ -224,7 +261,7 @@ router.put("/:id", requireAuth, requireRole(["admin", "staff"]), async (req: Req
     const fields = ["code","name","type","phone","email","city","district","address",
                     "contactPerson","taxOffice","taxNumber","creditLimit","notes"] as const;
     for (const f of fields) {
-      if (req.body[f] !== undefined) (updateData as Record<string, unknown>)[f] = req.body[f];
+      if (body[f] !== undefined) (updateData as Record<string, unknown>)[f] = body[f];
     }
 
     const [updated] = await db.update(customersTable).set(updateData)
@@ -246,7 +283,7 @@ router.put("/:id", requireAuth, requireRole(["admin", "staff"]), async (req: Req
 router.delete("/:id", requireAuth, requireRole(["admin"]), async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     if (isNaN(id)) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
 
     const [customer] = await db.select().from(customersTable)
@@ -271,7 +308,7 @@ router.delete("/:id", requireAuth, requireRole(["admin"]), async (req: Request, 
 router.patch("/:id/restore", requireAuth, requireRole(["admin"]), async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     if (isNaN(id)) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
 
     const [customer] = await db.select().from(customersTable)
@@ -296,7 +333,7 @@ router.patch("/:id/restore", requireAuth, requireRole(["admin"]), async (req: Re
 router.get("/:id/transactions", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const customerId = parseInt(req.params.id);
+    const customerId = parseInt(String(req.params.id));
     if (isNaN(customerId)) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
 
     const { page = "1", limit = "50" } = req.query;
@@ -345,7 +382,7 @@ router.get("/:id/transactions", requireAuth, async (req: Request, res: Response)
 router.post("/:id/payment", requireAuth, requireRole(["admin", "staff"]), async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const customerId = parseInt(req.params.id);
+    const customerId = parseInt(String(req.params.id));
     if (isNaN(customerId)) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
 
     const { amount, paymentMethod, note } = req.body;
@@ -365,7 +402,7 @@ router.post("/:id/payment", requireAuth, requireRole(["admin", "staff"]), async 
       amount: amountNum,
       referenceType: "manual",
       description: note || `Tahsilat${paymentMethod ? ` — ${paymentMethod}` : ""}`,
-      createdBy: req.session.user.id,
+      createdBy: req.session.user?.id,
     }).returning();
 
     const newBalance = await recalcBalance(customerId, cid);
@@ -385,13 +422,13 @@ router.post("/:id/payment", requireAuth, requireRole(["admin", "staff"]), async 
 router.post("/:id/adjustment", requireAuth, requireRole(["admin"]), async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const customerId = parseInt(req.params.id);
+    const customerId = parseInt(String(req.params.id));
     if (isNaN(customerId)) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
 
     const { amount, direction, note } = req.body;
-    const amountNum = parseFloat(amount);
-    if (!amountNum || amountNum <= 0) return void res.status(400).json(Errors.badRequest("Tutar 0'dan büyük olmalı"));
-    if (!["debit", "credit"].includes(direction)) return void res.status(400).json(Errors.badRequest("direction: debit veya credit olmalı"));
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt === 0) return void res.status(400).json(Errors.badRequest("Tutar geçersiz"));
+    if (!["debit", "credit"].includes(direction)) return void res.status(400).json(Errors.badRequest("Yön debit veya credit olmalı"));
 
     const [customer] = await db.select().from(customersTable)
       .where(and(eq(customersTable.id, customerId), eq(customersTable.companyId, cid)));
@@ -403,14 +440,14 @@ router.post("/:id/adjustment", requireAuth, requireRole(["admin"]), async (req: 
       customerId,
       type: "adjustment",
       direction,
-      amount: amountNum,
+      amount: Math.abs(amt),
       referenceType: "manual",
-      description: note || "Manuel bakiye düzeltmesi",
-      createdBy: req.session.user.id,
+      description: note || "Düzeltme",
+      createdBy: req.session.user?.id,
     }).returning();
 
     const newBalance = await recalcBalance(customerId, cid);
-    await audit({ req, action: "CUSTOMER_ADJUSTMENT", entity: "customer", entityId: customerId, details: { amount: amountNum, direction } });
+    await audit({ req, action: "CUSTOMER_ADJUSTMENT", entity: "customer", entityId: customerId, details: { amount: amt, direction } });
 
     res.json({ ok: true, transaction: tx, newBalance });
   } catch (err) {
@@ -426,7 +463,7 @@ router.post("/:id/adjustment", requireAuth, requireRole(["admin"]), async (req: 
 router.get("/:id/statement", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const customerId = parseInt(req.params.id);
+    const customerId = parseInt(String(req.params.id));
     if (isNaN(customerId)) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
 
     const [customer] = await db.select().from(customersTable)
@@ -466,7 +503,7 @@ router.get("/:id/statement", requireAuth, async (req: Request, res: Response) =>
 router.get("/:id/sales", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const customerId = parseInt(req.params.id);
+    const customerId = parseInt(String(req.params.id));
     if (isNaN(customerId)) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
 
     const { page = "1", limit = "50" } = req.query;

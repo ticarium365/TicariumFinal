@@ -21,10 +21,25 @@ export function TrialBadge() {
   const expired = data.isTrialExpired || daysLeft <= 0;
 
   const tone = expired || daysLeft <= 2
-    ? { bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-200", dot: "bg-rose-500" }
+    ? {
+        bg: "bg-[color-mix(in_srgb,var(--color-semantic-danger)_12%,var(--color-surface-card))]",
+        text: "text-[color:var(--color-semantic-danger)]",
+        border: "border-[color:color-mix(in_srgb,var(--color-semantic-danger)_35%,var(--color-border-subtle))]",
+        dot: "bg-[var(--color-semantic-danger)]",
+      }
     : daysLeft <= 6
-    ? { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", dot: "bg-amber-500" }
-    : { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" };
+      ? {
+          bg: "bg-[color-mix(in_srgb,var(--color-semantic-warning)_14%,var(--color-surface-card))]",
+          text: "text-[color:var(--color-semantic-warning)]",
+          border: "border-[color:color-mix(in_srgb,var(--color-semantic-warning)_35%,var(--color-border-subtle))]",
+          dot: "bg-[var(--color-semantic-warning)]",
+        }
+      : {
+          bg: "bg-[color-mix(in_srgb,var(--color-semantic-success)_12%,var(--color-surface-card))]",
+          text: "text-[color:var(--color-semantic-success)]",
+          border: "border-[color:color-mix(in_srgb,var(--color-semantic-success)_35%,var(--color-border-subtle))]",
+          dot: "bg-[var(--color-semantic-success)]",
+        };
 
   const label = expired
     ? "Deneme süresi doldu"

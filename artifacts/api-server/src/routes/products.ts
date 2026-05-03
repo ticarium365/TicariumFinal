@@ -1,8 +1,9 @@
 import { Router, Request, Response } from "express";
 import { db, productsTable, productViewsTable, salesTable } from "@workspace/db";
-import { eq, ilike, and, lte, or, desc, asc, count, gte, sql } from "drizzle-orm";
+import { eq, ilike, and, lte, or, desc, asc, count, gte, sql, getTableColumns } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth.js";
 import { audit } from "../lib/audit.js";
+import { Errors } from "../lib/errors.js";
 import multer from "multer";
 import * as XLSX from "xlsx";
 
@@ -55,7 +56,7 @@ router.get("/categories", requireAuth, async (req: Request, res: Response) => {
     res.json(results.map((r) => r.category).filter(Boolean));
   } catch (err) {
     req.log?.error({ err }, "List categories error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -71,7 +72,7 @@ router.get("/brands", requireAuth, async (req: Request, res: Response) => {
     res.json(results.map((r) => r.brand).filter(Boolean));
   } catch (err) {
     req.log?.error({ err }, "List brands error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -90,26 +91,7 @@ router.get("/generate-barcode", requireAuth, async (req: Request, res: Response)
     res.json({ barcode });
   } catch (err) {
     req.log?.error({ err }, "Generate barcode error");
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-// POST /api/products/generate-barcode
-router.post("/generate-barcode", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const cid = req.companyId;
-    let barcode: string;
-    let isUnique = false;
-    do {
-      barcode = String(Math.floor(100000000000 + Math.random() * 900000000000));
-      const [existing] = await db.select({ id: productsTable.id }).from(productsTable)
-        .where(and(eq(productsTable.companyId, cid), eq(productsTable.barcode, barcode)));
-      isUnique = !existing;
-    } while (!isUnique);
-    res.json({ barcode });
-  } catch (err) {
-    req.log?.error({ err }, "Generate barcode error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -136,7 +118,7 @@ router.get("/barcode/:barcode", requireAuth, async (req: Request, res: Response)
     res.json(await formatProduct(product));
   } catch (err) {
     req.log?.error({ err }, "Get product by barcode error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -176,7 +158,7 @@ router.get("/export", requireAuth, async (req: Request, res: Response) => {
     res.json({ products, total: products.length });
   } catch (err) {
     req.log?.error({ err }, "Export products error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -214,7 +196,7 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const cid = req.companyId;
-      const mode = (req.body.mode as string) ?? "skip"; // "skip" | "update"
+      const mode = req.body.mode === "update" ? "update" : "skip"; // "skip" | "update"
 
       if (!req.file) {
         res.status(400).json({ error: { code: "BAD_REQUEST", message: "Dosya yüklenmedi", details: null } });
@@ -382,48 +364,49 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+    const viewsAgg = db
+      .select({
+        productId: productViewsTable.productId,
+        views30Days: count().as("views30Days"),
+      })
+      .from(productViewsTable)
+      .where(and(eq(productViewsTable.companyId, cid), gte(productViewsTable.viewedAt, thirtyDaysAgo)))
+      .groupBy(productViewsTable.productId)
+      .as("views_agg");
+
+    const salesAgg = db
+      .select({
+        productId: salesTable.productId,
+        sales30Days: sql<number>`coalesce(sum(${salesTable.quantity}), 0)`.as("sales30Days"),
+      })
+      .from(salesTable)
+      .where(and(eq(salesTable.companyId, cid), gte(salesTable.createdAt, thirtyDaysAgo)))
+      .groupBy(salesTable.productId)
+      .as("sales_agg");
+
     const [products, totalResult] = await Promise.all([
-      db.select().from(productsTable).where(whereClause).orderBy(orderFn(orderColumn)).limit(limitNum).offset(offset),
+      db
+        .select({
+          ...getTableColumns(productsTable),
+          views30Days: sql<number>`coalesce(${viewsAgg.views30Days}, 0)::int`,
+          sales30Days: sql<number>`coalesce(${salesAgg.sales30Days}, 0)`,
+        })
+        .from(productsTable)
+        .leftJoin(viewsAgg, eq(productsTable.id, viewsAgg.productId))
+        .leftJoin(salesAgg, eq(productsTable.id, salesAgg.productId))
+        .where(whereClause)
+        .orderBy(orderFn(orderColumn))
+        .limit(limitNum)
+        .offset(offset),
       db.select({ count: count() }).from(productsTable).where(whereClause),
     ]);
 
     const total = totalResult[0]?.count ?? 0;
-    const productIds = products.map((p) => p.id);
 
-    const [viewCounts, saleCounts] = await Promise.all([
-      productIds.length > 0
-        ? db.select({ productId: productViewsTable.productId, cnt: count() })
-            .from(productViewsTable)
-            .where(and(
-              sql`${productViewsTable.productId} = ANY(${sql.raw(`ARRAY[${productIds.join(",")}]`)})`,
-              gte(productViewsTable.viewedAt, thirtyDaysAgo)
-            ))
-            .groupBy(productViewsTable.productId)
-        : Promise.resolve([]),
-      productIds.length > 0
-        ? db.select({ productId: salesTable.productId, total: sql<number>`COALESCE(SUM(${salesTable.quantity}), 0)` })
-            .from(salesTable)
-            .where(and(
-              sql`${salesTable.productId} = ANY(${sql.raw(`ARRAY[${productIds.join(",")}]`)})`,
-              gte(salesTable.createdAt, thirtyDaysAgo)
-            ))
-            .groupBy(salesTable.productId)
-        : Promise.resolve([]),
-    ]);
-
-    const viewMap = new Map(viewCounts.map((v) => [v.productId, v.cnt]));
-    const saleMap = new Map(saleCounts.map((s) => [s.productId, Number(s.total)]));
-
-    const formatted = products.map((p) => ({
-      ...p,
-      views30Days: viewMap.get(p.id) ?? 0,
-      sales30Days: saleMap.get(p.id) ?? 0,
-    }));
-
-    res.json({ products: formatted, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
+    res.json({ products, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
   } catch (err) {
     req.log?.error({ err }, "List products error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -501,7 +484,7 @@ router.get("/:id", requireAuth, async (req: Request, res: Response) => {
     res.json(await formatProduct(product));
   } catch (err) {
     req.log?.error({ err }, "Get product error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -548,7 +531,7 @@ router.put("/:id", requireAuth, async (req: Request, res: Response) => {
       return;
     }
     req.log?.error({ err }, "Update product error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 

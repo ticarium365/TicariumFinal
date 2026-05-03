@@ -10,7 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Plus, RefreshCw, Activity, Trash2, ShoppingCart, ListChecks, Settings as SettingsIcon, Package, CheckCircle2, AlertCircle, Clock, AlertOctagon, Hourglass, Loader2, Store, WifiOff, PackageOpen, ChevronRight, Rocket } from "lucide-react";
 import { MarketplaceAutopilotPanel } from "./MarketplaceAutopilotPanel";
+import { OnlineSalesFeatureGate } from "@/components/online-sales-feature-gate";
 import { useToast } from "@/hooks/use-toast";
+import { toastError, toastSuccess } from "@/lib/app-toast";
+import { SkeletonBlock, SkeletonLine, SkeletonTable } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Provider = { key: string; label: string; needs: string[] };
 type Account = {
@@ -61,6 +65,8 @@ export default function MarketplacePage() {
   const [globalPendingCount, setGlobalPendingCount] = useState(0);
   const [globalPendingOrders, setGlobalPendingOrders] = useState<MOrder[]>([]);
   const [publishedProductsCount, setPublishedProductsCount] = useState(0);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [ordersLoading, setOrdersLoading] = useState(false);
 
   const [newProvider, setNewProvider] = useState("mock");
   const [newName, setNewName] = useState("Mock Mağaza");
@@ -68,18 +74,24 @@ export default function MarketplacePage() {
   const [newCreds, setNewCreds] = useState<Record<string, string>>({});
 
   async function refresh() {
-    const [p, a, j, l] = await Promise.all([
-      api<Provider[]>("/marketplace/providers"),
-      api<Account[]>("/marketplace/accounts"),
-      api<Job[]>("/marketplace/jobs"),
-      api<Log[]>("/marketplace/logs"),
-    ]);
-    setProviders(p); setAccounts(a); setJobs(j); setLogs(l);
-    await loadOrders();
-    fetchKpiData().catch(() => {});
+    setPageLoading(true);
+    try {
+      const [p, a, j, l] = await Promise.all([
+        api<Provider[]>("/marketplace/providers"),
+        api<Account[]>("/marketplace/accounts"),
+        api<Job[]>("/marketplace/jobs"),
+        api<Log[]>("/marketplace/logs"),
+      ]);
+      setProviders(p); setAccounts(a); setJobs(j); setLogs(l);
+      await loadOrders();
+      fetchKpiData().catch(() => {});
+    } finally {
+      setPageLoading(false);
+    }
   }
 
   async function loadOrders() {
+    setOrdersLoading(true);
     const qs = orderFilter === "pending" ? "?converted=false"
       : orderFilter === "converted" ? "?converted=true" : "";
     try {
@@ -87,6 +99,8 @@ export default function MarketplacePage() {
       setOrders(o);
     } catch (e: any) {
       // sessizce yut — yetki yoksa
+    } finally {
+      setOrdersLoading(false);
     }
   }
 
@@ -134,7 +148,11 @@ export default function MarketplacePage() {
     }
   }
 
-  useEffect(() => { refresh().catch(console.error); }, []);
+  useEffect(() => {
+    refresh().catch(() => {
+      toastError("Pazaryeri verileri yüklenemedi.");
+    });
+  }, []);
   useEffect(() => { loadOrders().catch(() => {}); }, [orderFilter]);
   useEffect(() => { fetchKpiData().catch(() => {}); }, []);
   useEffect(() => {
@@ -154,7 +172,8 @@ export default function MarketplacePage() {
 
   async function healthCheck(id: number) {
     const r = await api<any>(`/marketplace/accounts/${id}/health-check`, { method: "POST" });
-    alert(`${r.ok ? "✓" : "✗"} ${r.message}`);
+    if (r.ok) toastSuccess(r.message);
+    else toastError(r.message);
     refresh();
   }
 
@@ -198,6 +217,7 @@ export default function MarketplacePage() {
   const visibleAccounts = showTestAccounts ? accounts : realAccounts;
 
   return (
+    <OnlineSalesFeatureGate>
     <div className="container mx-auto p-6 space-y-4" data-testid="page-marketplace">
       <div className="flex items-center justify-between">
         <div>
@@ -388,16 +408,40 @@ export default function MarketplacePage() {
               </CardContent>
             </Card>
           )}
-          {visibleAccounts.length === 0 && (
+          {pageLoading ? (
+            <div className="space-y-3">
+              {[0, 1, 2].map((k) => (
+                <Card key={k}>
+                  <CardHeader className="space-y-3">
+                    <div className="flex justify-between gap-3 flex-wrap">
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <SkeletonLine width="min(280px, 55%)" height={22} borderRadius={6} />
+                        <SkeletonLine width="85%" height={14} />
+                      </div>
+                      <div className="flex gap-2">
+                        <SkeletonBlock width={120} height={32} borderRadius={6} />
+                        <SkeletonBlock width={120} height={32} borderRadius={6} />
+                        <SkeletonBlock width={40} height={32} borderRadius={6} />
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          ) : null}
+          {!pageLoading && visibleAccounts.length === 0 && (
             <Card>
-              <CardContent className="py-10 text-center text-muted-foreground">
-                <Package className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                <p className="font-medium">Henüz gerçek mağaza eklenmemiş</p>
-                <p className="text-sm mt-1">Sağ üstten "Yeni Mağaza" butonuyla Trendyol, Hepsiburada gibi pazaryerlerini bağla.</p>
+              <CardContent className="py-6">
+                <EmptyState
+                  icon={Store}
+                  title="Henüz kanal bağlanmadı"
+                  description="Trendyol, Hepsiburada veya n11 hesabınızı bağlayarak satışlarınızı senkronize edin."
+                  action={{ label: "Kanal Bağla", onClick: () => setOpenCreate(true), testId: "empty-connect-channel" }}
+                />
               </CardContent>
             </Card>
           )}
-          {visibleAccounts.map((a) => {
+          {!pageLoading && visibleAccounts.map((a) => {
             const isTest = isTestAccount(a);
             return (
             <Card key={a.id} data-testid={`account-${a.id}`} className={isTest ? "opacity-70" : ""}>
@@ -446,6 +490,9 @@ export default function MarketplacePage() {
             </Button>
           </div>
           <Card><CardContent className="p-0 overflow-x-auto">
+            {ordersLoading ? (
+              <SkeletonTable rows={6} columns={10} rowHeight={40} className="border-0 rounded-none" />
+            ) : (
             <table className="w-full text-sm">
               <thead className="bg-muted text-left">
                 <tr>
@@ -505,6 +552,7 @@ export default function MarketplacePage() {
                 )}
               </tbody>
             </table>
+            )}
           </CardContent></Card>
         </TabsContent>
 
@@ -537,6 +585,7 @@ export default function MarketplacePage() {
         </TabsContent>
       </Tabs>
     </div>
+    </OnlineSalesFeatureGate>
   );
 }
 

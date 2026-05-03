@@ -4,6 +4,7 @@ import { db, companiesTable, usersTable, productsTable, salesTable } from "@work
 import { eq, count, sql } from "drizzle-orm";
 import { requireAuth, requireSuperAdmin } from "../middlewares/auth.js";
 import { validateSubdomain, listReservedSubdomains } from "../lib/reserved-subdomains.js";
+import { Errors } from "../lib/errors.js";
 
 const router = Router();
 
@@ -34,7 +35,7 @@ router.get("/", requireAuth, requireSuperAdmin, async (req: Request, res: Respon
     res.json(enriched);
   } catch (err) {
     req.log?.error({ err }, "List companies error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -96,7 +97,7 @@ router.post("/", requireAuth, requireSuperAdmin, async (req: Request, res: Respo
       return;
     }
     req.log?.error({ err }, "Create company error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -121,7 +122,7 @@ router.get("/:id", requireAuth, requireSuperAdmin, async (req: Request, res: Res
     res.json({ ...company, users });
   } catch (err) {
     req.log?.error({ err }, "Get company error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -156,7 +157,7 @@ router.patch("/:id", requireAuth, requireSuperAdmin, async (req: Request, res: R
     res.json(company);
   } catch (err) {
     req.log?.error({ err }, "Update company error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 

@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
-import { tr } from "date-fns/locale";
 import {
   Wallet, TrendingUp, TrendingDown, PiggyBank, Plus, X, Download,
   ChevronRight, ArrowUpRight, ArrowDownRight, Filter, RefreshCw, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { formatTryCurrency, formatTrDate, formatTrDateTime } from "@/lib/finance-intl";
 import { useToast } from "@/hooks/use-toast";
+import { SkeletonBlock, SkeletonLine, SkeletonTable } from "@/components/ui/skeleton";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TİPLER
@@ -37,8 +39,6 @@ type TabId = "summary" | "expenses" | "cash";
 // ─────────────────────────────────────────────────────────────────────────────
 // YARDIMCI
 // ─────────────────────────────────────────────────────────────────────────────
-function fmt(n: number) { return n.toLocaleString("tr-TR", { minimumFractionDigits: 2 }); }
-
 const PM_LABELS: Record<string, string> = { cash: "Nakit", bank: "Banka", credit: "Kredi" };
 
 const PRESET_CATEGORIES = [
@@ -57,11 +57,14 @@ export default function FinancePage() {
   const { toast } = useToast();
   const [tab, setTab] = useState<TabId>("summary");
 
-  // Tarih aralığı (bu ay varsayılan)
-  const [startDate, setStartDate] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
-  const [endDate, setEndDate] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
+  const [range, setRange] = useState(() => ({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
+  }));
+  const startDate = format(range.from, "yyyy-MM-dd");
+  const endDate = format(range.to, "yyyy-MM-dd");
 
-  // Gider formu
+  // Gider formu — tarih aralığı yönetimi DateRangePicker üzerinden
   const [showExpenseForm, setShowExpenseForm] = useState(false);
 
   useEffect(() => {
@@ -281,13 +284,17 @@ export default function FinancePage() {
       {/* Tarih filtresi */}
       <div className="flex flex-wrap gap-2 items-center bg-card border rounded-xl p-3">
         <Filter className="h-4 w-4 text-muted-foreground" />
-        <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-36 h-7 text-sm" />
-        <span className="text-muted-foreground text-sm">→</span>
-        <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-36 h-7 text-sm" />
+        <DateRangePicker value={range} onChange={setRange} useShortLabel className="min-w-[220px]" />
         {DATE_PRESETS.map(p => (
           <button key={p.label}
+            type="button"
             className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${startDate === p.start && endDate === p.end ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}
-            onClick={() => { setStartDate(p.start); setEndDate(p.end); }}>
+            onClick={() => {
+              setRange({
+                from: new Date(p.start + "T12:00:00"),
+                to: new Date(p.end + "T12:00:00"),
+              });
+            }}>
             {p.label}
           </button>
         ))}
@@ -307,7 +314,33 @@ export default function FinancePage() {
       {tab === "summary" && (
         <div className="space-y-5">
           {summaryQ.isLoading ? (
-            <div className="py-16 text-center text-muted-foreground">Yükleniyor...</div>
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="bg-card border rounded-xl p-4 space-y-2">
+                    <SkeletonBlock width={36} height={36} borderRadius={8} />
+                    <SkeletonLine width="60%" height={14} />
+                    <SkeletonLine width="80%" height={24} />
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-card border rounded-xl p-4 space-y-3">
+                  <SkeletonLine width={140} height={16} />
+                  <SkeletonLine width="50%" height={32} />
+                  <SkeletonLine width="70%" height={12} />
+                </div>
+                <div className="bg-card border rounded-xl p-4 space-y-3">
+                  <SkeletonLine width={120} height={16} />
+                  <div className="space-y-2 pt-1">
+                    <SkeletonLine width="100%" height={12} />
+                    <SkeletonLine width="90%" height={12} />
+                    <SkeletonLine width="95%" height={12} />
+                  </div>
+                </div>
+              </div>
+              <SkeletonTable rows={6} columns={5} rowHeight={40} />
+            </div>
           ) : summary ? (
             <>
               {/* KPI kartları */}
@@ -322,7 +355,7 @@ export default function FinancePage() {
                     <div className={`inline-flex h-9 w-9 rounded-lg ${c.bg} items-center justify-center mb-2`}>
                       <c.icon className={`h-5 w-5 ${c.color}`} />
                     </div>
-                    <p className={`text-xl font-bold ${c.color}`}>{fmt(c.value)} ₺</p>
+                    <p className={`text-xl font-bold ${c.color}`}>{formatTryCurrency(c.value, 2)}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{c.label}</p>
                   </div>
                 ))}
@@ -336,7 +369,7 @@ export default function FinancePage() {
                     <Wallet className="h-4 w-4 text-muted-foreground" />
                     <p className="font-semibold text-sm">Kasa Bakiyesi</p>
                   </div>
-                  <p className="text-3xl font-bold">{fmt(summary.totalCashBalance)} ₺</p>
+                  <p className="text-3xl font-bold">{formatTryCurrency(summary.totalCashBalance, 2)}</p>
                   <p className="text-xs text-muted-foreground mt-1">Tüm kasaların toplamı</p>
                 </div>
 
@@ -353,7 +386,7 @@ export default function FinancePage() {
                           <div key={i} className="space-y-0.5">
                             <div className="flex justify-between text-xs">
                               <span>{c.categoryIcon && `${c.categoryIcon} `}{c.categoryName ?? "Kategorisiz"}</span>
-                              <span className="font-semibold">{fmt(c.total)} ₺ ({pct.toFixed(0)}%)</span>
+                              <span className="font-semibold">{formatTryCurrency(c.total, 2)} ({pct.toFixed(0)}%)</span>
                             </div>
                             <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                               <div className="h-full bg-red-400 rounded-full" style={{ width: `${pct}%` }} />
@@ -389,11 +422,11 @@ export default function FinancePage() {
                           const net = s.profit - exp;
                           return (
                             <tr key={s.day} className="hover:bg-muted/20">
-                              <td className="px-4 py-2">{format(new Date(s.day + "T12:00:00"), "d MMM yyyy", { locale: tr })}</td>
-                              <td className="px-4 py-2 text-right font-mono">{fmt(s.revenue)}</td>
-                              <td className="px-4 py-2 text-right font-mono text-green-600">{fmt(s.profit)}</td>
-                              <td className="px-4 py-2 text-right font-mono text-red-500">{exp > 0 ? fmt(exp) : "—"}</td>
-                              <td className={`px-4 py-2 text-right font-mono font-semibold ${net >= 0 ? "text-green-600" : "text-red-600"}`}>{fmt(net)}</td>
+                              <td className="px-4 py-2">{formatTrDate(new Date(s.day + "T12:00:00"), { day: "numeric", month: "short", year: "numeric" })}</td>
+                              <td className="px-4 py-2 text-right font-mono">{formatTryCurrency(s.revenue, 2)}</td>
+                              <td className="px-4 py-2 text-right font-mono text-green-600">{formatTryCurrency(s.profit, 2)}</td>
+                              <td className="px-4 py-2 text-right font-mono text-red-500">{exp > 0 ? formatTryCurrency(exp, 2) : "—"}</td>
+                              <td className={`px-4 py-2 text-right font-mono font-semibold ${net >= 0 ? "text-green-600" : "text-red-600"}`}>{formatTryCurrency(net, 2)}</td>
                             </tr>
                           );
                         })}
@@ -524,7 +557,18 @@ export default function FinancePage() {
 
           {/* Gider listesi */}
           {expensesQ.isLoading ? (
-            <div className="py-8 text-center text-muted-foreground">Yükleniyor...</div>
+            <div className="bg-card border rounded-xl overflow-hidden divide-y">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-3">
+                  <SkeletonBlock width={36} height={36} borderRadius={8} />
+                  <div className="flex-1 space-y-2 min-w-0">
+                    <SkeletonLine width="55%" height={16} />
+                    <SkeletonLine width="40%" height={12} />
+                  </div>
+                  <SkeletonLine width={72} height={16} />
+                </div>
+              ))}
+            </div>
           ) : expenses.length === 0 ? (
             <div className="py-12 text-center border-2 border-dashed rounded-xl">
               <p className="text-muted-foreground">Bu dönemde gider yok</p>
@@ -536,7 +580,7 @@ export default function FinancePage() {
             <div className="bg-card border rounded-xl overflow-hidden">
               <div className="p-3 border-b flex items-center justify-between">
                 <p className="text-sm font-semibold">{expenses.length} gider</p>
-                <p className="text-sm font-bold text-red-600">{fmt(expensesQ.data?.totalAmount ?? 0)} ₺</p>
+                <p className="text-sm font-bold text-red-600">{formatTryCurrency(expensesQ.data?.totalAmount ?? 0, 2)}</p>
               </div>
               <div className="divide-y max-h-[500px] overflow-y-auto">
                 {expenses.map(e => (
@@ -548,11 +592,11 @@ export default function FinancePage() {
                       <p className="text-sm font-semibold truncate">{e.description}</p>
                       <p className="text-xs text-muted-foreground">
                         {e.categoryName ?? "Kategorisiz"} •{" "}
-                        {format(new Date(e.expenseDate), "d MMM yyyy", { locale: tr })} •{" "}
+                        {formatTrDate(e.expenseDate)} •{" "}
                         {PM_LABELS[e.paymentMethod] ?? e.paymentMethod}
                       </p>
                     </div>
-                    <p className="text-sm font-bold text-red-600 shrink-0">{fmt(e.amount)} ₺</p>
+                    <p className="text-sm font-bold text-red-600 shrink-0">{formatTryCurrency(e.amount, 2)}</p>
                     <button onClick={() => deleteExpense.mutate(e.id)}
                       className="text-muted-foreground hover:text-destructive p-1 rounded ml-1 shrink-0">
                       <Trash2 className="h-3.5 w-3.5" />
@@ -569,7 +613,19 @@ export default function FinancePage() {
       {tab === "cash" && (
         <div className="space-y-4">
           {cashQ.isLoading ? (
-            <div className="py-8 text-center text-muted-foreground">Yükleniyor...</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="bg-card border rounded-xl p-4">
+                  <div className="flex items-center gap-3">
+                    <SkeletonBlock width={40} height={40} borderRadius={12} />
+                    <div className="flex-1 space-y-2">
+                      <SkeletonLine width="50%" height={16} />
+                      <SkeletonLine width="40%" height={24} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <>
               {/* Kasa kartları */}
@@ -587,7 +643,7 @@ export default function FinancePage() {
                       </div>
                       <div className="ml-auto text-right">
                         <p className={`text-xl font-bold ${r.currentBalance >= 0 ? "text-green-600" : "text-red-600"}`}>
-                          {fmt(r.currentBalance)} ₺
+                          {formatTryCurrency(r.currentBalance, 2)}
                         </p>
                       </div>
                     </div>
@@ -642,7 +698,18 @@ export default function FinancePage() {
                     </button>
                   </div>
                   {movementsQ.isLoading ? (
-                    <div className="py-8 text-center text-muted-foreground text-sm">Yükleniyor...</div>
+                    <div className="divide-y">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="flex items-center gap-3 px-4 py-3">
+                          <SkeletonBlock width={32} height={32} borderRadius={9999} />
+                          <div className="flex-1 space-y-2 min-w-0">
+                            <SkeletonLine width="70%" height={14} />
+                            <SkeletonLine width="45%" height={12} />
+                          </div>
+                          <SkeletonLine width={64} height={16} />
+                        </div>
+                      ))}
+                    </div>
                   ) : movements.length === 0 ? (
                     <div className="py-8 text-center text-muted-foreground text-sm">Bu dönemde hareket yok</div>
                   ) : (
@@ -657,12 +724,12 @@ export default function FinancePage() {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm truncate">{m.description}</p>
                             <p className="text-xs text-muted-foreground">
-                              {format(new Date(m.createdAt), "d MMM HH:mm", { locale: tr })}
-                              {m.balanceAfter != null && ` • Bakiye: ${fmt(m.balanceAfter)} ₺`}
+                              {formatTrDateTime(m.createdAt)}
+                              {m.balanceAfter != null && ` • Bakiye: ${formatTryCurrency(m.balanceAfter, 2)}`}
                             </p>
                           </div>
                           <p className={`text-sm font-bold shrink-0 ${m.direction === "in" ? "text-green-600" : "text-red-600"}`}>
-                            {m.direction === "in" ? "+" : "-"}{fmt(m.amount)} ₺
+                            {m.direction === "in" ? "+" : "-"}{formatTryCurrency(m.amount, 2)}
                           </p>
                         </div>
                       ))}

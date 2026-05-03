@@ -11,9 +11,9 @@ export function BrandLogo({ size = 40, className, variant = "color" }: Props) {
   const gradId = `bl-${uid}-grad`;
   const shineId = `bl-${uid}-shine`;
 
-  const bgFill = variant === "mono-light" ? "#FFFFFF" : `url(#${gradId})`;
-  const tFill = variant === "mono-light" ? "#0F172A" : "#FFFFFF";
-  const dotFill = variant === "mono-light" ? "#2563EB" : "#5EEAD4";
+  const bgFill = variant === "mono-light" ? "var(--color-surface-card)" : `url(#${gradId})`;
+  const tFill = variant === "mono-light" ? "var(--color-neutral-900)" : "var(--color-nav-text-active)";
+  const dotFill = variant === "mono-light" ? "var(--color-brand-500)" : "var(--color-accent-teal)";
 
   return (
     <svg
@@ -26,13 +26,13 @@ export function BrandLogo({ size = 40, className, variant = "color" }: Props) {
     >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#1E3A8A" />
-          <stop offset="55%" stopColor="#2563EB" />
-          <stop offset="100%" stopColor="#0EA5A4" />
+          <stop offset="0%" stopColor="var(--color-brand-900)" />
+          <stop offset="55%" stopColor="var(--color-brand-500)" />
+          <stop offset="100%" stopColor="var(--color-accent-teal)" />
         </linearGradient>
         <linearGradient id={shineId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.28" />
-          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+          <stop offset="0%" stopColor="var(--color-nav-text-active)" stopOpacity="0.28" />
+          <stop offset="100%" stopColor="var(--color-nav-text-active)" stopOpacity="0" />
         </linearGradient>
       </defs>
 
@@ -63,15 +63,15 @@ export function BrandWordmark({ className, light = false }: WordmarkProps) {
   return (
     <span
       className={className ?? "font-bold text-lg tracking-tight leading-none"}
-      style={{ fontFamily: "var(--font-display)", color: light ? "#FFFFFF" : "#0F172A" }}
+      style={{ fontFamily: "var(--font-display)", color: light ? "var(--color-nav-text-active)" : "var(--color-neutral-900)" }}
     >
       Ticarium
       <span
         style={
           light
-            ? { color: "#A5F3FC" }
+            ? { color: "var(--color-brand-200)" }
             : {
-                background: "linear-gradient(135deg,#2563EB 0%,#0EA5A4 100%)",
+                background: "linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-accent-teal) 100%)",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
                 color: "transparent",

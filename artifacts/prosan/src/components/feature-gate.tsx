@@ -20,9 +20,9 @@ export function FeatureGate({ feature, children, title }: Props) {
   if (isLoading) {
     return (
       <div className="space-y-3 animate-pulse" data-testid="feature-gate-loading">
-        <div className="h-8 w-48 bg-slate-200 rounded" />
-        <div className="h-32 bg-slate-100 rounded" />
-        <div className="h-32 bg-slate-100 rounded" />
+        <div className="h-8 w-48 rounded bg-[color-mix(in_srgb,var(--color-neutral-500)_18%,var(--color-surface-card))]" />
+        <div className="h-32 rounded bg-[color-mix(in_srgb,var(--color-neutral-500)_10%,var(--color-surface-card))]" />
+        <div className="h-32 rounded bg-[color-mix(in_srgb,var(--color-neutral-500)_10%,var(--color-surface-card))]" />
       </div>
     );
   }
@@ -39,22 +39,34 @@ export function FeatureGate({ feature, children, title }: Props) {
 
       {/* Kilit overlay */}
       <div className="absolute inset-0 flex items-start justify-center pt-16">
-        <Card className="max-w-md w-[92%] shadow-2xl border-blue-200">
+        <Card className="max-w-md w-[92%] shadow-2xl border-[color:color-mix(in_srgb,var(--color-brand-500)_35%,var(--color-border-subtle))]">
           <CardContent className="p-8 text-center space-y-4">
-            <div className="mx-auto w-14 h-14 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
-              <Lock className="h-7 w-7 text-blue-700" />
+            <div
+              className="mx-auto flex h-14 w-14 items-center justify-center rounded-full"
+              style={{
+                background:
+                  "linear-gradient(to bottom right, color-mix(in srgb, var(--color-brand-200) 80%, var(--color-surface-card)), color-mix(in srgb, var(--color-accent-violet) 15%, var(--color-surface-card)))",
+              }}
+            >
+              <Lock className="h-7 w-7 text-[color:var(--color-brand-700)]" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-xl font-bold text-[color:var(--color-neutral-900)]">
                 {title ?? "Bu modül paketinizde yok"}
               </h2>
-              <p className="text-sm text-slate-600 mt-2">
+              <p className="mt-2 text-sm text-[color:var(--color-neutral-600)]">
                 Mevcut paketiniz: <span className="font-semibold">{planName}</span>.
                 Bu özelliği kullanmak için paketinizi yükseltin — modülün önizlemesini
                 arka planda görebilirsiniz.
               </p>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-900 flex items-center gap-2 justify-center">
+            <div
+              className="flex items-center justify-center gap-2 rounded-lg border p-3 text-xs text-[color:var(--color-brand-900)]"
+              style={{
+                backgroundColor: "color-mix(in srgb, var(--color-brand-500) 10%, var(--color-surface-card))",
+                borderColor: "color-mix(in srgb, var(--color-brand-500) 30%, var(--color-border-subtle))",
+              }}
+            >
               <Sparkles className="h-4 w-4" />
               <span>Yükseltme: anında aktifleşir, verileriniz korunur.</span>
             </div>

@@ -1,5 +1,5 @@
 // Bütçe & Tahmin — Logo Tiger / Mikro Jump benzeri planlama
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import {
   db,
   budgetsTable,
@@ -14,6 +14,7 @@ import {
 } from "@workspace/db";
 import { and, eq, gte, lte, sql, desc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { z } from "zod";
 // Sprint 65 — canonical finance ledger + forecast engine + budget alerts
 import {
   getRevenueTotal, getExpenseByCategory,
@@ -27,6 +28,20 @@ import { dispatchBudgetAlerts } from "../services/notifications/dispatch.js";
 const router = Router();
 router.use(requireAuth);
 const requireWriter = requireRole(["admin", "staff", "super_admin"]);
+
+// Zod schemas for validation
+const budgetAlertDispatchSchema = z.object({
+  period: z.string().regex(/^\d{4}-\d{2}$/, "period YYYY-MM formatında olmalı"),
+  warningPct: z.number().positive("warningPct > 0 olmalı").optional(),
+  criticalPct: z.number().optional(),
+});
+
+const revenueForecastSaveSchema = z.object({
+  period: z.string().regex(/^\d{4}-\d{2}$/, "period YYYY-MM formatında olmalı"),
+  basis: z.string().optional(),
+  forecastAmount: z.number().optional(),
+  meta: z.record(z.unknown()).optional(),
+});
 
 function periodToRange(period: string): [Date, Date] | null {
   const m = /^(\d{4})-(\d{2})$/.exec(period);
@@ -229,28 +244,27 @@ router.get("/alerts", async (req, res) => {
 // ─── Sprint B — Bütçe alarmlarını in-app bildirime dağıt ───
 router.post("/alerts/dispatch", requireWriter, async (req, res) => {
   const companyId = req.companyId!;
-  const period = String(req.body?.period || req.query?.period || currentPeriod());
-  if (!/^\d{4}-\d{2}$/.test(period)) return res.status(400).json({ error: "period YYYY-MM" });
-  const warningPct = req.body?.warningPct ? Number(req.body.warningPct) : 20;
-  const criticalPct = req.body?.criticalPct ? Number(req.body.criticalPct) : 50;
-  if (!Number.isFinite(warningPct) || warningPct <= 0) return res.status(400).json({ error: "warningPct > 0 olmalı" });
-  if (!Number.isFinite(criticalPct) || criticalPct < warningPct) return res.status(400).json({ error: "criticalPct >= warningPct olmalı" });
+  const body = budgetAlertDispatchSchema.parse(req.body);
+  const period = body.period || currentPeriod();
+  const warningPct = body.warningPct ?? 20;
+  const criticalPct = body.criticalPct ?? 50;
+  if (criticalPct < warningPct) return res.status(400).json({ error: "criticalPct >= warningPct olmalı" });
   const alerts = await computeBudgetAlerts(companyId, { period, warningPct, criticalPct });
   const result = await dispatchBudgetAlerts(companyId, alerts);
   res.json({ period, ...result });
 });
 
 router.post("/forecast/revenue/save", requireWriter, async (req, res) => {
-  const { period, basis, forecastAmount, meta } = req.body || {};
-  if (!/^\d{4}-\d{2}$/.test(String(period || ""))) return res.status(400).json({ error: "period YYYY-MM" });
+  const body = revenueForecastSaveSchema.parse(req.body);
   const [row] = await db.insert(revenueForecastsTable).values({
     companyId: req.companyId!,
-    period, basis: basis || "trend3",
-    forecastAmount: String(forecastAmount || 0),
-    meta: meta ? JSON.stringify(meta) : null,
+    period: body.period,
+    basis: body.basis || "trend3",
+    forecastAmount: String(body.forecastAmount || 0),
+    meta: body.meta ? JSON.stringify(body.meta) : null,
   }).onConflictDoUpdate({
     target: [revenueForecastsTable.companyId, revenueForecastsTable.period, revenueForecastsTable.basis],
-    set: { forecastAmount: String(forecastAmount || 0), computedAt: new Date(), meta: meta ? JSON.stringify(meta) : null },
+    set: { forecastAmount: String(body.forecastAmount || 0), computedAt: new Date(), meta: body.meta ? JSON.stringify(body.meta) : null },
   }).returning();
   res.json(row);
 });

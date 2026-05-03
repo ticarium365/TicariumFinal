@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { db, productsTable } from "@workspace/db";
 import { ilike, and, eq, or, asc, desc, count, sql } from "drizzle-orm";
+import { Errors } from "../lib/errors.js";
 
 const router = Router();
 
@@ -77,7 +78,7 @@ router.get("/", async (req: Request, res: Response) => {
     });
   } catch (err) {
     req.log?.error({ err }, "Catalog list error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -109,7 +110,7 @@ router.get("/:id", async (req: Request, res: Response) => {
     res.json(product);
   } catch (err) {
     req.log?.error({ err }, "Catalog get product error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 

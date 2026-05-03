@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { customFetch, ApiError, ApiValidationError } from "@workspace/api-client-react";
 
 export interface CompanyInfo {
   id: number;
@@ -35,20 +36,29 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
 
     async function resolve() {
       // Önce oturum kontrolü — super_admin ise platform markası göster
-      const meRes = await fetch("/api/auth/me", {
-        credentials: "include",
-        cache: "no-store",
-      }).catch(() => null);
-      if (meRes?.ok) {
-        const me = await meRes.json().catch(() => null);
-        if (me?.role === "super_admin") {
-          if (mounted) { setCompany(PLATFORM); setIsLoading(false); }
+      try {
+        const me = await customFetch<{ role?: string }>("/api/auth/me", {
+          credentials: "include",
+          cache: "no-store",
+          responseType: "json",
+        });
+        if (me.role === "super_admin") {
+          if (mounted) {
+            setCompany(PLATFORM);
+            setIsLoading(false);
+          }
           return;
+        }
+      } catch (e) {
+        if (e instanceof ApiValidationError) {
+          /* Sentry: api-runtime-bootstrap */
+        } else if (!(e instanceof ApiError)) {
+          /* ağ / beklenmeyen */
         }
       }
 
       // Normal kullanıcı: tenant'a ait şirket bilgisini al
-      const tenantRes = await fetch("/api/auth/tenant", {
+      const tenantRes = await fetch("/api/settings/company", {
         credentials: "include",
         cache: "no-store",
       }).catch(() => null);

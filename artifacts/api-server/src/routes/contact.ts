@@ -63,14 +63,10 @@ router.get("/admin", requireAuth, requireSuperAdmin, async (_req: Request, res: 
 router.patch("/admin/:id", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ message: "Bad id" });
-  const status = String(req.body?.status || "");
-  if (!["new", "contacted", "archived"].includes(status)) {
-    return res.status(400).json({ message: "Bad status" });
-  }
-  const notes = typeof req.body?.notes === "string" ? req.body.notes : undefined;
-  const patch: Record<string, unknown> = { status };
-  if (notes !== undefined) patch.notes = notes;
-  if (status === "contacted") patch.contactedAt = new Date();
+  const body = updateSchema.parse(req.body);
+  const patch: Record<string, unknown> = { status: body.status };
+  if (body.notes !== undefined) patch.notes = body.notes;
+  if (body.status === "contacted") patch.contactedAt = new Date();
   await db.update(contactRequestsTable).set(patch).where(eq(contactRequestsTable.id, id));
   return res.json({ ok: true });
 });

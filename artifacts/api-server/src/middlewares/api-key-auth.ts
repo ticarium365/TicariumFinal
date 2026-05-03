@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { db, apiKeysTable, companiesTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { assertWithinUsageLimit, incrementUsageSafe } from "../services/usage.js";
+import { logger } from "../lib/logger.js";
 
 export async function requireApiKey(req: Request, res: Response, next: NextFunction) {
   const auth = req.headers.authorization;
@@ -72,7 +73,7 @@ export async function requireApiKey(req: Request, res: Response, next: NextFunct
         return;
       }
       // Quota dışı hata (DB/servis) → fail-closed 503: enforcement bypass yok
-      console.error("[api-key-auth] usage assert error (fail-closed):", err?.message);
+      logger.error({ err }, "[api-key-auth] usage assert error (fail-closed)");
       res.status(503).json({ error: { code: "USAGE_CHECK_UNAVAILABLE", message: "Kullanım denetimi geçici olarak kullanılamıyor, lütfen tekrar deneyin" } });
       return;
     }
@@ -80,7 +81,7 @@ export async function requireApiKey(req: Request, res: Response, next: NextFunct
 
     next();
   } catch (err) {
-    console.error("API key auth error", err);
+    logger.error({ err }, "API key auth error");
     res.status(500).json({ error: "Sunucu hatası" });
   }
 }

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Building2, Loader2, ArrowRight } from "lucide-react";
+import { LazyImage } from "@/components/lazy-image";
 
 type Seller = {
   id: number;
@@ -81,7 +82,7 @@ export default function Discovery() {
                     style={{ backgroundColor: s.primaryColor }}
                   >
                     {s.logoUrl ? (
-                      <img src={s.logoUrl} alt={s.name} className="h-10 w-10 rounded-lg object-cover" />
+                      <LazyImage src={s.logoUrl} alt={s.name} className="h-10 w-10 rounded-lg object-cover" />
                     ) : (
                       <Building2 className="h-5 w-5" />
                     )}

@@ -1,10 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { OnlineSalesFeatureGate } from "@/components/online-sales-feature-gate";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   TrendingUp, TrendingDown, Loader2, Sparkles, Trophy, AlertCircle,
   ShoppingBag, DollarSign, Percent, Package,
@@ -44,6 +53,8 @@ function fmtPct(n: number) {
   return `${n >= 0 ? "" : ""}${n.toFixed(1)}%`;
 }
 
+type MarginSort = "margin_desc" | "margin_asc" | "revenue_desc";
+
 export default function KarlilikKanalPage() {
   const { toast } = useToast();
   const [days, setDays] = useState(30);
@@ -51,6 +62,7 @@ export default function KarlilikKanalPage() {
   const [loading, setLoading] = useState(true);
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
+  const [marginSort, setMarginSort] = useState<MarginSort>("margin_desc");
 
   const load = async () => {
     setLoading(true);
@@ -71,9 +83,18 @@ export default function KarlilikKanalPage() {
 
   useEffect(() => { load(); }, [days]);
 
-  const maxRevenue = Math.max(1, ...(data?.items || []).map((x) => x.revenue));
+  const sortedItems = useMemo(() => {
+    const items = [...(data?.items ?? [])];
+    items.sort((a, b) => {
+      if (marginSort === "revenue_desc") return b.revenue - a.revenue;
+      if (marginSort === "margin_asc") return a.netMarginPct - b.netMarginPct;
+      return b.netMarginPct - a.netMarginPct;
+    });
+    return items;
+  }, [data?.items, marginSort]);
 
   return (
+    <OnlineSalesFeatureGate title="Kanal karlılığı paketinizde kapalı">
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
@@ -114,51 +135,83 @@ export default function KarlilikKanalPage() {
             <KpiCard icon={<DollarSign className="w-5 h-5" />} label="Toplam Ciro" value={fmt(data.totals.revenue)} sub={`${data.totals.orderCount} sipariş`} />
             <KpiCard icon={<TrendingUp className="w-5 h-5" />} label="Brüt Kâr" value={fmt(data.totals.grossProfit)} sub={`Maliyet: ${fmt(data.totals.cogs)}`} />
             <KpiCard icon={<TrendingDown className="w-5 h-5 text-red-500" />} label="Komisyon + Kargo" value={fmt(data.totals.commission + data.totals.shipping)} sub="Toplam giderler" />
-            <KpiCard icon={<Percent className="w-5 h-5 text-emerald-600" />} label="Net Marj" value={fmtPct(data.totals.netMarginPct)} sub={`Net: ${fmt(data.totals.netProfit)}`} highlight />
+            <KpiCard
+              icon={<Percent className="w-5 h-5 text-emerald-600" />}
+              label="Net Marj"
+              value={
+                <span className="inline-flex flex-wrap items-baseline gap-2">
+                  <span>{fmt(data.totals.netProfit)}</span>
+                  <span className="text-lg text-muted-foreground/90">{fmtPct(data.totals.netMarginPct)}</span>
+                </span>
+              }
+              sub="Net kâr (TL) ve marj oranı"
+              highlight
+            />
           </div>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Kanal Karşılaştırma Tablosu</CardTitle>
-              <CardDescription>Bir kanala tıklayarak en kârlı ürünlerini görebilirsiniz.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {data.items.map((row) => {
-                  const meta = CHANNEL_LABELS[row.channelKey] || { label: row.channelKey, color: "bg-muted text-foreground" };
-                  const widthPct = (row.revenue / maxRevenue) * 100;
-                  const isLoss = row.netProfit < 0;
-                  return (
-                    <button key={row.channelKey} onClick={() => loadTop(row.channelKey)}
-                      className={`w-full text-left p-4 border-2 rounded-lg hover:shadow-md transition ${selectedChannel === row.channelKey ? "border-emerald-500 bg-emerald-500/10/30" : "border-border"}`}>
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <Badge className={meta.color}>{meta.label}</Badge>
-                        <span className="text-sm text-muted-foreground">{row.orderCount} sipariş · {row.totalQty} adet</span>
-                        <div className="ml-auto text-right">
-                          <div className={`text-lg font-bold ${isLoss ? "text-red-600" : "text-emerald-300"}`}>
-                            {fmt(row.netProfit)} <span className="text-sm text-muted-foreground/70">net</span>
-                          </div>
-                          <div className="text-xs text-muted-foreground">Marj {fmtPct(row.netMarginPct)} · Ciro {fmt(row.revenue)}</div>
-                        </div>
-                      </div>
-                      <div className="mt-3 h-2 bg-muted rounded overflow-hidden">
-                        <div className={`h-full ${isLoss ? "bg-red-500" : "bg-emerald-500"}`} style={{ width: `${widthPct}%` }} />
-                      </div>
-                      <div className="mt-2 text-xs text-muted-foreground grid grid-cols-2 md:grid-cols-4 gap-2">
-                        <span>Ciro: <b className="text-foreground/90">{fmt(row.revenue)}</b></span>
-                        <span>COGS: <b className="text-foreground/90">{fmt(row.cogs)}</b></span>
-                        <span>Komisyon: <b className="text-amber-300">{fmt(row.commission)}</b></span>
-                        <span>Kargo: <b className="text-amber-300">{fmt(row.shipping)}</b></span>
-                      </div>
-                      {isLoss && (
-                        <div className="mt-2 text-xs text-red-600 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" /> Bu kanal zarar yazıyor — komisyon/kargo cironun üzerine çıkmış.
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+            <CardHeader className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+              <div>
+                <CardTitle>Kanal Karşılaştırma Tablosu</CardTitle>
+                <CardDescription>Bir kanala tıklayarak en kârlı ürünlerini görebilirsiniz.</CardDescription>
               </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Sırala:</span>
+                <Select value={marginSort} onValueChange={(v) => setMarginSort(v as MarginSort)}>
+                  <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="margin_desc">Marj % (yüksek → düşük)</SelectItem>
+                    <SelectItem value="margin_asc">Marj % (düşük → yüksek)</SelectItem>
+                    <SelectItem value="revenue_desc">Ciro (yüksek → düşük)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Kanal</TableHead>
+                    <TableHead className="text-right">Sipariş</TableHead>
+                    <TableHead className="text-right">Ciro</TableHead>
+                    <TableHead className="text-right">Net kâr</TableHead>
+                    <TableHead className="text-right">Marj %</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedItems.map((row) => {
+                    const meta = CHANNEL_LABELS[row.channelKey] || { label: row.channelKey, color: "bg-muted text-foreground" };
+                    const negMargin = row.netMarginPct < 0;
+                    return (
+                      <TableRow
+                        key={row.channelKey}
+                        data-state={selectedChannel === row.channelKey ? "selected" : undefined}
+                        className={`cursor-pointer ${negMargin ? "bg-[color-mix(in_srgb,var(--color-semantic-danger)_10%,var(--color-surface-card))]" : ""} ${selectedChannel === row.channelKey ? "ring-1 ring-emerald-500/40" : ""}`}
+                        onClick={() => loadTop(row.channelKey)}
+                      >
+                        <TableCell>
+                          <Badge className={meta.color}>{meta.label}</Badge>
+                          <div className="text-xs text-muted-foreground mt-1">{row.totalQty} adet</div>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">{row.orderCount}</TableCell>
+                        <TableCell className="text-right tabular-nums">{fmt(row.revenue)}</TableCell>
+                        <TableCell className={`text-right tabular-nums font-semibold ${row.netProfit < 0 ? "text-[color:var(--color-semantic-danger)]" : "text-emerald-700 dark:text-emerald-300"}`}>
+                          {fmt(row.netProfit)}
+                        </TableCell>
+                        <TableCell className={`text-right tabular-nums ${negMargin ? "text-[color:var(--color-semantic-danger)] font-medium" : ""}`}>
+                          {fmtPct(row.netMarginPct)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              {sortedItems.some((r) => r.netProfit < 0) && (
+                <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 shrink-0" />
+                  Negatif marjlı satırlar vurgulandı — komisyon ve kargo ciro üzerinde.
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -178,8 +231,15 @@ export default function KarlilikKanalPage() {
                         <div className="font-medium truncate">{p.product_name}</div>
                         <div className="text-xs text-muted-foreground/70">{p.product_code} · {p.qty} adet</div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-semibold text-emerald-300">{fmt(Number(p.net_profit))}</div>
+                      <div className="text-right space-y-0.5">
+                        <div className="inline-flex flex-wrap items-baseline justify-end gap-x-2 gap-y-0 font-semibold text-emerald-700 dark:text-emerald-300">
+                          <span>{fmt(Number(p.net_profit))}</span>
+                          {p.margin_pct != null && (
+                            <span className="text-xs font-normal text-muted-foreground tabular-nums">
+                              {fmtPct(Number(p.margin_pct))}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-muted-foreground/70">Ciro {fmt(Number(p.revenue))}</div>
                       </div>
                     </div>
@@ -191,10 +251,11 @@ export default function KarlilikKanalPage() {
         </>
       )}
     </div>
+    </OnlineSalesFeatureGate>
   );
 }
 
-function KpiCard({ icon, label, value, sub, highlight }: { icon: React.ReactNode; label: string; value: string; sub: string; highlight?: boolean }) {
+function KpiCard({ icon, label, value, sub, highlight }: { icon: React.ReactNode; label: string; value: React.ReactNode; sub: string; highlight?: boolean }) {
   return (
     <Card className={highlight ? "border-emerald-500" : ""}>
       <CardContent className="p-4">

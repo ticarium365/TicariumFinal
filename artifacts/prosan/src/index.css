@@ -1,3 +1,5 @@
+@import "./styles/tokens.css";
+@config "../tailwind.config.ts";
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -179,12 +181,48 @@
 }
 
 @layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p {
+    margin: 0;
+  }
+
   * {
     @apply border-border;
   }
 
+  html {
+    background-color: var(--color-surface-bg);
+    color: var(--color-neutral-900);
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-normal);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .dark html {
+    color: var(--color-neutral-50);
+  }
+
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    margin: 0;
+    min-height: 100%;
+    background-color: var(--color-surface-bg);
+    color: var(--color-neutral-900);
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-normal);
+    -webkit-font-smoothing: antialiased;
     /* Light Mode: çok hafif sıcak beyaz + ferah mavi tonu */
     background-image:
       radial-gradient(circle at 0% 0%, hsl(221 83% 53% / 0.04) 0%, transparent 50%),
@@ -192,8 +230,8 @@
     background-attachment: fixed;
   }
 
-  /* Dark mode: cyan/violet/emerald glow blob'lar */
   .dark body {
+    color: var(--color-neutral-50);
     background-image:
       radial-gradient(circle at 0% 0%, hsl(189 94% 50% / 0.08) 0%, transparent 45%),
       radial-gradient(circle at 100% 10%, hsl(262 83% 65% / 0.10) 0%, transparent 50%),
@@ -252,6 +290,22 @@
 }
 
 @layer utilities {
+  /* Sidebar — design token tabanlı (P1-C) */
+  .sidebar-bg {
+    background-color: var(--color-nav-900);
+  }
+  .sidebar-text {
+    color: var(--color-nav-text);
+  }
+  .sidebar-item-active {
+    color: var(--color-nav-text-active);
+    background-color: var(--color-nav-800);
+  }
+  .sidebar-item-hover:hover {
+    color: var(--color-nav-text-active);
+    background-color: var(--color-nav-800);
+  }
+
   /* Premium marka gradyanı — Indigo → Teal (light pages) */
   .t365-brand-gradient {
     background: linear-gradient(135deg, hsl(234 89% 60%) 0%, hsl(180 70% 40%) 100%);
@@ -406,5 +460,65 @@
   .t365-mono {
     font-family: 'JetBrains Mono', var(--app-font-mono);
     font-feature-settings: "tnum";
+  }
+
+  /* Ana içerik — rota değişiminde hafif fade (yan panel kaydırmaz) */
+  @keyframes t365-route-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .t365-page-main {
+    animation: t365-route-fade 150ms ease-out;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .t365-page-main { animation: none; }
+  }
+
+  /* Veri tabloları — satır zemin geçişi; çoklu satır kaydırması yok */
+  .t365-data-table tbody tr {
+    transition: background-color 120ms ease;
+  }
+  .t365-data-table tbody tr:hover {
+    background-color: var(--color-neutral-50);
+  }
+  .dark .t365-data-table tbody tr:hover {
+    background-color: color-mix(in srgb, var(--color-neutral-500) 14%, transparent);
+  }
+
+  /* İsteğe bağlı seçim sütunu: satır hover'da soldan belirir */
+  .t365-data-table--selectable tbody tr .t365-row-select-wrap {
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateX(-6px);
+    transition:
+      width 150ms ease,
+      opacity 150ms ease,
+      transform 150ms ease,
+      padding 150ms ease;
+  }
+  .t365-data-table--selectable tbody tr:hover .t365-row-select-wrap {
+    width: 2.5rem;
+    min-width: 2.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.25rem;
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* Satır detayı — grid-template-rows ile yükseklik (max-height animasyonu değil) */
+  .t365-expand-row {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 150ms ease-out;
+  }
+  .t365-expand-row[data-open="true"] {
+    grid-template-rows: 1fr;
+  }
+  .t365-expand-row > .t365-expand-inner {
+    min-height: 0;
+    overflow: hidden;
   }
 }

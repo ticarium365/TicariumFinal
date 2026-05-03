@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { PublicNav } from "@/components/public-nav";
 import { BrandLogo, BrandWordmark as SharedWordmark } from "@/components/brand-logo";
 import {
   Loader2, Phone, KeyRound, Lock, ArrowLeft, ArrowRight,
@@ -201,8 +200,6 @@ export default function ForgotPassword() {
       className="min-h-screen w-full flex flex-col"
       style={{ background: "#F8FAFC", color: "#0F172A" }}
     >
-      <PublicNav />
-
       <div className="flex-1 w-full flex">
         {/* Sol panel — açık mavi gradyan */}
         <div

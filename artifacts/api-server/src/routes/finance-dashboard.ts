@@ -28,9 +28,25 @@ router.get("/summary", async (req: Request, res: Response) => {
   try {
     const companyId = req.companyId!;
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    const last30 = new Date(); last30.setDate(last30.getDate() - 30);
+    const fromQ = typeof req.query.from === "string" ? req.query.from : undefined;
+    const toQ = typeof req.query.to === "string" ? req.query.to : undefined;
+
+    let periodStart: Date;
+    let periodEnd: Date;
+    if (fromQ && toQ && /^\d{4}-\d{2}-\d{2}$/.test(fromQ) && /^\d{4}-\d{2}-\d{2}$/.test(toQ)) {
+      periodStart = new Date(`${fromQ}T00:00:00`);
+      periodEnd = new Date(`${toQ}T23:59:59.999`);
+    } else {
+      periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    }
+
+    const cashflowEnd = periodEnd;
+    const cashflowStart = new Date(cashflowEnd);
+    cashflowStart.setDate(cashflowStart.getDate() - 29);
+    if (cashflowStart < periodStart) {
+      cashflowStart.setTime(periodStart.getTime());
+    }
 
     // Banka toplam bakiye
     const accounts = await db.select().from(bankAccountsTable)
@@ -87,7 +103,8 @@ router.get("/summary", async (req: Request, res: Response) => {
              SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END)::text AS outflow
         FROM bank_transactions
        WHERE company_id = ${companyId}
-         AND tx_date >= ${last30}
+         AND tx_date >= ${cashflowStart}
+         AND tx_date <= ${cashflowEnd}
        GROUP BY DATE(tx_date)
        ORDER BY d ASC
     `);

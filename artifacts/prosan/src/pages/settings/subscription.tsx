@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   CreditCard, Users, Package, GitBranch, ShoppingBag,
   CheckCircle, XCircle, AlertCircle, RefreshCw, TrendingUp,
-  Star, Zap, Crown, Building2,
+  Star, Zap, Crown, Building2, FileDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,6 +56,38 @@ function fmtTry(n: number) {
   return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(n || 0);
 }
 function lmt(n: number) { return n === -1 ? "Sınırsız" : n.toLocaleString("tr-TR"); }
+
+function escHtml(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function openInvoicePrint(inv: Invoice) {
+  const w = window.open("", "_blank");
+  if (!w) return;
+  const desc = inv.description ? escHtml(inv.description) : "";
+  const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"/><title>Fatura ${escHtml(inv.invoiceNo)}</title>
+  <style>body{font-family:system-ui,sans-serif;padding:24px;max-width:640px;margin:auto;color:#111}
+  h1{font-size:18px;margin:0 0 16px} table{width:100%;border-collapse:collapse;font-size:13px}
+  td{padding:6px 0;border-bottom:1px solid #eee} .muted{color:#666;font-size:12px}</style></head><body>
+  <h1>Fatura özeti</h1>
+  <p class="muted">Bu sayfa yazdırma / PDF kaydı içindir.</p>
+  <table>
+  <tr><td>Fatura no</td><td><strong>${escHtml(inv.invoiceNo)}</strong></td></tr>
+  <tr><td>Tarih</td><td>${escHtml(fmt(inv.createdAt))}</td></tr>
+  <tr><td>Tutar</td><td>${escHtml(inv.currency)} ${Number(inv.amount).toLocaleString("tr-TR")}</td></tr>
+  <tr><td>Durum</td><td>${escHtml(inv.status)}</td></tr>
+  ${desc ? `<tr><td>Açıklama</td><td>${desc}</td></tr>` : ""}
+  </table>
+  </body></html>`;
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  requestAnimationFrame(() => w.print());
+}
 
 function usageBar(current: number, max: number) {
   if (max === -1) return 0;
@@ -205,6 +237,19 @@ export default function SubscriptionPage() {
   const plans = plansQ.data?.plans ?? [];
   const invoices = invoicesQ.data?.invoices ?? [];
   const brief = collectionBriefQ.data;
+
+  const comparisonFeatures = useMemo(() => {
+    const s = new Set<string>();
+    for (const p of plans) {
+      try {
+        const arr = JSON.parse(p.features) as string[];
+        arr.forEach((x) => s.add(x));
+      } catch {
+        /* ignore */
+      }
+    }
+    return Array.from(s);
+  }, [plans]);
 
   useEffect(() => {
     if (subscription?.status !== "grace_period" || graceRescueTracked.current) return;
@@ -385,7 +430,27 @@ export default function SubscriptionPage() {
               )}
 
               {/* Plan kartı */}
-              <div className={`border-2 rounded-xl p-5 ${activePlan ? planColor(activePlan.slug) : "bg-muted/30 border-border"}`}>
+              <div
+                className={`border-2 rounded-xl p-5 ${
+                  activePlan
+                    ? "border-[var(--color-brand-500)] bg-card shadow-sm"
+                    : "bg-muted/30 border-border"
+                }`}
+              >
+                <Button
+                  className="w-full mb-4 h-11 gap-2 text-base font-semibold bg-[var(--color-brand-500)] hover:bg-[var(--color-brand-700)] text-[color:var(--color-nav-text-active)]"
+                  asChild
+                >
+                  <Link
+                    href="/pricing"
+                    onClick={() =>
+                      trackProductEvent("trial_cta_click", { from: "subscription_plan_card_cta", to: "pricing" })
+                    }
+                  >
+                    Planı yükselt veya paketleri karşılaştır
+                    <TrendingUp className="h-4 w-4" />
+                  </Link>
+                </Button>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     {activePlan && planIcon(activePlan.slug)}
@@ -499,7 +564,12 @@ export default function SubscriptionPage() {
                 try { features = JSON.parse(plan.features); } catch { features = []; }
 
                 return (
-                  <div key={plan.id} className={`border-2 rounded-xl p-4 ${planColor(plan.slug)} ${isActive ? "opacity-80" : ""}`}>
+                  <div
+                    key={plan.id}
+                    className={`border-2 rounded-xl p-4 ${planColor(plan.slug)} ${
+                      isActive ? "border-[var(--color-brand-500)] shadow-md ring-2 ring-[var(--color-brand-500)]/20" : ""
+                    }`}
+                  >
                     <div className="flex items-center gap-2 mb-1">
                       {planIcon(plan.slug)}
                       <p className="font-bold">{plan.name}</p>
@@ -538,6 +608,49 @@ export default function SubscriptionPage() {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {plans.length > 0 && comparisonFeatures.length > 0 && (
+            <div className="rounded-xl border border-border overflow-x-auto bg-card">
+              <p className="text-sm font-semibold px-4 py-3 border-b bg-muted/20">Özellik karşılaştırması</p>
+              <table className="w-full text-xs min-w-[640px]">
+                <thead>
+                  <tr className="border-b bg-muted/30">
+                    <th className="text-left p-3 font-semibold text-muted-foreground">Özellik</th>
+                    {plans.map((p) => (
+                      <th key={p.id} className="p-3 text-center font-semibold whitespace-nowrap">
+                        {p.name}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparisonFeatures.map((f) => (
+                    <tr key={f} className="border-b border-border/60">
+                      <td className="p-3 text-muted-foreground">{labelFeature(f)}</td>
+                      {plans.map((p) => {
+                        let list: string[] = [];
+                        try {
+                          list = JSON.parse(p.features) as string[];
+                        } catch {
+                          list = [];
+                        }
+                        const has = list.includes(f);
+                        return (
+                          <td key={p.id} className="p-3 text-center align-middle">
+                            {has ? (
+                              <CheckCircle className="inline h-4 w-4 text-green-500" aria-label="Dahil" />
+                            ) : (
+                              <XCircle className="inline h-4 w-4 text-muted-foreground/45" aria-label="Yok" />
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -580,11 +693,23 @@ export default function SubscriptionPage() {
                         </td>
                         <td className="px-4 py-2.5 text-xs text-muted-foreground">{fmt(inv.createdAt)}</td>
                         <td className="px-4 py-2.5">
-                          {inv.status === "pending" && (
-                            <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => payInvoice.mutate(inv.id)} disabled={payInvoice.isPending}>
-                              Öde
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2"
+                              title="PDF / yazdır"
+                              onClick={() => openInvoicePrint(inv)}
+                            >
+                              <FileDown className="h-4 w-4" />
                             </Button>
-                          )}
+                            {inv.status === "pending" && (
+                              <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => payInvoice.mutate(inv.id)} disabled={payInvoice.isPending}>
+                                Öde
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}

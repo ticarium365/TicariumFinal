@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Bell, Plus, Trash2, Play, Power, Edit2, X, CheckCircle,
   AlertTriangle, ShoppingBag, Package, BarChart3, CreditCard,
-  Users, ClipboardList, Zap,
+  Users, ClipboardList, Zap, Mail, MessageSquare, Smartphone, Moon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/components/company-context";
 
@@ -21,6 +23,41 @@ interface NotificationRule {
   isActive: boolean; createdAt: string;
 }
 interface UserPref { type: string; label: string; enabled: boolean; }
+
+const LS_CHANNELS = "ticarium-notif-channel-prefs-v1";
+const LS_QUIET = "ticarium-notif-quiet-hours-v1";
+
+type ChannelTriplet = { email: boolean; sms: boolean; push: boolean };
+
+function loadChannelMap(): Record<string, ChannelTriplet> {
+  try {
+    const raw = localStorage.getItem(LS_CHANNELS);
+    if (!raw) return {};
+    const o = JSON.parse(raw) as Record<string, ChannelTriplet>;
+    return o && typeof o === "object" ? o : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveChannelMap(m: Record<string, ChannelTriplet>) {
+  try {
+    localStorage.setItem(LS_CHANNELS, JSON.stringify(m));
+  } catch {
+    /* ignore */
+  }
+}
+
+function loadQuietHours(): { start: string; end: string } {
+  try {
+    const raw = localStorage.getItem(LS_QUIET);
+    if (!raw) return { start: "22:00", end: "07:00" };
+    const o = JSON.parse(raw) as { start?: string; end?: string };
+    return { start: o.start ?? "22:00", end: o.end ?? "07:00" };
+  } catch {
+    return { start: "22:00", end: "07:00" };
+  }
+}
 
 // ─── İkon eşleştirme ────────────────────────────────────────────────────────
 function typeIcon(type: string) {
@@ -142,10 +179,46 @@ export default function NotificationSettingsPage() {
   const types = typesQ.data?.types ?? [];
   const prefs = prefsQ.data?.preferences ?? [];
 
-  const handleTogglePref = (type: string, enabled: boolean) => {
-    const updated = prefs.map((p) => p.type === type ? { ...p, enabled } : p);
-    savePrefsMut.mutate(updated);
-  };
+  const [channelMap, setChannelMap] = useState<Record<string, ChannelTriplet>>({});
+  const [quietHours, setQuietHours] = useState(() => loadQuietHours());
+
+  useEffect(() => {
+    if (prefs.length === 0) return;
+    setChannelMap((prev) => {
+      const fromLs = loadChannelMap();
+      const next: Record<string, ChannelTriplet> = { ...fromLs };
+      for (const p of prefs) {
+        if (!next[p.type]) {
+          next[p.type] = { email: p.enabled, sms: false, push: p.enabled };
+        }
+      }
+      saveChannelMap(next);
+      return { ...prev, ...next };
+    });
+  }, [prefs]);
+
+  const applyChannels = useCallback(
+    (type: string, triplet: ChannelTriplet) => {
+      setChannelMap((prev) => {
+        const next = { ...prev, [type]: triplet };
+        saveChannelMap(next);
+        return next;
+      });
+      const enabled = triplet.email || triplet.sms || triplet.push;
+      const updated = prefs.map((p) => (p.type === type ? { ...p, enabled } : p));
+      savePrefsMut.mutate(updated);
+    },
+    [prefs, savePrefsMut]
+  );
+
+  const persistQuietHours = useCallback((next: { start: string; end: string }) => {
+    setQuietHours(next);
+    try {
+      localStorage.setItem(LS_QUIET, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   return (
     <div className="p-6 space-y-6">
@@ -272,34 +345,102 @@ export default function NotificationSettingsPage() {
 
       {/* ─── Tercihler Sekmesi ────────────────────────────────────────────── */}
       {tab === "preferences" && (
-        <div className="bg-card rounded-xl border border-border divide-y divide-border/70">
-          {prefsQ.isLoading ? (
-            <div className="p-8 text-center text-muted-foreground/70">Yükleniyor...</div>
-          ) : prefs.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground/70">Tercih bulunamadı</div>
-          ) : (
-            prefs.map((pref) => (
-              <div key={pref.type} className="flex items-center justify-between px-6 py-4">
-                <div className="flex items-center gap-3">
-                  {typeIcon(pref.type)}
-                  <span className="text-sm font-medium text-foreground">{pref.label}</span>
+        <div className="space-y-4">
+          <div className="bg-card rounded-xl border border-border p-4 sm:p-5">
+            <div className="flex items-start gap-3">
+              <Moon className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Sessiz saatler</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Bu aralıkta özet bildirimleri geciktirilebilir (tercih bu cihazda saklanır).
+                  </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={pref.enabled}
-                    onChange={(e) => handleTogglePref(pref.type, e.target.checked)}
-                  />
-                  <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer
-                    peer-checked:after:translate-x-full peer-checked:after:border-white after:content-['']
-                    after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border
-                    after:border after:rounded-full after:h-5 after:w-5 after:transition-all
-                    peer-checked:bg-blue-600" />
-                </label>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Başlangıç</Label>
+                    <input
+                      type="time"
+                      value={quietHours.start}
+                      onChange={(e) => persistQuietHours({ ...quietHours, start: e.target.value })}
+                      className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Bitiş</Label>
+                    <input
+                      type="time"
+                      value={quietHours.end}
+                      onChange={(e) => persistQuietHours({ ...quietHours, end: e.target.value })}
+                      className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+                    />
+                  </div>
+                </div>
               </div>
-            ))
-          )}
+            </div>
+          </div>
+
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="px-4 py-3 border-b border-border/70 bg-muted/20">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Olay ve kanallar</p>
+              <p className="text-xs text-muted-foreground mt-0.5">E-posta, SMS ve push için kanal grubu (çoklu seçim)</p>
+            </div>
+            {prefsQ.isLoading ? (
+              <div className="p-8 text-center text-muted-foreground/70">Yükleniyor...</div>
+            ) : prefs.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground/70">Tercih bulunamadı</div>
+            ) : (
+              <div className="divide-y divide-border/70">
+                {prefs.map((pref) => {
+                  const triplet = channelMap[pref.type] ?? {
+                    email: pref.enabled,
+                    sms: false,
+                    push: pref.enabled,
+                  };
+                  const value = (["email", "sms", "push"] as const).filter((k) => triplet[k]);
+                  return (
+                    <div
+                      key={pref.type}
+                      className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {typeIcon(pref.type)}
+                        <span className="text-sm font-medium text-foreground">{pref.label}</span>
+                      </div>
+                      <ToggleGroup
+                        type="multiple"
+                        value={value}
+                        onValueChange={(vals) => {
+                          const v = new Set(vals);
+                          applyChannels(pref.type, {
+                            email: v.has("email"),
+                            sms: v.has("sms"),
+                            push: v.has("push"),
+                          });
+                        }}
+                        className="justify-end flex-wrap"
+                        size="sm"
+                        variant="outline"
+                      >
+                        <ToggleGroupItem value="email" aria-label="E-posta" className="gap-1.5 px-2.5 data-[state=on]:border-[var(--color-brand-500)] data-[state=on]:bg-[color-mix(in_srgb,var(--color-brand-500)_12%,transparent)]">
+                          <Mail className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">E-posta</span>
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="sms" aria-label="SMS" className="gap-1.5 px-2.5 data-[state=on]:border-[var(--color-brand-500)] data-[state=on]:bg-[color-mix(in_srgb,var(--color-brand-500)_12%,transparent)]">
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">SMS</span>
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="push" aria-label="Push" className="gap-1.5 px-2.5 data-[state=on]:border-[var(--color-brand-500)] data-[state=on]:bg-[color-mix(in_srgb,var(--color-brand-500)_12%,transparent)]">
+                          <Smartphone className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Push</span>
+                        </ToggleGroupItem>
+                      </ToggleGroup>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

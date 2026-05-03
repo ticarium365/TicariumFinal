@@ -938,6 +938,9 @@ router.post("/verify/send", requireAuth, async (req: Request, res: Response) => 
     const channel: "sms" | "email" = (req.body?.channel === "sms" || req.body?.channel === "email")
       ? req.body.channel
       : (company.verificationMethod ?? "email");
+    if (!["sms", "email"].includes(channel)) {
+      return res.status(400).json(Errors.badRequest("Geçersiz channel: sms veya email olmalı"));
+    }
     const target = channel === "sms" ? (u.username ? "" : "") : (u.email || "");
     // SMS için target user.phone — session'da yok, DB'den al
     let actualTarget = target;

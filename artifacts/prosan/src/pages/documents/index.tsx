@@ -6,6 +6,8 @@ import {
   File, FileImage, FileSpreadsheet, FileCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import { formatTrDate } from "@/lib/finance-intl";
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/components/company-context";
 
@@ -30,10 +32,6 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function fmtDate(s: string) {
-  return new Date(s).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function mimeIcon(mime: string) {
@@ -103,21 +101,20 @@ export default function DocumentsPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Başlık */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight t365-gradient-text t365-heading-accent" style={{ fontFamily: "var(--font-display)" }}>Evrak Yönetimi</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Dosyalarınızı ve belgelerinizi merkezi olarak yönetin</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => { setEditCat(null); setCatModal(true); }}>
-            <Folder className="h-4 w-4 mr-1.5" /> Kategori Ekle
-          </Button>
-          <Button onClick={() => setUploadModal(true)}>
-            <Upload className="h-4 w-4 mr-1.5" /> Dosya Yükle
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Evrak Yönetimi"
+        subtitle="Dosyalarınızı ve belgelerinizi merkezi olarak yönetin."
+        right={
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => { setEditCat(null); setCatModal(true); }}>
+              <Folder className="h-4 w-4 mr-1.5" /> Kategori Ekle
+            </Button>
+            <Button onClick={() => setUploadModal(true)}>
+              <Upload className="h-4 w-4 mr-1.5" /> Dosya Yükle
+            </Button>
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-12 gap-6">
         {/* Sol: Kategoriler */}
@@ -220,7 +217,7 @@ export default function DocumentsPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">{formatBytes(doc.fileSize)}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{fmtDate(doc.createdAt)}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{formatTrDate(doc.createdAt, { day: "2-digit", month: "short", year: "numeric" })}</td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <a

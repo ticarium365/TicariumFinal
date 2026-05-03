@@ -2,7 +2,8 @@ import { Router, Request, Response } from "express";
 import { db, companiesTable, companyNetworkProfilesTable, companyNetworkReviewsTable } from "@workspace/db";
 import { eq, and, ilike, or, desc, asc, count, avg, inArray, ne } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
-import { z } from "zod/v4";
+import { Errors } from "../lib/errors.js";
+import { z } from "zod";
 
 const router = Router();
 
@@ -123,7 +124,7 @@ router.get("/", async (req: Request, res: Response) => {
     });
   } catch (err) {
     req.log?.error({ err }, "Network list error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -133,7 +134,7 @@ router.get("/my-profile", requireAuth, async (req: Request, res: Response) => {
     res.json(profile);
   } catch (err) {
     req.log?.error({ err }, "Get my network profile error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -153,7 +154,7 @@ router.put("/my-profile", requireAuth, async (req: Request, res: Response) => {
     res.json(updated);
   } catch (err) {
     req.log?.error({ err }, "Update network profile error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -213,7 +214,7 @@ router.get("/companies/:subdomain", async (req: Request, res: Response) => {
     });
   } catch (err) {
     req.log?.error({ err }, "Get company profile error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -280,7 +281,7 @@ router.post("/companies/:subdomain/reviews", requireAuth, async (req: Request, r
     res.status(201).json(review);
   } catch (err) {
     req.log?.error({ err }, "Add review error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 

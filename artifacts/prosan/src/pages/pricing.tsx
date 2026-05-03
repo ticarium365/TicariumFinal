@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Check, Sparkles, ArrowRight, ShieldCheck, HelpCircle, CreditCard } from "lucide-react";
+import { Check, Sparkles, ArrowRight, ShieldCheck, HelpCircle, CreditCard, X } from "lucide-react";
 import { Link } from "wouter";
 import { FEATURE_LABELS as SHARED_FEATURE_LABELS } from "@/lib/feature-labels";
 import { trackProductEvent } from "@/lib/product-analytics";
+import { cn } from "@/lib/utils";
+import { customFetch, ApiError } from "@workspace/api-client-react";
 
 type Plan = {
   id: number;
@@ -68,6 +70,19 @@ export default function PricingPage() {
   });
 
   const plans = data?.plans || [];
+
+  const comparisonFeatures = useMemo(() => {
+    const s = new Set<string>();
+    for (const p of plans) {
+      try {
+        const arr = JSON.parse(p.features) as string[];
+        arr.forEach((x) => s.add(x));
+      } catch {
+        /* ignore */
+      }
+    }
+    return Array.from(s);
+  }, [plans]);
 
   useEffect(() => {
     if (plans.length > 0) {
@@ -137,32 +152,55 @@ export default function PricingPage() {
   async function subscribe(plan: Plan) {
     // Dalga 22 — Iyzico (mock-first) ödeme akışı: checkout oturumu aç →
     // paymentPageUrl'e yönlendir. Mock'ta callback aynı alanda /odeme/sonuc'a düşer.
-    const r = await fetch("/api/billing/checkout", {
-      method: "POST", credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ planId: plan.id, billingCycle: yearly ? "yearly" : "monthly" }),
-    });
-    const j = await r.json();
-    if (r.ok && j.paymentPageUrl) {
-      trackProductEvent("billing_checkout_started", {
-        plan_slug: plan.slug,
-        cycle: yearly ? "yearly" : "monthly",
+    try {
+      const j = await customFetch<{
+        paymentPageUrl: string;
+        amount: number;
+        currency: string;
+      }>("/api/billing/checkout", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId: plan.id, billingCycle: yearly ? "yearly" : "monthly" }),
+        responseType: "json",
       });
-      toast({ title: "Ödeme sayfasına yönlendiriliyorsunuz", description: `${plan.name} — ${j.amount} ${j.currency}` });
-      window.location.href = j.paymentPageUrl;
-    } else {
-      if (r.status === 400 && (j?.error?.code === "IDENTITY_REQUIRED" || j?.error?.code === "PHONE_REQUIRED" || j?.error?.code === "PHONE_INVALID")) {
-        setPendingPlan(plan);
-        setIdentityDialogOpen(true);
-        trackProductEvent(
-          j?.error?.code === "PHONE_REQUIRED" || j?.error?.code === "PHONE_INVALID"
-            ? "billing_phone_required_shown"
-            : "billing_identity_required_shown",
-          { plan_slug: plan.slug, cycle: yearly ? "yearly" : "monthly", code: j?.error?.code },
-        );
+      if (j.paymentPageUrl) {
+        trackProductEvent("billing_checkout_started", {
+          plan_slug: plan.slug,
+          cycle: yearly ? "yearly" : "monthly",
+        });
+        toast({
+          title: "Ödeme sayfasına yönlendiriliyorsunuz",
+          description: `${plan.name} — ${j.amount} ${j.currency}`,
+        });
+        window.location.href = j.paymentPageUrl;
+      }
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.status === 400) {
+        const j = err.data as {
+          error?: { code?: string; message?: string };
+          message?: string;
+        } | null;
+        const code = j?.error?.code;
+        if (code === "IDENTITY_REQUIRED" || code === "PHONE_REQUIRED" || code === "PHONE_INVALID") {
+          setPendingPlan(plan);
+          setIdentityDialogOpen(true);
+          trackProductEvent(
+            code === "PHONE_REQUIRED" || code === "PHONE_INVALID"
+              ? "billing_phone_required_shown"
+              : "billing_identity_required_shown",
+            { plan_slug: plan.slug, cycle: yearly ? "yearly" : "monthly", code },
+          );
+          return;
+        }
+        toast({
+          title: "Hata",
+          description: j?.error?.message ?? j?.message ?? "İşlem başarısız",
+          variant: "destructive",
+        });
         return;
       }
-      toast({ title: "Hata", description: j?.error?.message ?? j?.message ?? "İşlem başarısız", variant: "destructive" });
+      throw err;
     }
   }
 
@@ -338,9 +376,29 @@ export default function PricingPage() {
           return (
             <Card
               key={plan.id}
-              className={`flex flex-col ${isHighlighted ? "border-primary border-2 shadow-lg relative" : ""}`}
+              className={cn(
+                "flex flex-col relative",
+                isCurrent && "border-2 border-[var(--color-brand-500)] shadow-md",
+                isHighlighted && !isCurrent && "border-primary border-2 shadow-lg"
+              )}
               onPointerEnter={() => notePlanFocus(plan.slug)}
             >
+              {isCurrent && (
+                <div className="px-6 pt-4 space-y-2">
+                  <Button
+                    className="w-full h-11 font-semibold bg-[var(--color-brand-500)] hover:bg-[var(--color-brand-700)] text-[color:var(--color-nav-text-active)]"
+                    asChild
+                  >
+                    <Link
+                      href="/settings/subscription"
+                      onClick={() => trackProductEvent("pricing_upgrade_cta", { plan_slug: plan.slug, source: "current_card" })}
+                    >
+                      Aboneliği yönet ve yükselt <ArrowRight className="w-4 h-4 ml-1 inline" />
+                    </Link>
+                  </Button>
+                  <p className="text-[11px] text-center text-muted-foreground">Şu an bu paket aktif</p>
+                </div>
+              )}
               {isHighlighted && (
                 <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">Önerilen</Badge>
               )}
@@ -390,6 +448,49 @@ export default function PricingPage() {
           );
         })}
       </div>
+
+      {plans.length > 0 && comparisonFeatures.length > 0 && (
+        <div className="mt-10 rounded-xl border border-border overflow-x-auto bg-card">
+          <p className="text-sm font-semibold px-4 py-3 border-b bg-muted/30">Özellik karşılaştırması</p>
+          <table className="w-full text-xs min-w-[640px]">
+            <thead>
+              <tr className="border-b bg-muted/20">
+                <th className="text-left p-3 font-semibold text-muted-foreground">Özellik</th>
+                {plans.map((p) => (
+                  <th key={p.id} className="p-3 text-center font-semibold whitespace-nowrap">
+                    {planDisplayName(p.slug, p.name)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {comparisonFeatures.map((f) => (
+                <tr key={f} className="border-b border-border/60">
+                  <td className="p-3 text-muted-foreground">{FEATURE_LABELS[f] ?? f}</td>
+                  {plans.map((p) => {
+                    let list: string[] = [];
+                    try {
+                      list = JSON.parse(p.features) as string[];
+                    } catch {
+                      list = [];
+                    }
+                    const has = list.includes(f);
+                    return (
+                      <td key={p.id} className="p-3 text-center align-middle">
+                        {has ? (
+                          <Check className="inline h-4 w-4 text-green-600" aria-label="Dahil" />
+                        ) : (
+                          <X className="inline h-4 w-4 text-muted-foreground/40" aria-label="Yok" />
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="mt-12 text-center bg-muted/50 rounded-lg p-6">
         <h3 className="font-semibold mb-2">Hâlâ emin değil misiniz?</h3>

@@ -45,6 +45,7 @@ async function applyRls() {
         continue;
       }
 
+      // Table name is already validated by allowlist check above
       await db.execute(sql.raw(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`));
       await db.execute(sql.raw(`DROP POLICY IF EXISTS tenant_isolation ON ${table}`));
       await db.execute(sql.raw(`

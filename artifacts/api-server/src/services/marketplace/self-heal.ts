@@ -6,6 +6,7 @@
 import { db, channelAccountsTable, syncJobsTable, syncLogsTable } from "@workspace/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { logSync } from "./factory.js";
+import { logger } from "../../lib/logger.js";
 
 export const STUCK_QUEUED_MIN = 25;
 export const STUCK_RUNNING_MIN = 35;
@@ -545,12 +546,12 @@ let healTimer: NodeJS.Timeout | null = null;
 export function startMarketplaceSelfHealScheduler(): void {
   if (healTimer) return;
   if (!selfHealEnabled()) {
-    console.log("[marketplace/self-heal] disabled (MARKETPLACE_SELF_HEAL=false)");
+    logger.info("[marketplace/self-heal] disabled (MARKETPLACE_SELF_HEAL=false)");
     return;
   }
-  console.log("[marketplace/self-heal] scheduler every 60s");
+  logger.info("[marketplace/self-heal] scheduler every 60s");
   healTimer = setInterval(() => {
-    runMarketplaceSelfHealOnce().catch((e) => console.error("[marketplace/self-heal]", e));
+    runMarketplaceSelfHealOnce().catch((e) => logger.error({ err: e }, "[marketplace/self-heal]"));
   }, 60_000);
 }
 

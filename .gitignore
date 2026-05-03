@@ -67,3 +67,7 @@ lib/db/apply-sql-migrations.mjs
 
 # Redundant doc bundles (images live in docs/user-guide-assets*, see KULLANIM_KILAVUZU.md)
 docs/ticarium365-*.zip
+
+outputs/
+screenshots/
+attached_assets/

@@ -1,9 +1,11 @@
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
+import type { Hash } from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth.js";
 import { audit } from "../lib/audit.js";
+import { Errors } from "../lib/errors.js";
 
 const router = Router();
 
@@ -25,7 +27,7 @@ router.get("/", requireAuth, requireAdmin, async (req: Request, res: Response) =
     res.json(users);
   } catch (err) {
     req.log?.error({ err }, "List users error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
@@ -53,14 +55,14 @@ router.post("/", requireAuth, requireAdmin, async (req: Request, res: Response) 
       return;
     }
     req.log?.error({ err }, "Create user error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
 router.get("/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const id = parseInt(req.params.id!);
+    const id = parseInt(String(req.params.id!));
     const [user] = await db.select(safeUserFields).from(usersTable)
       .where(and(eq(usersTable.id, id), eq(usersTable.companyId, cid)));
     if (!user) {
@@ -70,14 +72,14 @@ router.get("/:id", requireAuth, requireAdmin, async (req: Request, res: Response
     res.json(user);
   } catch (err) {
     req.log?.error({ err }, "Get user error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
 router.put("/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const id = parseInt(req.params.id!);
+    const id = parseInt(String(req.params.id!));
     const { fullName, email, role, isActive, password } = req.body;
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (fullName !== undefined) updateData.fullName = fullName;
@@ -99,14 +101,14 @@ router.put("/:id", requireAuth, requireAdmin, async (req: Request, res: Response
     res.json(user);
   } catch (err) {
     req.log?.error({ err }, "Update user error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 
 router.delete("/:id", requireAuth, requireAdmin, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const id = parseInt(req.params.id!);
+    const id = parseInt(String(req.params.id!));
     if (req.session.user?.id === id) {
       res.status(400).json({ error: "Bad Request", message: "Kendi hesabınızı silemezsiniz" });
       return;
@@ -122,7 +124,7 @@ router.delete("/:id", requireAuth, requireAdmin, async (req: Request, res: Respo
     res.json({ message: "Kullanıcı silindi" });
   } catch (err) {
     req.log?.error({ err }, "Delete user error");
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json(Errors.internal());
   }
 });
 

@@ -1,6 +1,7 @@
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth-context";
+import { OnlineSalesFeatureGate } from "@/components/online-sales-feature-gate";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -283,6 +284,7 @@ export default function ETicariumMerkeziPage() {
   });
 
   return (
+    <OnlineSalesFeatureGate>
     <div className="container mx-auto px-4 py-6 space-y-6" data-testid="eticarium-merkezi">
       {/* Hero */}
       <div
@@ -397,5 +399,6 @@ export default function ETicariumMerkeziPage() {
         </CardContent>
       </Card>
     </div>
+    </OnlineSalesFeatureGate>
   );
 }

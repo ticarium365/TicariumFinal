@@ -15,9 +15,11 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { OnlineSalesFeatureGate } from "@/components/online-sales-feature-gate";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Truck, Plus, Loader2, Trash2, MapPin, Sparkles, Calculator, Save,
-  AlertCircle, CheckCircle2, Package,
+  AlertCircle, CheckCircle2, Package, CircleDot,
 } from "lucide-react";
 
 type Zone = { id: number; name: string; cities: string[]; isDefault: boolean };
@@ -28,16 +30,16 @@ type Rule = {
 };
 
 const CARRIERS = [
-  { key: "manual", label: "Manuel" },
-  { key: "yurtici", label: "Yurtiçi Kargo" },
-  { key: "aras", label: "Aras Kargo" },
-  { key: "mng", label: "MNG Kargo" },
-  { key: "ptt", label: "PTT" },
-  { key: "ups", label: "UPS" },
-  { key: "ceva", label: "Ceva" },
-  { key: "hepsijet", label: "Hepsijet" },
-  { key: "trendyol_express", label: "Trendyol Express" },
-  { key: "sendeo", label: "Sendeo" },
+  { key: "manual", label: "Manuel", eta: "—", hint: "Sabit kural / el ile" },
+  { key: "yurtici", label: "Yurtiçi Kargo", eta: "1–3 iş günü", hint: "Standart gönderi" },
+  { key: "aras", label: "Aras Kargo", eta: "2–4 iş günü", hint: "Geniş ağ" },
+  { key: "mng", label: "MNG Kargo", eta: "1–3 iş günü", hint: "Şehir içi hızlı" },
+  { key: "ptt", label: "PTT", eta: "3–6 iş günü", hint: "Ekonomik" },
+  { key: "ups", label: "UPS", eta: "2–5 iş günü", hint: "Uluslararası uygun" },
+  { key: "ceva", label: "Ceva", eta: "3–7 iş günü", hint: "Paleti / ağır" },
+  { key: "hepsijet", label: "Hepsijet", eta: "1–2 iş günü", hint: "Entegrasyonlu" },
+  { key: "trendyol_express", label: "Trendyol Express", eta: "1–3 iş günü", hint: "Pazaryeri operasyonu" },
+  { key: "sendeo", label: "Sendeo", eta: "1–3 iş günü", hint: "Çoklu taşıyıcı" },
 ];
 
 const TR_CITIES = [
@@ -76,6 +78,7 @@ export default function KargoYonetimi() {
   useEffect(() => { load(); }, []);
 
   return (
+    <OnlineSalesFeatureGate title="Kargo ayarları paketinizde kapalı">
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
@@ -116,6 +119,7 @@ export default function KargoYonetimi() {
         </Tabs>
       )}
     </div>
+    </OnlineSalesFeatureGate>
   );
 }
 
@@ -413,6 +417,7 @@ function QuotePanel() {
   const [city, setCity] = useState("İSTANBUL");
   const [totalDesi, setTotalDesi] = useState(3);
   const [cartTotal, setCartTotal] = useState(250);
+  const [carrier, setCarrier] = useState<string>("yurtici");
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
@@ -422,62 +427,165 @@ function QuotePanel() {
       const r = await fetch("/api/shipping/quote", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ city, totalDesi, cartTotal }),
+        body: JSON.stringify({ city, totalDesi, cartTotal, carrier }),
       });
       const j = await r.json();
-      if (!r.ok) throw new Error(j?.error?.message || "Hata");
+      if (!r.ok) throw new Error(j?.error?.message || j?.message || "Hata");
       setResult(j);
     } catch (e: any) { toast({ title: "Sorgu hatası", description: e.message, variant: "destructive" }); }
     finally { setLoading(false); }
   };
 
+  const carrierLabel = CARRIERS.find((c) => c.key === carrier)?.label ?? carrier;
+
   return (
-    <div className="grid md:grid-cols-2 gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Kargo Fiyat Sorgu</CardTitle>
-          <CardDescription>Bir sepet için kargo bedeli hesapla.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div><Label>Teslimat Şehri</Label>
-            <Select value={city} onValueChange={setCity}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent className="max-h-72">
-                {TR_CITIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div><Label>Toplam Desi</Label>
-            <Input type="number" step="0.1" value={totalDesi} onChange={(e) => setTotalDesi(Number(e.target.value))} /></div>
-          <div><Label>Sepet Tutarı (₺)</Label>
-            <Input type="number" step="0.01" value={cartTotal} onChange={(e) => setCartTotal(Number(e.target.value))} /></div>
-          <Button onClick={run} disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 w-full">
-            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Calculator className="w-4 h-4 mr-2" />} Hesapla
-          </Button>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader><CardTitle>Sonuç</CardTitle></CardHeader>
-        <CardContent>
-          {!result ? (
-            <div className="text-center text-muted-foreground/70 py-12">Sorgu yapılmadı</div>
-          ) : (
-            <div className="space-y-3">
-              <div className="text-center p-6 border rounded-lg bg-muted/30">
-                {result.price === 0 ? (
-                  <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto mb-2" />
-                ) : (
-                  <Truck className="w-12 h-12 text-emerald-600 mx-auto mb-2" />
-                )}
-                <div className="text-3xl font-bold">{result.price === 0 ? "ÜCRETSİZ" : `₺${result.price}`}</div>
-                <div className="text-sm text-muted-foreground mt-1">{result.reason}</div>
-              </div>
-              {result.ruleId && <div className="text-xs text-muted-foreground/70 text-center">Kural #{result.ruleId} · Bölge #{result.zoneId}</div>}
-              {!result.ruleId && <div className="flex items-center gap-2 text-amber-600 text-xs justify-center"><AlertCircle className="w-3 h-3" /> Eşleşen kural yok — varsayılan davranış</div>}
+    <div className="space-y-6">
+      <div className="grid lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Kargo Fiyat Sorgu</CardTitle>
+            <CardDescription>Taşıyıcı seçin; kurallarınız bu firmaya göre eşleşir.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="mb-2 block">Taşıyıcı</Label>
+              <RadioGroup value={carrier} onValueChange={setCarrier} className="grid gap-2">
+                {CARRIERS.map((c) => (
+                  <label
+                    key={c.key}
+                    htmlFor={`car-${c.key}`}
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors hover:bg-muted/40 ${carrier === c.key ? "border-emerald-500/60 bg-emerald-500/5 ring-1 ring-emerald-500/30" : "border-border"}`}
+                  >
+                    <RadioGroupItem value={c.key} id={`car-${c.key}`} className="mt-1" />
+                    <div className="flex flex-1 gap-3 min-w-0">
+                      <div
+                        className="h-11 w-11 shrink-0 rounded-lg flex items-center justify-center text-xs font-bold border bg-muted/50"
+                        aria-hidden
+                      >
+                        {c.label.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium leading-tight">{c.label}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{c.hint}</div>
+                        <div className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-1 font-medium">
+                          Tahmini teslim: {c.eta}
+                        </div>
+                      </div>
+                      <div className="text-right text-xs text-muted-foreground shrink-0 self-center tabular-nums">
+                        Kurala göre
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </RadioGroup>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <div><Label>Teslimat Şehri</Label>
+              <Select value={city} onValueChange={setCity}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {TR_CITIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div><Label>Toplam Desi</Label>
+              <Input type="number" step="0.1" value={totalDesi} onChange={(e) => setTotalDesi(Number(e.target.value))} /></div>
+            <div><Label>Sepet Tutarı (₺)</Label>
+              <Input type="number" step="0.01" value={cartTotal} onChange={(e) => setCartTotal(Number(e.target.value))} /></div>
+            <Button onClick={run} disabled={loading} className="bg-emerald-600 hover:bg-emerald-700 w-full">
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Calculator className="w-4 h-4 mr-2" />} Hesapla
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Sonuç</CardTitle>
+            <CardDescription className="font-medium text-foreground/80">{carrierLabel}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!result ? (
+              <div className="text-center text-muted-foreground/70 py-12">Taşıyıcı ve parametreleri seçip hesaplayın</div>
+            ) : (
+              <div className="space-y-3">
+                <div className="text-center p-6 border rounded-lg bg-muted/30">
+                  {result.price === 0 ? (
+                    <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto mb-2" />
+                  ) : (
+                    <Truck className="w-12 h-12 text-emerald-600 mx-auto mb-2" />
+                  )}
+                  <div className="text-3xl font-bold">{result.price === 0 ? "ÜCRETSİZ" : `₺${result.price}`}</div>
+                  <div className="text-sm text-muted-foreground mt-1">{result.reason}</div>
+                </div>
+                {result.ruleId != null && (
+                  <div className="text-xs text-muted-foreground/70 text-center">
+                    Kural #{result.ruleId} · Bölge #{result.zoneId}
+                  </div>
+                )}
+                {result.ruleId == null && result.price !== 0 && (
+                  <div className="flex items-center gap-2 text-amber-600 text-xs justify-center">
+                    <AlertCircle className="w-3 h-3" /> Bu taşıyıcı için eşleşen kural bulunamadı
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <ShipmentTrackingDemo />
     </div>
+  );
+}
+
+const TRACK_STEPS = ["Hazırlandı", "Kargoya Verildi", "Dağıtımda", "Teslim"] as const;
+
+function ShipmentTrackingDemo() {
+  const [step, setStep] = useState(1);
+  return (
+    <Card>
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+        <div>
+          <CardTitle>Gönderi takibi (örnek akış)</CardTitle>
+          <CardDescription>Müşteriye gösterilecek adımlar — entegrasyon ile gerçek durum beslenir.</CardDescription>
+        </div>
+        <div className="flex gap-2 text-xs">
+          {TRACK_STEPS.map((_, i) => (
+            <Button key={i} type="button" size="sm" variant={step === i ? "default" : "outline"} onClick={() => setStep(i)}>
+              Adım {i + 1}
+            </Button>
+          ))}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap items-center gap-2 md:gap-0 md:justify-between">
+          {TRACK_STEPS.map((label, i) => {
+            const done = i < step;
+            const active = i === step;
+            return (
+              <div key={label} className="flex items-center gap-2 md:flex-1 md:min-w-0">
+                <div className="flex flex-col items-center md:flex-1 min-w-0">
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-semibold shrink-0 ${
+                      active
+                        ? "border-emerald-500 bg-emerald-500/15 text-emerald-800 dark:text-emerald-200"
+                        : done
+                          ? "border-emerald-600/40 bg-emerald-500/10 text-emerald-700"
+                          : "border-muted bg-muted/40 text-muted-foreground"
+                    }`}
+                  >
+                    {done ? <CheckCircle2 className="h-5 w-5" /> : active ? <CircleDot className="h-5 w-5" /> : i + 1}
+                  </div>
+                  <span className={`mt-2 text-center text-xs font-medium px-1 ${active ? "text-foreground" : "text-muted-foreground"}`}>
+                    {label}
+                  </span>
+                </div>
+                {i < TRACK_STEPS.length - 1 && (
+                  <div className={`hidden md:block h-0.5 flex-1 mx-1 rounded ${done ? "bg-emerald-500/50" : "bg-border"}`} aria-hidden />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

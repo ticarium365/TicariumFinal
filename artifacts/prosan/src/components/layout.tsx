@@ -6,66 +6,29 @@ import { usePaymentStatus } from "@/hooks/use-payment-status";
 import { useLogout } from "@workspace/api-client-react";
 import {
   LayoutDashboard,
-  Package,
-  PackageOpen,
-  ScanBarcode,
-  Barcode,
-  ShoppingCart,
-  History,
-  BarChart3,
-  Users,
-  Settings,
   LogOut,
   Menu,
-  PackagePlus,
+  Settings,
   Building2,
   CreditCard,
-  Wrench,
   Clock,
-  CalendarCheck,
-  UserCircle,
-  Truck,
-  Trophy,
-  ShoppingBag,
-  ClipboardList,
-  Wallet,
-  Banknote,
-  TrendingUp,
-  GitBranch,
-  Webhook,
-  FileText,
-  Bell,
-  Tag,
-  Radio,
-  Network,
-  Inbox,
-  Calculator,
-  PieChart,
-  Upload,
-  ScanLine,
-  Factory,
-  Award,
-  DollarSign,
   Sparkles,
-  Store,
-  Megaphone,
-  ShoppingBasket,
-  ShieldCheck,
+  Activity,
   ChevronDown,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   Lock,
-  Activity,
   X,
+  ShieldOff,
+  Building2 as BuildingLock,
 } from "lucide-react";
 import { useFeatures } from "@/components/use-features";
 import { getNavLockReason, lockUiText, filterVisibleNavGroups, type AccountType, type LockReason } from "@/lib/nav-lock";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ShieldOff, Building2 as BuildingLock } from "lucide-react";
 import { useMenuPrefs } from "@/components/use-menu-prefs";
 import { FeatureGate } from "@/components/feature-gate";
-import { navItemId, navIdToTestSlug } from "@/components/nav-config";
+import { navItemId, navIdToTestSlug, NAV_GROUPS, type NavItem } from "@/components/nav-config";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./notification-center";
 import { GlobalSearch } from "./global-search";
@@ -75,7 +38,6 @@ import { DemoDataBanner } from "./demo-data-banner";
 import { CommandPalette } from "./command-palette";
 import { SetupChecklistPopover } from "./setup-checklist-popover";
 import { QuickBarcodeFab } from "./quick-barcode-fab";
-import { NAV_GROUPS, type NavItem, isVisibleForAccount } from "./nav-config";
 import { BrandLogo } from "./brand-logo";
 import {
   Sheet,
@@ -84,11 +46,94 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { trackProductEvent } from "@/lib/product-analytics";
 import { initialLetter } from "@/lib/display-initial";
+import { cn } from "@/lib/utils";
+import { prefetchNavHref } from "@/lib/nav-prefetch";
+
+const TOP_ITEM: NavItem = {
+  href: "/dashboard",
+  label: "Ana Panel",
+  icon: LayoutDashboard,
+  roles: ["admin", "staff", "viewer", "super_admin"],
+};
+
+const HERO_ITEM: NavItem = {
+  href: "/eticarium-merkezi",
+  label: "Online Satış Merkezi",
+  icon: Sparkles,
+  roles: ["admin", "staff", "viewer"],
+};
+
+function resolveLayoutPageTitle(path: string, skipHeroAndTop: boolean): string {
+  let bestHref = "";
+  let bestLabel = "Ticarium365";
+  const consider = (href: string, label: string) => {
+    if (path === href || path.startsWith(href + "/")) {
+      if (href.length >= bestHref.length) {
+        bestHref = href;
+        bestLabel = label;
+      }
+    }
+  };
+  if (!skipHeroAndTop) {
+    consider(TOP_ITEM.href, TOP_ITEM.label);
+    consider(HERO_ITEM.href, HERO_ITEM.label);
+  }
+  consider("/super-admin", "Platform merkezi");
+  for (const g of NAV_GROUPS) {
+    for (const i of g.items) consider(i.href, i.label);
+  }
+  return bestLabel;
+}
+
+function roleChipLabel(role: string): string {
+  switch (role) {
+    case "admin":
+      return "Yönetici";
+    case "staff":
+      return "Personel";
+    case "viewer":
+      return "Görüntüleyici";
+    case "super_admin":
+      return "Süper Admin";
+    default:
+      return role;
+  }
+}
+
+function useNavLayoutMedia() {
+  const [state, setState] = useState({ desktopNav: true, wideSidebar: true });
+  useEffect(() => {
+    const q768 = window.matchMedia("(min-width: 768px)");
+    const q1280 = window.matchMedia("(min-width: 1280px)");
+    const sync = () =>
+      setState({
+        desktopNav: q768.matches,
+        wideSidebar: q1280.matches,
+      });
+    sync();
+    q768.addEventListener("change", sync);
+    q1280.addEventListener("change", sync);
+    return () => {
+      q768.removeEventListener("change", sync);
+      q1280.removeEventListener("change", sync);
+    };
+  }, []);
+  return state;
+}
 
 function TrialBanner() {
   const { user } = useAuth();
@@ -99,16 +144,32 @@ function TrialBanner() {
   if (status.isTrialExpired) return null;
 
   const days = status.trialDaysLeft;
-  const color = days <= 3 ? "bg-red-600" : days <= 7 ? "bg-orange-500" : "bg-blue-600/80";
+  const bg =
+    days <= 3
+      ? "var(--color-semantic-danger)"
+      : days <= 7
+        ? "var(--color-semantic-warning)"
+        : "color-mix(in srgb, var(--color-semantic-info) 80%, var(--color-surface-card))";
+  const fg =
+    days <= 3
+      ? "var(--color-semantic-danger-fg)"
+      : days <= 7
+        ? "var(--color-semantic-warning-fg)"
+        : "var(--color-semantic-info-fg)";
 
   return (
-    <div className={`mx-3 mb-2 rounded-lg px-3 py-2 text-white text-xs ${color}`}>
+    <div
+      className="mx-3 mb-2 rounded-[var(--radius-lg)] px-3 py-2 text-xs"
+      style={{ background: bg, color: fg }}
+    >
       <div className="flex items-center gap-1.5 font-semibold">
         <Clock className="h-3 w-3 shrink-0" />
         Deneme süresi: {days} gün kaldı
       </div>
       {days <= 7 && (
-        <p className="mt-0.5 opacity-80">Süre dolmadan uygun paketi seçebilir veya ekibimizle görüşebilirsiniz.</p>
+        <p className="mt-0.5 opacity-90">
+          Süre dolmadan uygun paketi seçebilir veya ekibimizle görüşebilirsiniz.
+        </p>
       )}
     </div>
   );
@@ -116,7 +177,6 @@ function TrialBanner() {
 
 const TRIAL_STRIP_DISMISS_KEY = "t365_trial_strip_dismiss";
 
-/** Üst içerik alanı — deneme bitmeden 7 gün ve altı; 12 saatliğine kapatılabilir. */
 function hashMsgKey(s: string) {
   let h = 0;
   for (let i = 0; i < Math.min(s.length, 120); i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
@@ -172,11 +232,16 @@ function RetentionHintBanner() {
 
   return (
     <div
-      className="rounded-lg border border-sky-200/90 bg-sky-50/95 text-sky-950 px-3 py-2.5 text-sm flex flex-wrap gap-2 items-start justify-between"
+      className="flex flex-wrap items-start justify-between gap-2 rounded-[var(--radius-lg)] border px-3 py-2.5 text-sm"
+      style={{
+        borderColor: "color-mix(in srgb, var(--color-semantic-info) 35%, var(--color-border-subtle))",
+        backgroundColor: "color-mix(in srgb, var(--color-semantic-info) 12%, var(--color-surface-card))",
+        color: "var(--color-neutral-900)",
+      }}
       data-testid="retention-hint-banner"
     >
       <p className="min-w-0 flex-1 leading-snug">{data.message}</p>
-      <div className="flex gap-2 shrink-0 items-center">
+      <div className="flex shrink-0 items-center gap-2">
         {data.ctaHref ? (
           <Button variant="secondary" size="sm" className="h-8" asChild>
             <Link href={data.ctaHref} onClick={() => trackProductEvent("retention_hint_cta", { to: data.ctaHref ?? "" })}>
@@ -244,26 +309,30 @@ function TrialReminderStrip() {
     setDismissed(true);
   };
 
-  const tone =
-    (days ?? 8) <= 3
-      ? "border-rose-300/80 bg-rose-50 text-rose-950"
-      : "border-amber-300/80 bg-amber-50 text-amber-950";
+  const urgent = (days ?? 8) <= 3;
+  const borderColor = urgent
+    ? "color-mix(in srgb, var(--color-semantic-danger) 40%, var(--color-border-subtle))"
+    : "color-mix(in srgb, var(--color-semantic-warning) 40%, var(--color-border-subtle))";
+  const backgroundColor = urgent
+    ? "color-mix(in srgb, var(--color-semantic-danger) 10%, var(--color-surface-card))"
+    : "color-mix(in srgb, var(--color-semantic-warning) 10%, var(--color-surface-card))";
 
   return (
     <div
-      className={`rounded-lg border px-3 py-2.5 text-sm flex flex-wrap items-center gap-3 ${tone}`}
+      className="flex flex-wrap items-center gap-3 rounded-[var(--radius-lg)] border px-3 py-2.5 text-sm"
+      style={{ borderColor, backgroundColor, color: "var(--color-neutral-900)" }}
       data-testid="trial-reminder-strip"
     >
-      <div className="flex items-start gap-2 min-w-0 flex-1">
-        <Clock className="h-4 w-4 shrink-0 mt-0.5" />
+      <div className="flex min-w-0 flex-1 items-start gap-2">
+        <Clock className="mt-0.5 h-4 w-4 shrink-0" />
         <div className="min-w-0">
           <p className="font-semibold">Deneme süreniz {days} gün içinde bitiyor</p>
-          <p className="text-xs opacity-90 mt-0.5">
+          <p className="mt-0.5 text-xs opacity-90">
             Kesintisiz kullanım için plan seçin; faturalama ve abonelik ayarlarından devam edebilirsiniz.
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex shrink-0 items-center gap-2">
         <Button variant="default" size="sm" className="h-8" asChild>
           <Link href="/pricing" onClick={() => trackProductEvent("trial_cta_click", { from: "layout_strip", to: "pricing" })}>
             Planları gör
@@ -277,42 +346,67 @@ function TrialReminderStrip() {
   );
 }
 
-// Tüm menü öğeleri mantıksal gruplara ayrıldı.
-// "Ana Panel" üstte sabit (grup dışı), diğer gruplar katlanabilir.
-const TOP_ITEM: NavItem = {
-  href: "/dashboard", label: "Ana Panel", icon: LayoutDashboard,
-  roles: ["admin", "staff", "viewer", "super_admin"],
-};
-
-const HERO_ITEM: NavItem = {
-  href: "/eticarium-merkezi", label: "Online Satış Merkezi", icon: Sparkles,
-  roles: ["admin", "staff", "viewer"],
-};
-
-
 const STORAGE_KEY = "ticarium365_nav_open_groups_v1";
 const COLLAPSE_KEY = "ticarium365_sidebar_collapsed_v1";
 
 function loadOpenGroups(): Record<string, boolean> {
-  // Sayfa girişinde tüm alt menüler kapalı gelsin — sadece aktif rotanın grubu
-  // useEffect içinde otomatik açılır (bkz. activeGroupId effect).
   return {};
 }
 
 function saveOpenGroups(_state: Record<string, boolean>) {
-  // Açık-grup durumu sekme/sayfa içi tutulur, kalıcı kaydedilmez.
-  // (Eski sürümden kalan kayıtları temizle.)
-  try { localStorage.removeItem(STORAGE_KEY); } catch { /* */ }
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* */
+  }
 }
 
 function loadCollapsed(): boolean {
-  try { return localStorage.getItem(COLLAPSE_KEY) === "1"; } catch { return false; }
+  try {
+    return localStorage.getItem(COLLAPSE_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
+
 function saveCollapsed(v: boolean) {
-  try { localStorage.setItem(COLLAPSE_KEY, v ? "1" : "0"); } catch { /* */ }
+  try {
+    localStorage.setItem(COLLAPSE_KEY, v ? "1" : "0");
+  } catch {
+    /* */
+  }
+}
+
+function navRowStyle(active: boolean, locked: boolean): React.CSSProperties {
+  return {
+    borderRadius: "var(--radius-md)",
+    minHeight: 40,
+    fontSize: "var(--font-size-sm)",
+    fontWeight: "var(--font-weight-medium)",
+    color: active ? "var(--color-nav-text-active)" : locked ? "var(--color-neutral-400)" : "var(--color-nav-text)",
+    backgroundColor: active ? "var(--color-nav-item-active-bg)" : undefined,
+  };
+}
+
+/** Aktif öğe — sol marka çubuğu scale-y ile (150ms). */
+function navRowIndicator(active: boolean) {
+  return cn(
+    "relative overflow-visible",
+    "before:pointer-events-none before:absolute before:left-0 before:top-1/2 before:z-[1] before:h-[calc(100%-10px)] before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-[var(--color-brand-500)] before:transition-transform before:duration-150 before:ease-out before:origin-center",
+    active ? "before:scale-y-100" : "before:scale-y-0",
+  );
+}
+
+function navRailIndicator(active: boolean) {
+  return cn(
+    "relative overflow-visible",
+    "before:pointer-events-none before:absolute before:left-0 before:top-1/2 before:z-[1] before:h-[60%] before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-[var(--color-brand-500)] before:transition-transform before:duration-150 before:ease-out before:origin-center",
+    active ? "before:scale-y-100" : "before:scale-y-0",
+  );
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { company } = useCompany();
   const [location] = useLocation();
@@ -323,6 +417,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState<boolean>(() => loadCollapsed());
   const { has: hasFeature } = useFeatures();
   const { isHidden: isItemHidden } = useMenuPrefs();
+  const { desktopNav, wideSidebar } = useNavLayoutMedia();
+  const isMobileNav = !desktopNav;
+  const iconRail = desktopNav && (!wideSidebar || collapsed);
 
   const toggleCollapsed = () => {
     const next = !collapsed;
@@ -333,16 +430,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const companyName = company?.name ?? "Ticarium365";
 
   const username = user ? (user as { username?: string | null }).username?.trim() : undefined;
-  const sidebarDisplayName =
-    user?.fullName?.trim() || username || "Kullanıcı";
+  const sidebarDisplayName = user?.fullName?.trim() || username || "Kullanıcı";
   const sidebarInitial = initialLetter(user?.fullName?.trim() || username);
 
-  const accountType = ((user as any)?.accountType ?? "seller") as "buyer" | "seller" | "both" | "purchasing";
+  const accountType = ((user as any)?.accountType ?? "seller") as AccountType;
   const isPurchasing = accountType === "purchasing";
+  const pageTitle = resolveLayoutPageTitle(location, isPurchasing);
 
-  // Rol + accountType filtresi + kullanıcı menü tercihi (hidden) uygulanmış gruplar.
-  // Dalga 17: tek doğruluk kaynağı `filterVisibleNavGroups` saf helper'ı; aynı mantık
-  // node:test ile (D17-8/9/10/11) garantili.
   const visibleGroups = useMemo(() => {
     if (!user) return [];
     return filterVisibleNavGroups(NAV_GROUPS, {
@@ -353,7 +447,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     });
   }, [user, isItemHidden, accountType]);
 
-  // Aktif rotanın feature gereksinimi (en uzun href eşleşmesi — nested route güvenliği)
   const currentRouteFeature = useMemo<string | null>(() => {
     let bestHref = "";
     let bestFeature: string | null = null;
@@ -369,7 +462,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     return bestFeature;
   }, [location]);
 
-  // Aktif yol hangi gruptaysa o grup otomatik açılır
   const activeGroupId = useMemo(() => {
     for (const g of visibleGroups) {
       if (g.items.some((i) => location === i.href || location.startsWith(i.href + "/"))) {
@@ -405,18 +497,55 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const isItemActive = (href: string) => location === href || location.startsWith(href + "/");
 
-  const NavLinks = () => (
+  const closeMobile = () => setIsOpen(false);
+
+  const renderLockedLink = (item: NavItem, reason: LockReason | null, linkBody: React.ReactNode, key: string) => {
+    const locked = reason !== null;
+    const ui = lockUiText(reason);
+    const finalHref = locked && ui.href ? ui.href : item.href;
+    if (!locked) {
+      return (
+        <Link
+          key={key}
+          href={item.href}
+          onMouseEnter={() => prefetchNavHref(item.href, queryClient)}
+        >
+          {linkBody}
+        </Link>
+      );
+    }
+    return (
+      <Tooltip key={key} delayDuration={200}>
+        <TooltipTrigger asChild>
+          <Link href={finalHref} onMouseEnter={() => prefetchNavHref(finalHref, queryClient)}>
+            {linkBody}
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="max-w-xs text-xs">
+          <div className="mb-1 font-semibold">{ui.tooltip}</div>
+          <div className="text-[11px] opacity-80">→ {ui.cta}</div>
+        </TooltipContent>
+      </Tooltip>
+    );
+  };
+
+  const lockIconColor = (reason: LockReason | null) => {
+    if (reason === "role") return "var(--color-semantic-danger)";
+    if (reason === "accountType") return "var(--color-semantic-warning)";
+    return "var(--color-neutral-400)";
+  };
+
+  const NavLinks = ({ forSheet }: { forSheet?: boolean }) => (
     <nav className="flex flex-col gap-0.5">
-      {/* Ana Panel — sabit üst (Sprint I: Satınalma Hesabı'nda gizli) */}
       {user && !isPurchasing && TOP_ITEM.roles.includes(user.role) && (
         <Link href={TOP_ITEM.href}>
           <div
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer text-sm mb-1.5 ${
-              isItemActive(TOP_ITEM.href)
-                ? "bg-blue-50 text-blue-700 font-semibold"
-                : "text-slate-600 font-medium hover:bg-slate-100"
-            }`}
-            onClick={() => setIsOpen(false)}
+            className={cn(
+              "mb-1.5 flex cursor-pointer items-center gap-3 px-3 py-2 transition-colors hover:bg-[var(--color-nav-item-hover)] duration-150",
+              navRowIndicator(isItemActive(TOP_ITEM.href)),
+            )}
+            style={navRowStyle(isItemActive(TOP_ITEM.href), false)}
+            onClick={forSheet ? closeMobile : undefined}
             data-testid="nav-link-dashboard"
           >
             <TOP_ITEM.icon className="h-4 w-4 shrink-0" />
@@ -426,53 +555,52 @@ export function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       {user?.role === "super_admin" && (
-        <Link href="/super-admin">
+        <Link
+          href="/super-admin"
+          onMouseEnter={() => prefetchNavHref("/super-admin", queryClient)}
+        >
           <div
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer text-sm mb-2 ${
-              location === "/super-admin"
-                ? "bg-violet-50 text-violet-800 font-semibold border border-violet-200"
-                : "text-slate-600 font-medium hover:bg-slate-100 border border-transparent"
-            }`}
-            onClick={() => setIsOpen(false)}
+            className="mb-2 flex cursor-pointer items-center gap-3 px-3 py-2 transition-colors hover:bg-[var(--color-nav-item-hover)]"
+            style={navRowStyle(location === "/super-admin" || location.startsWith("/super-admin/"), false)}
+            onClick={forSheet ? closeMobile : undefined}
             data-testid="nav-link-super-admin-hub"
           >
-            <Activity className="h-4 w-4 shrink-0 text-violet-600" />
+            <Activity className="h-4 w-4 shrink-0" />
             <span>Platform merkezi</span>
           </div>
         </Link>
       )}
 
-      {/* HERO — Online Satış Merkezi (öne çıkarılmış; satınalma hesabında gizli) */}
       {user && !isPurchasing && HERO_ITEM.roles.includes(user.role) && (
-        <Link href={HERO_ITEM.href}>
+        <Link
+          href={HERO_ITEM.href}
+          onMouseEnter={() => prefetchNavHref(HERO_ITEM.href, queryClient)}
+        >
           <div
-            className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer text-sm mb-3 overflow-hidden ${
-              isItemActive(HERO_ITEM.href)
-                ? "shadow-md shadow-indigo-500/30"
-                : "hover:shadow-md hover:shadow-indigo-500/20"
-            }`}
+            className="group relative mb-3 flex cursor-pointer items-center gap-3 overflow-hidden rounded-[var(--radius-xl)] px-3 py-2.5 text-sm transition-shadow"
             style={{
-              background: "linear-gradient(135deg, hsl(234 89% 60%) 0%, hsl(180 70% 40%) 100%)",
-              color: "white",
+              background: "linear-gradient(135deg, var(--color-brand-700) 0%, var(--color-nav-700) 100%)",
+              color: "var(--color-nav-text-active)",
+              boxShadow: isItemActive(HERO_ITEM.href) ? "var(--shadow-md)" : undefined,
             }}
-            onClick={() => setIsOpen(false)}
+            onClick={forSheet ? closeMobile : undefined}
             data-testid="nav-link-eticarium-merkezi"
           >
             <span
               aria-hidden
-              className="absolute inset-0 opacity-30 group-hover:opacity-50 transition-opacity"
+              className="absolute inset-0 opacity-30 transition-opacity group-hover:opacity-50"
               style={{
-                background: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.5) 0%, transparent 60%)",
+                background: "radial-gradient(circle at 20% 50%, rgb(255 255 255 / 0.45) 0%, transparent 60%)",
               }}
             />
-            <span className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-white/20 shrink-0">
+            <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-nav-rail-muted)]">
               <HERO_ITEM.icon className="h-4 w-4" />
             </span>
-            <div className="relative flex-1 min-w-0">
-              <div className="font-bold leading-tight">{HERO_ITEM.label}</div>
-              <div className="text-[10px] opacity-90 leading-tight mt-0.5">Tek tıkla tüm kanallar</div>
+            <div className="relative min-w-0 flex-1">
+              <div className="text-sm font-bold leading-tight">{HERO_ITEM.label}</div>
+              <div className="mt-0.5 text-[10px] leading-tight opacity-90">Tek tıkla tüm kanallar</div>
             </div>
-            <span className="relative text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/25">
+            <span className="relative rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-[var(--color-nav-rail-muted)]">
               Yeni
             </span>
           </div>
@@ -487,28 +615,29 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => toggleGroup(group.id)}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer text-xs uppercase tracking-wider ${
-                groupHasActive ? "text-blue-700 font-bold" : "text-slate-500 font-bold hover:bg-slate-100"
-              }`}
+              className="flex w-full cursor-pointer items-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-left font-bold uppercase tracking-wider transition-colors hover:bg-[var(--color-nav-item-hover)]"
+              style={{
+                fontSize: "11px",
+                color: groupHasActive ? "var(--color-nav-text-active)" : "var(--color-neutral-400)",
+              }}
               data-testid={`nav-group-${group.id}`}
               aria-expanded={isOpenGroup}
             >
-              <group.icon className="h-3.5 w-3.5 shrink-0" />
-              <span className="flex-1 text-left">{group.label}</span>
-              <span className="text-[10px] font-semibold opacity-60">{group.items.length}</span>
-              {isOpenGroup
-                ? <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
-                : <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" />}
+              <group.icon className="h-3.5 w-3.5 shrink-0 text-[color:var(--color-neutral-400)]" />
+              <span className="flex-1">{group.label}</span>
+              <span className="text-[10px] font-semibold opacity-60" style={{ color: "var(--color-neutral-400)" }}>
+                {group.items.length}
+              </span>
+              {isOpenGroup ? (
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" />
+              )}
             </button>
             {isOpenGroup && (
-              <div className="ml-2 mt-0.5 mb-1 border-l border-slate-200 pl-2">
+              <div className="mb-1 ml-2 mt-0.5 border-l pl-2" style={{ borderColor: "var(--color-nav-border)" }}>
                 {group.items.map((item) => {
                   const active = isItemActive(item.href);
-                  // Dalga 17 — Lock reason ayrımı (package/role/accountType).
-                  // Mevcut behavior'da role/accountType zaten visibleGroups filter'ında
-                  // gizleniyor; burada gelen item'ların lock'u öncelikli olarak "package"
-                  // olur. Yine de helper genel — ileride "tüm modülleri göster" toggle'ı
-                  // eklenirse direkt çalışacak.
                   const reason: LockReason = user
                     ? getNavLockReason(
                         { roles: item.roles, accountTypes: item.accountTypes, feature: item.feature },
@@ -516,62 +645,33 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       )
                     : null;
                   const locked = reason !== null;
-                  const ui = lockUiText(reason);
+                  const LockIcon = reason === "role" ? ShieldOff : reason === "accountType" ? BuildingLock : Lock;
                   const itemId = navItemId(item);
                   const slug = navIdToTestSlug(itemId);
-                  // Lock ikonu ve renk varyantları
-                  const LockIcon = reason === "role" ? ShieldOff
-                    : reason === "accountType" ? BuildingLock
-                    : Lock;
-                  const lockColor = reason === "role" ? "text-rose-500"
-                    : reason === "accountType" ? "text-amber-500"
-                    : "text-slate-400";
                   const linkContent = (
                     <div
-                      className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer text-sm ${
-                        active
-                          ? "bg-blue-50 text-blue-700 font-semibold shadow-sm shadow-blue-500/10"
-                          : locked
-                            ? "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
-                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                      }`}
-                      onClick={() => setIsOpen(false)}
+                      className={cn(
+                        "flex cursor-pointer items-center gap-2.5 px-3 py-1.5 transition-colors hover:bg-[var(--color-nav-item-hover)] duration-150",
+                        navRowIndicator(active),
+                      )}
+                      style={navRowStyle(active, locked)}
+                      onClick={forSheet ? closeMobile : undefined}
                       data-testid={`nav-link-${slug}`}
                       data-lock-reason={reason ?? undefined}
                     >
                       <item.icon className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate flex-1">{item.label}</span>
+                      <span className="flex-1 truncate">{item.label}</span>
                       {locked && (
                         <LockIcon
-                          className={`h-3 w-3 shrink-0 opacity-80 ${lockColor}`}
+                          className="h-3 w-3 shrink-0 opacity-80"
+                          style={{ color: lockIconColor(reason) }}
                           data-testid={`nav-lock-${slug}`}
                           data-lock-reason={reason ?? undefined}
                         />
                       )}
                     </div>
                   );
-                  // Locked item'ın href'ini lock CTA'sına yönlendir (Yükselt → /pricing vb.)
-                  const finalHref = locked && ui.href ? ui.href : item.href;
-                  if (!locked) {
-                    return (
-                      <Link key={itemId} href={item.href}>
-                        {linkContent}
-                      </Link>
-                    );
-                  }
-                  return (
-                    <TooltipProvider key={itemId} delayDuration={200}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Link href={finalHref}>{linkContent}</Link>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-xs text-xs">
-                          <div className="font-semibold mb-1">{ui.tooltip}</div>
-                          <div className="text-[11px] opacity-80">→ {ui.cta}</div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  );
+                  return renderLockedLink(item, reason, linkContent, itemId);
                 })}
               </div>
             )}
@@ -581,172 +681,516 @@ export function Layout({ children }: { children: React.ReactNode }) {
     </nav>
   );
 
+  /** Tek satır ikon + popover menü (dar yan panel veya geniş panel daraltılmış) */
+  const NavIconRail = () => (
+    <div className="flex flex-col items-center gap-1 py-3">
+      {user && !isPurchasing && TOP_ITEM.roles.includes(user.role) && (
+        <Tooltip delayDuration={400}>
+          <TooltipTrigger asChild>
+            <Link href={TOP_ITEM.href}>
+              <div
+                className={cn(
+                  "flex h-10 w-10 cursor-pointer items-center justify-center transition-colors hover:bg-[var(--color-nav-item-hover)] duration-150",
+                  navRailIndicator(isItemActive(TOP_ITEM.href)),
+                )}
+                style={navRowStyle(isItemActive(TOP_ITEM.href), false)}
+                data-testid="nav-link-collapsed-dashboard"
+              >
+                <TOP_ITEM.icon className="h-4 w-4 shrink-0" />
+              </div>
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent side="right">{TOP_ITEM.label}</TooltipContent>
+        </Tooltip>
+      )}
+
+      {user?.role === "super_admin" && (
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>
+            <Link
+              href="/super-admin"
+              onMouseEnter={() => prefetchNavHref("/super-admin", queryClient)}
+            >
+              <div
+                className="flex h-10 w-10 cursor-pointer items-center justify-center transition-colors hover:bg-[var(--color-nav-item-hover)]"
+                style={navRowStyle(location.startsWith("/super-admin"), false)}
+              >
+                <Activity className="h-4 w-4 shrink-0" />
+              </div>
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent side="right">Platform merkezi</TooltipContent>
+        </Tooltip>
+      )}
+
+      {user && !isPurchasing && HERO_ITEM.roles.includes(user.role) && (
+        <Tooltip delayDuration={400}>
+          <TooltipTrigger asChild>
+            <Link
+              href={HERO_ITEM.href}
+              onMouseEnter={() => prefetchNavHref(HERO_ITEM.href, queryClient)}
+            >
+              <div
+                className={cn(
+                  "flex h-10 w-10 cursor-pointer items-center justify-center rounded-[var(--radius-md)] transition-colors hover:opacity-95 duration-150",
+                  navRailIndicator(isItemActive(HERO_ITEM.href)),
+                )}
+                style={{
+                  background: "linear-gradient(135deg, var(--color-brand-700) 0%, var(--color-nav-700) 100%)",
+                  color: "var(--color-nav-text-active)",
+                  boxShadow: isItemActive(HERO_ITEM.href) ? "var(--shadow-md)" : undefined,
+                }}
+              >
+                <HERO_ITEM.icon className="h-4 w-4 shrink-0" />
+              </div>
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent side="right">{HERO_ITEM.label}</TooltipContent>
+        </Tooltip>
+      )}
+
+      {visibleGroups.map((group) => (
+        <Popover key={group.id}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              title={group.label}
+              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-[var(--radius-md)] transition-colors hover:bg-[var(--color-nav-item-hover)]"
+              style={{
+                color: group.id === activeGroupId ? "var(--color-nav-text-active)" : "var(--color-nav-text)",
+              }}
+              data-testid={`nav-group-collapsed-${group.id}`}
+            >
+              <group.icon className="h-4 w-4 shrink-0" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            side="right"
+            align="start"
+            className="w-72 border-[color:var(--color-border-subtle)] bg-[var(--color-surface-card)] p-2"
+            sideOffset={8}
+          >
+            <div className="mb-2 px-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--color-neutral-400)" }}>
+              {group.label}
+            </div>
+            <div className="flex max-h-[min(70vh,24rem)] flex-col gap-0.5 overflow-y-auto">
+              {group.items.map((item) => {
+                const active = isItemActive(item.href);
+                const reason: LockReason = user
+                  ? getNavLockReason(
+                      { roles: item.roles, accountTypes: item.accountTypes, feature: item.feature },
+                      { role: user.role, accountType, hasFeature },
+                    )
+                  : null;
+                const locked = reason !== null;
+                const LockIcon = reason === "role" ? ShieldOff : reason === "accountType" ? BuildingLock : Lock;
+                const itemId = navItemId(item);
+                const slug = navIdToTestSlug(itemId);
+                const row = (
+                  <div
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2 rounded-[var(--radius-md)] px-2 py-2 text-sm transition-colors hover:bg-[var(--color-neutral-100)] duration-150",
+                      navRowIndicator(active),
+                    )}
+                    style={{
+                      fontWeight: "var(--font-weight-medium)",
+                      color: active ? "var(--color-neutral-900)" : locked ? "var(--color-neutral-400)" : "var(--color-neutral-700)",
+                      backgroundColor: active ? "color-mix(in srgb, var(--color-brand-50) 90%, transparent)" : undefined,
+                    }}
+                    data-testid={`nav-link-${slug}`}
+                  >
+                    <item.icon className="h-3.5 w-3.5 shrink-0" />
+                    <span className="flex-1 truncate">{item.label}</span>
+                    {locked && <LockIcon className="h-3 w-3 shrink-0 opacity-80" style={{ color: lockIconColor(reason) }} />}
+                  </div>
+                );
+                const ui = lockUiText(reason);
+                const finalHref = locked && ui.href ? ui.href : item.href;
+                return (
+                  <Link
+                    key={itemId}
+                    href={finalHref}
+                    onMouseEnter={() => prefetchNavHref(finalHref, queryClient)}
+                  >
+                    {row}
+                  </Link>
+                );
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
+      ))}
+    </div>
+  );
+
   if (!user) return null;
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row">
-      {/* Mobile Header */}
-      <header className="md:hidden px-4 py-3 flex items-center justify-between sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="flex items-center gap-2">
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="-ml-2 text-slate-700 hover:bg-slate-100" data-testid="button-mobile-menu">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
+  const shellAsideStyle: React.CSSProperties = {
+    backgroundColor: "var(--color-nav-bg)",
+    borderRight: `1px solid var(--color-nav-border)`,
+  };
 
-            <SheetContent side="left" className="w-72 p-0 bg-slate-50 flex flex-col h-full">
-              <SheetHeader className="p-5 border-b border-slate-200 text-left bg-white">
-                <SheetTitle
-                  className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5"
-                  style={{ fontFamily: "var(--font-display)" }}
+  const avatarStyle: React.CSSProperties = {
+    background: "linear-gradient(135deg, var(--color-brand-700) 0%, var(--color-nav-700) 100%)",
+    color: "var(--color-nav-text-active)",
+  };
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <div className="flex min-h-screen flex-col md:flex-row">
+        <header
+          className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 md:hidden"
+          style={{
+            backgroundColor: "var(--color-surface-card)",
+            borderBottom: "1px solid var(--color-border-subtle)",
+          }}
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="-ml-2 h-10 w-10 shrink-0"
+                  style={{ color: "var(--color-neutral-700)" }}
+                  data-testid="button-mobile-menu"
                 >
-                  <BrandLogo size={32} />
-                  <span className="t365-brand-gradient">Ticarium365</span>
-                </SheetTitle>
-              </SheetHeader>
-              <div className="p-3 flex-1 overflow-y-auto">
-                <TrialBanner />
-                <NavLinks />
-              </div>
-              <div className="p-4 mt-auto border-t border-slate-200 bg-white">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="h-9 w-9 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0 bg-gradient-to-br from-blue-600 to-teal-600 shadow-sm">
-                    {sidebarInitial}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{sidebarDisplayName}</p>
-                    <div className="flex items-center gap-1 text-[11px] text-slate-500 truncate">
-                      <Building2 className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{companyName}</span>
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+
+              <SheetContent
+                side="left"
+                className="flex h-full w-72 flex-col p-0"
+                style={{ backgroundColor: "var(--color-nav-bg)", borderColor: "var(--color-nav-border)" }}
+              >
+                <SheetHeader
+                  className="border-b p-5 text-left"
+                  style={{ borderColor: "var(--color-nav-border)", backgroundColor: "var(--color-nav-bg)" }}
+                >
+                  <SheetTitle
+                    className="flex items-center gap-2.5 text-2xl font-extrabold tracking-tight"
+                    style={{ fontFamily: "var(--font-display)", color: "var(--color-nav-text-active)" }}
+                  >
+                    {company?.logoUrl ? (
+                      <img
+                        src={company.logoUrl}
+                        alt={company.name}
+                        className="h-8 w-auto max-w-[140px] object-contain"
+                      />
+                    ) : (
+                      <>
+                        <BrandLogo size={32} />
+                        <span className="t365-brand-gradient">Ticarium365</span>
+                      </>
+                    )}
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="flex-1 overflow-y-auto p-3">
+                  <TrialBanner />
+                  <NavLinks forSheet />
+                </div>
+                <div
+                  className="mt-auto border-t p-4"
+                  style={{ borderColor: "var(--color-nav-border)", backgroundColor: "var(--color-nav-bg)" }}
+                >
+                  <div className="mb-3 flex items-center gap-3">
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-sm font-bold shadow-sm"
+                      style={avatarStyle}
+                    >
+                      {sidebarInitial}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold" style={{ color: "var(--color-nav-text-active)" }}>
+                        {sidebarDisplayName}
+                      </p>
+                      <div className="flex items-center gap-1 truncate text-[11px]" style={{ color: "var(--color-nav-text)" }}>
+                        <Building2 className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{companyName}</span>
+                      </div>
+                      <span
+                        className="mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium"
+                        style={{
+                          backgroundColor: "var(--color-nav-rail-muted)",
+                          color: "var(--color-nav-text-active)",
+                        }}
+                      >
+                        {roleChipLabel(user.role)}
+                      </span>
                     </div>
                   </div>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    style={{
+                      borderColor: "var(--color-nav-border)",
+                      color: "var(--color-nav-text)",
+                      backgroundColor: "transparent",
+                    }}
+                    onClick={handleLogout}
+                    data-testid="button-mobile-logout"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Çıkış Yap
+                  </Button>
                 </div>
-                <Button variant="outline" className="w-full justify-start border-slate-200 text-slate-700 hover:bg-slate-100 bg-white" onClick={handleLogout} data-testid="button-mobile-logout">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Çıkış Yap
+              </SheetContent>
+            </Sheet>
+            <span className="truncate text-lg font-bold tracking-tight" style={{ color: "var(--color-neutral-900)" }}>
+              {pageTitle}
+            </span>
+          </div>
+          {user.role !== "super_admin" && <NotificationCenter />}
+        </header>
+
+        <aside
+          className={`hidden h-screen flex-col sticky top-0 transition-[width] duration-200 md:flex ${
+            iconRail ? "w-16" : "w-60"
+          }`}
+          style={shellAsideStyle}
+          data-testid="desktop-sidebar"
+          data-collapsed={iconRail ? "true" : "false"}
+        >
+          <div
+            className={`relative flex items-center border-b px-3 py-5 ${
+              wideSidebar && !iconRail ? "justify-between gap-2" : "justify-center"
+            }`}
+            style={{ borderColor: "var(--color-nav-border)" }}
+          >
+            {iconRail ? (
+              company?.logoUrl ? (
+                <img
+                  src={company.logoUrl}
+                  alt={company.name}
+                  className="h-7 w-auto max-w-[120px] object-contain"
+                />
+              ) : (
+                <BrandLogo size={28} />
+              )
+            ) : (
+              <h1
+                className="flex min-w-0 flex-1 items-center gap-2.5 px-2 text-2xl font-extrabold tracking-tight"
+                style={{ fontFamily: "var(--font-display)", color: "var(--color-nav-text-active)" }}
+              >
+                {company?.logoUrl ? (
+                  <img
+                    src={company.logoUrl}
+                    alt={company.name}
+                    className="h-8 w-auto max-w-[140px] object-contain"
+                  />
+                ) : (
+                  <>
+                    <BrandLogo size={32} />
+                    <span className="t365-brand-gradient min-w-0 truncate">Ticarium365</span>
+                  </>
+                )}
+              </h1>
+            )}
+            {wideSidebar ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleCollapsed}
+                title={collapsed ? "Menüyü genişlet" : "Menüyü daralt"}
+                className={`h-7 w-7 shrink-0 ${iconRail ? "absolute right-2 top-1/2 -translate-y-1/2" : ""}`}
+                style={{ color: "var(--color-nav-text)" }}
+                data-testid="button-sidebar-toggle"
+              >
+                {iconRail ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+              </Button>
+            ) : null}
+          </div>
+
+          {iconRail ? (
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+              <NavIconRail />
+            </div>
+          ) : (
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+              <TrialBanner />
+              <NavLinks />
+            </div>
+          )}
+
+          <div className="mt-auto border-t p-3" style={{ borderColor: "var(--color-nav-border)" }}>
+            {iconRail ? (
+              <div className="flex flex-col items-center gap-2 px-0.5">
+                <div
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-sm font-bold"
+                  style={avatarStyle}
+                >
+                  {sidebarInitial}
+                </div>
+                <span
+                  className="line-clamp-2 max-w-full text-center text-[10px] font-medium leading-tight"
+                  style={{ color: "var(--color-nav-text-active)" }}
+                  title={sidebarDisplayName}
+                  data-testid="sidebar-user-name"
+                >
+                  {sidebarDisplayName}
+                </span>
+                <span
+                  className="max-w-full truncate text-center text-[10px] font-medium"
+                  style={{
+                    backgroundColor: "var(--color-nav-rail-muted)",
+                    color: "var(--color-nav-text-active)",
+                    borderRadius: "var(--radius-full)",
+                    padding: "2px 6px",
+                  }}
+                  title={roleChipLabel(user.role)}
+                >
+                  {roleChipLabel(user.role)}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  title="Çıkış Yap"
+                  className="h-9 w-9 shrink-0"
+                  style={{ color: "var(--color-nav-text)" }}
+                  data-testid="button-desktop-logout"
+                >
+                  <LogOut className="h-4 w-4" />
                 </Button>
               </div>
-            </SheetContent>
-          </Sheet>
-          <span className="font-bold text-lg tracking-tight text-slate-900">{companyName}</span>
-        </div>
-        {/* Mobile sağ — zil */}
-        {user.role !== "super_admin" && <NotificationCenter />}
-      </header>
-
-      {/* Desktop Sidebar */}
-      <aside
-        className={`hidden md:flex ${collapsed ? "w-16" : "w-64"} flex-col h-screen sticky top-0 bg-slate-50 border-r border-slate-200 transition-[width] duration-200`}
-        data-testid="desktop-sidebar"
-        data-collapsed={collapsed ? "true" : "false"}
-      >
-        <div className="px-3 py-5 border-b border-slate-200 bg-white flex items-center justify-between gap-2">
-          {collapsed ? (
-            <div className="mx-auto"><BrandLogo size={28} /></div>
-          ) : (
-            <h1
-              className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5 px-2"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              <BrandLogo size={32} />
-              <span className="t365-brand-gradient">Ticarium365</span>
-            </h1>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleCollapsed}
-            title={collapsed ? "Menüyü genişlet" : "Menüyü daralt"}
-            className="h-7 w-7 shrink-0 text-slate-500 hover:text-slate-900"
-            data-testid="button-sidebar-toggle"
-          >
-            {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
-          </Button>
-        </div>
-
-        {collapsed ? (
-          <div className="flex-1 overflow-y-auto py-3 flex flex-col items-center gap-1.5">
-            {user && TOP_ITEM.roles.includes(user.role) && (
-              <Link href={TOP_ITEM.href}>
+            ) : (
+              <div className="flex items-start gap-3 rounded-[var(--radius-lg)] px-2 py-2 transition-colors hover:bg-[var(--color-nav-item-hover)]">
                 <div
-                  title={TOP_ITEM.label}
-                  className={`h-9 w-9 flex items-center justify-center rounded-lg cursor-pointer ${
-                    isItemActive(TOP_ITEM.href) ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-100"
-                  }`}
-                  data-testid="nav-link-collapsed-dashboard"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-sm font-bold shadow-sm"
+                  style={avatarStyle}
                 >
-                  <TOP_ITEM.icon className="h-4 w-4" />
+                  {sidebarInitial}
                 </div>
-              </Link>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold" style={{ color: "var(--color-nav-text-active)" }} data-testid="sidebar-user-name">
+                    {sidebarDisplayName}
+                  </p>
+                  <div className="flex items-center gap-1 truncate text-[11px]" style={{ color: "var(--color-nav-text)" }} data-testid="sidebar-tenant-name">
+                    <Building2 className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{companyName}</span>
+                  </div>
+                  <span
+                    className="mt-1.5 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
+                    style={{
+                      backgroundColor: "var(--color-nav-rail-muted)",
+                      color: "var(--color-nav-text-active)",
+                    }}
+                  >
+                    {roleChipLabel(user.role)}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  title="Çıkış Yap"
+                  className="h-8 w-8 shrink-0"
+                  style={{ color: "var(--color-nav-text)" }}
+                  data-testid="button-desktop-logout"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
             )}
-            {visibleGroups.map((g) => (
-              <div
-                key={g.id}
-                title={g.label}
-                onClick={() => { setCollapsed(false); saveCollapsed(false); toggleGroup(g.id); }}
-                className="h-9 w-9 flex items-center justify-center rounded-lg cursor-pointer text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-                data-testid={`nav-group-collapsed-${g.id}`}
-              >
-                <g.icon className="h-4 w-4" />
-              </div>
-            ))}
           </div>
-        ) : (
-          <div className="flex-1 overflow-y-auto p-3">
-            <TrialBanner />
-            <NavLinks />
-          </div>
-        )}
+        </aside>
 
-        <div className="p-3 mt-auto border-t border-slate-200 bg-white">
-          <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-slate-50 transition-colors">
-            <div className="h-9 w-9 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0 bg-gradient-to-br from-blue-600 to-teal-600 shadow-sm">
-              {sidebarInitial}
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div
+            className="z-20 hidden h-14 w-full shrink-0 items-center gap-4 border-b px-6 md:flex"
+            style={{
+              borderColor: "var(--color-border-subtle)",
+              backgroundColor: "var(--color-surface-card)",
+            }}
+          >
+            <h1 className="max-w-[38%] shrink-0 truncate text-lg font-semibold" style={{ color: "var(--color-neutral-900)" }}>
+              {pageTitle}
+            </h1>
+            <div className="flex shrink-0 items-center gap-2">
+              <TrialBadge />
+              <QuickAction />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 truncate" data-testid="sidebar-user-name">{sidebarDisplayName}</p>
-              <div className="flex items-center gap-1 text-[11px] text-slate-500 truncate">
-                <Building2 className="h-3 w-3 shrink-0" />
-                <span className="truncate" data-testid="sidebar-tenant-name">{companyName}</span>
+            <div className="min-w-0 flex-1" />
+            <div className="flex shrink-0 items-center gap-3">
+              <div className="w-full max-w-md min-w-[12rem]">
+                <GlobalSearch />
+              </div>
+              {user.role !== "super_admin" && <NotificationCenter />}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-10 gap-2 px-2" style={{ color: "var(--color-neutral-700)" }}>
+                    <div
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold"
+                      style={avatarStyle}
+                    >
+                      {sidebarInitial}
+                    </div>
+                    <ChevronDown className="h-4 w-4 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="font-semibold">{sidebarDisplayName}</div>
+                    <div className="text-xs font-normal opacity-80">{companyName}</div>
+                    <div
+                      className="mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium"
+                      style={{
+                        backgroundColor: "var(--color-neutral-100)",
+                        color: "var(--color-neutral-700)",
+                      }}
+                    >
+                      {roleChipLabel(user.role)}
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Ayarlar
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/firma-profili">
+                      <Building2 className="mr-2 h-4 w-4" />
+                      Firma profili
+                    </Link>
+                  </DropdownMenuItem>
+                  {user.role === "admin" && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings/subscription">
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        Abonelik
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Çıkış Yap
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          <DemoDataBanner />
+          <div className="min-h-0 flex-1 overflow-y-auto" style={{ backgroundColor: "var(--color-surface-bg)", padding: "var(--spacing-6)" }}>
+            <div className="w-full max-w-none space-y-3">
+              <TrialReminderStrip />
+              <RetentionHintBanner />
+              <div key={location} className="t365-page-main">
+                <FeatureGate feature={currentRouteFeature ?? undefined}>{children}</FeatureGate>
               </div>
             </div>
-            {user.role !== "super_admin" && <NotificationCenter />}
-            <Button variant="ghost" size="icon" onClick={handleLogout} title="Çıkış Yap" className="h-8 w-8 shrink-0 text-slate-500 hover:text-slate-900 hover:bg-slate-100" data-testid="button-desktop-logout">
-              <LogOut className="h-4 w-4" />
-            </Button>
           </div>
-        </div>
-      </aside>
+        </main>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        {/* Sprint 83 — sticky üst bar: global arama + hızlı işlem */}
-        <div className="hidden md:flex sticky top-0 z-20 items-center gap-3 border-b border-slate-200 bg-white/95 px-6 py-2.5 backdrop-blur">
-          <div className="flex-1 max-w-xl">
-            <GlobalSearch />
-          </div>
-          <div className="flex items-center gap-2">
-            <TrialBadge />
-            <QuickAction />
-          </div>
-        </div>
-        <DemoDataBanner />
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          <div className="mx-auto max-w-6xl space-y-3">
-            <TrialReminderStrip />
-            <RetentionHintBanner />
-            <FeatureGate feature={currentRouteFeature ?? undefined}>
-              {children}
-            </FeatureGate>
-          </div>
-        </div>
-      </main>
-
-      <WelcomeTour />
-      <CommandPalette />
-      <SetupChecklistPopover />
-      <QuickBarcodeFab />
-    </div>
+        <WelcomeTour />
+        <CommandPalette />
+        <SetupChecklistPopover />
+        <QuickBarcodeFab />
+      </div>
+    </TooltipProvider>
   );
 }

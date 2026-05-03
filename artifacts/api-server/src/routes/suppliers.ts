@@ -7,8 +7,43 @@ import { eq, and, ilike, or, desc, asc, count, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { Errors } from "../lib/errors.js";
 import { audit } from "../lib/audit.js";
+import { z } from "zod";
 
 const router = Router();
+
+// Zod schemas for validation
+const supplierCreateSchema = z.object({
+  code: z.string().min(1, "Kod zorunludur").max(50),
+  name: z.string().min(1, "Ad zorunludur").max(200),
+  type: z.enum(["individual", "corporate"]).optional(),
+  phone: z.string().max(50).optional(),
+  email: z.string().email("Geçersiz e-posta").max(100).optional(),
+  city: z.string().max(100).optional(),
+  district: z.string().max(100).optional(),
+  address: z.string().max(500).optional(),
+  contactPerson: z.string().max(100).optional(),
+  taxOffice: z.string().max(100).optional(),
+  taxNumber: z.string().max(50).optional(),
+  creditLimit: z.number().optional(),
+  openingBalance: z.number().optional(),
+  notes: z.string().max(1000).optional(),
+});
+
+const supplierUpdateSchema = z.object({
+  code: z.string().min(1).max(50).optional(),
+  name: z.string().min(1).max(200).optional(),
+  type: z.enum(["individual", "corporate"]).optional(),
+  phone: z.string().max(50).optional(),
+  email: z.string().email("Geçersiz e-posta").max(100).optional(),
+  city: z.string().max(100).optional(),
+  district: z.string().max(100).optional(),
+  address: z.string().max(500).optional(),
+  contactPerson: z.string().max(100).optional(),
+  taxOffice: z.string().max(100).optional(),
+  taxNumber: z.string().max(50).optional(),
+  creditLimit: z.number().optional(),
+  notes: z.string().max(1000).optional(),
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // YARDIMCI
@@ -82,7 +117,7 @@ router.get("/top-creditors", requireAuth, requireRole(["admin"]), async (req: Re
 router.get("/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     if (isNaN(id)) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
     const [supplier] = await db.select().from(suppliersTable)
       .where(and(eq(suppliersTable.id, id), eq(suppliersTable.companyId, cid)));
@@ -100,8 +135,9 @@ router.get("/:id", requireAuth, async (req: Request, res: Response) => {
 router.post("/", requireAuth, requireRole(["admin", "staff"]), async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
+    const body = supplierCreateSchema.parse(req.body);
     const { code, name, phone, email, city, district, address, contactPerson,
-            taxOffice, taxNumber, openingBalance, notes } = req.body;
+            taxOffice, taxNumber, openingBalance, notes } = body;
     if (!code || !name) return void res.status(400).json(Errors.badRequest("Kod ve ad zorunludur"));
     const existing = await db.select({ id: suppliersTable.id }).from(suppliersTable)
       .where(and(eq(suppliersTable.companyId, cid), eq(suppliersTable.code, code)));
@@ -119,7 +155,7 @@ router.post("/", requireAuth, requireRole(["admin", "staff"]), async (req: Reque
         companyId: cid, supplierId: supplier.id, type: "adjustment",
         direction: ob > 0 ? "debit" : "credit", amount: Math.abs(ob),
         referenceType: "manual", description: "Açılış bakiyesi",
-        createdBy: req.session.user.id,
+        createdBy: req.session.user?.id,
       });
     }
     await audit({ req, action: "SUPPLIER_CREATE", entity: "supplier", entityId: supplier.id, details: { code, name } });
@@ -138,18 +174,19 @@ router.put("/:id", requireAuth, requireRole(["admin", "staff"]), async (req: Req
     const cid = req.companyId;
     const id = parseInt(req.params.id);
     if (isNaN(id)) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
+    const body = supplierUpdateSchema.parse(req.body);
     const [existing] = await db.select().from(suppliersTable)
       .where(and(eq(suppliersTable.id, id), eq(suppliersTable.companyId, cid)));
     if (!existing) return void res.status(404).json(Errors.notFound("Tedarikçi"));
     if (!existing.isActive) return void res.status(400).json(Errors.badRequest("Pasif tedarikçi düzenlenemez"));
-    if (req.body.code && req.body.code !== existing.code) {
+    if (body.code && body.code !== existing.code) {
       const dup = await db.select({ id: suppliersTable.id }).from(suppliersTable)
-        .where(and(eq(suppliersTable.companyId, cid), eq(suppliersTable.code, req.body.code)));
+        .where(and(eq(suppliersTable.companyId, cid), eq(suppliersTable.code, body.code)));
       if (dup.length) return void res.status(409).json(Errors.conflict("DUPLICATE_CODE", "Bu kod zaten kullanılıyor"));
     }
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     const fields = ["code","name","phone","email","city","district","address","contactPerson","taxOffice","taxNumber","notes"] as const;
-    for (const f of fields) { if (req.body[f] !== undefined) updateData[f] = req.body[f]; }
+    for (const f of fields) { if (body[f] !== undefined) updateData[f] = body[f]; }
     const [updated] = await db.update(suppliersTable).set(updateData as Partial<typeof suppliersTable.$inferInsert>)
       .where(and(eq(suppliersTable.id, id), eq(suppliersTable.companyId, cid))).returning();
     await audit({ req, action: "SUPPLIER_UPDATE", entity: "supplier", entityId: id });
@@ -206,7 +243,7 @@ router.patch("/:id/restore", requireAuth, requireRole(["admin"]), async (req: Re
 router.get("/:id/transactions", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const supplierId = parseInt(req.params.id);
+    const supplierId = parseInt(String(req.params.id));
     if (isNaN(supplierId)) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
     const { page = "1", limit = "50" } = req.query;
     const pageNum = Math.max(1, parseInt(String(page)));
@@ -236,7 +273,7 @@ router.get("/:id/transactions", requireAuth, async (req: Request, res: Response)
 router.post("/:id/payment", requireAuth, requireRole(["admin", "staff"]), async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const supplierId = parseInt(req.params.id);
+    const supplierId = parseInt(String(req.params.id));
     if (isNaN(supplierId)) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
     const { amount, paymentMethod, note } = req.body;
     const amountNum = parseFloat(amount);
@@ -248,7 +285,7 @@ router.post("/:id/payment", requireAuth, requireRole(["admin", "staff"]), async 
     const [tx] = await db.insert(supplierTransactionsTable).values({
       companyId: cid, supplierId, type: "payment", direction: "credit", amount: amountNum,
       referenceType: "manual", description: note || `Ödeme${paymentMethod ? ` — ${paymentMethod}` : ""}`,
-      createdBy: req.session.user.id,
+      createdBy: req.session.user?.id,
     }).returning();
     const newBalance = await recalcSupplierBalance(supplierId, cid);
     await audit({ req, action: "SUPPLIER_PAYMENT", entity: "supplier", entityId: supplierId, details: { amount: amountNum } });
@@ -265,7 +302,7 @@ router.post("/:id/payment", requireAuth, requireRole(["admin", "staff"]), async 
 router.post("/:id/adjustment", requireAuth, requireRole(["admin"]), async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const supplierId = parseInt(req.params.id);
+    const supplierId = parseInt(String(req.params.id));
     if (isNaN(supplierId)) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
     const { amount, direction, note } = req.body;
     const amountNum = parseFloat(amount);
@@ -278,7 +315,7 @@ router.post("/:id/adjustment", requireAuth, requireRole(["admin"]), async (req: 
     const [tx] = await db.insert(supplierTransactionsTable).values({
       companyId: cid, supplierId, type: "adjustment", direction, amount: amountNum,
       referenceType: "manual", description: note || "Manuel bakiye düzeltmesi",
-      createdBy: req.session.user.id,
+      createdBy: req.session.user?.id,
     }).returning();
     const newBalance = await recalcSupplierBalance(supplierId, cid);
     await audit({ req, action: "SUPPLIER_ADJUSTMENT", entity: "supplier", entityId: supplierId, details: { amount: amountNum, direction } });
@@ -295,7 +332,7 @@ router.post("/:id/adjustment", requireAuth, requireRole(["admin"]), async (req: 
 router.get("/:id/statement", requireAuth, async (req: Request, res: Response) => {
   try {
     const cid = req.companyId;
-    const supplierId = parseInt(req.params.id);
+    const supplierId = parseInt(String(req.params.id));
     if (isNaN(supplierId)) return void res.status(400).json(Errors.badRequest("Geçersiz ID"));
     const [supplier] = await db.select().from(suppliersTable)
       .where(and(eq(suppliersTable.id, supplierId), eq(suppliersTable.companyId, cid)));

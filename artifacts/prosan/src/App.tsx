@@ -1,20 +1,22 @@
 import { Suspense, useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { QueryProvider } from "@/components/query-client-provider";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SonnerToaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/components/auth-context";
 import { CompanyProvider } from "@/components/company-context";
 import { Layout } from "@/components/layout";
 import { TrialGateway } from "@/components/trial-gateway";
-import NotFound from "@/pages/not-found";
-import Login from "@/pages/login";
-import RegisterPage from "@/pages/register";
-import VerifyPage from "@/pages/verify";
-import ForgotPassword from "@/pages/forgot-password";
-import HomePage from "@/pages/home";
 import { RouteFallback } from "@/components/route-fallback";
 import {
+  LoginPage,
+  RegisterPage,
+  VerifyPage,
+  ForgotPasswordPage,
+  HomePage,
+  NotFoundPage,
   EntegrasyonlarPage,
   KarsilastirPage,
   HakkimizdaPage,
@@ -128,13 +130,29 @@ import { Loader2 } from "lucide-react";
 
 installFeatureLockInterceptor();
 
-const queryClient = new QueryClient();
-
 function FullScreenBlockingLoader() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-label="Yükleniyor" />
     </div>
+  );
+}
+
+function CatalogRoute() {
+  const [loc] = useLocation();
+  return (
+    <ErrorBoundary key={loc}>
+      <Catalog />
+    </ErrorBoundary>
+  );
+}
+
+function PublicStorefrontRoute() {
+  const [loc] = useLocation();
+  return (
+    <ErrorBoundary key={loc}>
+      <PublicStorefrontPage />
+    </ErrorBoundary>
   );
 }
 
@@ -150,7 +168,7 @@ function ProtectedRoute({
   noLayout?: boolean;
 }) {
   const { user, isAuthenticated, needsOnboarding } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
 
   const role = user?.role;
 
@@ -180,13 +198,19 @@ function ProtectedRoute({
   }
 
   if (noLayout) {
-    return <Component />;
+    return (
+      <ErrorBoundary key={location}>
+        <Component />
+      </ErrorBoundary>
+    );
   }
 
   return (
     <Layout>
       <TrialGateway>
-        <Component />
+        <ErrorBoundary key={location}>
+          <Component />
+        </ErrorBoundary>
       </TrialGateway>
     </Layout>
   );
@@ -196,7 +220,7 @@ function AuthenticatedRouter() {
   return (
     <AuthProvider>
       <Switch>
-        <Route path="/login" component={Login} />
+        <Route path="/login" component={LoginPage} />
         <Route path="/kayit" component={RegisterPage} />
         <Route path="/kayit/isletme">{() => <RegisterPage />}</Route>
         <Route path="/kayit/satinalmaci">{() => <RegisterPage />}</Route>
@@ -204,8 +228,8 @@ function AuthenticatedRouter() {
         <Route path="/entegrasyonlar">
           {() => <ProtectedRoute component={EntegrasyonlarPage} />}
         </Route>
-        <Route path="/sifremi-unuttum" component={ForgotPassword} />
-        <Route path="/forgot-password" component={ForgotPassword} />
+        <Route path="/sifremi-unuttum" component={ForgotPasswordPage} />
+        <Route path="/forgot-password" component={ForgotPasswordPage} />
         <Route path="/karsilastir" component={KarsilastirPage} />
         <Route path="/neden-ticarium365" component={KarsilastirPage} />
         <Route path="/hakkimizda" component={HakkimizdaPage} />
@@ -569,7 +593,7 @@ function AuthenticatedRouter() {
           {() => <ProtectedRoute component={Onboarding} roles={["admin"]} skipOnboardingCheck noLayout />}
         </Route>
 
-        <Route component={NotFound} />
+        <Route component={NotFoundPage} />
       </Switch>
     </AuthProvider>
   );
@@ -577,26 +601,27 @@ function AuthenticatedRouter() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <CompanyProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+    <TooltipProvider>
+      <CompanyProvider>
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <QueryProvider>
             <Suspense fallback={<RouteFallback />}>
-            <Switch>
-              <Route path="/catalog" component={Catalog} />
-              <Route path="/s/:slug" component={PublicStorefrontPage} />
-              <Route>
-                {() => <AuthenticatedRouter />}
-              </Route>
-            </Switch>
+              <Switch>
+                <Route path="/catalog" component={CatalogRoute} />
+                <Route path="/s/:slug" component={PublicStorefrontRoute} />
+                <Route>
+                  {() => <AuthenticatedRouter />}
+                </Route>
+              </Switch>
             </Suspense>
-          </WouterRouter>
-          <Toaster />
-          <UpgradeModal />
-          <CookieConsentBanner />
-        </CompanyProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+          </QueryProvider>
+        </WouterRouter>
+        <Toaster />
+        <SonnerToaster />
+        <UpgradeModal />
+        <CookieConsentBanner />
+      </CompanyProvider>
+    </TooltipProvider>
   );
 }
 

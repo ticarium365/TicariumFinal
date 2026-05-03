@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRoute } from "wouter";
 import { Loader2, ShoppingCart, Plus, Minus, X, Check, AlertCircle, Store } from "lucide-react";
 import { initialLetter } from "@/lib/display-initial";
+import { LazyImage } from "@/components/lazy-image";
 
 type Storefront = {
   id: number;
@@ -62,7 +63,7 @@ export default function PublicStorefrontPage() {
     })();
   }, [slug]);
 
-  const primary = storefront?.themeConfig?.primaryColor || "#10b981";
+  const primary = storefront?.themeConfig?.primaryColor || "var(--color-chart-mint)";
   const cartTotal = useMemo(() => cart.reduce((s, x) => s + x.price * x.qty, 0), [cart]);
   const cartCount = useMemo(() => cart.reduce((s, x) => s + x.qty, 0), [cart]);
 
@@ -130,7 +131,7 @@ export default function PublicStorefrontPage() {
               <div key={p.linkId} className="bg-card border rounded-lg overflow-hidden hover:shadow-md transition flex flex-col">
                 <div className="aspect-square bg-muted">
                   {p.imageUrl ? (
-                    <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" />
+                    <LazyImage src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-slate-300">
                       <Store className="w-12 h-12" />
